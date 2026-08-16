@@ -64,10 +64,16 @@ export function createPlanetTexture(width = 1024, height = 512): HTMLCanvasEleme
       const u = x / width
       const v = y / height
 
+      // Sample noise on a circle in u so the texture is periodic — otherwise the
+      // sphere shows a vertical seam where the map wraps.
+      const angle = u * Math.PI * 2
+      const cu = Math.cos(angle)
+      const su = Math.sin(angle)
+
       // Warp the latitude before banding so bands undulate instead of striping.
-      const warp = fbm(u * 6, v * 12) * 0.55
+      const warp = fbm(cu * 3 + 5, su * 3 + v * 12) * 0.55
       const bands = Math.sin((v * 9 + warp) * Math.PI * 2) * 0.5 + 0.5
-      const detail = fbm(u * 18, v * 30, 4) * 0.35
+      const detail = fbm(cu * 9 + 17, su * 9 + v * 30, 4) * 0.35
       const t = Math.min(1, Math.max(0, bands * 0.75 + detail))
 
       const scaled = t * (ramp.length - 1)
@@ -101,13 +107,14 @@ export function createRingTexture(width = 1024, height = 8): HTMLCanvasElement {
   for (let x = 0; x < width; x++) {
     const t = x / width
     // Two overlapping lane frequencies plus grain, faded at both edges.
-    const lanes = Math.sin(t * Math.PI * 34) * 0.5 + 0.5
-    const coarse = Math.sin(t * Math.PI * 7 + 1.2) * 0.5 + 0.5
+    const lanes = Math.sin(t * Math.PI * 16) * 0.5 + 0.5
+    const coarse = Math.sin(t * Math.PI * 5 + 1.2) * 0.5 + 0.5
     const grain = noise(x, 0) * 0.3
     const edge = Math.sin(t * Math.PI)
-    const alpha = Math.max(0, (lanes * 0.5 + coarse * 0.4 + grain) * edge - 0.18)
+    const alpha = Math.max(0, (lanes * 0.5 + coarse * 0.42 + grain) * edge - 0.1) * 1.35
 
-    ctx.fillStyle = `rgba(${180 + coarse * 60}, ${205 + coarse * 30}, 255, ${alpha})`
+    // Kept blue rather than white so the ring belongs to the palette, not to Saturn.
+    ctx.fillStyle = `rgba(${110 + coarse * 70}, ${165 + coarse * 45}, ${235 + coarse * 20}, ${Math.min(0.85, alpha)})`
     ctx.fillRect(x, 0, 1, height)
   }
 

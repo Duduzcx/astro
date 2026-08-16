@@ -47,7 +47,7 @@ export function Faq() {
           className="lg:sticky lg:top-32 lg:self-start"
         />
 
-        <Reveal>
+        <Reveal className="min-w-0">
           <ul className="border-t border-slate/25">
             {faqs.map((faq, index) => {
               const isOpen = open === index

@@ -115,7 +115,7 @@ export function Section({
   className?: string
 }) {
   return (
-    <section id={id} className={`py-24 md:py-32 ${className}`}>
+    <section id={id} className={`py-20 md:py-24 ${className}`}>
       <div className="shell">{children}</div>
     </section>
   )

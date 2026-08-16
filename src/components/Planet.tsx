@@ -19,8 +19,9 @@ const atmosphereShader = {
     varying vec3 vViewDir;
     void main() {
       float rim = 1.0 - max(dot(vNormal, vViewDir), 0.0);
-      rim = pow(rim, 2.6);
-      gl_FragColor = vec4(vec3(0.35, 0.66, 1.0), rim * 0.85);
+      // High exponent keeps the glow as a thin halo instead of a drawn outline.
+      rim = pow(rim, 3.0);
+      gl_FragColor = vec4(vec3(0.35, 0.66, 1.0), rim * 0.5);
     }
   `,
 }
@@ -39,7 +40,8 @@ export function Planet({ className = '' }: { className?: string }) {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100)
-    camera.position.set(0, 0.85, 6.2)
+    // Far enough back that the full ring stays inside the canvas box at every aspect.
+    camera.position.set(0, 1.05, 8.4)
     camera.lookAt(0, 0, 0)
 
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true })
@@ -58,7 +60,9 @@ export function Planet({ className = '' }: { className?: string }) {
     planet.rotation.z = THREE.MathUtils.degToRad(-14)
 
     const atmosphere = new THREE.Mesh(
-      new THREE.SphereGeometry(1.68, 64, 64),
+      // Barely larger than the planet, so the glow hugs the limb instead of
+      // drawing its own silhouette as a detached ring.
+      new THREE.SphereGeometry(1.575, 64, 64),
       new THREE.ShaderMaterial({
         ...atmosphereShader,
         blending: THREE.AdditiveBlending,
@@ -69,14 +73,14 @@ export function Planet({ className = '' }: { className?: string }) {
     )
 
     const ringTexture = new THREE.CanvasTexture(createRingTexture())
-    const ringGeometry = new THREE.RingGeometry(2.1, 3.35, 180, 1)
+    const ringGeometry = new THREE.RingGeometry(2.0, 3.3, 220, 1)
     // RingGeometry has no usable UVs for a radial stripe, so rewrite u from radius.
     const position = ringGeometry.attributes.position
     const uv = ringGeometry.attributes.uv
     const vertex = new THREE.Vector3()
     for (let i = 0; i < position.count; i++) {
       vertex.fromBufferAttribute(position, i)
-      const radial = (vertex.length() - 2.1) / (3.35 - 2.1)
+      const radial = (vertex.length() - 2.0) / (3.3 - 2.0)
       uv.setXY(i, radial, 0.5)
     }
 
@@ -89,8 +93,9 @@ export function Planet({ className = '' }: { className?: string }) {
         depthWrite: false,
       }),
     )
-    ring.rotation.x = THREE.MathUtils.degToRad(74)
-    ring.rotation.y = THREE.MathUtils.degToRad(-12)
+    // Shallow enough that the ring reads as a disc, not a line through the planet.
+    ring.rotation.x = THREE.MathUtils.degToRad(63)
+    ring.rotation.y = THREE.MathUtils.degToRad(-14)
 
     const group = new THREE.Group()
     group.add(planet, atmosphere, ring)

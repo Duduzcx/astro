@@ -49,11 +49,13 @@ export function Services() {
             delay={(index % 3) * 0.08}
             className="group relative bg-void transition-colors duration-300 hover:bg-orbit"
           >
+            {/* Hover marks the card with the brand gradient instead of a border color change. */}
+            <span className="nebula absolute inset-x-0 top-0 h-px scale-x-0 transition-transform duration-500 group-hover:scale-x-100" />
             <div className="flex h-full flex-col p-9">
               <div className="flex items-start justify-between gap-4">
-                <h3 className="text-2xl leading-tight">{service.title}</h3>
-                <span className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] bg-orbit text-mist transition-colors duration-300 group-hover:bg-orbit-soft">
-                  <ArrowGlyph />
+                <h3 className="text-[1.35rem] leading-[1.1] uppercase">{service.title}</h3>
+                <span className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate/40 text-mist transition-colors duration-300 group-hover:border-mist group-hover:bg-mist/10">
+                  <ArrowGlyph className="transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                 </span>
               </div>
               <p className="mt-5 text-[15px] text-silver">{service.body}</p>

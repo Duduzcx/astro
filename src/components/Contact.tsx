@@ -9,9 +9,9 @@ const promises = [
 
 export function Contact() {
   return (
-    <section id="contato" className="py-24 md:py-32">
+    <section id="contato" className="py-20 md:py-24">
       <div className="shell">
-        <Reveal className="rounded-[16px] border border-dashed border-slate/40 bg-deep/80 px-8 py-20 backdrop-blur-sm md:px-16 md:py-28">
+        <Reveal className="rounded-[16px] border border-dashed border-slate/40 bg-deep/80 px-8 py-14 backdrop-blur-sm md:px-14 md:py-20">
           <div className="grid gap-14 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
             <div>
               <Label>Próximo passo</Label>

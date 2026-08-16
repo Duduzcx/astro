@@ -5,7 +5,9 @@ import { Hero } from './components/Hero'
 import { Marquee } from './components/Marquee'
 import { VoidReveal } from './components/VoidReveal'
 import { PlanetStage } from './components/PlanetStage'
+import { SystemShowcase } from './components/SystemShowcase'
 import { Services } from './components/Services'
+import { Integrations } from './components/Integrations'
 import { Practices } from './components/Practices'
 import { Process } from './components/Process'
 import { Kinetic } from './components/Kinetic'
@@ -44,7 +46,9 @@ export default function App() {
           object={<PlanetStage className="h-full w-full" />}
         />
 
+        <SystemShowcase />
         <Services />
+        <Integrations />
         <Practices />
 
         <DashedRule className="shell" />
