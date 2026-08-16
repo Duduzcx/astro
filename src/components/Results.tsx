@@ -37,7 +37,7 @@ export function Results() {
     <Section id="resultados">
       <Reveal>
         <Label>Compromissos</Label>
-        <h2 className="mt-5 max-w-2xl text-[clamp(2rem,5vw,3.25rem)]">
+        <h2 className="mt-6 max-w-2xl text-[clamp(2rem,5vw,3.25rem)] leading-[0.9] uppercase">
           O que a gente assina embaixo.
         </h2>
       </Reveal>

@@ -121,6 +121,22 @@
   background-image: linear-gradient(90deg, #1b4dff 0%, #5aa9ff 46%, #cfe2ff 100%);
 }
 
+/* Section separator. Dashed, hairline, structural — never decorative. */
+@utility dashed-rule {
+  border: 0;
+  border-top: 1px dashed color-mix(in srgb, var(--color-slate) 45%, transparent);
+  margin: 0;
+}
+
+/* Museum-label voice: uppercase, weight 500, wide tracking, mono. */
+@utility label-voice {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--color-slate);
+}
+
 @keyframes astro-marquee {
   from {
     transform: translate3d(0, 0, 0);

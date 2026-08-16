@@ -32,11 +32,38 @@ Texto: `platinum` em títulos e nav, `silver` no corpo, `mist` em ênfase, `phos
 
 Tipografia: Inter em peso 400/500 — títulos sempre 500, nunca negrito nem light. JetBrains Mono em label, eyebrow e dado técnico, com tracking largo.
 
-Raio: 16px em card, 6px em botão. Nada além disso.
+Raio: 16px em card, 12px nos cards do hero, pill (`rounded-full`) em botão. Nada além disso.
 
-## Elemento assinatura
+Estrutura: seções de reveal ocupam 100svh com um objeto centralizado e texto flanqueando — título uppercase à esquerda, descrição em caixa mista à direita. Separadores são sempre tracejados de 1px (`.dashed-rule`), nunca sólidos e nunca decorativos.
 
-`src/components/OrbitField.tsx` — casca de 1500 pontos em esfera de Fibonacci girando em canvas 2D, com cinco satélites em órbitas inclinadas e paralaxe pelo ponteiro. Com `prefers-reduced-motion` desenha um único frame e para.
+Voz tipográfica, duas e só duas:
+
+1. **Uppercase peso 500** — nav, títulos, labels, botões, legal. `line-height` 0.9 nos tamanhos de display, para as caixas altas se empilharem como bloco sólido.
+2. **Caixa mista peso 400** — só nos parágrafos descritivos. A troca de caixa é o sinal de que o texto virou explicação e não rótulo.
+
+## Objetos animados
+
+O site não usa nenhuma imagem ou vídeo externo — toda a "fotografia" é gerada em runtime. Nada para baixar, nada para licenciar, e a paleta fica exata.
+
+| Componente | O que é | Custo |
+| --- | --- | --- |
+| `Starfield.tsx` | céu fixo atrás da página inteira, paralaxe por scroll em 3 camadas de profundidade | canvas 2D, sem dependência |
+| `OrbitField.tsx` | casca de 1600 pontos em esfera de Fibonacci com satélites em órbitas inclinadas; aparece grande no hero e miniaturizado no card "sinal ativo" | canvas 2D, sem dependência |
+| `Planet.tsx` | planeta 3D com textura de bandas procedural, anel com lanes e falhas, rim light por shader fresnel | three.js, carregado sob demanda |
+| `Constellation.tsx` | constelação desenhada conforme você rola — cada nó é uma frente de atuação, as arestas acendem em ordem de leitura | canvas 2D, sem dependência |
+| `Kinetic.tsx` | marcador tipográfico gigante que deriva com o scroll | CSS + Framer Motion |
+
+As texturas do planeta estão em `src/lib/textures.ts` (fbm noise em `ImageData`).
+
+Todos respeitam `prefers-reduced-motion`: desenham um frame e param.
+
+### Peso
+
+`three.js` só é baixado quando a seção do planeta se aproxima 400px do viewport — `PlanetStage.tsx` faz `IntersectionObserver` + `React.lazy`. O bundle inicial fica em ~115 kB gzip; o planeta é um chunk separado de ~132 kB.
+
+### Trocar por foto ou vídeo real
+
+Se um dia você tiver imagem própria, o lugar natural é o card do hero em `Hero.tsx` (hoje ocupado pelo `OrbitField` pequeno) e o objeto central do `VoidReveal` em `App.tsx` — os dois recebem qualquer `ReactNode`.
 
 ## Deploy
 

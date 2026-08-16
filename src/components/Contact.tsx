@@ -1,4 +1,4 @@
-import { ArrowGlyph, Label, NebulaButton, Reveal, SolidButton } from './ui/Primitives'
+import { ArrowGlyph, DashedRule, GhostButton, Label, NebulaButton, Reveal } from './ui/Primitives'
 import { site } from '../lib/site'
 
 const promises = [
@@ -11,14 +11,18 @@ export function Contact() {
   return (
     <section id="contato" className="py-24 md:py-32">
       <div className="shell">
-        <Reveal className="rounded-[16px] bg-deep px-8 py-20 md:px-16 md:py-28">
+        <Reveal className="rounded-[16px] border border-dashed border-slate/40 bg-deep/80 px-8 py-20 backdrop-blur-sm md:px-16 md:py-28">
           <div className="grid gap-14 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
             <div>
               <Label>Próximo passo</Label>
-              <h2 className="mt-6 max-w-xl text-[clamp(2.2rem,5.5vw,3.75rem)]">
-                Conta o problema. A gente diz se dá para resolver com software.
+              <h2 className="mt-6 max-w-xl text-[clamp(2.2rem,5.5vw,3.5rem)] leading-[0.9] uppercase">
+                Conta o problema.
               </h2>
-              <ul className="mt-10 space-y-3">
+              <p className="mt-7 max-w-md text-[clamp(1.05rem,1.6vw,1.35rem)] leading-[1.26] text-mist">
+                A gente diz na hora se dá para resolver com software — e quanto custa.
+              </p>
+              <DashedRule className="mt-10" />
+              <ul className="mt-8 space-y-3">
                 {promises.map((promise) => (
                   <li key={promise} className="flex gap-3 text-silver">
                     <span className="mt-2.5 h-1 w-1 shrink-0 rounded-full bg-[#5aa9ff]" />
@@ -32,9 +36,9 @@ export function Contact() {
               <NebulaButton href={site.whatsapp.href} className="w-full">
                 Falar no WhatsApp <ArrowGlyph />
               </NebulaButton>
-              <SolidButton href={`mailto:${site.email}`} className="w-full">
+              <GhostButton href={`mailto:${site.email}`} className="w-full">
                 {site.email}
-              </SolidButton>
+              </GhostButton>
               <p className="mt-2 font-mono text-[11px] leading-relaxed tracking-[0.08em] text-slate">
                 Respondemos em até um dia útil. Atendimento remoto para todo o Brasil, base em{' '}
                 {site.city}.

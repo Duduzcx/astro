@@ -30,7 +30,7 @@ const steps = [
 
 export function Process() {
   return (
-    <Section id="processo" className="bg-deep">
+    <Section id="processo" className="bg-deep/70">
       <SectionHead
         label="Como trabalhamos"
         title="Quatro etapas, nessa ordem."

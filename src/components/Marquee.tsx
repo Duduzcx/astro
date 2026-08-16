@@ -13,7 +13,7 @@ const capabilities = [
 
 export function Marquee() {
   return (
-    <div className="border-y border-slate/20 bg-deep py-5">
+    <div className="border-y border-dashed border-slate/45 bg-deep/60 py-5">
       <div
         className="overflow-hidden [mask-image:linear-gradient(90deg,transparent,#000_12%,#000_88%,transparent)]"
         aria-hidden="true"

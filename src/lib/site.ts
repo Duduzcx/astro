@@ -11,10 +11,10 @@ export const site = {
   city: 'São Paulo, Brasil',
 } as const
 
+/** Four items, no more. The nav is a legend for the page, not a table of contents. */
 export const navLinks = [
-  { label: 'Serviços', href: '#servicos' },
+  { label: 'Sistema', href: '#sistema' },
   { label: 'Processo', href: '#processo' },
   { label: 'Stack', href: '#stack' },
-  { label: 'Resultados', href: '#resultados' },
-  { label: 'Dúvidas', href: '#duvidas' },
+  { label: 'Contato', href: '#contato' },
 ] as const

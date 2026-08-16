@@ -9,13 +9,12 @@ export function Label({
   children: ReactNode
   className?: string
 }) {
-  return (
-    <span
-      className={`font-mono text-[11px] uppercase tracking-[0.18em] text-slate ${className}`}
-    >
-      {children}
-    </span>
-  )
+  return <span className={`label-voice block text-[11px] ${className}`}>{children}</span>
+}
+
+/** Dashed hairline. The only separator in the system. */
+export function DashedRule({ className = '' }: { className?: string }) {
+  return <hr className={`dashed-rule ${className}`} />
 }
 
 /** Primary CTA. The gradient appears here and nowhere else. */
@@ -34,27 +33,30 @@ export function NebulaButton({
     <a
       href={href}
       onClick={onClick}
-      className={`nebula inline-flex items-center justify-center gap-2 rounded-[6px] px-6 py-3.5 font-mono text-[12px] uppercase tracking-[0.12em] text-[#03102e] transition-[filter,transform] duration-200 hover:brightness-110 active:translate-y-px ${className}`}
+      className={`nebula inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-[#03102e] transition-[filter,transform] duration-200 hover:brightness-110 active:translate-y-px ${className}`}
     >
       {children}
     </a>
   )
 }
 
-/** Secondary CTA. Solid surface step, no gradient. */
-export function SolidButton({
+/** Secondary action. Border does the work — no fill, no gradient. */
+export function GhostButton({
   href,
   children,
   className = '',
+  onClick,
 }: {
   href: string
   children: ReactNode
   className?: string
+  onClick?: MouseEventHandler<HTMLAnchorElement>
 }) {
   return (
     <a
       href={href}
-      className={`inline-flex items-center justify-center gap-2 rounded-[6px] border border-slate/30 bg-orbit px-6 py-3.5 font-mono text-[12px] uppercase tracking-[0.12em] text-mist transition-colors duration-200 hover:bg-orbit-soft ${className}`}
+      onClick={onClick}
+      className={`inline-flex items-center justify-center gap-2 rounded-full border border-mist/60 px-7 py-3.5 font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-mist transition-colors duration-200 hover:border-mist hover:bg-mist/10 ${className}`}
     >
       {children}
     </a>
@@ -134,8 +136,14 @@ export function SectionHead({
   return (
     <Reveal className={className}>
       <Label>{label}</Label>
-      <h2 className="mt-5 max-w-2xl text-[clamp(2rem,5vw,3.25rem)]">{title}</h2>
-      {lead ? <p className="mt-6 max-w-xl text-silver">{lead}</p> : null}
+      <h2 className="mt-6 max-w-2xl text-[clamp(2rem,5vw,3.25rem)] leading-[0.9] uppercase">
+        {title}
+      </h2>
+      {lead ? (
+        <p className="mt-7 max-w-xl text-[clamp(1rem,1.5vw,1.2rem)] leading-[1.26] text-mist">
+          {lead}
+        </p>
+      ) : null}
     </Reveal>
   )
 }

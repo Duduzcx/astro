@@ -21,7 +21,7 @@ const groups = [
 
 export function Stack() {
   return (
-    <Section id="stack" className="bg-deep">
+    <Section id="stack" className="bg-deep/70">
       <SectionHead
         label="Stack"
         title="Ferramenta é escolha nossa. Conta é sua."

@@ -16,7 +16,7 @@ type Satellite = {
   radius: number
 }
 
-const SHELL_POINTS = 1500
+const SHELL_POINTS = 1600
 const SATELLITES = 5
 
 /** Fibonacci sphere — even coverage without the pole clustering of naive lat/long sampling. */
@@ -46,7 +46,17 @@ function buildSatellites(count: number): Satellite[] {
  * The page signature: a rotating point-shell with satellites tracing tilted orbits
  * around it. Canvas 2D on purpose — a WebGL dependency buys nothing at this fidelity.
  */
-export function OrbitField({ className = '' }: { className?: string }) {
+export function OrbitField({
+  className = '',
+  points = SHELL_POINTS,
+  satelliteCount = SATELLITES,
+  glow = true,
+}: {
+  className?: string
+  points?: number
+  satelliteCount?: number
+  glow?: boolean
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -55,8 +65,8 @@ export function OrbitField({ className = '' }: { className?: string }) {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const shell = buildShell(SHELL_POINTS)
-    const satellites = buildSatellites(SATELLITES)
+    const shell = buildShell(points)
+    const satellites = buildSatellites(satelliteCount)
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
     let width = 0
@@ -107,19 +117,21 @@ export function OrbitField({ className = '' }: { className?: string }) {
       const cosT = Math.cos(tilt)
 
       // Core glow — the shell reads as lit from inside rather than drawn as outline.
-      const glow = ctx.createRadialGradient(
-        width / 2,
-        height / 2,
-        0,
-        width / 2,
-        height / 2,
-        radius * 2.2,
-      )
-      glow.addColorStop(0, 'rgba(27, 77, 255, 0.22)')
-      glow.addColorStop(0.45, 'rgba(10, 32, 80, 0.14)')
-      glow.addColorStop(1, 'rgba(3, 10, 28, 0)')
-      ctx.fillStyle = glow
-      ctx.fillRect(0, 0, width, height)
+      if (glow) {
+        const halo = ctx.createRadialGradient(
+          width / 2,
+          height / 2,
+          0,
+          width / 2,
+          height / 2,
+          radius * 2.2,
+        )
+        halo.addColorStop(0, 'rgba(27, 77, 255, 0.22)')
+        halo.addColorStop(0.45, 'rgba(10, 32, 80, 0.14)')
+        halo.addColorStop(1, 'rgba(3, 10, 28, 0)')
+        ctx.fillStyle = halo
+        ctx.fillRect(0, 0, width, height)
+      }
 
       for (const point of shell) {
         const { sx, sy, depth } = project(point, sin, cos, sinT, cosT)
@@ -169,7 +181,7 @@ export function OrbitField({ className = '' }: { className?: string }) {
       window.removeEventListener('resize', resizeAndRedraw)
       window.removeEventListener('pointermove', onPointerMove)
     }
-  }, [])
+  }, [points, satelliteCount, glow])
 
   return <canvas ref={canvasRef} aria-hidden="true" className={className} />
 }
