@@ -1,0 +1,144 @@
+@import 'tailwindcss';
+
+@theme {
+  /* ── Surfaces: a single blue stack. Depth is a step in this ladder, never a shadow. */
+  --color-void: #030a1c; /* page canvas */
+  --color-deep: #020714; /* recessed well — footer, CTA panel */
+  --color-orbit: #0a2050; /* raised card, solid button */
+  --color-orbit-soft: #0d2a63; /* hover step above orbit */
+
+  /* ── Text */
+  --color-platinum: #ffffff; /* headings, nav */
+  --color-mist: #edf3ff; /* emphasized body */
+  --color-silver: #b4c4e0; /* default body */
+  --color-slate: #6c7a96; /* borders, low emphasis */
+  --color-phosphor: #cfe2ff; /* statistics only */
+
+  /* ── Fonts */
+  --font-display: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  /* ── Type scale (Auros ratios, tracking preserved) */
+  --text-caption: 10px;
+  --text-caption--line-height: 1.4;
+  --text-caption--letter-spacing: 0.15em;
+  --text-label: 12px;
+  --text-label--line-height: 1.4;
+  --text-label--letter-spacing: 0.12em;
+  --text-body: 16px;
+  --text-body--line-height: 1.6;
+  --text-subheading: 24px;
+  --text-subheading--line-height: 1.3;
+  --text-subheading--letter-spacing: -0.02em;
+  --text-heading: 36px;
+  --text-heading--line-height: 1;
+  --text-heading--letter-spacing: -0.03em;
+
+  --radius-card: 16px;
+  --radius-small: 6px;
+}
+
+@layer base {
+  * {
+    border-color: color-mix(in srgb, var(--color-slate) 26%, transparent);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    /* Nav is fixed and ~80px tall; anchor targets must clear it. */
+    scroll-padding-top: 96px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-void);
+    color: var(--color-silver);
+    font-family: var(--font-display);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* Headings are medium-weight only. No bold, no light, at any size. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: 500;
+    color: var(--color-platinum);
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  p {
+    margin: 0;
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background: #1b4dff;
+    color: #ffffff;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-phosphor);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-deep);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-orbit);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-orbit-soft);
+  }
+}
+
+@utility shell {
+  width: 100%;
+  max-width: 1280px;
+  margin-inline: auto;
+  padding-inline: 24px;
+
+  @media (width >= 768px) {
+    padding-inline: 40px;
+  }
+}
+
+/* The one chromatic gesture in the system. Reserved for the primary CTA. */
+@utility nebula {
+  background-image: linear-gradient(90deg, #1b4dff 0%, #5aa9ff 46%, #cfe2ff 100%);
+}
+
+@keyframes astro-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
