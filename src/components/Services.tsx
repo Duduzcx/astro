@@ -1,3 +1,4 @@
+import { CoverArt } from './scenes/CoverArt'
 import { ArrowGlyph, Reveal, Section, SectionHead } from './ui/Primitives'
 
 const services = [
@@ -42,26 +43,34 @@ export function Services() {
         lead="Não vendemos hora de programador. Vendemos o problema resolvido — e ficamos junto depois que entra no ar."
       />
 
-      <div className="mt-16 grid gap-px overflow-hidden rounded-[16px] bg-slate/20 md:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {services.map((service, index) => (
           <Reveal
             key={service.title}
             delay={(index % 3) * 0.08}
-            className="group relative bg-void transition-colors duration-300 hover:bg-orbit"
+            className="group glass relative overflow-hidden rounded-[20px] transition-colors duration-500 hover:border-[#4de0ff]/45"
           >
-            {/* Hover marks the card with the brand gradient instead of a border color change. */}
-            <span className="nebula absolute inset-x-0 top-0 h-px scale-x-0 transition-transform duration-500 group-hover:scale-x-100" />
-            <div className="flex h-full flex-col p-9">
-              <div className="flex items-start justify-between gap-4">
-                <h3 className="text-[1.35rem] leading-[1.1] uppercase">{service.title}</h3>
-                <span className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate/40 text-mist transition-colors duration-300 group-hover:border-mist group-hover:bg-mist/10">
-                  <ArrowGlyph className="transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                </span>
+            <div className="flex h-full flex-col">
+              {/* Each card opens on its own illustration — the grid reads as plates
+                  in a catalogue rather than as six boxes of text. */}
+              <div className="relative overflow-hidden">
+                <CoverArt
+                  variant={index}
+                  className="h-[150px] w-full transition-transform duration-700 group-hover:scale-[1.06]"
+                />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-b from-transparent to-[#04102a]" />
               </div>
-              <p className="mt-5 text-[15px] text-silver">{service.body}</p>
-              <p className="mt-auto pt-10 font-mono text-[10px] uppercase tracking-[0.16em] text-slate">
-                {service.detail}
-              </p>
+
+              <div className="flex flex-1 flex-col p-7">
+                <div className="flex items-start justify-between gap-4">
+                  <h3 className="text-[1.3rem] leading-[1.1] uppercase">{service.title}</h3>
+                  <span className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate/40 text-mist transition-colors duration-300 group-hover:border-[#4de0ff] group-hover:bg-[#4de0ff]/10">
+                    <ArrowGlyph className="transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                  </span>
+                </div>
+                <p className="mt-4 text-[15px] text-silver">{service.body}</p>
+                <p className="label-voice mt-auto pt-8 text-[9px]">{service.detail}</p>
+              </div>
             </div>
           </Reveal>
         ))}

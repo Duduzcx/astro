@@ -25,7 +25,7 @@ export function Practices() {
           viewport={{ once: true, margin: '-100px' }}
           transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
         >
-          <Label>Figura 04 — Constelação</Label>
+          <Label>Figura 05 — Constelação</Label>
           <h2 className="mt-6 text-[clamp(2rem,4.6vw,2.9rem)] leading-[0.9] uppercase">
             Nenhum problema
             <br />

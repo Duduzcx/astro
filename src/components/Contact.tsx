@@ -1,3 +1,4 @@
+import { Aurora } from './scenes/Aurora'
 import { ArrowGlyph, DashedRule, GhostButton, Label, NebulaButton, Reveal } from './ui/Primitives'
 import { site } from '../lib/site'
 
@@ -11,7 +12,12 @@ export function Contact() {
   return (
     <section id="contato" className="py-20 md:py-24">
       <div className="shell">
-        <Reveal className="rounded-[16px] border border-dashed border-slate/40 bg-deep/80 px-8 py-14 backdrop-blur-sm md:px-14 md:py-20">
+        <Reveal className="glass relative overflow-hidden rounded-[24px] px-8 py-14 md:px-14 md:py-20">
+          <Aurora
+            className="pointer-events-none absolute inset-0 h-full w-full opacity-70"
+            intensity={0.8}
+          />
+          <div className="relative">
           <div className="grid gap-14 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
             <div>
               <Label>Próximo passo</Label>
@@ -44,6 +50,7 @@ export function Contact() {
                 {site.city}.
               </p>
             </div>
+          </div>
           </div>
         </Reveal>
       </div>

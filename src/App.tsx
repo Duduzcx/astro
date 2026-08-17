@@ -4,7 +4,7 @@ import { Nav } from './components/Nav'
 import { Hero } from './components/Hero'
 import { Marquee } from './components/Marquee'
 import { VoidReveal } from './components/VoidReveal'
-import { PlanetStage } from './components/PlanetStage'
+import { OrbitField } from './components/OrbitField'
 import { SystemShowcase } from './components/SystemShowcase'
 import { Services } from './components/Services'
 import { Integrations } from './components/Integrations'
@@ -39,11 +39,11 @@ export default function App() {
 
         <VoidReveal
           id="sistema"
-          serial="Figura 01 — Objeto"
+          serial="Figura 02 — Objeto"
           heading="Não é só um site."
           body="É o sistema inteiro em volta dele: o cadastro que alimenta a vitrine, a automação que dispara a cobrança, a integração que fecha o ciclo com o ERP. A gente constrói o corpo, não só a superfície."
-          footnote="Render em tempo real · WebGL · sem imagem externa"
-          object={<PlanetStage className="h-full w-full" />}
+          footnote="Render em tempo real · sem imagem externa"
+          object={<OrbitField className="h-full w-full" />}
         />
 
         <SystemShowcase />

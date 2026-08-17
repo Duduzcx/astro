@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { DashboardScene } from './scenes/DashboardScene'
+import { ProductPanel } from './scenes/ProductPanel'
 import { Label } from './ui/Primitives'
 
 const bullets = [
@@ -19,7 +19,8 @@ const bullets = [
 
 export function SystemShowcase() {
   return (
-    <section className="py-20 md:py-24">
+    // Clips the panel's blooms, which bleed past the card but must not reach the page edge.
+    <section className="overflow-hidden py-20 md:py-24">
       <div className="shell grid gap-14 lg:grid-cols-12 lg:items-center lg:gap-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -28,7 +29,7 @@ export function SystemShowcase() {
           transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
           className="lg:col-span-5"
         >
-          <Label>Figura 02 — Painel</Label>
+          <Label>Figura 03 — Painel</Label>
           <h2 className="mt-6 text-[clamp(2rem,4.4vw,2.9rem)] leading-[0.9] uppercase">
             O sistema que a sua operação já desenhou.
           </h2>
@@ -54,8 +55,8 @@ export function SystemShowcase() {
           transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
           className="min-w-0 lg:col-span-7"
         >
-          <DashboardScene />
-          <p className="label-voice mt-4 text-[9px]">
+          <ProductPanel />
+          <p className="label-voice mt-5 text-[9px]">
             Painel ilustrativo · dados de exemplo atualizando em tempo real
           </p>
         </motion.div>

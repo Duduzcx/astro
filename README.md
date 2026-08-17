@@ -47,13 +47,19 @@ O site não usa nenhuma imagem ou vídeo externo — toda a "fotografia" é gera
 
 | Componente | O que é | Custo |
 | --- | --- | --- |
-| `Starfield.tsx` | céu fixo atrás da página inteira, paralaxe por scroll em 3 camadas de profundidade | canvas 2D, sem dependência |
-| `OrbitField.tsx` | casca de 1600 pontos em esfera de Fibonacci com satélites em órbitas inclinadas; aparece grande no hero e miniaturizado no card "sinal ativo" | canvas 2D, sem dependência |
-| `Planet.tsx` | planeta 3D com textura de bandas procedural, anel com lanes e falhas, rim light por shader fresnel | three.js, carregado sob demanda |
-| `Constellation.tsx` | constelação desenhada conforme você rola — cada nó é uma frente de atuação, as arestas acendem em ordem de leitura | canvas 2D, sem dependência |
+| `Planet.tsx` | planeta 3D do hero: textura de bandas procedural, anel com lanes e falhas, rim light por shader fresnel | three.js, carregado sob demanda |
+| `scenes/Aurora.tsx` | campo de cor que respira atrás do hero e do painel de contato — gradientes radiais em deriva elíptica | canvas 2D a meia resolução |
+| `scenes/CoverArt.tsx` | seis pratos ilustrados, um por serviço: núcleo aceso dentro de figura orbital sobre papel milimetrado. Nenhum repete a geometria do outro | SVG estático |
+| `scenes/ProductPanel.tsx` | o produto como objeto: mostrador em anel, curva suave que avança sozinha, três figuras | SVG + rAF |
+| `scenes/PipelineScene.tsx` | diagrama de integração com pacotes viajando entre ERP/e-commerce/WhatsApp, o hub e financeiro/BI/estoque | SVG + `animateMotion` |
+| `Starfield.tsx` | céu fixo atrás da página inteira, paralaxe por scroll em 3 profundidades | canvas 2D |
+| `OrbitField.tsx` | casca de 1600 pontos em esfera de Fibonacci com satélites em órbitas inclinadas | canvas 2D |
+| `Constellation.tsx` | constelação desenhada conforme você rola; cada nó é uma frente de atuação | canvas 2D |
 | `Kinetic.tsx` | marcador tipográfico gigante que deriva com o scroll | CSS + Framer Motion |
 
-As texturas do planeta estão em `src/lib/textures.ts` (fbm noise em `ImageData`).
+As texturas do planeta estão em `src/lib/textures.ts` (fbm noise em `ImageData`, amostrado em círculo para não deixar costura no wrap).
+
+Textura da página: grão de filme em `body::after` (SVG `feTurbulence` inline, 5% de opacidade). Sem ele os campos de azul aparecem em faixas em monitor barato.
 
 Todos respeitam `prefers-reduced-motion`: desenham um frame e param.
 

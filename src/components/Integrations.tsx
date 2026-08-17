@@ -20,7 +20,7 @@ export function Integrations() {
             transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
             className="lg:col-span-6"
           >
-            <Label>Figura 03 — Fluxo</Label>
+            <Label>Figura 04 — Fluxo</Label>
             <h2 className="mt-6 text-[clamp(2rem,4.4vw,2.9rem)] leading-[0.9] uppercase">
               Seus sistemas param de se ignorar.
             </h2>

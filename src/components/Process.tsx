@@ -37,9 +37,14 @@ export function Process() {
         lead="Software atrasa quando ninguém combinou o que era para ser feito. Nosso processo gasta tempo no começo justamente para não gastar depois."
       />
 
-      <ol className="mt-16 border-t border-slate/25">
+      {/* A lit rail runs down the left edge: the steps are a path, so they get one. */}
+      <ol className="relative mt-16 border-t border-dashed border-slate/35 md:pl-14">
+        <span className="absolute top-0 bottom-0 left-[7px] hidden w-px bg-gradient-to-b from-[#4de0ff]/70 via-[#7b5cff]/40 to-transparent md:block" />
         {steps.map((step, index) => (
-          <li key={step.id} className="border-b border-slate/25">
+          <li key={step.id} className="relative border-b border-dashed border-slate/35">
+            <span className="absolute top-[46px] -left-14 hidden h-4 w-4 items-center justify-center rounded-full border border-[#4de0ff]/60 bg-void md:flex">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#4de0ff]" />
+            </span>
             <Reveal
               delay={index * 0.06}
               className="grid gap-6 py-10 md:grid-cols-[auto_1fr_1.4fr] md:items-start md:gap-12"

@@ -28,15 +28,20 @@ export function Stack() {
         lead="Trabalhamos com tecnologia aberta e amplamente adotada. Se um dia você trocar de time, qualquer desenvolvedor pega o projeto de onde paramos."
       />
 
-      <div className="mt-16 grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {groups.map((group, index) => (
-          <Reveal key={group.title} delay={index * 0.07}>
-            <h3 className="border-b border-slate/25 pb-4 font-mono text-[11px] uppercase tracking-[0.16em] text-[#5aa9ff]">
-              {group.title}
-            </h3>
-            <ul className="mt-6 space-y-3">
+          <Reveal
+            key={group.title}
+            delay={index * 0.07}
+            className="glass rounded-[20px] p-6 transition-colors duration-500 hover:border-[#4de0ff]/40"
+          >
+            <h3 className="label-voice text-[9px] text-[#4de0ff]">{group.title}</h3>
+            <ul className="mt-5 flex flex-wrap gap-2">
               {group.items.map((item) => (
-                <li key={item} className="text-mist">
+                <li
+                  key={item}
+                  className="rounded-full border border-slate/35 bg-void/40 px-3 py-1.5 font-mono text-[11px] text-mist"
+                >
                   {item}
                 </li>
               ))}
