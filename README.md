@@ -47,7 +47,8 @@ O site não usa nenhuma imagem ou vídeo externo — toda a "fotografia" é gera
 
 | Componente | O que é | Custo |
 | --- | --- | --- |
-| `Planet.tsx` | planeta 3D do hero: textura de bandas procedural, anel com lanes e falhas, rim light por shader fresnel | three.js, carregado sob demanda |
+| `scenes/VideoPlate.tsx` | as duas filmagens em `public/videos`. Nada é baixado até a faixa chegar perto da viewport, e a reprodução para quando ela sai — 4K decodificando fora da tela é o jeito mais rápido de travar a página | `<video>` + IntersectionObserver |
+| `Planet.tsx` | planeta 3D: bandas com duplo domain warp e tempestades, casca de nuvens girando mais rápido que a superfície, anel com lanes, rim light por shader fresnel, rig de três luzes | three.js, carregado sob demanda |
 | `scenes/Aurora.tsx` | campo de cor que respira atrás do hero e do painel de contato — gradientes radiais em deriva elíptica | canvas 2D a meia resolução |
 | `scenes/CoverArt.tsx` | seis pratos ilustrados, um por serviço: núcleo aceso dentro de figura orbital sobre papel milimetrado. Nenhum repete a geometria do outro | SVG estático |
 | `scenes/ProductPanel.tsx` | o produto como objeto: mostrador em anel, curva suave que avança sozinha, três figuras | SVG + rAF |
@@ -65,7 +66,9 @@ Todos respeitam `prefers-reduced-motion`: desenham um frame e param.
 
 ### Peso
 
-`three.js` só é baixado quando a seção do planeta se aproxima 400px do viewport — `PlanetStage.tsx` faz `IntersectionObserver` + `React.lazy`. O bundle inicial fica em ~115 kB gzip; o planeta é um chunk separado de ~132 kB.
+`three.js` só é baixado quando a seção do planeta se aproxima 400px do viewport — `PlanetStage.tsx` faz `IntersectionObserver` + `React.lazy`. O bundle inicial fica em ~119 kB gzip; o planeta é um chunk separado de ~132 kB.
+
+Os dois vídeos somam ~40 MB e estão versionados no repositório. Se o histórico começar a incomodar, mova-os para Git LFS ou sirva de um CDN e troque só os caminhos em `src/lib/media.ts`.
 
 ### Trocar por foto ou vídeo real
 

@@ -1,60 +1,82 @@
 import type { ReactNode } from 'react'
-import { motion } from 'framer-motion'
+import { useRef } from 'react'
+import { motion, useScroll, useTransform } from 'framer-motion'
+import { Label, LineReveal } from './ui/Primitives'
 
 /**
- * The signature layout: a full-viewport void with one object centered and text
- * flanking it. Heading left, body right, both left-aligned. Nothing else in frame.
+ * Two-column composition: text on one side, object on the other. `flip` alternates
+ * the sides down the page so consecutive sections never repeat the same reading
+ * path. The object drifts against the scroll, which is what keeps it feeling
+ * placed in space rather than pasted on the page.
  */
 export function VoidReveal({
   id,
-  serial,
+  label,
   heading,
   body,
   footnote,
   object,
+  flip = false,
 }: {
   id?: string
-  serial: string
+  label: string
   heading: string
   body: string
   footnote?: string
   object: ReactNode
+  flip?: boolean
 }) {
+  const ref = useRef<HTMLElement>(null)
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] })
+  const objectY = useTransform(scrollYProgress, [0, 1], ['12%', '-12%'])
+
   return (
-    <section
-      id={id}
-      className="relative flex min-h-[72svh] flex-col justify-center overflow-hidden py-20"
-    >
-      {/* Both text columns start on the same line so the row reads as one baseline,
-          regardless of how many lines each side runs to. */}
-      <div className="shell relative z-10 grid items-start gap-10 lg:grid-cols-[1fr_1.25fr_1fr] lg:gap-[18px]">
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-120px' }}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          className="order-2 lg:order-1 lg:pt-[6vh]"
-        >
-          <p className="label-voice text-[10px]">{serial}</p>
-          <h2 className="mt-6 text-[clamp(2.2rem,4.6vw,2.9rem)] leading-[0.9] uppercase">
-            {heading}
-          </h2>
-        </motion.div>
+    <section ref={ref} id={id} className="relative overflow-hidden py-24 md:py-32">
+      <div className="shell grid items-center gap-14 lg:grid-cols-2 lg:gap-20">
+        <div className={flip ? 'lg:order-2' : ''}>
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-15%' }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <Label>{label}</Label>
+          </motion.div>
 
-        {/* The object gets the middle column and the tallest box on the row. */}
-        {/* min-w-0 keeps the renderer's intrinsic size from widening the grid track. */}
-        <div className="order-1 h-[42vh] w-full min-w-0 lg:order-2 lg:h-[56vh]">{object}</div>
+          <LineReveal
+            text={heading}
+            delay={0.08}
+            className="mt-7 text-[clamp(2.4rem,5.2vw,4.2rem)] leading-[1.04]"
+          />
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-15%' }}
+            transition={{ duration: 0.8, delay: 0.24, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-8 max-w-lg text-[clamp(1rem,1.35vw,1.125rem)] leading-[1.5] text-silver"
+          >
+            {body}
+          </motion.p>
+
+          {footnote ? (
+            <motion.p
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true, margin: '-15%' }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="label-voice mt-10 text-[10px]"
+            >
+              {footnote}
+            </motion.p>
+          ) : null}
+        </div>
 
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-120px' }}
-          transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-          className="order-3 lg:pt-[6vh]"
+          style={{ y: objectY }}
+          className={`h-[46vh] w-full min-w-0 lg:h-[64vh] ${flip ? 'lg:order-1' : ''}`}
         >
-          {/* The system's only mixed-case voice: description, not label. */}
-          <p className="text-[clamp(1.05rem,1.6vw,1.35rem)] leading-[1.26] text-mist">{body}</p>
-          {footnote ? <p className="label-voice mt-8 text-[10px]">{footnote}</p> : null}
+          {object}
         </motion.div>
       </div>
     </section>

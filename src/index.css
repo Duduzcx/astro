@@ -1,18 +1,26 @@
 @import 'tailwindcss';
 
 @theme {
-  /* ── Surfaces: a single blue stack. Depth is a step in this ladder, never a shadow. */
-  --color-void: #030a1c; /* page canvas */
-  --color-deep: #020714; /* recessed well — footer, CTA panel */
-  --color-orbit: #0a2050; /* raised card, solid button */
-  --color-orbit-soft: #0d2a63; /* hover step above orbit */
+  /* ── Surfaces. The void is the design: content floats on black, and the only
+     lift is a translucent glass, never an opaque panel. */
+  --color-void: #000000; /* page canvas */
+  --color-deep: #05070f; /* recessed well — footer, bands */
+  --color-orbit: #0a1330; /* the one raised solid, used sparingly */
+  --color-orbit-soft: #101c44;
 
-  /* ── Text */
+  /* ── Text. Achromatic on purpose: the only colour on the page is the accent
+     pair and the footage. Grey carries every word that is not a headline. */
   --color-platinum: #ffffff; /* headings, nav */
-  --color-mist: #edf3ff; /* emphasized body */
-  --color-silver: #b4c4e0; /* default body */
-  --color-slate: #6c7a96; /* borders, low emphasis */
-  --color-phosphor: #cfe2ff; /* statistics only */
+  --color-mist: #e9e9ec; /* emphasized body */
+  --color-silver: #bdbdbd; /* default body */
+  --color-ash: #9a9a9a; /* muted labels, inactive nav */
+  --color-slate: #5c5c62; /* hairlines only */
+  --color-phosphor: #ffffff; /* statistics */
+
+  /* ── The two accents. Violet is the only filled action colour on the site;
+     amber is the only emphasis colour. Everything else is achromatic. */
+  --color-iris: #8052ff;
+  --color-amber: #ffb829;
 
   /* ── Atmosphere. Gradients and glows only — never a flat fill, never text. */
   --color-nebula-violet: #7b5cff;
@@ -60,21 +68,24 @@
     background-color: var(--color-void);
     color: var(--color-silver);
     font-family: var(--font-display);
-    font-size: 16px;
-    line-height: 1.6;
+    /* Ultra-light body is the signature: paragraphs read as air, not as weight. */
+    font-size: 18px;
+    font-weight: 200;
+    line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
   }
 
-  /* Headings are medium-weight only. No bold, no light, at any size. */
+  /* Hierarchy comes from scale and tracking, never from weight. Every heading
+     is 400 — the 100px one and the 20px one alike. */
   h1,
   h2,
   h3,
   h4 {
-    font-weight: 500;
+    font-weight: 400;
     color: var(--color-platinum);
-    letter-spacing: -0.03em;
-    line-height: 1;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
     margin: 0;
     text-wrap: balance;
   }
@@ -150,11 +161,18 @@
 @utility glass {
   background-image: linear-gradient(
     145deg,
-    color-mix(in srgb, var(--color-nebula-blue) 14%, transparent),
-    color-mix(in srgb, var(--color-deep) 92%, transparent) 55%
+    rgba(128, 82, 255, 0.09),
+    rgba(5, 7, 15, 0.86) 58%
   );
-  border: 1px solid color-mix(in srgb, var(--color-nebula-cyan) 18%, transparent);
+  border: 1px solid rgba(255, 255, 255, 0.09);
   backdrop-filter: blur(14px);
+}
+
+/* Cinematic footage sits under a scrim: the video is atmosphere, the type is content. */
+@utility film-scrim {
+  background-image:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.12) 45%, rgba(0, 0, 0, 0.82) 100%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.15) 55%, transparent 78%);
 }
 
 /* Soft coloured bloom placed behind a section. Purely atmospheric. */
@@ -170,8 +188,8 @@
   font-family: var(--font-mono);
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: var(--color-slate);
+  letter-spacing: 0.16em;
+  color: var(--color-ash);
 }
 
 @keyframes astro-caret {

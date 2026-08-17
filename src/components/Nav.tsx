@@ -1,7 +1,7 @@
 import { useEffect, useState, type MouseEvent } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Logo } from './Logo'
-import { NebulaButton } from './ui/Primitives'
+import { IrisButton } from './ui/Primitives'
 import { navLinks, site } from '../lib/site'
 
 /** Marks the nav item whose section currently owns the viewport. */
@@ -103,7 +103,7 @@ export function Nav() {
         </ul>
 
         <div className="hidden lg:block">
-          <NebulaButton href="#contato">Agendar diagnóstico</NebulaButton>
+          <IrisButton href="#contato">Agendar diagnóstico</IrisButton>
         </div>
 
         <button
@@ -150,13 +150,13 @@ export function Nav() {
                 </li>
               ))}
             </ul>
-            <NebulaButton
+            <IrisButton
               href="#contato"
               className="mt-10 w-full"
               onClick={(event) => goToSection(event, '#contato')}
             >
               Agendar diagnóstico
-            </NebulaButton>
+            </IrisButton>
             <a
               href={`mailto:${site.email}`}
               className="label-voice mt-6 block text-center text-[10px]"

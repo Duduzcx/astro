@@ -1,16 +1,17 @@
-import { motion } from 'framer-motion'
-import { Aurora } from './scenes/Aurora'
-import { PlanetStage } from './PlanetStage'
-import { ArrowGlyph, GhostButton, NebulaButton } from './ui/Primitives'
+import { useRef } from 'react'
+import { motion, useScroll, useTransform } from 'framer-motion'
+import { VideoPlate } from './scenes/VideoPlate'
+import { ArrowGlyph, GhostButton, IrisButton, LineReveal } from './ui/Primitives'
+import { media } from '../lib/media'
 
 const rise = {
-  hidden: { opacity: 0, y: 24 },
+  hidden: { opacity: 0, y: 26 },
   show: { opacity: 1, y: 0 },
 }
 
 const stagger = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.09, delayChildren: 0.15 } },
+  show: { transition: { staggerChildren: 0.1, delayChildren: 0.5 } },
 }
 
 const telemetry = [
@@ -21,69 +22,72 @@ const telemetry = [
 ]
 
 export function Hero() {
+  const ref = useRef<HTMLElement>(null)
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] })
+  // The field sinks slower than the page: the type leaves, the footage stays a beat longer.
+  const videoY = useTransform(scrollYProgress, [0, 1], ['0%', '18%'])
+  const videoScale = useTransform(scrollYProgress, [0, 1], [1, 1.12])
+  const contentY = useTransform(scrollYProgress, [0, 1], ['0%', '-14%'])
+  const contentOpacity = useTransform(scrollYProgress, [0, 0.65], [1, 0])
+
   return (
-    <section id="topo" className="relative overflow-hidden">
-      <Aurora className="pointer-events-none absolute inset-0 h-full w-full" intensity={0.55} />
-      {/* Darkens the left half so the copy keeps its contrast over the colour field. */}
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(100deg,#030a1ce6_0%,#030a1c99_38%,transparent_72%)]" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-gradient-to-b from-transparent to-void" />
+    <section ref={ref} id="topo" className="relative min-h-[100svh] overflow-hidden">
+      <motion.div style={{ y: videoY, scale: videoScale }} className="absolute inset-0">
+        <VideoPlate src={media.particleWave} className="h-full w-full" />
+      </motion.div>
+      <div className="film-scrim pointer-events-none absolute inset-0" />
 
       <motion.div
-        variants={stagger}
-        initial="hidden"
-        animate="show"
-        className="shell relative z-10 grid min-h-[100svh] grid-cols-1 items-center gap-8 pt-28 pb-16 lg:grid-cols-12 lg:gap-8"
+        style={{ y: contentY, opacity: contentOpacity }}
+        className="relative z-10 flex min-h-[100svh] items-center pt-28 pb-16"
       >
-        <div className="lg:col-span-6">
-          <motion.p variants={rise} className="label-voice flex items-center gap-3 text-[11px]">
-            <span className="h-1.5 w-1.5 animate-[astro-pulse_2s_ease-in-out_infinite] rounded-full bg-[#4de0ff]" />
+        <motion.div variants={stagger} initial="hidden" animate="show" className="shell w-full">
+          <motion.p
+            variants={rise}
+            className="flex items-center gap-3 font-mono text-[12px] font-medium tracking-[0.16em] text-amber uppercase"
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-amber" />
             Engenharia de software sob medida
           </motion.p>
 
-          <motion.h1
-            variants={rise}
-            className="mt-6 text-[clamp(3.2rem,8.5vw,6.5rem)] leading-[0.86] uppercase"
-          >
-            Astro
-          </motion.h1>
+          <LineReveal
+            as="h1"
+            trigger="mount"
+            delay={0.6}
+            text={'A tecnologia que a sua\nempresa ainda faz na mão.'}
+            className="mt-7 max-w-4xl text-[clamp(2.6rem,6.2vw,5.6rem)] leading-[1.02]"
+          />
 
           <motion.p
             variants={rise}
-            className="mt-7 max-w-lg text-[clamp(1.05rem,1.7vw,1.35rem)] leading-[1.3] text-mist"
+            className="mt-8 max-w-lg text-[clamp(1.05rem,1.4vw,1.15rem)] leading-[1.5] text-silver"
           >
-            A gente constrói a tecnologia que a sua empresa ainda faz na mão. Sites, sistemas,
-            automações, integrações e produtos SaaS — no ar, com código seu.
+            Sites, sistemas, automações, integrações e produtos SaaS. Você descreve o problema, a
+            Astro entrega o software rodando em produção — com o código no seu nome.
           </motion.p>
 
-          <motion.div variants={rise} className="mt-9 flex flex-wrap items-center gap-3">
-            <NebulaButton href="#contato">
+          <motion.div variants={rise} className="mt-11 flex flex-wrap items-center gap-8">
+            <IrisButton href="#contato">
               Agendar diagnóstico <ArrowGlyph />
-            </NebulaButton>
+            </IrisButton>
             <GhostButton href="#sistema">Ver o sistema</GhostButton>
           </motion.div>
 
           <motion.dl
             variants={rise}
-            className="mt-14 grid grid-cols-2 gap-x-8 gap-y-6 border-t border-dashed border-slate/45 pt-7 sm:grid-cols-4"
+            className="mt-16 grid max-w-4xl grid-cols-2 gap-x-10 gap-y-8 sm:grid-cols-4"
           >
             {telemetry.map((item) => (
               <div key={item.label}>
-                <dt className="label-voice text-[9px]">{item.label}</dt>
-                <dd className="mt-2 text-[1.1rem] leading-none text-phosphor uppercase">
+                <dt className="font-mono text-[10px] tracking-[0.16em] text-ash uppercase">
+                  {item.label}
+                </dt>
+                <dd className="mt-2.5 text-[1.3rem] leading-none tracking-[-0.02em] text-platinum">
                   {item.value}
                 </dd>
               </div>
             ))}
           </motion.dl>
-        </div>
-
-        {/* The object leads. It is the first thing the page shows and the last thing
-            anyone forgets about it. */}
-        <motion.div
-          variants={rise}
-          className="relative min-w-0 lg:col-span-6 lg:-mr-[6vw]"
-        >
-          <PlanetStage className="h-[42vh] w-full lg:h-[74vh]" />
         </motion.div>
       </motion.div>
     </section>

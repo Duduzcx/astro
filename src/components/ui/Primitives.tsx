@@ -1,7 +1,7 @@
 import type { MouseEventHandler, ReactNode } from 'react'
 import { motion } from 'framer-motion'
 
-/** Eyebrow. Mono + wide tracking so labels read as instrument panel, not decoration. */
+/** Eyebrow. Amber is the emphasis colour and appears nowhere else. */
 export function Label({
   children,
   className = '',
@@ -9,7 +9,13 @@ export function Label({
   children: ReactNode
   className?: string
 }) {
-  return <span className={`label-voice block text-[11px] ${className}`}>{children}</span>
+  return (
+    <span
+      className={`block font-mono text-[12px] font-medium tracking-[0.16em] text-amber uppercase ${className}`}
+    >
+      {children}
+    </span>
+  )
 }
 
 /** Dashed hairline. The only separator in the system. */
@@ -17,8 +23,11 @@ export function DashedRule({ className = '' }: { className?: string }) {
   return <hr className={`dashed-rule ${className}`} />
 }
 
-/** Primary CTA. The gradient appears here and nowhere else. */
-export function NebulaButton({
+/**
+ * The one filled action on the page. Violet, pill, never duplicated within a
+ * view — its scarcity is what makes it read as *the* next step.
+ */
+export function IrisButton({
   href,
   children,
   className = '',
@@ -30,17 +39,20 @@ export function NebulaButton({
   onClick?: MouseEventHandler<HTMLAnchorElement>
 }) {
   return (
-    <a
+    <motion.a
       href={href}
       onClick={onClick}
-      className={`nebula inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-[#03102e] transition-[filter,transform] duration-200 hover:brightness-110 active:translate-y-px ${className}`}
+      whileHover={{ scale: 1.03 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 26 }}
+      className={`inline-flex items-center justify-center gap-2.5 rounded-full bg-iris px-7 py-4 text-[14px] font-medium tracking-[0.02em] text-platinum uppercase shadow-[0_0_0_0_rgba(128,82,255,0.5)] transition-shadow duration-300 hover:shadow-[0_0_40px_-6px_rgba(128,82,255,0.85)] ${className}`}
     >
       {children}
-    </a>
+    </motion.a>
   )
 }
 
-/** Secondary action. Border does the work — no fill, no gradient. */
+/** Secondary action. Bare text with a rule under it — no container competes with the pill. */
 export function GhostButton({
   href,
   children,
@@ -56,9 +68,10 @@ export function GhostButton({
     <a
       href={href}
       onClick={onClick}
-      className={`inline-flex items-center justify-center gap-2 rounded-full border border-mist/60 px-7 py-3.5 font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-mist transition-colors duration-200 hover:border-mist hover:bg-mist/10 ${className}`}
+      className={`group inline-flex items-center gap-2.5 py-4 text-[14px] font-normal tracking-[0.02em] text-silver uppercase transition-colors duration-300 hover:text-platinum ${className}`}
     >
       {children}
+      <span className="block h-px w-6 bg-current transition-all duration-300 group-hover:w-10" />
     </a>
   )
 }
@@ -97,10 +110,67 @@ export function Reveal({
       initial={{ opacity: 0, y: 18 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-80px' }}
-      transition={{ duration: 0.65, delay, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.7, delay, ease: [0.22, 1, 0.36, 1] }}
     >
       {children}
     </motion.div>
+  )
+}
+
+/**
+ * Headline that rises line by line from behind a mask. Splitting on an explicit
+ * separator rather than on words keeps the line breaks the author intended.
+ */
+export function LineReveal({
+  text,
+  className = '',
+  delay = 0,
+  as: Tag = 'h2',
+  trigger = 'view',
+}: {
+  text: string
+  className?: string
+  delay?: number
+  as?: 'h1' | 'h2' | 'h3'
+  /**
+   * Above the fold there is nothing to scroll into, and a parent driving variants
+   * would swallow `whileInView` anyway — so the hero animates on mount instead.
+   */
+  trigger?: 'view' | 'mount'
+}) {
+  const lines = text.split('\n')
+  const MotionTag = motion[Tag]
+
+  return (
+    /**
+     * The trigger lives on the heading, never on the masked line. A line sitting
+     * at y:110% is fully clipped by its `overflow: hidden` parent, and
+     * IntersectionObserver counts ancestor clipping — so observing the line
+     * itself yields ratio 0 forever and the reveal never fires.
+     */
+    <MotionTag
+      className={className}
+      initial="hidden"
+      {...(trigger === 'mount'
+        ? { animate: 'show' }
+        : { whileInView: 'show', viewport: { once: true, margin: '-12%' } })}
+    >
+      {lines.map((line, index) => (
+        <span key={line + index} className="block overflow-hidden pb-[0.08em]">
+          <motion.span
+            className="block"
+            variants={{ hidden: { y: '110%' }, show: { y: '0%' } }}
+            transition={{
+              duration: 0.9,
+              delay: delay + index * 0.09,
+              ease: [0.16, 1, 0.3, 1],
+            }}
+          >
+            {line}
+          </motion.span>
+        </span>
+      ))}
+    </MotionTag>
   )
 }
 
@@ -115,7 +185,7 @@ export function Section({
   className?: string
 }) {
   return (
-    <section id={id} className={`py-20 md:py-24 ${className}`}>
+    <section id={id} className={`py-24 md:py-32 ${className}`}>
       <div className="shell">{children}</div>
     </section>
   )
@@ -129,21 +199,27 @@ export function SectionHead({
   className = '',
 }: {
   label: string
-  title: ReactNode
+  title: string
   lead?: string
   className?: string
 }) {
   return (
-    <Reveal className={className}>
-      <Label>{label}</Label>
-      <h2 className="mt-6 max-w-2xl text-[clamp(2rem,5vw,3.25rem)] leading-[0.9] uppercase">
-        {title}
-      </h2>
+    <div className={className}>
+      <Reveal>
+        <Label>{label}</Label>
+      </Reveal>
+      <LineReveal
+        text={title}
+        delay={0.08}
+        className="mt-7 max-w-3xl text-[clamp(2.4rem,5.4vw,4.4rem)] leading-[1.05]"
+      />
       {lead ? (
-        <p className="mt-7 max-w-xl text-[clamp(1rem,1.5vw,1.2rem)] leading-[1.26] text-mist">
-          {lead}
-        </p>
+        <Reveal delay={0.2}>
+          <p className="mt-8 max-w-xl text-[clamp(1rem,1.35vw,1.125rem)] leading-[1.5] text-silver">
+            {lead}
+          </p>
+        </Reveal>
       ) : null}
-    </Reveal>
+    </div>
   )
 }

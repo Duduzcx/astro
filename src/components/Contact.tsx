@@ -1,5 +1,5 @@
 import { Aurora } from './scenes/Aurora'
-import { ArrowGlyph, DashedRule, GhostButton, Label, NebulaButton, Reveal } from './ui/Primitives'
+import { ArrowGlyph, DashedRule, GhostButton, Label, IrisButton, Reveal } from './ui/Primitives'
 import { site } from '../lib/site'
 
 const promises = [
@@ -39,9 +39,9 @@ export function Contact() {
             </div>
 
             <div className="flex flex-col gap-4">
-              <NebulaButton href={site.whatsapp.href} className="w-full">
+              <IrisButton href={site.whatsapp.href} className="w-full">
                 Falar no WhatsApp <ArrowGlyph />
-              </NebulaButton>
+              </IrisButton>
               <GhostButton href={`mailto:${site.email}`} className="w-full">
                 {site.email}
               </GhostButton>

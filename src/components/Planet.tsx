@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
-import { createPlanetTexture, createRingTexture } from '../lib/textures'
+import { createCloudTexture, createPlanetTexture, createRingTexture } from '../lib/textures'
 
 /** Rim light. Cheap fresnel — brightest where the surface turns away from the camera. */
 const atmosphereShader = {
@@ -54,15 +54,32 @@ export function Planet({ className = '' }: { className?: string }) {
     planetTexture.wrapS = THREE.RepeatWrapping
 
     const planet = new THREE.Mesh(
-      new THREE.SphereGeometry(1.55, 96, 96),
-      new THREE.MeshStandardMaterial({ map: planetTexture, roughness: 0.92, metalness: 0.05 }),
+      new THREE.SphereGeometry(1.55, 128, 128),
+      new THREE.MeshStandardMaterial({ map: planetTexture, roughness: 0.95, metalness: 0.02 }),
     )
     planet.rotation.z = THREE.MathUtils.degToRad(-14)
 
+    // Second shell, turning faster than the surface. The parallax between the two
+    // is what reads as atmosphere instead of as a painted ball.
+    const cloudTexture = new THREE.CanvasTexture(createCloudTexture())
+    cloudTexture.colorSpace = THREE.SRGBColorSpace
+    const clouds = new THREE.Mesh(
+      new THREE.SphereGeometry(1.575, 96, 96),
+      new THREE.MeshStandardMaterial({
+        map: cloudTexture,
+        transparent: true,
+        opacity: 0.55,
+        roughness: 1,
+        metalness: 0,
+        depthWrite: false,
+      }),
+    )
+    clouds.rotation.z = planet.rotation.z
+
     const atmosphere = new THREE.Mesh(
-      // Barely larger than the planet, so the glow hugs the limb instead of
+      // Barely larger than the cloud shell, so the glow hugs the limb instead of
       // drawing its own silhouette as a detached ring.
-      new THREE.SphereGeometry(1.575, 64, 64),
+      new THREE.SphereGeometry(1.6, 64, 64),
       new THREE.ShaderMaterial({
         ...atmosphereShader,
         blending: THREE.AdditiveBlending,
@@ -98,15 +115,19 @@ export function Planet({ className = '' }: { className?: string }) {
     ring.rotation.y = THREE.MathUtils.degToRad(-14)
 
     const group = new THREE.Group()
-    group.add(planet, atmosphere, ring)
+    group.add(planet, clouds, atmosphere, ring)
     scene.add(group)
 
-    // Key light upper right, cold fill from the opposite side, almost no ambient.
-    const key = new THREE.DirectionalLight(0xdfeaff, 3.1)
-    key.position.set(4, 3.4, 3)
-    const fill = new THREE.DirectionalLight(0x1b4dff, 0.9)
-    fill.position.set(-5, -1.5, -2)
-    scene.add(key, fill, new THREE.AmbientLight(0x0a2050, 0.55))
+    // Three-point rig. The key is warm and slightly off-axis so the terminator
+    // falls across the visible face instead of hiding at the edge; the violet
+    // bounce keeps the night side readable without flattening it.
+    const key = new THREE.DirectionalLight(0xfff0d8, 3.4)
+    key.position.set(3.6, 2.8, 2.4)
+    const bounce = new THREE.DirectionalLight(0x8052ff, 1.1)
+    bounce.position.set(-4.5, -1.2, -1.5)
+    const rim = new THREE.DirectionalLight(0x9fd0ff, 1.5)
+    rim.position.set(-2.5, 1.8, -3.5)
+    scene.add(key, bounce, rim, new THREE.AmbientLight(0x0a1330, 0.4))
 
     let pointerX = 0
     let pointerY = 0
@@ -135,6 +156,8 @@ export function Planet({ className = '' }: { className?: string }) {
 
       if (!reduceMotion) {
         planet.rotation.y += 0.0016
+        // Clouds lead the surface — the differential is the whole point of the shell.
+        clouds.rotation.y += 0.0023
         ring.rotation.z += 0.0004
       }
 
@@ -159,6 +182,7 @@ export function Planet({ className = '' }: { className?: string }) {
       window.removeEventListener('pointermove', onPointerMove)
       renderer.dispose()
       planetTexture.dispose()
+      cloudTexture.dispose()
       ringTexture.dispose()
       scene.traverse((object) => {
         if (object instanceof THREE.Mesh) {
