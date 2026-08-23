@@ -72,6 +72,7 @@ export function Nav() {
   }
 
   return (
+    <>
     <motion.header
       initial={{ y: -24, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
@@ -136,15 +137,18 @@ export function Nav() {
           </span>
         </button>
       </nav>
+    </motion.header>
 
-      <AnimatePresence>
+    {/* The overlay must live OUTSIDE the header: the header's backdrop-blur
+        creates a containing block that would trap this fixed panel inside it. */}
+    <AnimatePresence>
         {menuOpen ? (
           <motion.div
             initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed inset-0 top-14 flex flex-col overflow-hidden bg-onyx/95 backdrop-blur-xl md:top-20 lg:hidden"
+            className="fixed inset-0 top-14 z-40 flex flex-col overflow-hidden bg-onyx/95 backdrop-blur-xl md:top-20 lg:hidden"
           >
             <div className="aurora" aria-hidden="true" />
 
@@ -206,6 +210,6 @@ export function Nav() {
           </motion.div>
         ) : null}
       </AnimatePresence>
-    </motion.header>
+    </>
   )
 }
