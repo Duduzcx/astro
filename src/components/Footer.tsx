@@ -17,7 +17,7 @@ export function Footer() {
             <p className="font-impact text-[clamp(2.2rem,5vw,4rem)] leading-[1.06] text-ivory">
               A sua operação tem a resposta.
               <br />
-              Peça pra Astro Bot construir.
+              Peça pra Astro Soluções construir.
             </p>
             <div className="mt-10 flex justify-center">
               <IrisButton href={site.whatsapp.href}>
@@ -42,17 +42,7 @@ export function Footer() {
               Sistemas, sites, automações e integrações sob medida para empresas que querem parar
               de operar no manual.
             </p>
-            <div className="mt-6 flex gap-5">
-              <a href={site.linkedin} className="text-[14px] text-slate transition-colors hover:text-ivory">
-                LinkedIn
-              </a>
-              <a href={site.instagram} className="text-[14px] text-slate transition-colors hover:text-ivory">
-                Instagram
-              </a>
-              <a href={site.github} className="text-[14px] text-slate transition-colors hover:text-ivory">
-                GitHub
-              </a>
-            </div>
+            {/* Social links go here as soon as the profiles exist. */}
           </div>
 
           <nav aria-label="Mapa do site">
@@ -84,7 +74,6 @@ export function Footer() {
                   {site.whatsapp.label} (WhatsApp)
                 </a>
               </li>
-              <li className="text-slate">{site.address}</li>
               <li className="text-slate">{site.hours}</li>
             </ul>
           </div>
@@ -93,10 +82,10 @@ export function Footer() {
         <div className="border-t border-white/10">
           <div className="shell flex flex-col gap-2 py-5 md:flex-row md:items-center md:justify-between">
             <p className="text-[12px] font-[420] tracking-[0.01em] text-slate">
-              © {year} {site.legalName} · CNPJ {site.cnpj} · {site.city}
+              © {year} {site.name} · CNPJ {site.cnpj} · {site.city}
             </p>
             <p className="text-[12px] font-[420] tracking-[0.01em] text-slate">
-              Feito em São Paulo, com software que trabalha de madrugada.
+              Feito com software que trabalha de madrugada.
             </p>
           </div>
         </div>

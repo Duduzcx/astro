@@ -6,7 +6,7 @@ export function Logo({ className = '' }: { className?: string }) {
         <path d="M12 2.6 21 20H3L12 2.6Z" stroke="#5266eb" strokeWidth="1.8" strokeLinejoin="round" />
         <path d="M12 9.4 16.4 18H7.6L12 9.4Z" fill="#ededf3" />
       </svg>
-      <span className="text-[17px] font-[480] tracking-[-0.01em] text-ivory">Astro Bot</span>
+      <span className="text-[17px] font-[480] tracking-[-0.01em] text-ivory">Astro Soluções</span>
     </span>
   )
 }

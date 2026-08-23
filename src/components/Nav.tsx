@@ -81,7 +81,7 @@ export function Nav() {
       }`}
     >
       <nav className="shell flex h-20 items-center justify-between" aria-label="Principal">
-        <a href="#topo" className="shrink-0" aria-label="Astro Bot — ir para o topo">
+        <a href="#topo" className="shrink-0" aria-label="Astro Soluções — ir para o topo">
           <Logo />
         </a>
 

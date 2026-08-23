@@ -1,33 +1,37 @@
 import { AnimatedNumber, GiantWord, Reveal, WordReveal } from './ui/Primitives'
 
-/** Invented case studies: pain → build → number, plus the stack that shipped it. */
+/**
+ * Typical scenarios (labelled by segment, not by client — the company is new
+ * and doesn't claim a track record it doesn't have yet). Swap for real cases
+ * with real names as they close.
+ */
 const cases = [
   {
-    client: 'Vetra Logística',
-    metric: '-38%',
-    metricLabel: 'custo por entrega',
-    problem: 'Rotas montadas à mão numa planilha que só um analista sabia operar.',
-    solution: 'Roteirização automática integrada ao ERP, com app simples pro motorista.',
-    result: 'Rota pronta às 6h da manhã, antes do primeiro caminhão sair do pátio.',
-    tech: ['Node.js', 'Postgres', 'AWS', 'React Native'],
+    client: 'Logística',
+    metric: '-6h',
+    metricLabel: 'de planilha por dia',
+    problem: 'Rotas montadas à mão numa planilha que só uma pessoa sabe operar.',
+    solution: 'Roteirização automática integrada ao sistema de gestão, com app simples pro motorista.',
+    result: 'Rota pronta de manhã cedo, antes do primeiro caminhão sair do pátio.',
+    tech: ['Node.js', 'Postgres', 'App do motorista'],
   },
   {
-    client: 'Clínica Áurea',
-    metric: '3×',
-    metricLabel: 'mais agendamentos',
-    problem: 'Recepção afogada em ligações; paciente desistia antes de conseguir marcar.',
-    solution: 'Portal do paciente e bot de agenda no WhatsApp, ligados ao prontuário.',
-    result: '70% das marcações acontecem fora do horário comercial, sozinhas.',
-    tech: ['Next.js', 'WhatsApp API', 'Postgres'],
+    client: 'Saúde',
+    metric: '24h',
+    metricLabel: 'de agenda funcionando',
+    problem: 'Recepção afogada em ligações; paciente desiste antes de conseguir marcar.',
+    solution: 'Portal do paciente e assistente de agenda no WhatsApp, ligados ao prontuário.',
+    result: 'Marcações acontecem a qualquer hora — sem depender do telefone tocar.',
+    tech: ['WhatsApp', 'Agenda', 'Portal'],
   },
   {
-    client: 'Mercado Bonfim',
-    metric: '+52%',
-    metricLabel: 'receita online',
-    problem: 'Loja online vendia produto em falta e o estoque físico nunca batia.',
-    solution: 'E-commerce ligado ao estoque em tempo real, com catálogo que se atualiza só.',
-    result: 'Acabou a venda furada — e o time parou de conferir estoque de madrugada.',
-    tech: ['React', 'Tailwind', 'Node.js', 'Redis'],
+    client: 'Varejo',
+    metric: '1×',
+    metricLabel: 'o dado entra uma vez só',
+    problem: 'Loja online vende produto em falta e o estoque físico nunca bate.',
+    solution: 'E-commerce ligado ao estoque em tempo real, com catálogo que se atualiza sozinho.',
+    result: 'Acabou a venda furada — e a conferência de madrugada.',
+    tech: ['E-commerce', 'Estoque', 'Integração'],
   },
 ] as const
 
@@ -36,11 +40,11 @@ export function Cases() {
     <section id="resultados" aria-label="Resultados" className="relative z-10 overflow-hidden py-24 md:py-32">
       <GiantWord word="Prova" className="opacity-70" />
       <div className="shell relative">
-        <WordReveal text="Resultados medidos" className="font-impact max-w-2xl text-[clamp(2.4rem,5.2vw,4.2rem)]" />
+        <WordReveal text="O que a gente resolve" className="font-impact max-w-2xl text-[clamp(2.4rem,5.2vw,4.2rem)]" />
         <Reveal delay={0.12}>
           <p className="mt-6 max-w-md text-ash">
-            Todo projeto começa com uma métrica combinada. Três histórias completas: a dor, o que a
-            gente construiu e o número que ficou.
+            Três cenários típicos de quem opera no manual — a dor, o que a gente constrói e o que
+            muda no dia seguinte. Todo projeto começa com uma métrica combinada em contrato.
           </p>
         </Reveal>
 

@@ -1,25 +1,21 @@
 /**
  * Single source of truth for company details and nav targets.
- * Everything here is placeholder data — swap for the real values before launch.
+ * Real data provided by the founders; e-mail is the provisional Gmail until
+ * the domain mailbox exists. No social profiles yet — add them here when live.
  */
 export const site = {
-  name: 'Astro Bot',
-  legalName: 'Astro Bot Tecnologia LTDA',
-  cnpj: '00.000.000/0001-00',
-  email: 'contato@astrobot.dev.br',
+  name: 'Astro Soluções',
+  cnpj: '65.903.572/0001-26',
+  email: 'sq1matheusgsilva@gmail.com',
   phone: {
-    label: '+55 (11) 90000-0000',
-    href: 'tel:+5511900000000',
+    label: '(11) 95008-5875',
+    href: 'tel:+5511950085875',
   },
   whatsapp: {
-    label: '+55 (11) 90000-0000',
-    href: 'https://wa.me/5511900000000?text=Quero%20agendar%20um%20diagn%C3%B3stico%20com%20a%20Astro%20Bot',
+    label: '(11) 95008-5875',
+    href: 'https://wa.me/5511950085875?text=Quero%20agendar%20um%20diagn%C3%B3stico%20com%20a%20Astro%20Solu%C3%A7%C3%B5es',
   },
-  linkedin: 'https://linkedin.com/company/astrobot',
-  instagram: 'https://instagram.com/astrobot.tech',
-  github: 'https://github.com/astrobot',
-  address: 'Av. Paulista, 1000 · Sala 71 · Bela Vista, São Paulo/SP',
-  hours: 'Segunda a sexta, das 9h às 18h',
+  hours: 'Atendimento 24h — equipe das 8h às 21h, assistente de IA no restante',
   city: 'São Paulo, Brasil',
 } as const
 
@@ -27,7 +23,7 @@ export const site = {
 export const navLinks = [
   { label: 'Serviços', href: '#servicos' },
   { label: 'Processo', href: '#processo' },
-  { label: 'Clientes', href: '#clientes' },
+  { label: 'Entregáveis', href: '#entregaveis' },
   { label: 'Contato', href: '#contato' },
 ] as const
 
@@ -37,7 +33,7 @@ export const footerLinks = [
   { label: 'Manifesto', href: '#manifesto' },
   { label: 'Sobre nós', href: '#sobre' },
   { label: 'Processo', href: '#processo' },
-  { label: 'Resultados', href: '#resultados' },
+  { label: 'O que você recebe', href: '#entregaveis' },
   { label: 'Equipe', href: '#equipe' },
   { label: 'Tech insights', href: '#insights' },
   { label: 'Perguntas frequentes', href: '#faq' },

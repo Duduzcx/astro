@@ -47,7 +47,7 @@ export function Hero() {
             variants={rise}
             className="mt-4 max-w-md text-[clamp(1.05rem,1.4vw,1.2rem)] leading-[1.55] text-ash"
           >
-            A Astro Bot cria{' '}
+            A Astro Soluções cria{' '}
             <RotatingWord words={['sites', 'sistemas', 'robôs', 'painéis', 'integrações']} /> que
             trabalham pela sua empresa. Sua equipe cuida dos clientes — o resto roda no automático.
           </motion.p>

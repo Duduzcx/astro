@@ -13,9 +13,8 @@ import { Cases } from './components/Cases'
 import { CtaBand } from './components/CtaBand'
 import { Process } from './components/Process'
 import { About } from './components/About'
+import { Deliverables } from './components/Deliverables'
 import { Team } from './components/Team'
-import { Clients } from './components/Clients'
-import { Testimonials } from './components/Testimonials'
 import { Insights } from './components/Insights'
 import { Faq } from './components/Faq'
 import { Contact } from './components/Contact'
@@ -61,10 +60,9 @@ export default function App() {
         <Cases />
         <CtaBand />
         <Process />
+        <Deliverables />
         <About />
         <Team />
-        <Clients />
-        <Testimonials />
         <Insights />
         <Faq />
         <Contact />

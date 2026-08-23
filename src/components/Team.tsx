@@ -1,43 +1,31 @@
 import { useEffect, useRef, useState } from 'react'
 import { WordReveal, Reveal } from './ui/Primitives'
 
-/** Invented crew. Triangle avatars keep the particle language at card scale. */
+/** The real founding trio. Roles are provisional — refine as the company defines them. */
 const members = [
   {
-    name: 'Rafael Duarte',
-    role: 'CEO & Fundador',
-    bio: 'Dez anos automatizando operações em fintechs antes de fundar a Astro Bot.',
+    name: 'Eduardo',
+    role: 'Cofundador · Desenvolvimento',
+    bio: 'Constrói o produto de ponta a ponta — do primeiro protótipo ao sistema rodando em produção.',
     color: '#5266eb',
   },
   {
-    name: 'Marina Costa',
-    role: 'Head de Engenharia',
-    bio: 'Lidera a arquitetura dos sistemas — obcecada por software que não quebra na virada do mês.',
+    name: 'Matheus',
+    role: 'Cofundador · Engenharia',
+    bio: 'Responsável técnico: arquitetura, qualidade e a garantia de que tudo que sai daqui é auditável.',
+    color: '#4dd6e8',
+  },
+  {
+    name: 'Luana',
+    role: 'Cofundadora · Operações',
+    bio: 'Cuida da experiência do cliente do diagnóstico à entrega — e do atendimento que não dorme.',
     color: '#ededf3',
-  },
-  {
-    name: 'Lucas Ferreira',
-    role: 'Automações & IA',
-    bio: 'Transforma rotina repetitiva em robô. Se fez duas vezes na mão, ele já está automatizando.',
-    color: '#7d8bf0',
-  },
-  {
-    name: 'Ana Beltrão',
-    role: 'Produto & Design',
-    bio: 'Traduz processo confuso em tela simples. Defende o usuário em toda decisão.',
-    color: '#c3c3cc',
-  },
-  {
-    name: 'Pedro Sales',
-    role: 'Integrações',
-    bio: 'Faz ERP, CRM e WhatsApp conversarem — mesmo quando a documentação da API não ajuda.',
-    color: '#8b8fa8',
   },
 ] as const
 
 function initials(name: string) {
   const parts = name.split(' ')
-  return `${parts[0][0]}${parts[parts.length - 1][0]}`
+  return parts.length > 1 ? `${parts[0][0]}${parts[parts.length - 1][0]}` : parts[0][0]
 }
 
 export function Team() {

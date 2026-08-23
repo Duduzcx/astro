@@ -1,11 +1,11 @@
 import { AnimatedNumber, Reveal, WordReveal } from './ui/Primitives'
 
-/** Invented numbers, plainly presented — the fictional track record of the startup. */
+/** Real commitments from the deliverables annex — verifiable, not vanity metrics. */
 const stats = [
-  { label: 'Projetos entregues', value: '40+' },
-  { label: 'Horas automatizadas por ano', value: '12 mil' },
-  { label: 'Clientes que seguem com a gente', value: '98%' },
-  { label: 'Dias até a primeira entrega', value: '14' },
+  { label: 'Frentes de entrega em todo projeto', value: '12' },
+  { label: 'Propriedade do código é sua', value: '100%' },
+  { label: 'Dias de garantia técnica (SLA)', value: '30–90' },
+  { label: 'Atendimento por dia, com IA de plantão', value: '24h' },
 ] as const
 
 /**

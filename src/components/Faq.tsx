@@ -2,32 +2,32 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { WordReveal, Reveal } from './ui/Primitives'
 
-/** Invented answers with realistic ranges — adjust to the real practice. */
+/** Answers grounded in the real deliverables annex — prices land in the proposal, not here. */
 const faqs = [
   {
     question: 'Quanto custa um projeto?',
     answer:
-      'Depende do escopo. Automações e integrações pontuais partem de R$ 6 mil; sistemas completos costumam ficar entre R$ 25 mil e R$ 80 mil. O diagnóstico é gratuito e sai com uma estimativa fechada.',
+      'Depende do escopo. O diagnóstico é gratuito e sai com uma proposta fechada: preço, prazo e marcos de pagamento atrelados às fases do projeto — sem surpresa no meio do caminho.',
   },
   {
-    question: 'Quanto tempo leva?',
+    question: 'Como funciona o projeto?',
     answer:
-      'A primeira entrega em produção acontece em até 14 dias. Projetos completos rodam em sprints quinzenais — a maioria fecha entre 6 e 12 semanas.',
+      'Cinco fases claras: descoberta, design aprovado no Figma, desenvolvimento com ambiente de homologação, bateria de testes e lançamento com transferência total pro seu nome.',
   },
   {
     question: 'O código é meu?',
     answer:
-      'Sim, 100%. Repositório no seu nome desde o primeiro commit, documentação incluída, zero lock-in. Se um dia quiser seguir com outro time, é só seguir.',
+      'Sim, 100%. Repositório com acesso de administrador, chaves e acessos no seu nome e Termo de Cessão de Propriedade Intelectual formalizando tudo. Zero dependência da gente.',
   },
   {
     question: 'E depois do lançamento?',
     answer:
-      'Todo projeto sai com 30 dias de garantia. Depois, planos de evolução contínua a partir de R$ 1,5 mil/mês — monitoramento, correções e melhorias priorizadas com você.',
+      'Todo projeto sai com garantia técnica de 30 a 90 dias definida em contrato. Depois, suporte e evolução contínua são opcionais — você recebe treinamento e documentação pra operar sozinho.',
   },
   {
-    question: 'Com que tecnologias vocês trabalham?',
+    question: 'Que horário vocês atendem?',
     answer:
-      'React, TypeScript e Node no produto; Postgres nos dados; integrações com ERPs, CRMs, WhatsApp Business e o que a sua operação já usa. Escolhemos ferramenta pelo problema, não pela moda.',
+      'Atendimento 24h: a equipe responde das 8h às 21h, e fora desse horário um assistente de IA registra e resolve o que der — quando você acordar, já tem resposta.',
   },
 ] as const
 
@@ -54,8 +54,8 @@ export function Faq() {
                 <p className="label-voice text-[10px]">Sem letra miúda</p>
                 <ul className="mt-4 flex flex-col gap-3">
                   {[
-                    'Resposta em até 1 dia útil',
-                    '30 dias de garantia em toda entrega',
+                    'Atendimento 24h — equipe + IA de plantão',
+                    'Garantia técnica de 30 a 90 dias em contrato',
                     'Código 100% no seu nome, sem aluguel',
                   ].map((item) => (
                     <li key={item} className="flex items-center gap-3 text-[14px] text-ash">

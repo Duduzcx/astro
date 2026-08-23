@@ -2,27 +2,32 @@ import { useEffect, useRef, useState } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { GiantWord, Label, Reveal, WordReveal } from './ui/Primitives'
 
-/** Numbered because it IS a sequence — this is the actual order of an engagement. */
+/** The five real phases from the deliverables document — payment milestones ride on them. */
 const steps = [
   {
     number: '01',
-    title: 'Diagnóstico',
-    body: 'Uma conversa de 45 minutos. Mapeamos o processo, os sistemas atuais e onde o tempo se perde. Gratuito e sem compromisso.',
+    title: 'Descoberta & Planejamento',
+    body: 'Levantamento de requisitos, definição de escopo, arquitetura da solução e aprovação do cronograma. Marco inicial do projeto.',
   },
   {
     number: '02',
-    title: 'Proposta',
-    body: 'Escopo fechado com preço e prazo. Você sabe o que recebe, quando recebe e quanto custa — antes de assinar qualquer coisa.',
+    title: 'Design UI/UX',
+    body: 'Protótipo de alta fidelidade no Figma e fluxos de navegação. Você aprova o visual antes da primeira linha de código.',
   },
   {
     number: '03',
-    title: 'Sprints',
-    body: 'Entregas a cada duas semanas, direto em produção. Você acompanha o avanço de perto e ajusta a rota com a gente.',
+    title: 'Desenvolvimento',
+    body: 'Construção em ciclos, com ambiente de homologação pra você acompanhar cada funcionalidade conforme fica pronta.',
   },
   {
     number: '04',
-    title: 'Evolução',
-    body: 'Depois do lançamento: monitoramento, correções e melhorias contínuas. O sistema cresce junto com a operação.',
+    title: 'Testes & Homologação',
+    body: 'Bateria de testes em navegadores e dispositivos, correções e validação conjunta antes de qualquer lançamento.',
+  },
+  {
+    number: '05',
+    title: 'Lançamento & Transferência',
+    body: 'Deploy em produção, migração de acessos e faturamento pro seu nome, Termo de Aceite e início da garantia técnica.',
   },
 ] as const
 
@@ -73,7 +78,7 @@ export function Process() {
   }, [])
 
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end end'] })
-  const x = useTransform(scrollYProgress, [0.12, 0.92], ['4%', '-46%'])
+  const x = useTransform(scrollYProgress, [0.12, 0.92], ['3%', '-56%'])
 
   const header = (
     <>

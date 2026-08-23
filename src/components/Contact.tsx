@@ -38,7 +38,8 @@ export function Contact() {
             <WordReveal text={'Conta pra gente\no seu desafio'} className="font-impact text-[clamp(2.4rem,5.2vw,4.2rem)]" />
             <Reveal delay={0.12}>
               <p className="mt-6 max-w-md text-ash">
-                Responde em até um dia útil. Se preferir pular a fila: uma conversa técnica de 20
+                Atendimento 24h: a equipe responde das 8h às 21h e, fora disso, nosso assistente de
+                IA já começa a resolver. Se preferir pular a fila: uma conversa técnica de 20
                 minutos, direto no WhatsApp.
               </p>
             </Reveal>
@@ -58,12 +59,7 @@ export function Contact() {
                 >
                   {site.email}
                 </a>
-                <a
-                  href={site.linkedin}
-                  className="w-fit text-[15px] text-ash underline-offset-4 transition-colors hover:text-ivory hover:underline"
-                >
-                  LinkedIn da Astro Bot
-                </a>
+                <p className="text-[13px] text-slate">{site.hours}</p>
               </div>
             </Reveal>
           </div>

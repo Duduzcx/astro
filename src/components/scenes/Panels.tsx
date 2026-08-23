@@ -210,7 +210,7 @@ export function PipelinePanel() {
   const inputs = ['ERP', 'Site', 'WhatsApp']
   const outputs = ['Financeiro', 'BI', 'Estoque']
   return (
-    <Frame label="Diagrama: ERP, site e WhatsApp entram na Astro Bot e saem para financeiro, BI e estoque">
+    <Frame label="Diagrama: ERP, site e WhatsApp entram na Astro Soluções e saem para financeiro, BI e estoque">
       <svg viewBox="0 0 440 220" className="w-full p-2" aria-hidden="true">
         {inputs.map((label, i) => {
           const y = 45 + i * 65

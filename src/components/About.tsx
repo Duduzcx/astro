@@ -24,23 +24,22 @@ export function About() {
   useAutoPauseVideo(videoRef)
 
   return (
-    <section id="sobre" aria-label="Sobre a Astro Bot" className="relative z-10 py-24 md:py-32">
+    <section id="sobre" aria-label="Sobre a Astro Soluções" className="relative z-10 py-24 md:py-32">
       <div className="shell">
         <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
           <div>
-            <WordReveal text={'Por que a Astro Bot\nexiste'} className="font-impact text-[clamp(2.4rem,5.2vw,4.2rem)]" />
+            <WordReveal text={'Por que a Astro Soluções\nexiste'} className="font-impact text-[clamp(2.4rem,5.2vw,4.2rem)]" />
             <Reveal delay={0.12}>
               <p className="mt-6 max-w-md leading-[1.6] text-ash">
-                A Astro Bot nasceu em 2023, dentro de uma operação de logística que vivia refém de
-                planilha. Depois de automatizar aquela rotina por conta própria — e ver o time
-                ganhar as noites de volta — a pergunta ficou: quantas empresas estão presas no
-                mesmo lugar?
+                A Astro Soluções nasceu da união de três pessoas cansadas de ver empresa boa presa
+                em planilha, papel e retrabalho — enquanto a tecnologia que resolveria isso ficava
+                cara e distante.
               </p>
             </Reveal>
             <Reveal delay={0.2}>
               <p className="mt-5 max-w-md leading-[1.6] text-ash">
-                A missão é essa até hoje: tirar operação séria do manual, com software sob medida
-                que a equipe gosta de usar — e código que pertence ao cliente.
+                A missão é simples: tirar operação séria do manual, com software sob medida que a
+                equipe gosta de usar — e código que pertence ao cliente, formalizado em contrato.
               </p>
             </Reveal>
           </div>

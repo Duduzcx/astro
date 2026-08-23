@@ -34,7 +34,7 @@ export function Marquee() {
         <div aria-hidden="true" className="flex">{row}</div>
         <div className="flex">{row}</div>
       </motion.div>
-      <p className="sr-only">Capacidades da Astro Bot: {capabilities.join(', ')}.</p>
+      <p className="sr-only">Capacidades da Astro Soluções: {capabilities.join(', ')}.</p>
     </div>
   )
 }
