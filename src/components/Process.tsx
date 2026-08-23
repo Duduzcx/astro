@@ -51,13 +51,19 @@ function StepCard({ step }: { step: (typeof steps)[number] }) {
  */
 export function Process() {
   const ref = useRef<HTMLElement>(null)
-  const [pinned, setPinned] = useState(false)
+  /* Decided on the FIRST render: if the pinned branch only appeared after an
+     effect, useScroll would initialise against a null target and the track
+     would never move. */
+  const [pinned, setPinned] = useState(
+    () =>
+      window.matchMedia('(min-width: 1024px)').matches &&
+      !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  )
 
   useEffect(() => {
     const wide = window.matchMedia('(min-width: 1024px)')
     const still = window.matchMedia('(prefers-reduced-motion: reduce)')
     const update = () => setPinned(wide.matches && !still.matches)
-    update()
     wide.addEventListener('change', update)
     still.addEventListener('change', update)
     return () => {
@@ -87,7 +93,7 @@ export function Process() {
 
   if (!pinned) {
     return (
-      <section id="processo" aria-label="Processo" className="relative z-10 py-24 md:py-32">
+      <section ref={ref} id="processo" aria-label="Processo" className="relative z-10 py-24 md:py-32">
         <div className="shell">
           {header}
           <div className="mt-12 grid gap-4 sm:grid-cols-2">

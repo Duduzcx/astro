@@ -1,0 +1,642 @@
+- generic [ref=f4e2]:
+  - link "Pular para o conteúdo" [ref=f4e7] [cursor=pointer]:
+    - /url: "#servicos"
+  - banner [ref=f4e8]:
+    - navigation "Principal" [ref=f4e9]:
+      - link "Astro Bot — ir para o topo" [ref=f4e10] [cursor=pointer]:
+        - /url: "#topo"
+        - generic [ref=f4e11]: Astro Bot
+      - list [ref=f4e16]:
+        - listitem [ref=f4e17]:
+          - link "Serviços" [ref=f4e18] [cursor=pointer]:
+            - /url: "#servicos"
+        - listitem [ref=f4e20]:
+          - link "Processo" [ref=f4e21] [cursor=pointer]:
+            - /url: "#processo"
+        - listitem [ref=f4e22]:
+          - link "Clientes" [ref=f4e23] [cursor=pointer]:
+            - /url: "#clientes"
+        - listitem [ref=f4e24]:
+          - link "Contato" [ref=f4e25] [cursor=pointer]:
+            - /url: "#contato"
+      - link "Agendar diagnóstico" [ref=f4e27] [cursor=pointer]:
+        - /url: "#contato"
+  - main [ref=f4e28]:
+    - generic [ref=f4e31]:
+      - heading "Destrave a sua operação." [level=1] [ref=f4e32]:
+        - generic [ref=f4e33]:
+          - generic [ref=f4e34]: Destrave
+          - generic [ref=f4e37]: a
+        - generic [ref=f4e40]:
+          - generic [ref=f4e41]: sua
+          - generic [ref=f4e44]: operação.
+      - generic [ref=f4e47]: Pare de operar no manual. Comece a escalar.
+      - paragraph [ref=f4e51]:
+        - text: A Astro Bot cria
+        - generic [ref=f4e52]: sites
+        - text: que trabalham pela sua empresa. Sua equipe cuida dos clientes — o resto roda no automático.
+      - generic [ref=f4e54]:
+        - link "Agendar diagnóstico" [ref=f4e55] [cursor=pointer]:
+          - /url: "#contato"
+        - link "Conhecer os serviços" [ref=f4e58] [cursor=pointer]:
+          - /url: "#servicos"
+    - generic [ref=f4e59]:
+      - generic [ref=f4e60]:
+        - generic [ref=f4e61]:
+          - generic [ref=f4e62]: Sites que vendem
+          - generic [ref=f4e66]: Sistemas sob medida
+          - generic [ref=f4e70]: Robôs de WhatsApp
+          - generic [ref=f4e74]: Cobrança automática
+          - generic [ref=f4e78]: Painéis em tempo real
+          - generic [ref=f4e82]: Tudo conectado
+        - generic [ref=f4e86]:
+          - generic [ref=f4e87]: Sites que vendem
+          - generic [ref=f4e91]: Sistemas sob medida
+          - generic [ref=f4e95]: Robôs de WhatsApp
+          - generic [ref=f4e99]: Cobrança automática
+          - generic [ref=f4e103]: Painéis em tempo real
+          - generic [ref=f4e107]: Tudo conectado
+      - paragraph [ref=f4e111]: "Capacidades da Astro Bot: Sites que vendem, Sistemas sob medida, Robôs de WhatsApp, Cobrança automática, Painéis em tempo real, Tudo conectado."
+    - region "Serviços" [ref=f4e112]:
+      - generic [ref=f4e114]:
+        - generic [ref=f4e115]:
+          - heading "Um sistema do jeito da sua empresa" [level=2] [ref=f4e116]:
+            - generic [ref=f4e117]:
+              - generic [ref=f4e118]: Um
+              - generic [ref=f4e121]: sistema
+              - generic [ref=f4e124]: do
+              - generic [ref=f4e127]: jeito
+            - generic [ref=f4e130]:
+              - generic [ref=f4e131]: da
+              - generic [ref=f4e134]: sua
+              - generic [ref=f4e137]: empresa
+          - paragraph [ref=f4e141]: Cadastro, agenda, estoque e cobrança numa tela só, do jeito que o seu negócio já funciona. Chega de caçar informação em cinco planilhas diferentes.
+          - paragraph [ref=f4e143]: Tudo num lugar só — qualquer pessoa da equipe aprende em um dia
+          - list [ref=f4e146]:
+            - listitem [ref=f4e147]: React
+            - listitem [ref=f4e148]: Next.js
+            - listitem [ref=f4e149]: Node.js
+            - listitem [ref=f4e150]: Postgres
+        - img "Tela de um sistema de gestão com indicadores e gráfico de faturamento" [ref=f4e154]:
+          - generic [ref=f4e159]:
+            - generic [ref=f4e160]:
+              - generic [ref=f4e161]: Visão geral
+              - generic [ref=f4e162]: Pedidos
+              - generic [ref=f4e163]: Agenda
+              - generic [ref=f4e164]: Estoque
+              - generic [ref=f4e165]: Financeiro
+              - generic [ref=f4e166]: Equipe
+            - generic [ref=f4e168]:
+              - generic [ref=f4e169]:
+                - paragraph [ref=f4e170]: Faturamento
+                - paragraph [ref=f4e171]: R$ 184 mil
+              - generic [ref=f4e172]:
+                - paragraph [ref=f4e173]: Pedidos hoje
+                - paragraph [ref=f4e174]: "312"
+              - generic [ref=f4e175]:
+                - paragraph [ref=f4e176]: Inadimplência
+                - paragraph [ref=f4e177]: 1,2%
+      - generic [ref=f4e183]:
+        - generic [ref=f4e184]:
+          - heading "Um site que traz clientes" [level=2] [ref=f4e185]:
+            - generic [ref=f4e186]:
+              - generic [ref=f4e187]: Um
+              - generic [ref=f4e190]: site
+              - generic [ref=f4e193]: que
+            - generic [ref=f4e196]:
+              - generic [ref=f4e197]: traz
+              - generic [ref=f4e200]: clientes
+          - paragraph [ref=f4e204]: "Bonito, rápido e ligado ao resto: o pedido que entra já aparece no estoque, na cobrança e no relatório. Ninguém precisa copiar e colar nada."
+          - paragraph [ref=f4e206]: Venda online sem medo de vender o que acabou
+          - list [ref=f4e209]:
+            - listitem [ref=f4e210]: React
+            - listitem [ref=f4e211]: Vite
+            - listitem [ref=f4e212]: Tailwind
+            - listitem [ref=f4e213]: Netlify
+        - img "Tela de um e-commerce com vitrine de produtos" [ref=f4e217]:
+          - generic [ref=f4e222]:
+            - generic [ref=f4e223]: mercadobonfim.com.br
+            - generic [ref=f4e226]:
+              - paragraph [ref=f4e227]: Feira da semana, entregue em casa
+              - paragraph [ref=f4e228]: Estoque sincronizado com a loja física
+            - generic [ref=f4e229]:
+              - generic [ref=f4e230]:
+                - paragraph [ref=f4e232]: Cesta orgânica
+                - paragraph [ref=f4e233]: R$ 89
+              - generic [ref=f4e234]:
+                - paragraph [ref=f4e236]: Café da casa
+                - paragraph [ref=f4e237]: R$ 34
+              - generic [ref=f4e238]:
+                - paragraph [ref=f4e240]: Assinatura
+                - paragraph [ref=f4e241]: R$ 149/mês
+            - generic [ref=f4e242]: Finalizar pedido
+      - generic [ref=f4e245]:
+        - generic [ref=f4e246]:
+          - heading "Robôs que trabalham por você" [level=2] [ref=f4e247]:
+            - generic [ref=f4e248]:
+              - generic [ref=f4e249]: Robôs
+              - generic [ref=f4e252]: que
+              - generic [ref=f4e255]: trabalham
+            - generic [ref=f4e258]:
+              - generic [ref=f4e259]: por
+              - generic [ref=f4e262]: você
+          - paragraph [ref=f4e266]: Cobrar quem atrasou, confirmar consulta, mandar relatório toda segunda. O robô faz o repetitivo e devolve horas pra sua equipe toda semana.
+          - paragraph [ref=f4e268]: Seu WhatsApp atende e agenda sozinho, até de madrugada
+          - list [ref=f4e271]:
+            - listitem [ref=f4e272]: Node.js
+            - listitem [ref=f4e273]: WhatsApp
+            - listitem [ref=f4e274]: Robôs
+            - listitem [ref=f4e275]: Agenda
+        - img "Conversa de WhatsApp em que o robô remarca uma consulta sozinho" [ref=f4e279]:
+          - generic [ref=f4e284]:
+            - generic [ref=f4e289]:
+              - paragraph [ref=f4e290]: Clínica Áurea · Assistente
+              - paragraph [ref=f4e291]: online agora
+            - generic [ref=f4e292]: Oi! Preciso remarcar minha consulta de quinta.
+            - generic [ref=f4e293]: Claro! Tenho quinta às 16h ou sexta às 9h30. Qual prefere?
+            - generic [ref=f4e294]: Sexta 9h30.
+            - generic [ref=f4e295]: Remarcado ✓ Enviei a confirmação por e-mail e avisei a recepção.
+            - paragraph [ref=f4e296]: resolvido em 40 segundos · sem tocar na recepção
+      - generic [ref=f4e298]:
+        - generic [ref=f4e299]:
+          - heading "Sensores e painéis ao vivo" [level=2] [ref=f4e300]:
+            - generic [ref=f4e301]:
+              - generic [ref=f4e302]: Sensores
+              - generic [ref=f4e305]: e
+              - generic [ref=f4e308]: painéis
+            - generic [ref=f4e311]:
+              - generic [ref=f4e312]: ao
+              - generic [ref=f4e315]: vivo
+          - paragraph [ref=f4e319]: A temperatura da câmara fria, o gasto de energia, a esteira que parou — tudo aparece no celular na hora. A ronda com prancheta vira alerta automático.
+          - paragraph [ref=f4e321]: Você fica sabendo do problema antes de virar prejuízo
+          - list [ref=f4e324]:
+            - listitem [ref=f4e325]: Sensores
+            - listitem [ref=f4e326]: Alertas
+            - listitem [ref=f4e327]: Painéis
+            - listitem [ref=f4e328]: Celular
+        - img "Painel de sensores IoT com leituras de temperatura, umidade e energia em tempo real" [ref=f4e332]:
+          - generic [ref=f4e337]:
+            - generic [ref=f4e338]:
+              - paragraph [ref=f4e339]: Telemetria · agora
+              - generic [ref=f4e340]: 42 sensores online
+            - generic [ref=f4e342]:
+              - generic [ref=f4e343]:
+                - paragraph [ref=f4e344]: Câmara fria 01
+                - paragraph [ref=f4e345]: "-18,2 °C"
+              - generic [ref=f4e348]:
+                - paragraph [ref=f4e349]: Umidade galpão
+                - paragraph [ref=f4e350]: 54%
+              - generic [ref=f4e353]:
+                - paragraph [ref=f4e354]: Energia linha A
+                - paragraph [ref=f4e355]: 12,4 kW
+              - generic [ref=f4e358]:
+                - paragraph [ref=f4e359]: Esteira 03
+                - paragraph [ref=f4e360]: ativa
+      - generic [ref=f4e364]:
+        - generic [ref=f4e365]:
+          - heading "Tudo conectado" [level=2] [ref=f4e366]:
+            - generic [ref=f4e367]: Tudo
+            - generic [ref=f4e371]: conectado
+          - paragraph [ref=f4e376]: Seu sistema de gestão, seu site, seu WhatsApp e suas planilhas falando a mesma língua. A informação entra uma vez e aparece em todo lugar, sempre atualizada.
+          - paragraph [ref=f4e378]: Digitou uma vez? Nunca mais digita de novo
+          - list [ref=f4e381]:
+            - listitem [ref=f4e382]: Integrações
+            - listitem [ref=f4e383]: Planilhas
+            - listitem [ref=f4e384]: WhatsApp
+            - listitem [ref=f4e385]: Gestão
+        - 'img "Diagrama: ERP, site e WhatsApp entram na Astro Bot e saem para financeiro, BI e estoque" [ref=f4e389]':
+          - img [ref=f4e394]:
+            - generic [ref=f4e395]: ERP
+            - generic [ref=f4e399]: Site
+            - generic [ref=f4e402]: WhatsApp
+            - generic [ref=f4e408]: Financeiro
+            - generic [ref=f4e412]: BI
+            - generic [ref=f4e415]: Estoque
+    - region "Integrações" [ref=f4e419]:
+      - generic [ref=f4e420]:
+        - paragraph [ref=f4e422]: Conecta com o que você já usa
+        - list [ref=f4e423]:
+          - listitem [ref=f4e424]: WhatsApp Business
+          - listitem [ref=f4e425]: Mercado Pago
+          - listitem [ref=f4e426]: Bling
+          - listitem [ref=f4e427]: Conta Azul
+          - listitem [ref=f4e428]: Omie
+          - listitem [ref=f4e429]: Shopify
+          - listitem [ref=f4e430]: Nuvemshop
+          - listitem [ref=f4e431]: Pipedrive
+          - listitem [ref=f4e432]: RD Station
+          - listitem [ref=f4e433]: Google Sheets
+          - listitem [ref=f4e434]: Slack
+          - listitem [ref=f4e435]: Postgres
+        - paragraph [ref=f4e437]: — e qualquer sistema com API que a sua operação precisar.
+    - region "Manifesto" [ref=f4e438]:
+      - generic [ref=f4e439]:
+        - generic: Manual
+        - paragraph [ref=f4e442]: Hoje o seu negócio funciona na base de planilha, papel e memória. A gente troca isso por um sistema que trabalha sozinho.
+    - region "Automação em ação" [ref=f4e443]:
+      - generic [ref=f4e448]:
+        - paragraph [ref=f4e449]: Funcionando agora, de verdade
+        - paragraph [ref=f4e450]: Enquanto você dorme, o robô cobra, confere e responde.
+        - paragraph [ref=f4e451]: Cada mensagem, cobrança e planilha encontra o caminho sozinha. Sem esquecer, sem errar, sem tirar férias.
+    - region "Missão" [ref=f4e452]:
+      - generic [ref=f4e454]:
+        - heading "Um jeito melhor de operar" [level=2] [ref=f4e455]:
+          - generic [ref=f4e456]:
+            - generic [ref=f4e457]: Um
+            - generic [ref=f4e460]: jeito
+            - generic [ref=f4e463]: melhor
+          - generic [ref=f4e466]:
+            - generic [ref=f4e467]: de
+            - generic [ref=f4e470]: operar
+        - paragraph [ref=f4e474]:
+          - text: Nossa missão é tornar o trabalho mais coerente — reprogramando a produtividade de
+          - emphasis [ref=f4e475]: fazer mais
+          - text: para
+          - emphasis [ref=f4e476]: operar melhor
+          - text: .
+        - paragraph [ref=f4e478]: "Os melhores momentos de um time acontecem quando ele está em fluxo: criando valor pro cliente, não caçando informação nem redigitando planilha."
+        - generic [ref=f4e480]:
+          - generic [ref=f4e481]:
+            - definition [ref=f4e482]: 0+
+            - term [ref=f4e483]: Projetos entregues
+          - generic [ref=f4e484]:
+            - definition [ref=f4e485]: 0 mil
+            - term [ref=f4e486]: Horas automatizadas por ano
+          - generic [ref=f4e487]:
+            - definition [ref=f4e488]: 0%
+            - term [ref=f4e489]: Clientes que seguem com a gente
+          - generic [ref=f4e490]:
+            - definition [ref=f4e491]: "0"
+            - term [ref=f4e492]: Dias até a primeira entrega
+    - region "Resultados" [ref=f4e493]:
+      - generic: Prova
+      - generic [ref=f4e494]:
+        - heading "Resultados medidos" [level=2] [ref=f4e495]:
+          - generic [ref=f4e496]:
+            - generic [ref=f4e497]: Resultados
+            - generic [ref=f4e500]: medidos
+        - paragraph [ref=f4e504]: "Todo projeto começa com uma métrica combinada. Três histórias completas: a dor, o que a gente construiu e o número que ficou."
+        - generic [ref=f4e505]:
+          - article [ref=f4e507]:
+            - paragraph [ref=f4e508]: Vetra Logística
+            - paragraph [ref=f4e509]: "-0%"
+            - paragraph [ref=f4e510]: custo por entrega
+            - generic [ref=f4e511]:
+              - generic [ref=f4e512]:
+                - term [ref=f4e513]: O problema
+                - definition [ref=f4e514]: Rotas montadas à mão numa planilha que só um analista sabia operar.
+              - generic [ref=f4e515]:
+                - term [ref=f4e516]: A solução
+                - definition [ref=f4e517]: Roteirização automática integrada ao ERP, com app simples pro motorista.
+              - generic [ref=f4e518]:
+                - term [ref=f4e519]: O resultado
+                - definition [ref=f4e520]: Rota pronta às 6h da manhã, antes do primeiro caminhão sair do pátio.
+            - list [ref=f4e521]:
+              - listitem [ref=f4e522]: Node.js
+              - listitem [ref=f4e523]: Postgres
+              - listitem [ref=f4e524]: AWS
+              - listitem [ref=f4e525]: React Native
+          - article [ref=f4e527]:
+            - paragraph [ref=f4e528]: Clínica Áurea
+            - paragraph [ref=f4e529]: 0×
+            - paragraph [ref=f4e530]: mais agendamentos
+            - generic [ref=f4e531]:
+              - generic [ref=f4e532]:
+                - term [ref=f4e533]: O problema
+                - definition [ref=f4e534]: Recepção afogada em ligações; paciente desistia antes de conseguir marcar.
+              - generic [ref=f4e535]:
+                - term [ref=f4e536]: A solução
+                - definition [ref=f4e537]: Portal do paciente e bot de agenda no WhatsApp, ligados ao prontuário.
+              - generic [ref=f4e538]:
+                - term [ref=f4e539]: O resultado
+                - definition [ref=f4e540]: 70% das marcações acontecem fora do horário comercial, sozinhas.
+            - list [ref=f4e541]:
+              - listitem [ref=f4e542]: Next.js
+              - listitem [ref=f4e543]: WhatsApp API
+              - listitem [ref=f4e544]: Postgres
+          - article [ref=f4e546]:
+            - paragraph [ref=f4e547]: Mercado Bonfim
+            - paragraph [ref=f4e548]: +0%
+            - paragraph [ref=f4e549]: receita online
+            - generic [ref=f4e550]:
+              - generic [ref=f4e551]:
+                - term [ref=f4e552]: O problema
+                - definition [ref=f4e553]: Loja online vendia produto em falta e o estoque físico nunca batia.
+              - generic [ref=f4e554]:
+                - term [ref=f4e555]: A solução
+                - definition [ref=f4e556]: E-commerce ligado ao estoque em tempo real, com catálogo que se atualiza só.
+              - generic [ref=f4e557]:
+                - term [ref=f4e558]: O resultado
+                - definition [ref=f4e559]: Acabou a venda furada — e o time parou de conferir estoque de madrugada.
+            - list [ref=f4e560]:
+              - listitem [ref=f4e561]: React
+              - listitem [ref=f4e562]: Tailwind
+              - listitem [ref=f4e563]: Node.js
+              - listitem [ref=f4e564]: Redis
+    - region "Agendar diagnóstico" [ref=f4e565]:
+      - generic [ref=f4e569]:
+        - paragraph [ref=f4e570]: 45 minutos. Zero compromisso.O mapa do que dá pra automatizar.
+        - paragraph [ref=f4e571]: "Uma conversa de trabalho, não uma ligação de vendas: você sai com uma lista do que dá pra tirar do manual — com ou sem a gente."
+        - link "Agendar conversa gratuita" [ref=f4e573] [cursor=pointer]:
+          - /url: "#contato"
+    - region "Processo" [ref=f4e576]:
+      - generic [ref=f4e577]:
+        - generic: Processo
+        - generic [ref=f4e578]:
+          - generic [ref=f4e579]: Como a gente trabalha
+          - heading "Do primeiro café ao sistema no ar" [level=2] [ref=f4e582]:
+            - generic [ref=f4e583]:
+              - generic [ref=f4e584]: Do
+              - generic [ref=f4e587]: primeiro
+              - generic [ref=f4e590]: café
+              - generic [ref=f4e593]: ao
+              - generic [ref=f4e596]: sistema
+              - generic [ref=f4e599]: "no"
+              - generic [ref=f4e602]: ar
+          - paragraph [ref=f4e606]: "Sem projeto de gaveta: escopo fechado, entregas quinzenais e o código no seu nome desde o primeiro dia."
+        - generic [ref=f4e607]:
+          - article [ref=f4e609]:
+            - generic: "01"
+            - generic [ref=f4e610]: "01"
+            - heading "Diagnóstico" [level=3] [ref=f4e611]
+            - paragraph [ref=f4e612]: Uma conversa de 45 minutos. Mapeamos o processo, os sistemas atuais e onde o tempo se perde. Gratuito e sem compromisso.
+          - article [ref=f4e614]:
+            - generic: "02"
+            - generic [ref=f4e615]: "02"
+            - heading "Proposta" [level=3] [ref=f4e616]
+            - paragraph [ref=f4e617]: Escopo fechado com preço e prazo. Você sabe o que recebe, quando recebe e quanto custa — antes de assinar qualquer coisa.
+          - article [ref=f4e619]:
+            - generic: "03"
+            - generic [ref=f4e620]: "03"
+            - heading "Sprints" [level=3] [ref=f4e621]
+            - paragraph [ref=f4e622]: Entregas a cada duas semanas, direto em produção. Você acompanha o avanço de perto e ajusta a rota com a gente.
+          - article [ref=f4e624]:
+            - generic: "04"
+            - generic [ref=f4e625]: "04"
+            - heading "Evolução" [level=3] [ref=f4e626]
+            - paragraph [ref=f4e627]: "Depois do lançamento: monitoramento, correções e melhorias contínuas. O sistema cresce junto com a operação."
+          - paragraph [ref=f4e629]: Pronto pracomeçar?
+    - region "Sobre a Astro Bot" [ref=f4e630]:
+      - generic [ref=f4e631]:
+        - generic [ref=f4e632]:
+          - generic [ref=f4e633]:
+            - heading "Por que a Astro Bot existe" [level=2] [ref=f4e634]:
+              - generic [ref=f4e635]:
+                - generic [ref=f4e636]: Por
+                - generic [ref=f4e639]: que
+                - generic [ref=f4e642]: a
+                - generic [ref=f4e645]: Astro
+                - generic [ref=f4e648]: Bot
+              - generic [ref=f4e651]: existe
+            - paragraph [ref=f4e656]: "A Astro Bot nasceu em 2023, dentro de uma operação de logística que vivia refém de planilha. Depois de automatizar aquela rotina por conta própria — e ver o time ganhar as noites de volta — a pergunta ficou: quantas empresas estão presas no mesmo lugar?"
+            - paragraph [ref=f4e658]: "A missão é essa até hoje: tirar operação séria do manual, com software sob medida que a equipe gosta de usar — e código que pertence ao cliente."
+          - generic "Equipe trabalhando em um escritório com luz natural" [ref=f4e660]
+        - generic [ref=f4e661]:
+          - article [ref=f4e663]:
+            - heading "Protótipo antes de proposta" [level=3] [ref=f4e665]
+            - paragraph [ref=f4e666]: Toda ideia grande vira um protótipo navegável na primeira semana. Você decide vendo, não imaginando.
+          - article [ref=f4e668]:
+            - heading "Sprint curto, demo toda sexta" [level=3] [ref=f4e670]
+            - paragraph [ref=f4e671]: Ciclos de duas semanas com entrega em produção. Sexta-feira tem demo — mesmo quando o avanço é pequeno.
+          - article [ref=f4e673]:
+            - heading "Código limpo e documentado" [level=3] [ref=f4e675]
+            - paragraph [ref=f4e676]: Testes, revisão em par e documentação de bordo. O sistema precisa sobreviver a qualquer troca de time.
+    - region "Equipe" [ref=f4e677]:
+      - generic [ref=f4e678]:
+        - heading "Quem constrói" [level=2] [ref=f4e679]:
+          - generic [ref=f4e680]:
+            - generic [ref=f4e681]: Quem
+            - generic [ref=f4e684]: constrói
+        - paragraph [ref=f4e688]: "Um time pequeno de propósito: quem entende o seu problema é quem escreve o código."
+      - generic [ref=f4e690]:
+        - article [ref=f4e691]:
+          - img [ref=f4e692]:
+            - generic [ref=f4e694]: RD
+          - heading "Rafael Duarte" [level=3] [ref=f4e695]
+          - paragraph [ref=f4e696]: CEO & Fundador
+          - paragraph [ref=f4e697]: Dez anos automatizando operações em fintechs antes de fundar a Astro Bot.
+        - article [ref=f4e698]:
+          - img [ref=f4e699]:
+            - generic [ref=f4e701]: MC
+          - heading "Marina Costa" [level=3] [ref=f4e702]
+          - paragraph [ref=f4e703]: Head de Engenharia
+          - paragraph [ref=f4e704]: Lidera a arquitetura dos sistemas — obcecada por software que não quebra na virada do mês.
+        - article [ref=f4e705]:
+          - img [ref=f4e706]:
+            - generic [ref=f4e708]: LF
+          - heading "Lucas Ferreira" [level=3] [ref=f4e709]
+          - paragraph [ref=f4e710]: Automações & IA
+          - paragraph [ref=f4e711]: Transforma rotina repetitiva em robô. Se fez duas vezes na mão, ele já está automatizando.
+        - article [ref=f4e712]:
+          - img [ref=f4e713]:
+            - generic [ref=f4e715]: AB
+          - heading "Ana Beltrão" [level=3] [ref=f4e716]
+          - paragraph [ref=f4e717]: Produto & Design
+          - paragraph [ref=f4e718]: Traduz processo confuso em tela simples. Defende o usuário em toda decisão.
+        - article [ref=f4e719]:
+          - img [ref=f4e720]:
+            - generic [ref=f4e722]: PS
+          - heading "Pedro Sales" [level=3] [ref=f4e723]
+          - paragraph [ref=f4e724]: Integrações
+          - paragraph [ref=f4e725]: Faz ERP, CRM e WhatsApp conversarem — mesmo quando a documentação da API não ajuda.
+      - generic [ref=f4e726]:
+        - button "Membro anterior" [ref=f4e727]
+        - button "Próximo membro" [ref=f4e730]
+    - region "Clientes" [ref=f4e733]:
+      - generic [ref=f4e734]:
+        - generic [ref=f4e735]:
+          - heading "Quem confia" [level=2] [ref=f4e736]:
+            - generic [ref=f4e737]:
+              - generic [ref=f4e738]: Quem
+              - generic [ref=f4e741]: confia
+          - paragraph [ref=f4e745]: Operações reais que trocaram planilha e retrabalho por sistema rodando — do varejo à saúde.
+        - generic [ref=f4e746]:
+          - generic [ref=f4e751]:
+            - paragraph [ref=f4e752]: Vetra Logística
+            - paragraph [ref=f4e753]: Operação de frota e entregas
+          - generic [ref=f4e758]:
+            - paragraph [ref=f4e759]: Clínica Áurea
+            - paragraph [ref=f4e760]: Agenda e prontuário integrados
+          - generic [ref=f4e765]:
+            - paragraph [ref=f4e766]: Mercado Bonfim
+            - paragraph [ref=f4e767]: E-commerce e estoque
+          - generic [ref=f4e772]:
+            - paragraph [ref=f4e773]: Escala Fitness
+            - paragraph [ref=f4e774]: Cobrança recorrente automatizada
+          - generic [ref=f4e779]:
+            - paragraph [ref=f4e780]: NovaEdu
+            - paragraph [ref=f4e781]: Portal do aluno e matrículas
+          - generic [ref=f4e786]:
+            - paragraph [ref=f4e787]: Grupo Litoral
+            - paragraph [ref=f4e788]: ERP integrado ao financeiro
+    - region "Depoimentos" [ref=f4e789]:
+      - generic [ref=f4e790]:
+        - heading "Quem já passou pelo processo" [level=2] [ref=f4e791]
+        - generic [ref=f4e794]:
+          - figure [ref=f4e796]:
+            - blockquote [ref=f4e799]: A Astro Bot entregou em seis semanas o que a consultoria anterior não entregou em um ano. Hoje o fechamento do mês leva dois dias, não duas semanas.
+            - generic [ref=f4e800]:
+              - paragraph [ref=f4e801]: Camila Andrade
+              - paragraph [ref=f4e802]: COO · Vetra Logística
+          - figure [ref=f4e804]:
+            - blockquote [ref=f4e807]: O bot de agendamento atende 70% dos pacientes sem tocar na recepção. Foi o melhor investimento que a clínica fez no ano.
+            - generic [ref=f4e808]:
+              - paragraph [ref=f4e809]: Henrique Vale
+              - paragraph [ref=f4e810]: Diretor · Clínica Áurea
+          - figure [ref=f4e812]:
+            - blockquote [ref=f4e815]: Primeira empresa de tecnologia que falou a língua do varejo. Desde a integração, o estoque nunca mais furou.
+            - generic [ref=f4e816]:
+              - paragraph [ref=f4e817]: Beatriz Lima
+              - paragraph [ref=f4e818]: Fundadora · Mercado Bonfim
+    - region "Tech insights" [ref=f4e819]:
+      - generic [ref=f4e820]:
+        - generic [ref=f4e821]:
+          - generic [ref=f4e822]:
+            - heading "Tech insights" [level=2] [ref=f4e823]:
+              - generic [ref=f4e824]:
+                - generic [ref=f4e825]: Tech
+                - generic [ref=f4e828]: insights
+            - paragraph [ref=f4e832]: Como a gente pensa tecnologia e operação — sem jargão, com opinião.
+          - paragraph [ref=f4e834]: Novos artigos toda quinzena
+        - generic [ref=f4e835]:
+          - article [ref=f4e837]:
+            - img "Tela com código em ambiente escuro" [ref=f4e839]
+            - generic [ref=f4e840]:
+              - paragraph [ref=f4e841]:
+                - generic [ref=f4e842]: Automação
+                - text: Ago 2026 · 6 min de leitura
+              - heading "O checklist dos processos que valem a pena automatizar primeiro" [level=3] [ref=f4e843]
+              - paragraph [ref=f4e844]: "Nem tudo que é repetitivo dá retorno rápido. O filtro que usamos: frequência × dor × risco de erro humano."
+          - article [ref=f4e846]:
+            - img "Placa de circuito em close" [ref=f4e848]
+            - generic [ref=f4e849]:
+              - paragraph [ref=f4e850]:
+                - generic [ref=f4e851]: IoT
+                - text: Jul 2026 · 8 min de leitura
+              - 'heading "Do sensor ao dashboard: anatomia de um projeto de telemetria" [level=3] [ref=f4e852]'
+              - paragraph [ref=f4e853]: O caminho do dado da câmara fria até o alerta no celular — e onde os projetos de IoT costumam travar.
+          - article [ref=f4e855]:
+            - img "Corredor de racks de servidores" [ref=f4e857]
+            - generic [ref=f4e858]:
+              - paragraph [ref=f4e859]:
+                - generic [ref=f4e860]: Engenharia
+                - text: Jul 2026 · 5 min de leitura
+              - heading "Por que entregamos em produção desde a primeira sprint" [level=3] [ref=f4e861]
+              - paragraph [ref=f4e862]: Homologação eterna esconde risco. Software só aprende no mundo real — o nosso vai pra lá em duas semanas.
+    - region "Perguntas frequentes" [ref=f4e863]:
+      - generic [ref=f4e865]:
+        - generic [ref=f4e866]:
+          - heading "Perguntas frequentes" [level=2] [ref=f4e867]:
+            - generic [ref=f4e868]: Perguntas
+            - generic [ref=f4e872]: frequentes
+          - paragraph [ref=f4e877]:
+            - text: O que todo mundo pergunta no primeiro contato. Ficou faltando alguma?
+            - link "Fala com a gente." [ref=f4e878] [cursor=pointer]:
+              - /url: "#contato"
+          - generic [ref=f4e880]:
+            - paragraph [ref=f4e881]: Sem letra miúda
+            - list [ref=f4e882]:
+              - listitem [ref=f4e883]: Resposta em até 1 dia útil
+              - listitem [ref=f4e886]: 30 dias de garantia em toda entrega
+              - listitem [ref=f4e889]: Código 100% no seu nome, sem aluguel
+        - generic [ref=f4e892]:
+          - button "01Quanto custa um projeto?" [ref=f4e895] [cursor=pointer]
+          - button "02Quanto tempo leva?" [ref=f4e901] [cursor=pointer]
+          - button "03O código é meu?" [ref=f4e907] [cursor=pointer]
+          - button "04E depois do lançamento?" [ref=f4e913] [cursor=pointer]
+          - button "05Com que tecnologias vocês trabalham?" [ref=f4e919] [cursor=pointer]
+    - region "Contato" [ref=f4e923]:
+      - generic [ref=f4e925]:
+        - generic [ref=f4e926]:
+          - heading "Conta pra gente o seu desafio" [level=2] [ref=f4e927]:
+            - generic [ref=f4e928]:
+              - generic [ref=f4e929]: Conta
+              - generic [ref=f4e932]: pra
+              - generic [ref=f4e935]: gente
+            - generic [ref=f4e938]:
+              - generic [ref=f4e939]: o
+              - generic [ref=f4e942]: seu
+              - generic [ref=f4e945]: desafio
+          - paragraph [ref=f4e949]: "Responde em até um dia útil. Se preferir pular a fila: uma conversa técnica de 20 minutos, direto no WhatsApp."
+          - generic [ref=f4e951]:
+            - link "Agendar 20 minutos no WhatsApp" [ref=f4e952] [cursor=pointer]:
+              - /url: https://wa.me/5511900000000?text=Quero%20agendar%20um%20diagn%C3%B3stico%20com%20a%20Astro%20Bot
+            - link "contato@astrobot.dev.br" [ref=f4e954] [cursor=pointer]:
+              - /url: mailto:contato@astrobot.dev.br
+            - link "LinkedIn da Astro Bot" [ref=f4e955] [cursor=pointer]:
+              - /url: https://linkedin.com/company/astrobot
+        - generic [ref=f4e957]:
+          - generic [ref=f4e958]: Nome
+          - textbox "Nome" [ref=f4e959]:
+            - /placeholder: Seu nome
+          - generic [ref=f4e960]: E-mail
+          - textbox "E-mail" [ref=f4e961]:
+            - /placeholder: E-mail de trabalho
+          - generic [ref=f4e962]: Empresa
+          - textbox "Empresa" [ref=f4e963]
+          - generic [ref=f4e964]: Qual é o seu desafio atual?
+          - textbox "Qual é o seu desafio atual?" [ref=f4e965]:
+            - /placeholder: "Qual é o seu desafio atual? Ex.: fechamento do mês leva duas semanas…"
+          - button "Enviar desafio" [ref=f4e966]
+  - contentinfo [ref=f4e969]:
+    - generic [ref=f4e972]:
+      - paragraph [ref=f4e973]: A sua operação tem a resposta.Peça pra Astro Bot construir.
+      - link "Agendar diagnóstico" [ref=f4e975] [cursor=pointer]:
+        - /url: https://wa.me/5511900000000?text=Quero%20agendar%20um%20diagn%C3%B3stico%20com%20a%20Astro%20Bot
+      - paragraph [ref=f4e978]:
+        - text: Ou escreva pra
+        - link "contato@astrobot.dev.br" [ref=f4e979] [cursor=pointer]:
+          - /url: mailto:contato@astrobot.dev.br
+    - generic [ref=f4e980]:
+      - generic [ref=f4e981]:
+        - generic [ref=f4e982]:
+          - generic [ref=f4e983]: Astro Bot
+          - paragraph [ref=f4e988]: Sistemas, sites, automações e integrações sob medida para empresas que querem parar de operar no manual.
+          - generic [ref=f4e989]:
+            - link "LinkedIn" [ref=f4e990] [cursor=pointer]:
+              - /url: https://linkedin.com/company/astrobot
+            - link "Instagram" [ref=f4e991] [cursor=pointer]:
+              - /url: https://instagram.com/astrobot.tech
+            - link "GitHub" [ref=f4e992] [cursor=pointer]:
+              - /url: https://github.com/astrobot
+        - navigation "Mapa do site" [ref=f4e993]:
+          - paragraph [ref=f4e994]: Navegação
+          - list [ref=f4e995]:
+            - listitem [ref=f4e996]:
+              - link "Serviços" [ref=f4e997] [cursor=pointer]:
+                - /url: "#servicos"
+            - listitem [ref=f4e998]:
+              - link "Manifesto" [ref=f4e999] [cursor=pointer]:
+                - /url: "#manifesto"
+            - listitem [ref=f4e1000]:
+              - link "Sobre nós" [ref=f4e1001] [cursor=pointer]:
+                - /url: "#sobre"
+            - listitem [ref=f4e1002]:
+              - link "Processo" [ref=f4e1003] [cursor=pointer]:
+                - /url: "#processo"
+            - listitem [ref=f4e1004]:
+              - link "Resultados" [ref=f4e1005] [cursor=pointer]:
+                - /url: "#resultados"
+            - listitem [ref=f4e1006]:
+              - link "Equipe" [ref=f4e1007] [cursor=pointer]:
+                - /url: "#equipe"
+            - listitem [ref=f4e1008]:
+              - link "Tech insights" [ref=f4e1009] [cursor=pointer]:
+                - /url: "#insights"
+            - listitem [ref=f4e1010]:
+              - link "Perguntas frequentes" [ref=f4e1011] [cursor=pointer]:
+                - /url: "#faq"
+        - generic [ref=f4e1012]:
+          - paragraph [ref=f4e1013]: Contato
+          - list [ref=f4e1014]:
+            - listitem [ref=f4e1015]:
+              - link "contato@astrobot.dev.br" [ref=f4e1016] [cursor=pointer]:
+                - /url: mailto:contato@astrobot.dev.br
+            - listitem [ref=f4e1017]:
+              - link "+55 (11) 90000-0000 (WhatsApp)" [ref=f4e1018] [cursor=pointer]:
+                - /url: https://wa.me/5511900000000?text=Quero%20agendar%20um%20diagn%C3%B3stico%20com%20a%20Astro%20Bot
+            - listitem [ref=f4e1019]: Av. Paulista, 1000 · Sala 71 · Bela Vista, São Paulo/SP
+            - listitem [ref=f4e1020]: Segunda a sexta, das 9h às 18h
+      - generic [ref=f4e1022]:
+        - paragraph [ref=f4e1023]: © 2026 Astro Bot Tecnologia LTDA · CNPJ 00.000.000/0001-00 · São Paulo, Brasil
+        - paragraph [ref=f4e1024]: Feito em São Paulo, com software que trabalha de madrugada.
