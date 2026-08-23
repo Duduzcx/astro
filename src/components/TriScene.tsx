@@ -44,21 +44,21 @@ function pickColor(target: THREE.Color, random: () => number) {
  */
 const KEYFRAMES: Array<[number, number, number, number, number, number]> = [
   [0.0, 0.04, 0.52, 0.02, 0.88, 1.0],
-  [0.035, 0.05, 0.52, 0.0, 0.88, 1.0],
-  [0.075, 0.85, 0.0, 0.0, 1.25, 0.35],
-  [0.2, 0.85, 0.0, 0.0, 1.25, 0.35],
-  [0.245, 1.0, 0.0, 0.0, 1.12, 0.9],
-  [0.33, 1.0, 0.0, 0.0, 1.12, 0.9],
-  [0.365, 1.0, 0.0, 0.0, 1.12, 0.0],
-  [0.39, 0.3, 0.55, 0.0, 0.98, 0.0],
-  [0.415, 0.05, 0.55, 0.0, 0.98, 1.0],
-  [0.44, 0.06, 0.55, 0.0, 0.98, 1.0],
-  [0.475, 0.9, 0.0, 0.0, 1.35, 0.22],
-  [0.6, 0.9, 0.0, 0.0, 1.35, 0.22],
-  [0.625, 0.9, 0.0, 0.0, 1.35, 0.0],
-  [0.655, 0.9, 0.0, 0.0, 1.35, 0.0],
-  [0.685, 0.9, 0.0, 0.0, 1.35, 0.22],
-  [0.955, 0.9, 0.0, 0.0, 1.35, 0.22],
+  [0.04, 0.05, 0.52, 0.0, 0.88, 1.0],
+  [0.085, 0.85, 0.0, 0.0, 1.25, 0.35],
+  [0.22, 0.85, 0.0, 0.0, 1.25, 0.35],
+  [0.265, 1.0, 0.0, 0.0, 1.12, 0.9],
+  [0.3, 1.0, 0.0, 0.0, 1.12, 0.9],
+  [0.325, 1.0, 0.0, 0.0, 1.12, 0.0],
+  [0.345, 0.3, 0.55, 0.0, 0.9, 0.0],
+  [0.37, 0.05, 0.55, 0.0, 0.9, 1.0],
+  [0.4, 0.06, 0.55, 0.0, 0.9, 1.0],
+  [0.435, 0.9, 0.0, 0.0, 1.35, 0.22],
+  [0.465, 0.9, 0.0, 0.0, 1.35, 0.22],
+  [0.49, 0.9, 0.0, 0.0, 1.35, 0.0],
+  [0.515, 0.9, 0.0, 0.0, 1.35, 0.0],
+  [0.545, 0.9, 0.0, 0.0, 1.35, 0.22],
+  [0.95, 0.9, 0.0, 0.0, 1.35, 0.22],
   [1.0, 0.3, 0.0, -0.04, 0.9, 0.85],
 ]
 
@@ -302,13 +302,13 @@ export function TriScene() {
     camera.position.z = 3.3
 
     const spread = new THREE.Vector3(2.6, 1.7, 1.2)
-    const sphereGeometry = buildTriangles(6000, spread, true)
+    const sphereGeometry = buildTriangles(9000, spread, true)
     const sphereMaterial = makeMaterial(0.95)
     const sphereField = new THREE.LineSegments(sphereGeometry, sphereMaterial)
     scene.add(sphereField)
 
     /* Always-dispersed ambient layer: the faint triangles floating everywhere. */
-    const ambientGeometry = buildTriangles(420, new THREE.Vector3(3.2, 2.1, 1.6), false)
+    const ambientGeometry = buildTriangles(700, new THREE.Vector3(3.2, 2.1, 1.6), false)
     const ambientMaterial = makeMaterial(0.32)
     ambientMaterial.uniforms.uMix.value = 1
     const ambientField = new THREE.LineSegments(ambientGeometry, ambientMaterial)

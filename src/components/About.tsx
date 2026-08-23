@@ -40,11 +40,15 @@ export function About() {
           </div>
 
           <Reveal delay={0.15}>
-            <img
-              src="/media/culture.jpg"
-              alt="Estação de trabalho com código na tela, em luz baixa"
-              loading="lazy"
-              className="aspect-[4/3] w-full rounded-xl object-cover opacity-85 [filter:saturate(0.6)_brightness(0.85)]"
+            <video
+              src="/media/office.mp4"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              aria-label="Equipe trabalhando em um escritório com luz natural"
+              className="aspect-[4/3] w-full rounded-xl object-cover opacity-90 [filter:saturate(0.75)_brightness(0.85)]"
             />
           </Reveal>
         </div>

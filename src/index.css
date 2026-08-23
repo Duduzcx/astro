@@ -39,7 +39,15 @@
 
   body {
     margin: 0;
+    /* Not flat black: a blue-hour wash — indigo pooling at the top, violet at
+       the horizon — so every section sits in coloured air. */
     background-color: var(--color-onyx);
+    background-image:
+      radial-gradient(1200px 800px at 80% -10%, rgba(82, 102, 235, 0.14), transparent 60%),
+      radial-gradient(1000px 700px at 0% 40%, rgba(139, 124, 248, 0.08), transparent 60%),
+      radial-gradient(900px 700px at 100% 90%, rgba(77, 214, 232, 0.07), transparent 60%),
+      linear-gradient(180deg, #191927 0%, #171721 40%, #1a1830 100%);
+    background-attachment: fixed;
     color: var(--color-ash);
     font-family: var(--font-display);
     font-size: 16px;
@@ -162,6 +170,36 @@
   scrollbar-width: none;
   &::-webkit-scrollbar {
     display: none;
+  }
+}
+
+@keyframes astro-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+/* Slow drifting colour blobs — the living background layer. */
+@keyframes astro-blob-a {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(9vw, 6vh, 0) scale(1.15);
+  }
+}
+
+@keyframes astro-blob-b {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1.1);
+  }
+  50% {
+    transform: translate3d(-8vw, -5vh, 0) scale(0.92);
   }
 }
 

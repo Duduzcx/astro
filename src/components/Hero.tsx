@@ -47,8 +47,8 @@ export function Hero() {
             variants={rise}
             className="mt-4 max-w-md text-[clamp(1.05rem,1.4vw,1.2rem)] leading-[1.55] text-ash"
           >
-            A Astro Bot constrói sistemas, sites, automações e integrações sob medida. Conecte tudo
-            que a sua empresa usa e deixe o software trabalhar — com contexto, controle e clareza.
+            A Astro Bot cria sites, sistemas e robôs que fazem o trabalho repetitivo da sua empresa
+            sozinhos. Sua equipe cuida dos clientes — o resto roda no automático.
           </motion.p>
 
           <motion.div variants={rise} className="mt-10 flex flex-wrap items-center gap-4">
