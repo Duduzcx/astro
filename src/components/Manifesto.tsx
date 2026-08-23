@@ -7,7 +7,7 @@ import { BlurReveal, GiantWord } from './ui/Primitives'
 export function Manifesto() {
   return (
     <section id="manifesto" aria-label="Manifesto">
-      <div className="relative z-10 flex min-h-[85svh] items-center">
+      <div className="relative z-10 flex items-center py-24 lg:min-h-[85svh] lg:py-16">
         <GiantWord word="Manual" />
         <div className="shell">
           <BlurReveal className="mx-auto max-w-4xl">

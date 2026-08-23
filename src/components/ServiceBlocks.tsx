@@ -61,7 +61,7 @@ export function ServiceBlocks() {
   return (
     <section id="servicos" aria-label="Serviços" className="relative z-10 py-12 md:py-20">
       {services.map((service, index) => (
-        <div key={service.title} className="flex min-h-[70svh] items-center">
+        <div key={service.title} className="flex items-center py-14 lg:min-h-[70svh] lg:py-10">
           <div className="shell grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
             <div className={index % 2 === 1 ? 'lg:order-2' : ''}>
               <WordReveal

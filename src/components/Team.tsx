@@ -7,19 +7,19 @@ const members = [
     name: 'Eduardo',
     role: 'Cofundador · Desenvolvimento',
     bio: 'Constrói o produto de ponta a ponta — do primeiro protótipo ao sistema rodando em produção.',
-    color: '#8434ce',
+    color: '#4d84e0',
   },
   {
     name: 'Matheus',
     role: 'Cofundador · Engenharia',
     bio: 'Responsável técnico: arquitetura, qualidade e a garantia de que tudo que sai daqui é auditável.',
-    color: '#c9a0ff',
+    color: '#8db4f5',
   },
   {
     name: 'Luana',
     role: 'Cofundadora · Operações',
     bio: 'Cuida da experiência do cliente do diagnóstico à entrega — e do atendimento que não dorme.',
-    color: '#fffcf3',
+    color: '#f5f7fb',
   },
 ] as const
 

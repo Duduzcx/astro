@@ -102,7 +102,7 @@ export function Nav() {
                     <motion.span
                       layoutId="nav-active"
                       transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-                      className="absolute right-0 -bottom-0.5 left-0 h-px bg-gradient-to-r from-cobalt to-[#c9a0ff]"
+                      className="absolute right-0 -bottom-0.5 left-0 h-px bg-gradient-to-r from-cobalt to-[#8db4f5]"
                     />
                   ) : null}
                 </a>

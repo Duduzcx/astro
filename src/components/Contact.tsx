@@ -3,7 +3,7 @@ import { ArrowGlyph, WordReveal, Reveal } from './ui/Primitives'
 import { site } from '../lib/site'
 
 const inputClasses =
-  'w-full rounded-2xl bg-obsidian px-5 py-3.5 text-[15px] text-ivory placeholder:text-slate outline-none transition-shadow focus:shadow-[inset_0_0_0_1px_#8434ce]'
+  'w-full rounded-2xl bg-obsidian px-5 py-3.5 text-[15px] text-ivory placeholder:text-slate outline-none transition-shadow focus:shadow-[inset_0_0_0_1px_#4d84e0]'
 
 /**
  * Netlify-powered form (the hidden mirror lives in index.html so the build
@@ -48,7 +48,7 @@ export function Contact() {
               <div className="mt-8 flex flex-col gap-3">
                 <a
                   href={site.whatsapp.href}
-                  className="inline-flex w-fit items-center gap-2.5 rounded-full bg-obsidian px-6 py-3.5 text-[15px] text-ivory transition-colors hover:bg-[#3a2158]"
+                  className="inline-flex w-fit items-center gap-2.5 rounded-full bg-obsidian px-6 py-3.5 text-[15px] text-ivory transition-colors hover:bg-[#1e2c4c]"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#4ade80]" />
                   Agendar 20 minutos no WhatsApp
@@ -119,7 +119,7 @@ export function Contact() {
                 />
                 <button
                   type="submit"
-                  className="mt-2 inline-flex items-center justify-center gap-2.5 rounded-full bg-cobalt px-7 py-3.5 text-[15px] font-[420] text-white transition-colors duration-300 hover:bg-[#9a4fe0]"
+                  className="mt-2 inline-flex items-center justify-center gap-2.5 rounded-full bg-cobalt px-7 py-3.5 text-[15px] font-[420] text-white transition-colors duration-300 hover:bg-[#5d92ea]"
                 >
                   Enviar desafio <ArrowGlyph />
                 </button>

@@ -14,7 +14,7 @@ const stats = [
  */
 export function Mission() {
   return (
-    <section aria-label="Missão" className="relative z-10 flex min-h-[100svh] items-center overflow-hidden">
+    <section aria-label="Missão" className="relative z-10 flex items-center overflow-hidden py-20 lg:min-h-[100svh] lg:py-16">
       <div className="aurora" aria-hidden="true" />
       <div className="shell">
         <div className="max-w-lg">

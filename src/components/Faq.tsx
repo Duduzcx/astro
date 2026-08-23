@@ -60,7 +60,7 @@ export function Faq() {
                   ].map((item) => (
                     <li key={item} className="flex items-center gap-3 text-[14px] text-ash">
                       <svg viewBox="0 0 12 12" aria-hidden="true" className="h-2.5 w-2.5 shrink-0">
-                        <path d="M6 1.5 10.5 10.5H1.5L6 1.5Z" fill="none" stroke="#c9a0ff" strokeWidth="1.4" />
+                        <path d="M6 1.5 10.5 10.5H1.5L6 1.5Z" fill="none" stroke="#8db4f5" strokeWidth="1.4" />
                       </svg>
                       {item}
                     </li>
@@ -84,7 +84,7 @@ export function Faq() {
                       className="flex w-full cursor-pointer items-center justify-between gap-6 p-6 text-left text-[1.05rem] font-[480] text-ivory"
                     >
                       <span>
-                        <span className="mr-3 font-mono text-[13px] text-[#c9a0ff]">
+                        <span className="mr-3 font-mono text-[13px] text-[#8db4f5]">
                           {String(index + 1).padStart(2, '0')}
                         </span>
                         {faq.question}

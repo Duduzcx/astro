@@ -6,12 +6,12 @@ import { WordReveal, Reveal } from './ui/Primitives'
  * monochrome palette with cobalt punctuation.
  */
 const clients = [
-  { name: 'Vetra Logística', segment: 'Operação de frota e entregas', color: '#8434ce', tilt: -12 },
-  { name: 'Clínica Áurea', segment: 'Agenda e prontuário integrados', color: '#fffcf3', tilt: 18 },
-  { name: 'Mercado Bonfim', segment: 'E-commerce e estoque', color: '#a86ce8', tilt: -25 },
-  { name: 'Escala Fitness', segment: 'Cobrança recorrente automatizada', color: '#cfc4dd', tilt: 8 },
-  { name: 'NovaEdu', segment: 'Portal do aluno e matrículas', color: '#a58fc0', tilt: -6 },
-  { name: 'Grupo Litoral', segment: 'ERP integrado ao financeiro', color: '#8434ce', tilt: 22 },
+  { name: 'Vetra Logística', segment: 'Operação de frota e entregas', color: '#4d84e0', tilt: -12 },
+  { name: 'Clínica Áurea', segment: 'Agenda e prontuário integrados', color: '#f5f7fb', tilt: 18 },
+  { name: 'Mercado Bonfim', segment: 'E-commerce e estoque', color: '#5a8fe8', tilt: -25 },
+  { name: 'Escala Fitness', segment: 'Cobrança recorrente automatizada', color: '#b9c2d4', tilt: 8 },
+  { name: 'NovaEdu', segment: 'Portal do aluno e matrículas', color: '#7e93b8', tilt: -6 },
+  { name: 'Grupo Litoral', segment: 'ERP integrado ao financeiro', color: '#4d84e0', tilt: 22 },
 ] as const
 
 /** Desktop scatter: column start + vertical push per item, echoing the reference. */

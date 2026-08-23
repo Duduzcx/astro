@@ -30,7 +30,7 @@ export function Label({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-2.5 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 font-mono text-[11px] tracking-[0.14em] text-[#c9a0ff] uppercase backdrop-blur-sm ${className}`}
+      className={`inline-flex items-center gap-2.5 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 font-mono text-[11px] tracking-[0.14em] text-[#8db4f5] uppercase ${className}`}
     >
       <svg viewBox="0 0 12 12" aria-hidden="true" className="h-2.5 w-2.5 shrink-0">
         <path d="M6 1.5 10.5 10.5H1.5L6 1.5Z" fill="currentColor" />
@@ -103,7 +103,7 @@ export function IrisButton({
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.97 }}
       transition={{ type: 'spring', stiffness: 400, damping: 26 }}
-      className={`inline-flex items-center justify-center gap-2.5 rounded-full bg-cobalt px-7 py-3.5 text-[15px] font-[420] text-white transition-colors duration-300 hover:bg-[#9a4fe0] ${className}`}
+      className={`inline-flex items-center justify-center gap-2.5 rounded-full bg-cobalt px-7 py-3.5 text-[15px] font-[420] text-white transition-colors duration-300 hover:bg-[#5d92ea] ${className}`}
     >
       {children}
     </motion.a>

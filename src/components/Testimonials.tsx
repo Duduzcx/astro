@@ -30,7 +30,7 @@ export function Testimonials() {
             <Reveal key={quote.name} delay={0.08 * index}>
               <figure className="graphite-card flex h-full flex-col">
                 <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6">
-                  <path d="M5 17 9 5h3L9.5 17H5Zm8 0L17 5h3l-2.5 12H13Z" fill="#8434ce" />
+                  <path d="M5 17 9 5h3L9.5 17H5Zm8 0L17 5h3l-2.5 12H13Z" fill="#4d84e0" />
                 </svg>
                 <blockquote className="mt-5 flex-1 text-[15px] leading-[1.6] text-ash">
                   {quote.text}

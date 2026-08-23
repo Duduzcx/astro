@@ -14,13 +14,13 @@ import * as THREE from 'three'
  * and soft violet season it, ivory keeps the cool base.
  */
 const PALETTE: Array<[string, number]> = [
-  ['#8434ce', 0.2],
-  ['#a86ce8', 0.14],
-  ['#c9a0ff', 0.12],
-  ['#b57aff', 0.08],
-  ['#d4b8ff', 0.08],
-  ['#fffcf3', 0.18],
-  ['#cfc4dd', 0.12],
+  ['#4d84e0', 0.2],
+  ['#5a8fe8', 0.14],
+  ['#8db4f5', 0.12],
+  ['#6d9df0', 0.08],
+  ['#a8c8ff', 0.08],
+  ['#f5f7fb', 0.18],
+  ['#b9c2d4', 0.12],
   ['#ffffff', 0.08],
 ]
 
@@ -291,9 +291,16 @@ export function TriScene() {
     if (!mount) return
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    /* Small screens get the same scene at a lighter weight: fewer triangles
+       and a lower pixel ratio — same look, steadier frame rate. */
+    const lightweight = window.innerWidth < 1024
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: 'high-performance',
+    })
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
     renderer.setSize(window.innerWidth, window.innerHeight)
     mount.appendChild(renderer.domElement)
 
@@ -302,13 +309,13 @@ export function TriScene() {
     camera.position.z = 3.3
 
     const spread = new THREE.Vector3(2.6, 1.7, 1.2)
-    const sphereGeometry = buildTriangles(9000, spread, true)
+    const sphereGeometry = buildTriangles(lightweight ? 4800 : 9000, spread, true)
     const sphereMaterial = makeMaterial(0.95)
     const sphereField = new THREE.LineSegments(sphereGeometry, sphereMaterial)
     scene.add(sphereField)
 
     /* Always-dispersed ambient layer: the faint triangles floating everywhere. */
-    const ambientGeometry = buildTriangles(700, new THREE.Vector3(3.2, 2.1, 1.6), false)
+    const ambientGeometry = buildTriangles(lightweight ? 350 : 700, new THREE.Vector3(3.2, 2.1, 1.6), false)
     const ambientMaterial = makeMaterial(0.32)
     ambientMaterial.uniforms.uMix.value = 1
     const ambientField = new THREE.LineSegments(ambientGeometry, ambientMaterial)
@@ -348,12 +355,12 @@ export function TriScene() {
       const progress = window.scrollY / maxScroll
       const target = sampleKeyframes(progress)
 
-      /* Narrow viewports put the object BEHIND the copy, so it shrinks and
-         quiets down instead of competing with the text. */
+      /* Narrow viewports put the object BEHIND the copy — same scene, slightly
+         smaller and softer so the text stays readable. */
       const narrow = camera.aspect < 0.9
-      const xDamp = narrow ? 0.25 : 1
-      const scaleDamp = narrow ? 0.72 : 1
-      const opacityDamp = narrow ? 0.5 : 1
+      const xDamp = narrow ? 0.3 : 1
+      const scaleDamp = narrow ? 0.8 : 1
+      const opacityDamp = narrow ? 0.6 : 1
       const damping = reducedMotion ? 1 : 1 - Math.exp(-delta * 4.5)
       current.mix += (target.mix - current.mix) * damping
       current.x += (target.x * xDamp - current.x) * damping

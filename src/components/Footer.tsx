@@ -24,7 +24,7 @@ export function Footer() {
                 Agendar diagnóstico <ArrowGlyph />
               </IrisButton>
             </div>
-            <p className="mt-8 text-[15px] text-ash [text-shadow:0_1px_10px_rgba(26,10,46,0.9)]">
+            <p className="mt-8 text-[15px] text-ash [text-shadow:0_1px_10px_rgba(10,15,30,0.9)]">
               Conectando seu negócio ao futuro.
             </p>
           </BlurReveal>

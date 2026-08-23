@@ -56,29 +56,38 @@ function StepCard({ step }: { step: (typeof steps)[number] }) {
  */
 export function Process() {
   const ref = useRef<HTMLElement>(null)
+  const trackRef = useRef<HTMLDivElement>(null)
   /* Decided on the FIRST render: if the pinned branch only appeared after an
      effect, useScroll would initialise against a null target and the track
-     would never move. */
+     would never move. Pinned on every screen size — the mobile layout is the
+     same as desktop; only reduced-motion users get the flat grid. */
   const [pinned, setPinned] = useState(
-    () =>
-      window.matchMedia('(min-width: 1024px)').matches &&
-      !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    () => !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   )
+  const [shift, setShift] = useState(1100)
 
   useEffect(() => {
-    const wide = window.matchMedia('(min-width: 1024px)')
     const still = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const update = () => setPinned(wide.matches && !still.matches)
-    wide.addEventListener('change', update)
+    const update = () => setPinned(!still.matches)
     still.addEventListener('change', update)
-    return () => {
-      wide.removeEventListener('change', update)
-      still.removeEventListener('change', update)
-    }
+    return () => still.removeEventListener('change', update)
   }, [])
 
+  /* Measured travel: track width minus viewport, so the last card always
+     parks fully on screen — on any device width. */
+  useEffect(() => {
+    const measure = () => {
+      const track = trackRef.current
+      if (!track) return
+      setShift(Math.max(track.scrollWidth - window.innerWidth + 24, 0))
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [pinned])
+
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end end'] })
-  const x = useTransform(scrollYProgress, [0.12, 0.92], ['3%', '-56%'])
+  const x = useTransform(scrollYProgress, [0.12, 0.92], [0, -shift])
 
   const header = (
     <>
@@ -118,9 +127,13 @@ export function Process() {
       <div className="sticky top-0 flex h-screen flex-col justify-center overflow-hidden">
         <GiantWord word="Processo" className="opacity-60" />
         <div className="shell relative">{header}</div>
-        <motion.div style={{ x }} className="mt-12 flex w-max gap-6 pl-[max(48px,calc((100vw-1200px)/2+48px))]">
+        <motion.div
+          ref={trackRef}
+          style={{ x }}
+          className="mt-10 flex w-max gap-6 pl-[max(24px,calc((100vw-1200px)/2+48px))] md:mt-12"
+        >
           {steps.map((step) => (
-            <div key={step.number} className="w-[340px] shrink-0 md:w-[380px]">
+            <div key={step.number} className="w-[300px] shrink-0 md:w-[380px]">
               <StepCard step={step} />
             </div>
           ))}
