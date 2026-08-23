@@ -31,15 +31,16 @@ export function About() {
             <WordReveal text={'Por que a Astro Soluções\nexiste'} className="font-impact text-[clamp(2.4rem,5.2vw,4.2rem)]" />
             <Reveal delay={0.12}>
               <p className="mt-6 max-w-md leading-[1.6] text-ash">
-                A Astro Soluções nasceu da união de três pessoas cansadas de ver empresa boa presa
-                em planilha, papel e retrabalho — enquanto a tecnologia que resolveria isso ficava
-                cara e distante.
+                A Astro Soluções desenvolve software com impacto real na operação de quem contrata.
+                Atuamos exclusivamente com empresas (B2B) — pequenas e médias na jornada de
+                digitalização.
               </p>
             </Reveal>
             <Reveal delay={0.2}>
               <p className="mt-5 max-w-md leading-[1.6] text-ash">
-                A missão é simples: tirar operação séria do manual, com software sob medida que a
-                equipe gosta de usar — e código que pertence ao cliente, formalizado em contrato.
+                A visão que buscamos: ser o principal parceiro tecnológico dessas empresas,
+                transformando processos manuais em operações eficientes — com código que pertence
+                ao cliente, formalizado em contrato.
               </p>
             </Reveal>
           </div>

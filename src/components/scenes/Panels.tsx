@@ -60,8 +60,8 @@ export function DashboardPanel() {
           <svg viewBox="0 0 400 120" className="mt-3 w-full" aria-hidden="true">
             <defs>
               <linearGradient id="panel-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor="#5266eb" stopOpacity="0.35" />
-                <stop offset="1" stopColor="#5266eb" stopOpacity="0" />
+                <stop offset="0" stopColor="#8434ce" stopOpacity="0.35" />
+                <stop offset="1" stopColor="#8434ce" stopOpacity="0" />
               </linearGradient>
             </defs>
             <path
@@ -71,7 +71,7 @@ export function DashboardPanel() {
             <path
               d="M0,95 C40,90 60,70 95,72 C130,74 150,50 190,52 C230,54 250,38 290,30 C330,24 360,18 400,12"
               fill="none"
-              stroke="#5266eb"
+              stroke="#8434ce"
               strokeWidth="2"
             />
             <g stroke="#ffffff" strokeOpacity="0.06">
@@ -135,7 +135,7 @@ export function ChatPanel() {
         <div className="flex items-center gap-2 pb-1">
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-obsidian">
             <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" aria-hidden="true">
-              <path d="M12 3 20 19H4L12 3Z" stroke="#5266eb" strokeWidth="2" strokeLinejoin="round" />
+              <path d="M12 3 20 19H4L12 3Z" stroke="#8434ce" strokeWidth="2" strokeLinejoin="round" />
             </svg>
           </span>
           <div>
@@ -166,9 +166,9 @@ export function ChatPanel() {
 /** IoT telemetry: live sensor tiles + a sparkline wall. */
 export function TelemetryPanel() {
   const sensors = [
-    ['Câmara fria 01', '-18,2 °C', '#4dd6e8'],
-    ['Umidade galpão', '54%', '#7d8bf0'],
-    ['Energia linha A', '12,4 kW', '#5266eb'],
+    ['Câmara fria 01', '-18,2 °C', '#c9a0ff'],
+    ['Umidade galpão', '54%', '#a86ce8'],
+    ['Energia linha A', '12,4 kW', '#8434ce'],
     ['Esteira 03', 'ativa', '#4ade80'],
   ] as const
   return (
@@ -216,14 +216,14 @@ export function PipelinePanel() {
           const y = 45 + i * 65
           return (
             <g key={label}>
-              <rect x="8" y={y - 16} width="86" height="32" rx="8" fill="#272735" />
-              <text x="51" y={y + 4} textAnchor="middle" fill="#c3c3cc" fontSize="11">
+              <rect x="8" y={y - 16} width="86" height="32" rx="8" fill="#301a4a" />
+              <text x="51" y={y + 4} textAnchor="middle" fill="#cfc4dd" fontSize="11">
                 {label}
               </text>
               <path
                 d={`M96,${y} C140,${y} 160,110 196,110`}
                 fill="none"
-                stroke="#5266eb"
+                stroke="#8434ce"
                 strokeWidth="1.4"
                 strokeDasharray="4 5"
                 opacity="0.7"
@@ -232,8 +232,8 @@ export function PipelinePanel() {
             </g>
           )
         })}
-        <circle cx="222" cy="110" r="34" fill="#171721" stroke="#5266eb" strokeWidth="1.6" />
-        <path d="M222 92 236 122H208L222 92Z" fill="none" stroke="#ededf3" strokeWidth="2" strokeLinejoin="round" />
+        <circle cx="222" cy="110" r="34" fill="#1a0a2e" stroke="#8434ce" strokeWidth="1.6" />
+        <path d="M222 92 236 122H208L222 92Z" fill="none" stroke="#fffcf3" strokeWidth="2" strokeLinejoin="round" />
         {outputs.map((label, i) => {
           const y = 45 + i * 65
           return (
@@ -241,14 +241,14 @@ export function PipelinePanel() {
               <path
                 d={`M248,110 C290,110 300,${y} 344,${y}`}
                 fill="none"
-                stroke="#5266eb"
+                stroke="#8434ce"
                 strokeWidth="1.4"
                 strokeDasharray="4 5"
                 opacity="0.7"
                 className="animate-[astro-flow_2.4s_linear_infinite]"
               />
-              <rect x="346" y={y - 16} width="86" height="32" rx="8" fill="#272735" />
-              <text x="389" y={y + 4} textAnchor="middle" fill="#c3c3cc" fontSize="11">
+              <rect x="346" y={y - 16} width="86" height="32" rx="8" fill="#301a4a" />
+              <text x="389" y={y + 4} textAnchor="middle" fill="#cfc4dd" fontSize="11">
                 {label}
               </text>
             </g>

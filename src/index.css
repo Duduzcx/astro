@@ -3,20 +3,20 @@
 @theme {
   /* ── Surfaces. Mercury's alpine stack: onyx canvas, graphite cards one value
      step up, obsidian for interactive fills. Separation by value, never shadow. */
-  --color-onyx: #171721; /* page canvas */
-  --color-graphite: #1e1e2a; /* elevated card surface */
-  --color-obsidian: #272735; /* secondary interactive fills */
+  --color-onyx: #1a0a2e; /* page canvas */
+  --color-graphite: #251239; /* elevated card surface */
+  --color-obsidian: #301a4a; /* secondary interactive fills */
 
   /* ── Text. Ivory leads, ash carries body copy, slate whispers. Pure white is
      reserved for text on cobalt. */
-  --color-ivory: #ededf3; /* headings, nav, strong */
-  --color-mist: #e2e3ed; /* hover states, hairline borders on dark */
-  --color-ash: #c3c3cc; /* default body */
-  --color-slate: #70707d; /* muted labels, dividers */
+  --color-ivory: #fffcf3; /* headings, nav, strong */
+  --color-mist: #f3ecff; /* hover states, hairline borders on dark */
+  --color-ash: #cfc4dd; /* default body */
+  --color-slate: #8a7a9e; /* muted labels, dividers */
 
   /* ── The one chromatic note. Cobalt fills the primary action, tags the
      eyebrows, and punctuates the particle field. Nothing else gets colour. */
-  --color-cobalt: #5266eb;
+  --color-cobalt: #8434ce;
 
   /* ── Fonts. Grotesque body, condensed-impact display, mono for labels. */
   --font-display: 'Inter Tight', 'Inter', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
@@ -44,10 +44,10 @@
        the horizon — so every section sits in coloured air. */
     background-color: var(--color-onyx);
     background-image:
-      radial-gradient(1200px 800px at 80% -10%, rgba(82, 102, 235, 0.14), transparent 60%),
-      radial-gradient(1000px 700px at 0% 40%, rgba(139, 124, 248, 0.08), transparent 60%),
-      radial-gradient(900px 700px at 100% 90%, rgba(77, 214, 232, 0.07), transparent 60%),
-      linear-gradient(180deg, #191927 0%, #171721 40%, #1a1830 100%);
+      radial-gradient(1200px 800px at 80% -10%, rgba(132, 52, 206, 0.14), transparent 60%),
+      radial-gradient(1000px 700px at 0% 40%, rgba(168, 108, 232, 0.08), transparent 60%),
+      radial-gradient(900px 700px at 100% 90%, rgba(201, 160, 255, 0.07), transparent 60%),
+      linear-gradient(180deg, #1f0d33 0%, #1a0a2e 40%, #2a1145 100%);
     background-attachment: fixed;
     color: var(--color-ash);
     font-family: var(--font-display);
@@ -109,7 +109,7 @@
     border-radius: 999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #33334a;
+    background: #42266a;
   }
 }
 
@@ -133,7 +133,7 @@
   transition: background-color 250ms ease;
 
   &:hover {
-    background-color: #232330;
+    background-color: #2d1846;
   }
 }
 
@@ -159,7 +159,7 @@
   font-weight: 400;
   text-transform: uppercase;
   color: transparent;
-  -webkit-text-stroke: 1.5px rgba(146, 153, 190, 0.16);
+  -webkit-text-stroke: 1.5px rgba(184, 156, 220, 0.16);
 }
 
 /* Soft colour weather behind a section — cobalt, cyan and violet at whisper
@@ -170,14 +170,14 @@
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(640px 420px at 16% 18%, rgba(82, 102, 235, 0.16), transparent 70%),
-    radial-gradient(720px 520px at 84% 72%, rgba(77, 214, 232, 0.1), transparent 70%),
-    radial-gradient(520px 420px at 62% 8%, rgba(139, 124, 248, 0.1), transparent 70%);
+    radial-gradient(640px 420px at 16% 18%, rgba(132, 52, 206, 0.16), transparent 70%),
+    radial-gradient(720px 520px at 84% 72%, rgba(201, 160, 255, 0.1), transparent 70%),
+    radial-gradient(520px 420px at 62% 8%, rgba(168, 108, 232, 0.1), transparent 70%);
 }
 
 /* Cobalt→cyan gradient type. For numbers and emphasised words only. */
 @utility text-spectrum {
-  background: linear-gradient(92deg, #5266eb 0%, #7d8bf0 45%, #4dd6e8 100%);
+  background: linear-gradient(92deg, #8434ce 0%, #a86ce8 45%, #c9a0ff 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -185,7 +185,7 @@
 
 /* Same gradient, alive: the colour slides through the letters on a slow loop. */
 @utility text-spectrum-animated {
-  background: linear-gradient(92deg, #5266eb, #7d8bf0, #4dd6e8, #8b7cf8, #5266eb);
+  background: linear-gradient(92deg, #8434ce, #a86ce8, #c9a0ff, #b57aff, #8434ce);
   background-size: 300% 100%;
   -webkit-background-clip: text;
   background-clip: text;

@@ -6,7 +6,8 @@
 export const site = {
   name: 'Astro Soluções',
   cnpj: '65.903.572/0001-26',
-  email: 'sq1matheusgsilva@gmail.com',
+  /* Kept for internal use (form notifications etc.) — not displayed on the page. */
+  email: 'astro.comercial@gmail.com',
   phone: {
     label: '(11) 95008-5875',
     href: 'tel:+5511950085875',

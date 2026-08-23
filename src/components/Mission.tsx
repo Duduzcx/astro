@@ -19,23 +19,42 @@ export function Mission() {
       <div className="shell">
         <div className="max-w-lg">
           <WordReveal
-            text={'Um jeito melhor\nde operar'}
+            text={'Seu negócio em\nnovas órbitas'}
             className="font-impact text-[clamp(2.6rem,5.6vw,4.6rem)] leading-[1.0]"
           />
 
           <Reveal delay={0.12}>
             <p className="mt-8 text-[clamp(1rem,1.3vw,1.15rem)] leading-[1.6] text-ash">
-              Nossa missão é tornar o trabalho mais coerente — reprogramando a produtividade de{' '}
-              <em className="text-cobalt">fazer mais</em> para{' '}
-              <em className="text-cobalt">operar melhor</em>.
+              Trabalhamos só com empresas (B2B) — e do nosso jeito de ver, os{' '}
+              <em className="text-cobalt">Astros são os clientes</em>. A gente é o combustível
+              tecnológico que impulsiona cada um a alcançar novas órbitas no seu mercado.
             </p>
           </Reveal>
 
           <Reveal delay={0.2}>
             <p className="mt-6 text-[clamp(1rem,1.3vw,1.15rem)] leading-[1.6] text-ash">
-              Os melhores momentos de um time acontecem quando ele está em fluxo: criando valor pro
-              cliente, não caçando informação nem redigitando planilha.
+              A missão: transformar processos manuais em operações eficientes e escaláveis, com
+              software sob medida que resolve problemas reais de gestão, vendas e operação.
             </p>
+          </Reveal>
+
+          <Reveal delay={0.26}>
+            <ul className="mt-8 flex flex-wrap gap-2">
+              {[
+                'Impacto real',
+                'Parceria, não fornecimento',
+                'Transparência',
+                'Excelência técnica',
+                'Simplicidade que resolve',
+              ].map((value) => (
+                <li
+                  key={value}
+                  className="rounded-full bg-obsidian px-4 py-2 text-[13px] text-ash transition-colors hover:text-ivory"
+                >
+                  {value}
+                </li>
+              ))}
+            </ul>
           </Reveal>
 
           <Reveal delay={0.28}>

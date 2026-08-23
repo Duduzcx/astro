@@ -24,11 +24,8 @@ export function Footer() {
                 Agendar diagnóstico <ArrowGlyph />
               </IrisButton>
             </div>
-            <p className="mt-8 text-[15px] text-ash [text-shadow:0_1px_10px_rgba(23,23,33,0.9)]">
-              Ou escreva pra{' '}
-              <a href={`mailto:${site.email}`} className="text-ivory underline underline-offset-4 hover:text-white">
-                {site.email}
-              </a>
+            <p className="mt-8 text-[15px] text-ash [text-shadow:0_1px_10px_rgba(26,10,46,0.9)]">
+              Conectando seu negócio ao futuro.
             </p>
           </BlurReveal>
         </div>
@@ -65,13 +62,8 @@ export function Footer() {
             <p className="label-voice text-[11px]">Contato</p>
             <ul className="mt-4 flex flex-col gap-2.5 text-[14px] text-ash">
               <li>
-                <a href={`mailto:${site.email}`} className="transition-colors hover:text-ivory">
-                  {site.email}
-                </a>
-              </li>
-              <li>
                 <a href={site.whatsapp.href} className="transition-colors hover:text-ivory">
-                  {site.whatsapp.label} (WhatsApp)
+                  Chamar no WhatsApp
                 </a>
               </li>
               <li className="text-slate">{site.hours}</li>

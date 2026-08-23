@@ -40,7 +40,7 @@ export function Hero() {
           />
 
           <motion.div variants={rise} className="mt-9">
-            <Label>Pare de operar no manual. Comece a escalar.</Label>
+            <Label>Conectando seu negócio ao futuro</Label>
           </motion.div>
 
           <motion.p

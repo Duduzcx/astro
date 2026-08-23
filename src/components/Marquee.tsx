@@ -23,7 +23,7 @@ export function Marquee() {
     <span key={capability} className="flex items-center gap-8 pr-8 whitespace-nowrap">
       <span className="text-[15px] tracking-[0.02em] text-ash">{capability}</span>
       <svg viewBox="0 0 12 12" aria-hidden="true" className="h-2.5 w-2.5 opacity-70">
-        <path d="M6 1.5 10.5 10.5H1.5L6 1.5Z" fill="none" stroke="#5266eb" strokeWidth="1.4" />
+        <path d="M6 1.5 10.5 10.5H1.5L6 1.5Z" fill="none" stroke="#8434ce" strokeWidth="1.4" />
       </svg>
     </span>
   ))

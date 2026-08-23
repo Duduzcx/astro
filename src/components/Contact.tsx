@@ -3,7 +3,7 @@ import { ArrowGlyph, WordReveal, Reveal } from './ui/Primitives'
 import { site } from '../lib/site'
 
 const inputClasses =
-  'w-full rounded-2xl bg-obsidian px-5 py-3.5 text-[15px] text-ivory placeholder:text-slate outline-none transition-shadow focus:shadow-[inset_0_0_0_1px_#5266eb]'
+  'w-full rounded-2xl bg-obsidian px-5 py-3.5 text-[15px] text-ivory placeholder:text-slate outline-none transition-shadow focus:shadow-[inset_0_0_0_1px_#8434ce]'
 
 /**
  * Netlify-powered form (the hidden mirror lives in index.html so the build
@@ -48,16 +48,10 @@ export function Contact() {
               <div className="mt-8 flex flex-col gap-3">
                 <a
                   href={site.whatsapp.href}
-                  className="inline-flex w-fit items-center gap-2.5 rounded-full bg-obsidian px-6 py-3.5 text-[15px] text-ivory transition-colors hover:bg-[#31314a]"
+                  className="inline-flex w-fit items-center gap-2.5 rounded-full bg-obsidian px-6 py-3.5 text-[15px] text-ivory transition-colors hover:bg-[#3a2158]"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#4ade80]" />
                   Agendar 20 minutos no WhatsApp
-                </a>
-                <a
-                  href={`mailto:${site.email}`}
-                  className="w-fit text-[15px] text-ash underline-offset-4 transition-colors hover:text-ivory hover:underline"
-                >
-                  {site.email}
                 </a>
                 <p className="text-[13px] text-slate">{site.hours}</p>
               </div>
@@ -125,7 +119,7 @@ export function Contact() {
                 />
                 <button
                   type="submit"
-                  className="mt-2 inline-flex items-center justify-center gap-2.5 rounded-full bg-cobalt px-7 py-3.5 text-[15px] font-[420] text-white transition-colors duration-300 hover:bg-[#6377f2]"
+                  className="mt-2 inline-flex items-center justify-center gap-2.5 rounded-full bg-cobalt px-7 py-3.5 text-[15px] font-[420] text-white transition-colors duration-300 hover:bg-[#9a4fe0]"
                 >
                   Enviar desafio <ArrowGlyph />
                 </button>

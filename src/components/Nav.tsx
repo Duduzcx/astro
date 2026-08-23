@@ -102,7 +102,7 @@ export function Nav() {
                     <motion.span
                       layoutId="nav-active"
                       transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-                      className="absolute right-0 -bottom-0.5 left-0 h-px bg-gradient-to-r from-cobalt to-[#4dd6e8]"
+                      className="absolute right-0 -bottom-0.5 left-0 h-px bg-gradient-to-r from-cobalt to-[#c9a0ff]"
                     />
                   ) : null}
                 </a>
@@ -167,10 +167,10 @@ export function Nav() {
               Agendar diagnóstico
             </IrisButton>
             <a
-              href={`mailto:${site.email}`}
+              href={site.whatsapp.href}
               className="mt-6 block text-center text-[14px] text-ash"
             >
-              {site.email}
+              Chamar no WhatsApp
             </a>
           </motion.div>
         ) : null}

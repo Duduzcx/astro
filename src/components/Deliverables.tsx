@@ -75,7 +75,7 @@ export function Deliverables() {
                     <path
                       d="M2.5 8.5 6 12l7.5-8"
                       fill="none"
-                      stroke="#4dd6e8"
+                      stroke="#c9a0ff"
                       strokeWidth="1.8"
                       strokeLinecap="round"
                       strokeLinejoin="round"

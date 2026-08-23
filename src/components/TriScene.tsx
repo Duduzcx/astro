@@ -14,13 +14,13 @@ import * as THREE from 'three'
  * and soft violet season it, ivory keeps the cool base.
  */
 const PALETTE: Array<[string, number]> = [
-  ['#5266eb', 0.2],
-  ['#7d8bf0', 0.14],
-  ['#4dd6e8', 0.12],
-  ['#8b7cf8', 0.08],
-  ['#a5b1ff', 0.08],
-  ['#ededf3', 0.18],
-  ['#c3c3cc', 0.12],
+  ['#8434ce', 0.2],
+  ['#a86ce8', 0.14],
+  ['#c9a0ff', 0.12],
+  ['#b57aff', 0.08],
+  ['#d4b8ff', 0.08],
+  ['#fffcf3', 0.18],
+  ['#cfc4dd', 0.12],
   ['#ffffff', 0.08],
 ]
 
