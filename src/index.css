@@ -40,15 +40,10 @@
 
   body {
     margin: 0;
-    /* Not flat black: a blue-hour wash — indigo pooling at the top, violet at
-       the horizon — so every section sits in coloured air. */
+    /* Flat colour only — the coloured washes live in a fixed layer
+       (AuroraBlobs), because background-attachment: fixed repaints on every
+       scroll frame on mobile. */
     background-color: var(--color-onyx);
-    background-image:
-      radial-gradient(1200px 800px at 80% -10%, rgba(77, 132, 224, 0.14), transparent 60%),
-      radial-gradient(1000px 700px at 0% 40%, rgba(90, 143, 232, 0.08), transparent 60%),
-      radial-gradient(900px 700px at 100% 90%, rgba(122, 179, 255, 0.07), transparent 60%),
-      linear-gradient(180deg, #0d1326 0%, #0a0f1e 40%, #0e1a36 100%);
-    background-attachment: fixed;
     color: var(--color-ash);
     font-family: var(--font-display);
     font-size: 16px;

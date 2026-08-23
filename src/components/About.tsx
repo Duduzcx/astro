@@ -60,7 +60,7 @@ export function About() {
               playsInline
               preload="metadata"
               aria-label="Equipe trabalhando em um escritório com luz natural"
-              className="aspect-[4/3] w-full rounded-xl object-cover opacity-90 [filter:saturate(0.75)_brightness(0.85)]"
+              className="aspect-[4/3] w-full rounded-xl object-cover opacity-90"
             />
           </motion.div>
         </div>

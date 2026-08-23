@@ -300,7 +300,7 @@ export function TriScene() {
       alpha: true,
       powerPreference: 'high-performance',
     })
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, lightweight ? 1.25 : 1.5))
     renderer.setSize(window.innerWidth, window.innerHeight)
     mount.appendChild(renderer.domElement)
 
@@ -309,13 +309,13 @@ export function TriScene() {
     camera.position.z = 3.3
 
     const spread = new THREE.Vector3(2.6, 1.7, 1.2)
-    const sphereGeometry = buildTriangles(lightweight ? 4800 : 9000, spread, true)
+    const sphereGeometry = buildTriangles(lightweight ? 3200 : 9000, spread, true)
     const sphereMaterial = makeMaterial(0.95)
     const sphereField = new THREE.LineSegments(sphereGeometry, sphereMaterial)
     scene.add(sphereField)
 
     /* Always-dispersed ambient layer: the faint triangles floating everywhere. */
-    const ambientGeometry = buildTriangles(lightweight ? 350 : 700, new THREE.Vector3(3.2, 2.1, 1.6), false)
+    const ambientGeometry = buildTriangles(lightweight ? 240 : 700, new THREE.Vector3(3.2, 2.1, 1.6), false)
     const ambientMaterial = makeMaterial(0.32)
     ambientMaterial.uniforms.uMix.value = 1
     const ambientField = new THREE.LineSegments(ambientGeometry, ambientMaterial)

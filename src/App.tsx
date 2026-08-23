@@ -1,4 +1,5 @@
 import { Suspense, lazy } from 'react'
+import { TintLayer } from './components/TintLayer'
 import { AuroraBlobs } from './components/AuroraBlobs'
 import { ScrollProgress } from './components/ScrollProgress'
 import { Nav } from './components/Nav'
@@ -34,6 +35,7 @@ const TriScene = lazy(() =>
 export default function App() {
   return (
     <>
+      <TintLayer />
       <AuroraBlobs />
       <Suspense fallback={null}>
         <TriScene />

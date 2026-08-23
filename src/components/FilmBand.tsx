@@ -22,10 +22,12 @@ export function FilmBand() {
       aria-label="Automação em ação"
       className="relative z-10 h-[72svh] overflow-hidden"
     >
+      {/* The 1440p footage only plays from md up — decoding it wrecks mobile
+          scrolling. Phones get the tinted gradient + particle field instead. */}
       <motion.video
         ref={videoRef}
         style={{ y: videoY, scale: videoScale }}
-        className="absolute inset-0 h-full w-full object-cover opacity-60 [filter:saturate(0.85)_brightness(0.6)] [mask-image:radial-gradient(130%_105%_at_50%_50%,black_55%,transparent_98%)]"
+        className="absolute inset-0 hidden h-full w-full object-cover opacity-45 [mask-image:radial-gradient(130%_105%_at_50%_50%,black_55%,transparent_98%)] md:block"
         src="/media/plexus.mp4"
         autoPlay
         muted
@@ -34,7 +36,8 @@ export function FilmBand() {
         preload="metadata"
         aria-hidden="true"
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-onyx via-onyx/25 to-onyx" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#0c1526] via-[#101c38]/60 to-onyx md:hidden" />
+      <div className="absolute inset-0 bg-gradient-to-b from-onyx via-onyx/35 to-onyx" />
 
       <div className="relative flex h-full items-center">
         <div className="shell">

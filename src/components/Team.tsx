@@ -73,7 +73,7 @@ export function Team() {
           {members.map((member) => (
             <article
               key={member.name}
-              className="graphite-card w-72 shrink-0 snap-start bg-graphite/95 backdrop-blur-sm"
+              className="graphite-card w-72 shrink-0 snap-start"
             >
               <svg viewBox="0 0 96 96" aria-hidden="true" className="h-24 w-24">
                 <path
