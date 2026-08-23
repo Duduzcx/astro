@@ -164,6 +164,25 @@
   color: transparent;
 }
 
+/* Same gradient, alive: the colour slides through the letters on a slow loop. */
+@utility text-spectrum-animated {
+  background: linear-gradient(92deg, #5266eb, #7d8bf0, #4dd6e8, #8b7cf8, #5266eb);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: astro-spectrum 7s linear infinite;
+}
+
+@keyframes astro-spectrum {
+  from {
+    background-position: 0% 0;
+  }
+  to {
+    background-position: 300% 0;
+  }
+}
+
 /* Hides the scrollbar on the team carousel without killing scrollability. */
 @utility no-scrollbar {
   scrollbar-width: none;

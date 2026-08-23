@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { LineReveal, Reveal } from './ui/Primitives'
+import { WordReveal, Reveal } from './ui/Primitives'
 
 /** Invented answers with realistic ranges — adjust to the real practice. */
 const faqs = [
@@ -39,7 +39,7 @@ export function Faq() {
       <div className="shell">
         <div className="grid gap-10 lg:grid-cols-[1fr_1.4fr]">
           <div>
-            <LineReveal text={'Perguntas\nfrequentes'} className="text-[clamp(2.2rem,4.6vw,3.6rem)]" />
+            <WordReveal text={'Perguntas\nfrequentes'} className="text-[clamp(2.2rem,4.6vw,3.6rem)]" />
             <Reveal delay={0.12}>
               <p className="mt-6 max-w-sm text-ash">
                 O que todo mundo pergunta no primeiro contato. Ficou faltando alguma?{' '}
@@ -47,6 +47,26 @@ export function Faq() {
                   Fala com a gente.
                 </a>
               </p>
+            </Reveal>
+
+            <Reveal delay={0.2}>
+              <div className="graphite-card mt-10 max-w-sm">
+                <p className="label-voice text-[10px]">Sem letra miúda</p>
+                <ul className="mt-4 flex flex-col gap-3">
+                  {[
+                    'Resposta em até 1 dia útil',
+                    '30 dias de garantia em toda entrega',
+                    'Código 100% no seu nome, sem aluguel',
+                  ].map((item) => (
+                    <li key={item} className="flex items-center gap-3 text-[14px] text-ash">
+                      <svg viewBox="0 0 12 12" aria-hidden="true" className="h-2.5 w-2.5 shrink-0">
+                        <path d="M6 1.5 10.5 10.5H1.5L6 1.5Z" fill="none" stroke="#4dd6e8" strokeWidth="1.4" />
+                      </svg>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </Reveal>
           </div>
 

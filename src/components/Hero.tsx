@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
-import { ArrowGlyph, GhostButton, IrisButton, Label, LineReveal } from './ui/Primitives'
+import { ArrowGlyph, GhostButton, IrisButton, Label, RotatingWord, WordReveal } from './ui/Primitives'
 
 const rise = {
   hidden: { opacity: 0, y: 26 },
@@ -31,7 +31,7 @@ export function Hero() {
         className="relative z-10 flex min-h-[100svh] items-center pt-28 pb-16"
       >
         <motion.div variants={stagger} initial="hidden" animate="show" className="shell w-full">
-          <LineReveal
+          <WordReveal
             as="h1"
             trigger="mount"
             delay={0.35}
@@ -47,8 +47,9 @@ export function Hero() {
             variants={rise}
             className="mt-4 max-w-md text-[clamp(1.05rem,1.4vw,1.2rem)] leading-[1.55] text-ash"
           >
-            A Astro Bot cria sites, sistemas e robôs que fazem o trabalho repetitivo da sua empresa
-            sozinhos. Sua equipe cuida dos clientes — o resto roda no automático.
+            A Astro Bot cria{' '}
+            <RotatingWord words={['sites', 'sistemas', 'robôs', 'painéis', 'integrações']} /> que
+            trabalham pela sua empresa. Sua equipe cuida dos clientes — o resto roda no automático.
           </motion.p>
 
           <motion.div variants={rise} className="mt-10 flex flex-wrap items-center gap-4">

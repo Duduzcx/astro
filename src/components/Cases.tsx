@@ -1,4 +1,4 @@
-import { LineReveal, Reveal } from './ui/Primitives'
+import { AnimatedNumber, Reveal, WordReveal } from './ui/Primitives'
 
 /** Invented case studies: pain → build → number, plus the stack that shipped it. */
 const cases = [
@@ -35,7 +35,7 @@ export function Cases() {
   return (
     <section id="resultados" aria-label="Resultados" className="relative z-10 py-24 md:py-32">
       <div className="shell">
-        <LineReveal text="Resultados medidos" className="max-w-2xl text-[clamp(2.2rem,4.6vw,3.6rem)]" />
+        <WordReveal text="Resultados medidos" className="max-w-2xl text-[clamp(2.2rem,4.6vw,3.6rem)]" />
         <Reveal delay={0.12}>
           <p className="mt-6 max-w-md text-ash">
             Todo projeto começa com uma métrica combinada. Três histórias completas: a dor, o que a
@@ -50,8 +50,8 @@ export function Cases() {
                 <p className="text-[13px] font-[480] tracking-[0.08em] text-slate uppercase">
                   {item.client}
                 </p>
-                <p className="text-spectrum mt-5 text-[3rem] leading-none font-[480] tracking-[-0.01em]">
-                  {item.metric}
+                <p className="text-spectrum-animated mt-5 text-[3rem] leading-none font-[480] tracking-[-0.01em]">
+                  <AnimatedNumber value={item.metric} />
                 </p>
                 <p className="mt-1 text-[14px] text-ivory">{item.metricLabel}</p>
 

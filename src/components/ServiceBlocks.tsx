@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { LineReveal, Reveal, Tilt } from './ui/Primitives'
+import { WordReveal, Reveal, Tilt } from './ui/Primitives'
 import {
   ChatPanel,
   DashboardPanel,
@@ -64,7 +64,7 @@ export function ServiceBlocks() {
         <div key={service.title} className="flex min-h-[70svh] items-center">
           <div className="shell grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
             <div className={index % 2 === 1 ? 'lg:order-2' : ''}>
-              <LineReveal
+              <WordReveal
                 text={service.title}
                 className="text-[clamp(2.2rem,4.6vw,3.6rem)] leading-[1.04]"
               />

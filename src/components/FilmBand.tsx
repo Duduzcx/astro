@@ -41,7 +41,8 @@ export function FilmBand() {
           <BlurReveal className="max-w-2xl">
             <p className="label-voice text-[11px]">Funcionando agora, de verdade</p>
             <p className="mt-5 text-[clamp(1.8rem,4vw,3.2rem)] leading-[1.15] font-[480] tracking-[-0.01em] text-ivory">
-              Enquanto você dorme, o robô cobra, confere e responde.
+              Enquanto você dorme, o robô{' '}
+              <span className="text-spectrum-animated">cobra, confere e responde</span>.
             </p>
             <p className="mt-5 max-w-lg text-ash">
               Cada mensagem, cobrança e planilha encontra o caminho sozinha. Sem esquecer, sem

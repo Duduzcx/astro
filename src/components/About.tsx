@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { motion } from 'framer-motion'
-import { LineReveal, Reveal } from './ui/Primitives'
+import { WordReveal, Reveal } from './ui/Primitives'
 import { useAutoPauseVideo } from '../lib/useAutoPauseVideo'
 
 /** How the team actually works — the engineering culture, in three habits. */
@@ -28,7 +28,7 @@ export function About() {
       <div className="shell">
         <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
           <div>
-            <LineReveal text={'Por que a Astro Bot\nexiste'} className="text-[clamp(2.2rem,4.6vw,3.6rem)]" />
+            <WordReveal text={'Por que a Astro Bot\nexiste'} className="text-[clamp(2.2rem,4.6vw,3.6rem)]" />
             <Reveal delay={0.12}>
               <p className="mt-6 max-w-md leading-[1.6] text-ash">
                 A Astro Bot nasceu em 2023, dentro de uma operação de logística que vivia refém de

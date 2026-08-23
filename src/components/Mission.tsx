@@ -1,6 +1,4 @@
-import { useEffect, useRef } from 'react'
-import { animate, motion, useInView, useMotionValue, useTransform } from 'framer-motion'
-import { LineReveal, Reveal } from './ui/Primitives'
+import { AnimatedNumber, Reveal, WordReveal } from './ui/Primitives'
 
 /** Invented numbers, plainly presented — the fictional track record of the startup. */
 const stats = [
@@ -10,32 +8,9 @@ const stats = [
   { label: 'Dias até a primeira entrega', value: '14' },
 ] as const
 
-/** Counts from 0 to the numeric part when scrolled into view; suffix rides along. */
-function Counter({ raw }: { raw: string }) {
-  const match = raw.match(/^(\d+)(.*)$/)
-  const target = match ? Number(match[1]) : 0
-  const suffix = match ? match[2] : ''
-  const ref = useRef<HTMLSpanElement>(null)
-  const inView = useInView(ref, { once: true, margin: '-60px' })
-  const value = useMotionValue(0)
-  const text = useTransform(value, (v) => `${Math.round(v)}${suffix}`)
-
-  useEffect(() => {
-    if (!inView) return
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      value.set(target)
-      return
-    }
-    const controls = animate(value, target, { duration: 1.2, ease: 'easeOut' })
-    return () => controls.stop()
-  }, [inView, target, value])
-
-  return <motion.span ref={ref}>{text}</motion.span>
-}
-
 /**
  * Reference pattern: "Build a better world of work" — left column beside the
- * regrouped sphere, with italic cobalt emphasis inside the running text.
+ * regrouped core, with italic cobalt emphasis inside the running text.
  */
 export function Mission() {
   return (
@@ -43,7 +18,7 @@ export function Mission() {
       <div className="aurora" aria-hidden="true" />
       <div className="shell">
         <div className="max-w-lg">
-          <LineReveal
+          <WordReveal
             text={'Um jeito melhor\nde operar'}
             className="text-[clamp(2.4rem,5vw,4rem)] leading-[1.04]"
           />
@@ -67,8 +42,8 @@ export function Mission() {
             <dl className="mt-12 grid grid-cols-2 gap-x-8 gap-y-8">
               {stats.map((stat) => (
                 <div key={stat.label}>
-                  <dd className="text-spectrum text-[2rem] leading-none font-[480] tracking-[-0.01em]">
-                    <Counter raw={stat.value} />
+                  <dd className="text-spectrum-animated text-[2rem] leading-none font-[480] tracking-[-0.01em]">
+                    <AnimatedNumber value={stat.value} />
                   </dd>
                   <dt className="mt-2 text-[13px] leading-[1.4] text-slate">{stat.label}</dt>
                 </div>

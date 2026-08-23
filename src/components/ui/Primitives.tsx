@@ -1,5 +1,20 @@
-import { useRef, type MouseEventHandler, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
-import { motion, useMotionValue, useSpring } from 'framer-motion'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEventHandler,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react'
+import {
+  AnimatePresence,
+  animate,
+  motion,
+  useInView,
+  useMotionValue,
+  useSpring,
+  useTransform,
+} from 'framer-motion'
 
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -246,6 +261,123 @@ export function LineReveal({
         </span>
       ))}
     </MotionTag>
+  )
+}
+
+/**
+ * Headline that assembles word by word — each word rises out of its own mask
+ * with a small rotation. Supports explicit line breaks via \n.
+ */
+export function WordReveal({
+  text,
+  className = '',
+  delay = 0,
+  as: Tag = 'h2',
+  trigger = 'view',
+}: {
+  text: string
+  className?: string
+  delay?: number
+  as?: 'h1' | 'h2' | 'h3'
+  trigger?: 'view' | 'mount'
+}) {
+  const MotionTag = motion[Tag]
+  let wordIndex = 0
+
+  return (
+    <MotionTag
+      className={className}
+      initial="hidden"
+      {...(trigger === 'mount'
+        ? { animate: 'show' }
+        : { whileInView: 'show', viewport: { once: true, margin: '-12%' } })}
+    >
+      {text.split('\n').map((line, lineNumber) => (
+        <span key={lineNumber} className="block">
+          {line.split(' ').map((word, wordNumber, words) => {
+            const index = wordIndex
+            wordIndex += 1
+            return (
+              <span key={`${word}-${wordNumber}`}>
+                <span className="inline-block overflow-hidden pb-[0.08em] align-top">
+                  <motion.span
+                    className="inline-block origin-bottom-left"
+                    variants={{ hidden: { y: '112%', rotate: 6 }, show: { y: '0%', rotate: 0 } }}
+                    transition={{
+                      duration: 0.7,
+                      delay: delay + index * 0.055,
+                      ease: [0.16, 1, 0.3, 1],
+                    }}
+                  >
+                    {word}
+                  </motion.span>
+                </span>
+                {wordNumber < words.length - 1 ? ' ' : null}
+              </span>
+            )
+          })}
+        </span>
+      ))}
+    </MotionTag>
+  )
+}
+
+/** One word that keeps cycling — slides up, blurs out, next one arrives. */
+export function RotatingWord({ words, className = '' }: { words: readonly string[]; className?: string }) {
+  const [index, setIndex] = useState(0)
+
+  useEffect(() => {
+    if (prefersReducedMotion()) return
+    const id = setInterval(() => setIndex((current) => (current + 1) % words.length), 2300)
+    return () => clearInterval(id)
+  }, [words.length])
+
+  return (
+    <span className={`inline-block ${className}`}>
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.span
+          key={words[index]}
+          initial={{ y: '85%', opacity: 0, filter: 'blur(6px)' }}
+          animate={{ y: '0%', opacity: 1, filter: 'blur(0px)' }}
+          exit={{ y: '-85%', opacity: 0, filter: 'blur(6px)' }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          className="text-spectrum-animated inline-block font-[480]"
+        >
+          {words[index]}
+        </motion.span>
+      </AnimatePresence>
+    </span>
+  )
+}
+
+/**
+ * "R$ -38%"-style stat that counts from zero when scrolled into view.
+ * Splits any prefix and suffix around the first integer in the string.
+ */
+export function AnimatedNumber({ value, className = '' }: { value: string; className?: string }) {
+  const match = value.match(/^([^\d]*)(\d+)(.*)$/)
+  const prefix = match ? match[1] : ''
+  const target = match ? Number(match[2]) : 0
+  const suffix = match ? match[3] : ''
+  const ref = useRef<HTMLSpanElement>(null)
+  const inView = useInView(ref, { once: true, margin: '-60px' })
+  const motionValue = useMotionValue(0)
+  const text = useTransform(motionValue, (current) => `${prefix}${Math.round(current)}${suffix}`)
+
+  useEffect(() => {
+    if (!inView) return
+    if (prefersReducedMotion()) {
+      motionValue.set(target)
+      return
+    }
+    const controls = animate(motionValue, target, { duration: 1.3, ease: 'easeOut' })
+    return () => controls.stop()
+  }, [inView, target, motionValue])
+
+  return (
+    <motion.span ref={ref} className={className}>
+      {text}
+    </motion.span>
   )
 }
 
