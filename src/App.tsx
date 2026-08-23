@@ -1,4 +1,4 @@
-import { TriScene } from './components/TriScene'
+import { Suspense, lazy } from 'react'
 import { Nav } from './components/Nav'
 import { Hero } from './components/Hero'
 import { ServiceBlocks } from './components/ServiceBlocks'
@@ -12,6 +12,11 @@ import { Testimonials } from './components/Testimonials'
 import { Faq } from './components/Faq'
 import { Footer } from './components/Footer'
 
+/** three.js is ~500kB minified — the scene lazy-loads and fades in under the hero. */
+const TriScene = lazy(() =>
+  import('./components/TriScene').then((module) => ({ default: module.TriScene })),
+)
+
 /**
  * One fixed WebGL scene behind everything; the sections scroll over it and the
  * particle field morphs per section (see TriScene KEYFRAMES). Section order and
@@ -20,7 +25,9 @@ import { Footer } from './components/Footer'
 export default function App() {
   return (
     <>
-      <TriScene />
+      <Suspense fallback={null}>
+        <TriScene />
+      </Suspense>
 
       <a
         href="#servicos"

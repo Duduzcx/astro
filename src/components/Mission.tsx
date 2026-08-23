@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react'
+import { animate, motion, useInView, useMotionValue, useTransform } from 'framer-motion'
 import { LineReveal, Reveal } from './ui/Primitives'
 
 /** Invented numbers, plainly presented — the fictional track record of the startup. */
@@ -8,9 +10,32 @@ const stats = [
   { label: 'Dias até a primeira entrega', value: '14' },
 ] as const
 
+/** Counts from 0 to the numeric part when scrolled into view; suffix rides along. */
+function Counter({ raw }: { raw: string }) {
+  const match = raw.match(/^(\d+)(.*)$/)
+  const target = match ? Number(match[1]) : 0
+  const suffix = match ? match[2] : ''
+  const ref = useRef<HTMLSpanElement>(null)
+  const inView = useInView(ref, { once: true, margin: '-60px' })
+  const value = useMotionValue(0)
+  const text = useTransform(value, (v) => `${Math.round(v)}${suffix}`)
+
+  useEffect(() => {
+    if (!inView) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      value.set(target)
+      return
+    }
+    const controls = animate(value, target, { duration: 1.2, ease: 'easeOut' })
+    return () => controls.stop()
+  }, [inView, target, value])
+
+  return <motion.span ref={ref}>{text}</motion.span>
+}
+
 /**
  * Reference pattern: "Build a better world of work" — left column beside the
- * regrouped sphere, with italic amber emphasis inside the running text.
+ * regrouped sphere, with italic cobalt emphasis inside the running text.
  */
 export function Mission() {
   return (
@@ -42,7 +67,7 @@ export function Mission() {
               {stats.map((stat) => (
                 <div key={stat.label}>
                   <dd className="text-[2rem] leading-none font-[480] tracking-[-0.01em] text-ivory">
-                    {stat.value}
+                    <Counter raw={stat.value} />
                   </dd>
                   <dt className="mt-2 text-[13px] leading-[1.4] text-slate">{stat.label}</dt>
                 </div>

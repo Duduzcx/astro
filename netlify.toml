@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# One-page app: any deep link falls back to the page itself.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

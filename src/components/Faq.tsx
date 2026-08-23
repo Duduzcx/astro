@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { LineReveal, Reveal } from './ui/Primitives'
 
 /** Invented answers with realistic ranges — adjust to the real practice. */
@@ -30,6 +32,8 @@ const faqs = [
 ] as const
 
 export function Faq() {
+  const [open, setOpen] = useState<number | null>(null)
+
   return (
     <section id="faq" aria-label="Perguntas frequentes" className="relative z-10 py-24 md:py-32">
       <div className="shell">
@@ -47,24 +51,46 @@ export function Faq() {
           </div>
 
           <div className="flex flex-col gap-3">
-            {faqs.map((faq, index) => (
-              <Reveal key={faq.question} delay={0.05 * index}>
-                <details className="group graphite-card !p-0">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-6 p-6 text-[1.05rem] font-[480] text-ivory [&::-webkit-details-marker]:hidden">
-                    {faq.question}
-                    <svg
-                      viewBox="0 0 16 16"
-                      fill="none"
-                      aria-hidden="true"
-                      className="h-4 w-4 shrink-0 transition-transform duration-200 group-open:rotate-45"
+            {faqs.map((faq, index) => {
+              const isOpen = open === index
+              return (
+                <Reveal key={faq.question} delay={0.05 * index}>
+                  <div className="graphite-card !p-0">
+                    <button
+                      type="button"
+                      onClick={() => setOpen(isOpen ? null : index)}
+                      aria-expanded={isOpen}
+                      aria-controls={`faq-panel-${index}`}
+                      className="flex w-full cursor-pointer items-center justify-between gap-6 p-6 text-left text-[1.05rem] font-[480] text-ivory"
                     >
-                      <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="1.4" />
-                    </svg>
-                  </summary>
-                  <p className="px-6 pb-6 text-[15px] leading-[1.6] text-ash">{faq.answer}</p>
-                </details>
-              </Reveal>
-            ))}
+                      {faq.question}
+                      <svg
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        aria-hidden="true"
+                        className={`h-4 w-4 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-45' : ''}`}
+                      >
+                        <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="1.4" />
+                      </svg>
+                    </button>
+                    <AnimatePresence initial={false}>
+                      {isOpen ? (
+                        <motion.div
+                          id={`faq-panel-${index}`}
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                          className="overflow-hidden"
+                        >
+                          <p className="px-6 pb-6 text-[15px] leading-[1.6] text-ash">{faq.answer}</p>
+                        </motion.div>
+                      ) : null}
+                    </AnimatePresence>
+                  </div>
+                </Reveal>
+              )
+            })}
           </div>
         </div>
       </div>

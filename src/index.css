@@ -115,11 +115,17 @@
   }
 }
 
-/* Graphite surface: the Mercury card. Value lift, 12px radius, no border, no shadow. */
+/* Graphite surface: the Mercury card. Value lift, 12px radius, no border, no
+   shadow. Hover lifts one more value step — never a shadow. */
 @utility graphite-card {
   background-color: var(--color-graphite);
   border-radius: 12px;
   padding: 32px;
+  transition: background-color 250ms ease;
+
+  &:hover {
+    background-color: #232330;
+  }
 }
 
 /* Caption voice: eyebrows and tiny labels. Weight 480, wide-set, uppercase. */

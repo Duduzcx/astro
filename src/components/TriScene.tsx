@@ -276,6 +276,9 @@ export function TriScene() {
     }
     window.addEventListener('resize', onResize)
 
+    /* First rendered frame lifts the container's opacity — no canvas pop-in. */
+    let revealed = false
+
     let frame = 0
     let previous = performance.now()
 
@@ -314,11 +317,28 @@ export function TriScene() {
       ambientMaterial.uniforms.uTime.value = time * 0.6
 
       renderer.render(scene, camera)
+
+      if (!revealed) {
+        revealed = true
+        mount.style.opacity = '1'
+      }
     }
     frame = requestAnimationFrame(tick)
 
+    /* No point burning GPU while the tab is hidden. */
+    const onVisibility = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(frame)
+      } else {
+        previous = performance.now()
+        frame = requestAnimationFrame(tick)
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+
     return () => {
       cancelAnimationFrame(frame)
+      document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('resize', onResize)
       window.removeEventListener('pointermove', onPointerMove)
       sphereGeometry.dispose()
@@ -330,5 +350,11 @@ export function TriScene() {
     }
   }, [])
 
-  return <div ref={mountRef} aria-hidden="true" className="fixed inset-0 z-0" />
+  return (
+    <div
+      ref={mountRef}
+      aria-hidden="true"
+      className="fixed inset-0 z-0 opacity-0 transition-opacity duration-700"
+    />
+  )
 }

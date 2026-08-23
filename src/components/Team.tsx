@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { LineReveal, Reveal } from './ui/Primitives'
 
 /** Invented crew. Triangle avatars keep the particle language at card scale. */
@@ -42,6 +42,25 @@ function initials(name: string) {
 
 export function Team() {
   const trackRef = useRef<HTMLDivElement>(null)
+  const [atStart, setAtStart] = useState(true)
+  const [atEnd, setAtEnd] = useState(false)
+
+  /* Arrows go quiet at the ends instead of pretending there is more to see. */
+  useEffect(() => {
+    const track = trackRef.current
+    if (!track) return
+    const update = () => {
+      setAtStart(track.scrollLeft <= 4)
+      setAtEnd(track.scrollLeft >= track.scrollWidth - track.clientWidth - 4)
+    }
+    update()
+    track.addEventListener('scroll', update, { passive: true })
+    window.addEventListener('resize', update)
+    return () => {
+      track.removeEventListener('scroll', update)
+      window.removeEventListener('resize', update)
+    }
+  }, [])
 
   const scrollByCard = (direction: 1 | -1) => {
     trackRef.current?.scrollBy({ left: direction * 320, behavior: 'smooth' })
@@ -102,8 +121,9 @@ export function Team() {
         <button
           type="button"
           onClick={() => scrollByCard(-1)}
+          disabled={atStart}
           aria-label="Membro anterior"
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-cobalt text-white transition-transform hover:scale-105"
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-cobalt text-white transition-[transform,opacity] duration-200 hover:enabled:scale-105 disabled:opacity-35"
         >
           <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" className="h-4 w-4">
             <path d="M11 2 5 8l6 6" stroke="currentColor" strokeWidth="1.6" />
@@ -112,8 +132,9 @@ export function Team() {
         <button
           type="button"
           onClick={() => scrollByCard(1)}
+          disabled={atEnd}
           aria-label="Próximo membro"
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-cobalt text-white transition-transform hover:scale-105"
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-cobalt text-white transition-[transform,opacity] duration-200 hover:enabled:scale-105 disabled:opacity-35"
         >
           <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" className="h-4 w-4">
             <path d="M5 2l6 6-6 6" stroke="currentColor" strokeWidth="1.6" />
