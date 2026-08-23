@@ -20,7 +20,7 @@ export function Mission() {
         <div className="max-w-lg">
           <WordReveal
             text={'Um jeito melhor\nde operar'}
-            className="text-[clamp(2.4rem,5vw,4rem)] leading-[1.04]"
+            className="font-impact text-[clamp(2.6rem,5.6vw,4.6rem)] leading-[1.0]"
           />
 
           <Reveal delay={0.12}>

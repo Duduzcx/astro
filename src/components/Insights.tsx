@@ -40,7 +40,7 @@ export function Insights() {
       <div className="shell">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div>
-            <WordReveal text="Tech insights" className="text-[clamp(2.2rem,4.6vw,3.6rem)]" />
+            <WordReveal text="Tech insights" className="font-impact text-[clamp(2.4rem,5.2vw,4.2rem)]" />
             <Reveal delay={0.12}>
               <p className="mt-6 max-w-md text-ash">
                 Como a gente pensa tecnologia e operação — sem jargão, com opinião.

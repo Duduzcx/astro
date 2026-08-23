@@ -14,7 +14,7 @@ export function Footer() {
       <div className="flex min-h-[80svh] items-center">
         <div className="shell">
           <BlurReveal className="mx-auto max-w-3xl text-center">
-            <p className="text-[clamp(2rem,4.6vw,3.6rem)] leading-[1.15] font-[480] tracking-[-0.01em] text-ivory">
+            <p className="font-impact text-[clamp(2.2rem,5vw,4rem)] leading-[1.06] text-ivory">
               A sua operação tem a resposta.
               <br />
               Peça pra Astro Bot construir.

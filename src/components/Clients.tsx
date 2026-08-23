@@ -29,7 +29,7 @@ export function Clients() {
     <section id="clientes" aria-label="Clientes" className="relative z-10 py-24 md:py-36">
       <div className="shell">
         <div className="max-w-lg">
-          <WordReveal text="Quem confia" className="text-[clamp(2.4rem,5.6vw,4.6rem)]" />
+          <WordReveal text="Quem confia" className="font-impact text-[clamp(2.6rem,6vw,5rem)]" />
           <Reveal delay={0.12}>
             <p className="mt-6 text-ash">
               Operações reais que trocaram planilha e retrabalho por sistema rodando — do varejo à

@@ -40,7 +40,7 @@ export function FilmBand() {
         <div className="shell">
           <BlurReveal className="max-w-2xl">
             <p className="label-voice text-[11px]">Funcionando agora, de verdade</p>
-            <p className="mt-5 text-[clamp(1.8rem,4vw,3.2rem)] leading-[1.15] font-[480] tracking-[-0.01em] text-ivory">
+            <p className="font-impact mt-5 text-[clamp(2rem,4.6vw,3.8rem)] leading-[1.06] text-ivory">
               Enquanto você dorme, o robô{' '}
               <span className="text-spectrum-animated">cobra, confere e responde</span>.
             </p>

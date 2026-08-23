@@ -28,7 +28,7 @@ export function About() {
       <div className="shell">
         <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
           <div>
-            <WordReveal text={'Por que a Astro Bot\nexiste'} className="text-[clamp(2.2rem,4.6vw,3.6rem)]" />
+            <WordReveal text={'Por que a Astro Bot\nexiste'} className="font-impact text-[clamp(2.4rem,5.2vw,4.2rem)]" />
             <Reveal delay={0.12}>
               <p className="mt-6 max-w-md leading-[1.6] text-ash">
                 A Astro Bot nasceu em 2023, dentro de uma operação de logística que vivia refém de

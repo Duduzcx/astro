@@ -12,6 +12,7 @@ import {
   motion,
   useInView,
   useMotionValue,
+  useScroll,
   useSpring,
   useTransform,
 } from 'framer-motion'
@@ -19,7 +20,7 @@ import {
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-/** Eyebrow. Cobalt caps at weight 480 — the one place colour touches text. */
+/** Eyebrow. Bordered mono pill with the triangle glyph — the "technical" voice. */
 export function Label({
   children,
   className = '',
@@ -29,10 +30,35 @@ export function Label({
 }) {
   return (
     <span
-      className={`block text-[13px] font-[480] tracking-[0.08em] text-cobalt uppercase ${className}`}
+      className={`inline-flex items-center gap-2.5 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 font-mono text-[11px] tracking-[0.14em] text-[#4dd6e8] uppercase backdrop-blur-sm ${className}`}
     >
+      <svg viewBox="0 0 12 12" aria-hidden="true" className="h-2.5 w-2.5 shrink-0">
+        <path d="M6 1.5 10.5 10.5H1.5L6 1.5Z" fill="currentColor" />
+      </svg>
       {children}
     </span>
+  )
+}
+
+/** Huge outlined ghost word drifting behind a section heading. */
+export function GiantWord({ word, className = '' }: { word: string; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] })
+  const y = useTransform(scrollYProgress, [0, 1], ['14%', '-14%'])
+
+  return (
+    <div
+      ref={ref}
+      aria-hidden="true"
+      className={`pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden ${className}`}
+    >
+      <motion.span
+        style={{ y }}
+        className="giant-outline text-[clamp(6rem,21vw,19rem)] leading-none whitespace-nowrap"
+      >
+        {word}
+      </motion.span>
+    </div>
   )
 }
 

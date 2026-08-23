@@ -36,7 +36,7 @@ export function Hero() {
             trigger="mount"
             delay={0.35}
             text={'Destrave a\nsua operação.'}
-            className="max-w-4xl text-[clamp(3.2rem,9vw,7.5rem)] leading-[0.98]"
+            className="font-impact max-w-4xl text-[clamp(3.6rem,10vw,8.6rem)] leading-[0.95]"
           />
 
           <motion.div variants={rise} className="mt-9">

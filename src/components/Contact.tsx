@@ -35,7 +35,7 @@ export function Contact() {
       <div className="shell">
         <div className="grid gap-12 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
           <div>
-            <WordReveal text={'Conta pra gente\no seu desafio'} className="text-[clamp(2.2rem,4.6vw,3.6rem)]" />
+            <WordReveal text={'Conta pra gente\no seu desafio'} className="font-impact text-[clamp(2.4rem,5.2vw,4.2rem)]" />
             <Reveal delay={0.12}>
               <p className="mt-6 max-w-md text-ash">
                 Responde em até um dia útil. Se preferir pular a fila: uma conversa técnica de 20

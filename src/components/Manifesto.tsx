@@ -1,4 +1,4 @@
-import { BlurReveal } from './ui/Primitives'
+import { BlurReveal, GiantWord } from './ui/Primitives'
 
 /**
  * One full-screen statement over the dispersed particle field — the landing
@@ -8,6 +8,7 @@ export function Manifesto() {
   return (
     <section id="manifesto" aria-label="Manifesto">
       <div className="relative z-10 flex min-h-[85svh] items-center">
+        <GiantWord word="Manual" />
         <div className="shell">
           <BlurReveal className="mx-auto max-w-4xl">
             <p className="text-center text-[clamp(1.7rem,3.6vw,2.9rem)] leading-[1.25] font-[480] tracking-[-0.01em] text-ivory">

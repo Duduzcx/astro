@@ -1,4 +1,4 @@
-import { AnimatedNumber, Reveal, WordReveal } from './ui/Primitives'
+import { AnimatedNumber, GiantWord, Reveal, WordReveal } from './ui/Primitives'
 
 /** Invented case studies: pain → build → number, plus the stack that shipped it. */
 const cases = [
@@ -33,9 +33,10 @@ const cases = [
 
 export function Cases() {
   return (
-    <section id="resultados" aria-label="Resultados" className="relative z-10 py-24 md:py-32">
-      <div className="shell">
-        <WordReveal text="Resultados medidos" className="max-w-2xl text-[clamp(2.2rem,4.6vw,3.6rem)]" />
+    <section id="resultados" aria-label="Resultados" className="relative z-10 overflow-hidden py-24 md:py-32">
+      <GiantWord word="Prova" className="opacity-70" />
+      <div className="shell relative">
+        <WordReveal text="Resultados medidos" className="font-impact max-w-2xl text-[clamp(2.4rem,5.2vw,4.2rem)]" />
         <Reveal delay={0.12}>
           <p className="mt-6 max-w-md text-ash">
             Todo projeto começa com uma métrica combinada. Três histórias completas: a dor, o que a

@@ -69,7 +69,7 @@ export function Team() {
   return (
     <section id="equipe" aria-label="Equipe" className="relative z-10 py-24 md:py-36">
       <div className="shell">
-        <WordReveal text="Quem constrói" className="text-[clamp(2.4rem,5.6vw,4.6rem)]" />
+        <WordReveal text="Quem constrói" className="font-impact text-[clamp(2.6rem,6vw,5rem)]" />
         <Reveal delay={0.12}>
           <p className="mt-6 max-w-md text-ash">
             Um time pequeno de propósito: quem entende o seu problema é quem escreve o código.

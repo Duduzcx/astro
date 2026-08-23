@@ -66,7 +66,7 @@ export function ServiceBlocks() {
             <div className={index % 2 === 1 ? 'lg:order-2' : ''}>
               <WordReveal
                 text={service.title}
-                className="text-[clamp(2.2rem,4.6vw,3.6rem)] leading-[1.04]"
+                className="font-impact text-[clamp(2.4rem,5.2vw,4.2rem)] leading-[1.0]"
               />
               <Reveal delay={0.12}>
                 <p className="mt-6 max-w-md text-[clamp(1rem,1.3vw,1.15rem)] leading-[1.6] text-ash">

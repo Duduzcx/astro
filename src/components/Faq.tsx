@@ -39,7 +39,7 @@ export function Faq() {
       <div className="shell">
         <div className="grid gap-10 lg:grid-cols-[1fr_1.4fr]">
           <div>
-            <WordReveal text={'Perguntas\nfrequentes'} className="text-[clamp(2.2rem,4.6vw,3.6rem)]" />
+            <WordReveal text={'Perguntas\nfrequentes'} className="font-impact text-[clamp(2.4rem,5.2vw,4.2rem)]" />
             <Reveal delay={0.12}>
               <p className="mt-6 max-w-sm text-ash">
                 O que todo mundo pergunta no primeiro contato. Ficou faltando alguma?{' '}
@@ -83,7 +83,12 @@ export function Faq() {
                       aria-controls={`faq-panel-${index}`}
                       className="flex w-full cursor-pointer items-center justify-between gap-6 p-6 text-left text-[1.05rem] font-[480] text-ivory"
                     >
-                      {faq.question}
+                      <span>
+                        <span className="mr-3 font-mono text-[13px] text-[#4dd6e8]">
+                          {String(index + 1).padStart(2, '0')}
+                        </span>
+                        {faq.question}
+                      </span>
                       <svg
                         viewBox="0 0 16 16"
                         fill="none"

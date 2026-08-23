@@ -1,5 +1,6 @@
-import { motion } from 'framer-motion'
-import { WordReveal, Reveal } from './ui/Primitives'
+import { useEffect, useRef, useState } from 'react'
+import { motion, useScroll, useTransform } from 'framer-motion'
+import { GiantWord, Label, Reveal, WordReveal } from './ui/Primitives'
 
 /** Numbered because it IS a sequence — this is the actual order of an engagement. */
 const steps = [
@@ -25,41 +26,101 @@ const steps = [
   },
 ] as const
 
-/** Mercury card language: graphite surface, 12px radius, no border, no shadow. */
-export function Process() {
+function StepCard({ step }: { step: (typeof steps)[number] }) {
   return (
-    <section id="processo" aria-label="Processo" className="relative z-10 py-24 md:py-32">
-      <div className="shell">
-        <WordReveal text="Como a gente trabalha" className="max-w-2xl text-[clamp(2.2rem,4.6vw,3.6rem)]" />
-        <Reveal delay={0.12}>
-          <p className="mt-6 max-w-md text-ash">
-            Sem projeto de gaveta: escopo fechado, entregas quinzenais e o código no seu nome desde
-            o primeiro commit.
-          </p>
-        </Reveal>
+    <article className="graphite-card relative h-full w-full overflow-hidden">
+      <span
+        aria-hidden="true"
+        className="giant-outline pointer-events-none absolute -top-5 -right-3 text-[7rem] leading-none"
+      >
+        {step.number}
+      </span>
+      <span className="text-spectrum-animated block text-[13px] font-[480] tracking-[0.08em]">
+        {step.number}
+      </span>
+      <h3 className="mt-4 text-[1.4rem]">{step.title}</h3>
+      <p className="mt-3 max-w-[38ch] text-[15px] leading-[1.55] text-ash">{step.body}</p>
+    </article>
+  )
+}
 
-        <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {steps.map((step, index) => (
-            <Reveal key={step.number} delay={0.08 * index}>
-              <article className="graphite-card h-full">
-                {/* The step line draws itself in sequence — the pipeline filling up. */}
-                <motion.span
-                  initial={{ scaleX: 0 }}
-                  whileInView={{ scaleX: 1 }}
-                  viewport={{ once: true, margin: '-80px' }}
-                  transition={{ duration: 0.7, delay: 0.15 + 0.14 * index, ease: [0.22, 1, 0.36, 1] }}
-                  className="block h-0.5 w-full origin-left rounded-full bg-gradient-to-r from-cobalt to-[#4dd6e8]"
-                  aria-hidden="true"
-                />
-                <span className="text-spectrum-animated mt-5 block text-[13px] font-[480] tracking-[0.08em]">
-                  {step.number}
-                </span>
-                <h3 className="mt-4 text-[1.4rem]">{step.title}</h3>
-                <p className="mt-3 text-[15px] leading-[1.55] text-ash">{step.body}</p>
-              </article>
-            </Reveal>
-          ))}
+/**
+ * Reference trick (Projeto Thor): the section pins while the cards ride
+ * horizontally on vertical scroll. Falls back to a plain grid below lg and
+ * for reduced-motion users.
+ */
+export function Process() {
+  const ref = useRef<HTMLElement>(null)
+  const [pinned, setPinned] = useState(false)
+
+  useEffect(() => {
+    const wide = window.matchMedia('(min-width: 1024px)')
+    const still = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const update = () => setPinned(wide.matches && !still.matches)
+    update()
+    wide.addEventListener('change', update)
+    still.addEventListener('change', update)
+    return () => {
+      wide.removeEventListener('change', update)
+      still.removeEventListener('change', update)
+    }
+  }, [])
+
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end end'] })
+  const x = useTransform(scrollYProgress, [0.12, 0.92], ['4%', '-46%'])
+
+  const header = (
+    <>
+      <Label>Como a gente trabalha</Label>
+      <WordReveal
+        text="Do primeiro café ao sistema no ar"
+        className="font-impact mt-6 max-w-3xl text-[clamp(2.4rem,5.2vw,4.2rem)]"
+      />
+      <Reveal delay={0.12}>
+        <p className="mt-5 max-w-md text-ash">
+          Sem projeto de gaveta: escopo fechado, entregas quinzenais e o código no seu nome desde o
+          primeiro dia.
+        </p>
+      </Reveal>
+    </>
+  )
+
+  if (!pinned) {
+    return (
+      <section id="processo" aria-label="Processo" className="relative z-10 py-24 md:py-32">
+        <div className="shell">
+          {header}
+          <div className="mt-12 grid gap-4 sm:grid-cols-2">
+            {steps.map((step, index) => (
+              <Reveal key={step.number} delay={0.08 * index}>
+                <StepCard step={step} />
+              </Reveal>
+            ))}
+          </div>
         </div>
+      </section>
+    )
+  }
+
+  return (
+    <section ref={ref} id="processo" aria-label="Processo" className="relative z-10 h-[260vh]">
+      <div className="sticky top-0 flex h-screen flex-col justify-center overflow-hidden">
+        <GiantWord word="Processo" className="opacity-60" />
+        <div className="shell relative">{header}</div>
+        <motion.div style={{ x }} className="mt-12 flex w-max gap-6 pl-[max(48px,calc((100vw-1200px)/2+48px))]">
+          {steps.map((step) => (
+            <div key={step.number} className="w-[340px] shrink-0 md:w-[380px]">
+              <StepCard step={step} />
+            </div>
+          ))}
+          <div className="graphite-card flex w-[300px] shrink-0 items-center justify-center bg-cobalt/10">
+            <p className="font-impact text-center text-[1.6rem] leading-[1.1] text-ivory">
+              Pronto pra
+              <br />
+              começar?
+            </p>
+          </div>
+        </motion.div>
       </div>
     </section>
   )

@@ -25,7 +25,7 @@ export function CtaBand() {
       <div className="relative py-28 md:py-36">
         <div className="shell">
           <BlurReveal className="mx-auto max-w-2xl text-center">
-            <p className="text-[clamp(1.9rem,4.2vw,3.2rem)] leading-[1.15] font-[480] tracking-[-0.01em] text-ivory">
+            <p className="font-impact text-[clamp(2.1rem,4.8vw,3.8rem)] leading-[1.06] text-ivory">
               45 minutos. Zero compromisso.
               <br />O mapa do que dá pra automatizar.
             </p>
