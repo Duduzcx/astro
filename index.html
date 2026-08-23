@@ -58,6 +58,12 @@
     />
   </head>
   <body>
+    <!-- Netlify form registration: the build bot only sees static HTML, so the
+         React form in Contact.tsx needs this hidden mirror with the same fields. -->
+    <form name="contato" netlify netlify-honeypot="bot-field" hidden>
+      <input name="nome" /><input name="email" /><input name="empresa" />
+      <textarea name="desafio"></textarea>
+    </form>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

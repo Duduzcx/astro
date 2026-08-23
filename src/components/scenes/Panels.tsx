@@ -163,6 +163,48 @@ export function ChatPanel() {
   )
 }
 
+/** IoT telemetry: live sensor tiles + a sparkline wall. */
+export function TelemetryPanel() {
+  const sensors = [
+    ['Câmara fria 01', '-18,2 °C', '#4dd6e8'],
+    ['Umidade galpão', '54%', '#7d8bf0'],
+    ['Energia linha A', '12,4 kW', '#5266eb'],
+    ['Esteira 03', 'ativa', '#4ade80'],
+  ] as const
+  return (
+    <Frame label="Painel de sensores IoT com leituras de temperatura, umidade e energia em tempo real">
+      <div className="p-4">
+        <div className="flex items-center justify-between pb-3">
+          <p className="text-[11px] font-[480] text-ivory">Telemetria · agora</p>
+          <span className="flex items-center gap-1.5 text-[9px] text-slate">
+            <span className="h-1.5 w-1.5 animate-[astro-pulse_1.8s_ease-in-out_infinite] rounded-full bg-[#4ade80]" />
+            42 sensores online
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {sensors.map(([name, value, tint]) => (
+            <div key={name} className="rounded-lg bg-obsidian p-3">
+              <p className="text-[9px] tracking-[0.06em] text-slate uppercase">{name}</p>
+              <p className="mt-1 text-[15px] font-[480]" style={{ color: tint }}>
+                {value}
+              </p>
+              <svg viewBox="0 0 120 24" className="mt-2 w-full" aria-hidden="true">
+                <path
+                  d="M0,16 C12,14 18,20 30,17 C42,14 48,8 60,10 C72,12 78,6 90,8 C102,10 110,5 120,7"
+                  fill="none"
+                  stroke={tint}
+                  strokeWidth="1.5"
+                  opacity="0.7"
+                />
+              </svg>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Frame>
+  )
+}
+
 /** Integration hub: sources feed the triangle, outputs leave it. */
 export function PipelinePanel() {
   const inputs = ['ERP', 'Site', 'WhatsApp']

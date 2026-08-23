@@ -6,13 +6,16 @@ import { IntegrationsStrip } from './components/IntegrationsStrip'
 import { Manifesto } from './components/Manifesto'
 import { FilmBand } from './components/FilmBand'
 import { Mission } from './components/Mission'
+import { About } from './components/About'
 import { Process } from './components/Process'
 import { Cases } from './components/Cases'
 import { CtaBand } from './components/CtaBand'
 import { Team } from './components/Team'
 import { Clients } from './components/Clients'
 import { Testimonials } from './components/Testimonials'
+import { Insights } from './components/Insights'
 import { Faq } from './components/Faq'
+import { Contact } from './components/Contact'
 import { Footer } from './components/Footer'
 
 /** three.js is ~500kB minified — the scene lazy-loads and fades in under the hero. */
@@ -48,13 +51,16 @@ export default function App() {
         <Manifesto />
         <FilmBand />
         <Mission />
+        <About />
         <Process />
         <Cases />
         <CtaBand />
         <Team />
         <Clients />
         <Testimonials />
+        <Insights />
         <Faq />
+        <Contact />
       </main>
 
       <Footer />

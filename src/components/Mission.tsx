@@ -39,7 +39,8 @@ function Counter({ raw }: { raw: string }) {
  */
 export function Mission() {
   return (
-    <section aria-label="Missão" className="relative z-10 flex min-h-[100svh] items-center">
+    <section aria-label="Missão" className="relative z-10 flex min-h-[100svh] items-center overflow-hidden">
+      <div className="aurora" aria-hidden="true" />
       <div className="shell">
         <div className="max-w-lg">
           <LineReveal
@@ -66,7 +67,7 @@ export function Mission() {
             <dl className="mt-12 grid grid-cols-2 gap-x-8 gap-y-8">
               {stats.map((stat) => (
                 <div key={stat.label}>
-                  <dd className="text-[2rem] leading-none font-[480] tracking-[-0.01em] text-ivory">
+                  <dd className="text-spectrum text-[2rem] leading-none font-[480] tracking-[-0.01em]">
                     <Counter raw={stat.value} />
                   </dd>
                   <dt className="mt-2 text-[13px] leading-[1.4] text-slate">{stat.label}</dt>

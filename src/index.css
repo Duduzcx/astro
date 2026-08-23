@@ -136,6 +136,27 @@
   color: var(--color-slate);
 }
 
+/* Soft colour weather behind a section — cobalt, cyan and violet at whisper
+   opacity. This is the "life" layer over the onyx canvas; never behind text
+   directly, always behind the whole section. */
+@utility aurora {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(640px 420px at 16% 18%, rgba(82, 102, 235, 0.16), transparent 70%),
+    radial-gradient(720px 520px at 84% 72%, rgba(77, 214, 232, 0.1), transparent 70%),
+    radial-gradient(520px 420px at 62% 8%, rgba(139, 124, 248, 0.1), transparent 70%);
+}
+
+/* Cobalt→cyan gradient type. For numbers and emphasised words only. */
+@utility text-spectrum {
+  background: linear-gradient(92deg, #5266eb 0%, #7d8bf0 45%, #4dd6e8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 /* Hides the scrollbar on the team carousel without killing scrollability. */
 @utility no-scrollbar {
   scrollbar-width: none;

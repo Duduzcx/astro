@@ -35,9 +35,10 @@ export const navLinks = [
 export const footerLinks = [
   { label: 'Serviços', href: '#servicos' },
   { label: 'Manifesto', href: '#manifesto' },
+  { label: 'Sobre nós', href: '#sobre' },
   { label: 'Processo', href: '#processo' },
   { label: 'Resultados', href: '#resultados' },
   { label: 'Equipe', href: '#equipe' },
-  { label: 'Clientes', href: '#clientes' },
+  { label: 'Tech insights', href: '#insights' },
   { label: 'Perguntas frequentes', href: '#faq' },
 ] as const

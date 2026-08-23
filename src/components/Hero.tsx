@@ -25,6 +25,7 @@ export function Hero() {
 
   return (
     <section ref={ref} id="topo" className="relative min-h-[100svh] overflow-hidden">
+      <div className="aurora" aria-hidden="true" />
       <motion.div
         style={{ y: contentY, opacity: contentOpacity }}
         className="relative z-10 flex min-h-[100svh] items-center pt-28 pb-16"

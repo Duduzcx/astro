@@ -2,23 +2,25 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 
 /**
- * The signature object, after the reference: thousands of small outlined
- * triangles that assemble into a sphere, scatter into a field, and regroup as
- * the page scrolls. One fixed canvas behind the whole document; every section
+ * The signature object: an ORBITAL CORE — a dense nucleus of outlined
+ * triangles wrapped by three tilted rings that precess at different speeds,
+ * like an atom or a small planetary system. On scroll it scatters into a field
+ * and regroups, one fixed canvas behind the whole document; every section
  * change is a state of this scene, not a new scene.
  */
 
 /**
- * Mercury discipline applied to the Dala field: a cool monochrome of ivory,
- * ash and slate-blue, with cobalt as the only chromatic note.
+ * Blue-hour palette with more life than pure monochrome: cobalt leads, cyan
+ * and soft violet season it, ivory keeps the cool base.
  */
 const PALETTE: Array<[string, number]> = [
-  ['#5266eb', 0.24],
-  ['#7d8bf0', 0.16],
+  ['#5266eb', 0.2],
+  ['#7d8bf0', 0.14],
+  ['#4dd6e8', 0.12],
+  ['#8b7cf8', 0.08],
   ['#a5b1ff', 0.08],
-  ['#ededf3', 0.2],
-  ['#c3c3cc', 0.14],
-  ['#8b8fa8', 0.1],
+  ['#ededf3', 0.18],
+  ['#c3c3cc', 0.12],
   ['#ffffff', 0.08],
 ]
 
@@ -41,22 +43,22 @@ function pickColor(target: THREE.Color, random: () => number) {
  * faint sparse field (cards need quiet behind them), footer regrouped centre.
  */
 const KEYFRAMES: Array<[number, number, number, number, number, number]> = [
-  [0.0, 0.04, 0.58, 0.02, 1.0, 1.0],
-  [0.045, 0.05, 0.58, 0.0, 1.0, 1.0],
-  [0.09, 0.85, 0.0, 0.0, 1.25, 0.35],
-  [0.22, 0.85, 0.0, 0.0, 1.25, 0.35],
-  [0.27, 1.0, 0.0, 0.0, 1.12, 0.9],
-  [0.38, 1.0, 0.0, 0.0, 1.12, 0.9],
-  [0.42, 1.0, 0.0, 0.0, 1.12, 0.0],
-  [0.45, 0.3, 0.55, 0.0, 0.98, 0.0],
-  [0.48, 0.05, 0.55, 0.0, 0.98, 1.0],
-  [0.51, 0.06, 0.55, 0.0, 0.98, 1.0],
-  [0.55, 0.9, 0.0, 0.0, 1.35, 0.22],
-  [0.62, 0.9, 0.0, 0.0, 1.35, 0.22],
-  [0.65, 0.9, 0.0, 0.0, 1.35, 0.0],
-  [0.69, 0.9, 0.0, 0.0, 1.35, 0.0],
-  [0.73, 0.9, 0.0, 0.0, 1.35, 0.22],
-  [0.94, 0.9, 0.0, 0.0, 1.35, 0.22],
+  [0.0, 0.04, 0.52, 0.02, 0.88, 1.0],
+  [0.035, 0.05, 0.52, 0.0, 0.88, 1.0],
+  [0.075, 0.85, 0.0, 0.0, 1.25, 0.35],
+  [0.2, 0.85, 0.0, 0.0, 1.25, 0.35],
+  [0.245, 1.0, 0.0, 0.0, 1.12, 0.9],
+  [0.33, 1.0, 0.0, 0.0, 1.12, 0.9],
+  [0.365, 1.0, 0.0, 0.0, 1.12, 0.0],
+  [0.39, 0.3, 0.55, 0.0, 0.98, 0.0],
+  [0.415, 0.05, 0.55, 0.0, 0.98, 1.0],
+  [0.44, 0.06, 0.55, 0.0, 0.98, 1.0],
+  [0.475, 0.9, 0.0, 0.0, 1.35, 0.22],
+  [0.6, 0.9, 0.0, 0.0, 1.35, 0.22],
+  [0.625, 0.9, 0.0, 0.0, 1.35, 0.0],
+  [0.655, 0.9, 0.0, 0.0, 1.35, 0.0],
+  [0.685, 0.9, 0.0, 0.0, 1.35, 0.22],
+  [0.955, 0.9, 0.0, 0.0, 1.35, 0.22],
   [1.0, 0.3, 0.0, -0.04, 0.9, 0.85],
 ]
 
@@ -83,6 +85,7 @@ const VERTEX_SHADER = /* glsl */ `
   attribute vec3 aScatter;
   attribute vec3 aColor;
   attribute float aRand;
+  attribute float aRing;
   uniform float uMix;
   uniform float uTime;
   uniform float uScale;
@@ -90,28 +93,40 @@ const VERTEX_SHADER = /* glsl */ `
   varying vec3 vColor;
   varying float vFade;
 
+  /* Rodrigues rotation around an arbitrary unit axis. */
+  vec3 rotateAxis(vec3 p, vec3 axis, float angle) {
+    float c = cos(angle);
+    float s = sin(angle);
+    return p * c + cross(axis, p) * s + axis * dot(axis, p) * (1.0 - c);
+  }
+
   void main() {
     vColor = aColor;
 
-    float spin = uTime * 0.07;
-    float c = cos(spin);
-    float s = sin(spin);
-    vec3 sphere = vec3(
-      aSphere.x * c + aSphere.z * s,
-      aSphere.y,
-      -aSphere.x * s + aSphere.z * c
-    );
+    /* The planet body spins slowly on Y; each ring band ORBITS in the shared
+       tilted disc plane at its own speed and direction — counter-rotation is
+       what makes the object feel alive. */
+    const vec3 discAxis = vec3(0.2488, 0.7465, 0.6171);
+    float speed = 0.5;
+    if (aRing > 0.5 && aRing < 1.5) speed = 1.4;
+    else if (aRing > 1.5 && aRing < 2.5) speed = -1.0;
+    else if (aRing > 2.5) speed = 1.9;
+    float angle = uTime * 0.07 * speed;
+    vec3 core = aRing > 0.5
+      ? rotateAxis(aSphere, discAxis, angle)
+      : rotateAxis(aSphere, vec3(0.0, 1.0, 0.0), angle);
 
     vec3 scatter = aScatter;
     scatter.x += sin(uTime * 0.28 + aRand * 6.2831) * 0.09;
     scatter.y += cos(uTime * 0.22 + aRand * 9.42) * 0.09;
 
-    vec3 position3 = mix(sphere, scatter, uMix) * uScale;
+    vec3 position3 = mix(core, scatter, uMix) * uScale;
     position3.xy += uCenter;
 
-    /* Triangles on the far side of the sphere dim instead of disappearing. */
-    float depth = smoothstep(-1.0, 0.9, sphere.z);
-    vFade = mix(0.12 + 0.88 * depth * depth, 0.85, uMix);
+    /* Far side dims instead of disappearing; rings stay a touch brighter. */
+    float depth = smoothstep(-1.5, 1.2, core.z);
+    float base = aRing > 0.5 ? 0.35 : 0.15;
+    vFade = mix(base + (1.0 - base) * depth * depth, 0.85, uMix);
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position3, 1.0);
   }
@@ -132,26 +147,57 @@ const FRAGMENT_SHADER = /* glsl */ `
  * per triangle, with the sphere-state and scatter-state positions baked into
  * attributes so the shader can morph between them.
  */
+/**
+ * One shared tilted orbital plane (a ringed planet, not a brain): three
+ * concentric bands with clear gaps, counter-rotating against each other.
+ */
+const RING_NORMAL = new THREE.Vector3(0.25, 0.75, 0.62).normalize()
+const RING_BANDS: Array<[number, number]> = [
+  [1.04, 1.2],
+  [1.3, 1.46],
+  [1.56, 1.64],
+]
+
 function buildTriangles(count: number, spread: THREE.Vector3, onSphere: boolean) {
   const spherePositions = new Float32Array(count * 6 * 3)
   const scatterPositions = new Float32Array(count * 6 * 3)
   const colors = new Float32Array(count * 6 * 3)
   const randoms = new Float32Array(count * 6)
+  const rings = new Float32Array(count * 6)
   const color = new THREE.Color()
-  const golden = Math.PI * (3 - Math.sqrt(5))
 
   for (let i = 0; i < count; i += 1) {
-    /* Sphere anchor: fibonacci distribution with a little jitter. */
+    /* Gathered state: 58% in a dense nucleus, the rest split across three
+       tilted orbit rings — an orbital core, not the reference's brain-sphere. */
     let anchor: THREE.Vector3
+    let ring = 0
     if (onSphere) {
-      const t = (i + 0.5) / count
-      const inclination = Math.acos(1 - 2 * t)
-      const azimuth = golden * i
-      anchor = new THREE.Vector3(
-        Math.sin(inclination) * Math.cos(azimuth),
-        Math.cos(inclination),
-        Math.sin(inclination) * Math.sin(azimuth),
-      ).multiplyScalar(0.98 + Math.random() * 0.06)
+      const roll = Math.random()
+      if (roll < 0.6) {
+        /* Planet body: dense ball on the sphere surface plus inner fill. */
+        const t = Math.random()
+        const inclination = Math.acos(1 - 2 * t)
+        const azimuth = Math.random() * Math.PI * 2
+        const shell = Math.random() < 0.7 ? 0.6 + Math.random() * 0.06 : 0.62 * Math.sqrt(Math.random())
+        anchor = new THREE.Vector3(
+          Math.sin(inclination) * Math.cos(azimuth),
+          Math.cos(inclination),
+          Math.sin(inclination) * Math.sin(azimuth),
+        ).multiplyScalar(shell)
+      } else {
+        ring = 1 + Math.floor(Math.random() * 3)
+        const [inner, outer] = RING_BANDS[ring - 1]
+        const radius = inner + Math.random() * (outer - inner)
+        const tangent = new THREE.Vector3(1, 0, 0)
+        tangent.cross(RING_NORMAL).normalize()
+        const bitangent = new THREE.Vector3().crossVectors(RING_NORMAL, tangent)
+        const theta = Math.random() * Math.PI * 2
+        anchor = new THREE.Vector3()
+          .addScaledVector(tangent, Math.cos(theta) * radius)
+          .addScaledVector(bitangent, Math.sin(theta) * radius)
+        /* Paper-thin vertical jitter: the bands must read as a flat ring disc. */
+        anchor.addScaledVector(RING_NORMAL, (Math.random() - 0.5) * 0.035)
+      }
     } else {
       anchor = new THREE.Vector3(
         (Math.random() * 2 - 1) * spread.x,
@@ -167,8 +213,10 @@ function buildTriangles(count: number, spread: THREE.Vector3, onSphere: boolean)
     )
 
     /* Triangle corners in a random plane around the anchor. Mostly tiny, the
-       occasional bigger one — the reference brain reads as fine grain. */
-    const size = (onSphere ? 0.005 : 0.012) + Math.random() * Math.random() * (onSphere ? 0.022 : 0.055)
+       occasional bigger one — fine grain in the core, chunkier on the rings. */
+    const size =
+      (onSphere ? (ring > 0 ? 0.008 : 0.005) : 0.012) +
+      Math.random() * Math.random() * (onSphere ? (ring > 0 ? 0.03 : 0.02) : 0.055)
     const normal = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize()
     const tangent = new THREE.Vector3(1, 0, 0)
     if (Math.abs(normal.x) > 0.9) tangent.set(0, 1, 0)
@@ -203,6 +251,7 @@ function buildTriangles(count: number, spread: THREE.Vector3, onSphere: boolean)
       colors[base + 1] = color.g
       colors[base + 2] = color.b
       randoms[i * 6 + v] = random
+      rings[i * 6 + v] = ring
     }
   }
 
@@ -211,6 +260,7 @@ function buildTriangles(count: number, spread: THREE.Vector3, onSphere: boolean)
   geometry.setAttribute('aScatter', new THREE.BufferAttribute(scatterPositions, 3))
   geometry.setAttribute('aColor', new THREE.BufferAttribute(colors, 3))
   geometry.setAttribute('aRand', new THREE.BufferAttribute(randoms, 1))
+  geometry.setAttribute('aRing', new THREE.BufferAttribute(rings, 1))
   /* LineSegments needs a `position` attribute even though the shader ignores it. */
   geometry.setAttribute('position', new THREE.BufferAttribute(spherePositions, 3))
   return geometry

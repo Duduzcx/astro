@@ -10,7 +10,7 @@ export function Footer() {
   const year = new Date().getFullYear()
 
   return (
-    <footer id="contato" className="relative z-10">
+    <footer className="relative z-10">
       <div className="flex min-h-[80svh] items-center">
         <div className="shell">
           <Reveal className="mx-auto max-w-3xl text-center">
