@@ -1,59 +1,33 @@
 @import 'tailwindcss';
 
 @theme {
-  /* ── Surfaces. The void is the design: content floats on black, and the only
-     lift is a translucent glass, never an opaque panel. */
-  --color-void: #000000; /* page canvas */
-  --color-deep: #05070f; /* recessed well — footer, bands */
-  --color-orbit: #0a1330; /* the one raised solid, used sparingly */
-  --color-orbit-soft: #101c44;
+  /* ── Surfaces. Mercury's alpine stack: onyx canvas, graphite cards one value
+     step up, obsidian for interactive fills. Separation by value, never shadow. */
+  --color-onyx: #171721; /* page canvas */
+  --color-graphite: #1e1e2a; /* elevated card surface */
+  --color-obsidian: #272735; /* secondary interactive fills */
 
-  /* ── Text. Achromatic on purpose: the only colour on the page is the accent
-     pair and the footage. Grey carries every word that is not a headline. */
-  --color-platinum: #ffffff; /* headings, nav */
-  --color-mist: #e9e9ec; /* emphasized body */
-  --color-silver: #bdbdbd; /* default body */
-  --color-ash: #9a9a9a; /* muted labels, inactive nav */
-  --color-slate: #5c5c62; /* hairlines only */
-  --color-phosphor: #ffffff; /* statistics */
+  /* ── Text. Ivory leads, ash carries body copy, slate whispers. Pure white is
+     reserved for text on cobalt. */
+  --color-ivory: #ededf3; /* headings, nav, strong */
+  --color-mist: #e2e3ed; /* hover states, hairline borders on dark */
+  --color-ash: #c3c3cc; /* default body */
+  --color-slate: #70707d; /* muted labels, dividers */
 
-  /* ── The two accents. Violet is the only filled action colour on the site;
-     amber is the only emphasis colour. Everything else is achromatic. */
-  --color-iris: #8052ff;
-  --color-amber: #ffb829;
+  /* ── The one chromatic note. Cobalt fills the primary action, tags the
+     eyebrows, and punctuates the particle field. Nothing else gets colour. */
+  --color-cobalt: #5266eb;
 
-  /* ── Atmosphere. Gradients and glows only — never a flat fill, never text. */
-  --color-nebula-violet: #7b5cff;
-  --color-nebula-cyan: #4de0ff;
-  --color-nebula-blue: #1b4dff;
+  /* ── Fonts. One grotesque, intermediate weights (480 is the ceiling). */
+  --font-display: 'Inter Tight', 'Inter', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
 
-  /* ── Fonts */
-  --font-display: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
-
-  /* ── Type scale (Auros ratios, tracking preserved) */
-  --text-caption: 10px;
-  --text-caption--line-height: 1.4;
-  --text-caption--letter-spacing: 0.15em;
-  --text-label: 12px;
-  --text-label--line-height: 1.4;
-  --text-label--letter-spacing: 0.12em;
-  --text-body: 16px;
-  --text-body--line-height: 1.6;
-  --text-subheading: 24px;
-  --text-subheading--line-height: 1.3;
-  --text-subheading--letter-spacing: -0.02em;
-  --text-heading: 36px;
-  --text-heading--line-height: 1;
-  --text-heading--letter-spacing: -0.03em;
-
-  --radius-card: 16px;
-  --radius-small: 6px;
+  --radius-card: 12px;
+  --radius-small: 4px;
 }
 
 @layer base {
   * {
-    border-color: color-mix(in srgb, var(--color-slate) 26%, transparent);
+    border-color: color-mix(in srgb, var(--color-slate) 32%, transparent);
   }
 
   html {
@@ -65,27 +39,25 @@
 
   body {
     margin: 0;
-    background-color: var(--color-void);
-    color: var(--color-silver);
+    background-color: var(--color-onyx);
+    color: var(--color-ash);
     font-family: var(--font-display);
-    /* Ultra-light body is the signature: paragraphs read as air, not as weight. */
-    font-size: 18px;
-    font-weight: 200;
+    font-size: 16px;
+    font-weight: 400;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
   }
 
-  /* Hierarchy comes from scale and tracking, never from weight. Every heading
-     is 400 — the 100px one and the 20px one alike. */
+  /* Weight 480 is the signature: asserts without shouting. Never bold. */
   h1,
   h2,
   h3,
   h4 {
-    font-weight: 400;
-    color: var(--color-platinum);
-    letter-spacing: -0.04em;
-    line-height: 1.05;
+    font-weight: 480;
+    color: var(--color-ivory);
+    letter-spacing: -0.01em;
+    line-height: 1.08;
     margin: 0;
     text-wrap: balance;
   }
@@ -95,8 +67,7 @@
     text-wrap: pretty;
   }
 
-  /* Film grain. Breaks the flatness of large dark gradients — without it the
-     blue fields band visibly on cheap panels. */
+  /* Film grain. Keeps the large dark fields from banding — the Dala half of the mix. */
   body::after {
     content: '';
     position: fixed;
@@ -108,12 +79,12 @@
   }
 
   ::selection {
-    background: #1b4dff;
+    background: var(--color-cobalt);
     color: #ffffff;
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-phosphor);
+    outline: 2px solid var(--color-ivory);
     outline-offset: 3px;
     border-radius: 2px;
   }
@@ -122,93 +93,48 @@
     width: 10px;
   }
   ::-webkit-scrollbar-track {
-    background: var(--color-deep);
+    background: var(--color-onyx);
   }
   ::-webkit-scrollbar-thumb {
-    background: var(--color-orbit);
+    background: var(--color-obsidian);
     border-radius: 999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--color-orbit-soft);
+    background: #33334a;
   }
 }
 
 @utility shell {
   width: 100%;
-  max-width: 1280px;
+  max-width: 1200px;
   margin-inline: auto;
   padding-inline: 24px;
 
   @media (width >= 768px) {
-    padding-inline: 40px;
+    padding-inline: 48px;
   }
 }
 
-/* The one chromatic gesture in the system. Reserved for the primary CTA. */
-@utility nebula {
-  background-image: linear-gradient(90deg, #1b4dff 0%, #5aa9ff 46%, #cfe2ff 100%);
+/* Graphite surface: the Mercury card. Value lift, 12px radius, no border, no shadow. */
+@utility graphite-card {
+  background-color: var(--color-graphite);
+  border-radius: 12px;
+  padding: 32px;
 }
 
-/* Section separator. Dashed, hairline, structural — never decorative. */
-@utility dashed-rule {
-  border: 0;
-  border-top: 1px dashed color-mix(in srgb, var(--color-slate) 45%, transparent);
-  margin: 0;
-}
-
-/* Glass surface: translucent, gradient-lit from the top-left, hairline edge.
-   Replaces flat card fills so panels catch light instead of sitting dead. */
-@utility glass {
-  background-image: linear-gradient(
-    145deg,
-    rgba(128, 82, 255, 0.09),
-    rgba(5, 7, 15, 0.86) 58%
-  );
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  backdrop-filter: blur(14px);
-}
-
-/* Cinematic footage sits under a scrim: the video is atmosphere, the type is content. */
-@utility film-scrim {
-  background-image:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.12) 45%, rgba(0, 0, 0, 0.82) 100%),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.15) 55%, transparent 78%);
-}
-
-/* Soft coloured bloom placed behind a section. Purely atmospheric. */
-@utility bloom {
-  position: absolute;
-  border-radius: 9999px;
-  filter: blur(90px);
-  pointer-events: none;
-}
-
-/* Museum-label voice: uppercase, weight 500, wide tracking, mono. */
+/* Caption voice: eyebrows and tiny labels. Weight 480, wide-set, uppercase. */
 @utility label-voice {
-  font-family: var(--font-mono);
-  font-weight: 500;
+  font-weight: 480;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: var(--color-ash);
+  letter-spacing: 0.1em;
+  color: var(--color-slate);
 }
 
-@keyframes astro-caret {
-  0%,
-  49% {
-    opacity: 1;
-  }
-  50%,
-  100% {
-    opacity: 0;
-  }
-}
-
-@keyframes astro-sweep {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(220%);
+/* Hides the scrollbar on the team carousel without killing scrollability. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
   }
 }
 
@@ -219,15 +145,6 @@
   }
   50% {
     opacity: 1;
-  }
-}
-
-@keyframes astro-marquee {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    transform: translate3d(-50%, 0, 0);
   }
 }
 

@@ -73,11 +73,11 @@ export function Nav() {
   return (
     <header
       className={`fixed inset-x-0 top-0 z-50 transition-colors duration-300 ${
-        scrolled ? 'bg-void/70 backdrop-blur-xl' : ''
+        scrolled ? 'bg-onyx/70 backdrop-blur-xl' : ''
       }`}
     >
       <nav className="shell flex h-20 items-center justify-between" aria-label="Principal">
-        <a href="#topo" className="shrink-0" aria-label="Astro — ir para o topo">
+        <a href="#topo" className="shrink-0" aria-label="Astro Bot — ir para o topo">
           <Logo />
         </a>
 
@@ -89,10 +89,8 @@ export function Nav() {
                 <a
                   href={link.href}
                   aria-current={isActive ? 'true' : undefined}
-                  className={`label-voice block pb-1 text-[11px] transition-colors ${
-                    isActive
-                      ? 'border-b border-dashed border-mist/70 text-mist'
-                      : 'border-b border-dashed border-transparent hover:text-mist'
+                  className={`block text-[15px] font-[420] transition-colors ${
+                    isActive ? 'text-ivory' : 'text-ash hover:text-ivory'
                   }`}
                 >
                   {link.label}
@@ -111,7 +109,7 @@ export function Nav() {
           onClick={() => setMenuOpen((open) => !open)}
           aria-expanded={menuOpen}
           aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-mist/50 text-mist lg:hidden"
+          className="flex h-10 w-10 items-center justify-center rounded-full border border-ivory/60 text-ivory lg:hidden"
         >
           <span className="relative block h-3 w-4">
             <span
@@ -135,7 +133,7 @@ export function Nav() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 top-20 bg-void px-6 pt-8 lg:hidden"
+            className="fixed inset-0 top-20 bg-onyx px-6 pt-8 lg:hidden"
           >
             <ul>
               {navLinks.map((link) => (
@@ -143,7 +141,7 @@ export function Nav() {
                   <a
                     href={link.href}
                     onClick={(event) => goToSection(event, link.href)}
-                    className="block border-b border-dashed border-slate/40 py-6 text-3xl uppercase"
+                    className="block border-b border-white/10 py-6 text-3xl font-[480] text-ivory"
                   >
                     {link.label}
                   </a>
@@ -159,7 +157,7 @@ export function Nav() {
             </IrisButton>
             <a
               href={`mailto:${site.email}`}
-              className="label-voice mt-6 block text-center text-[10px]"
+              className="mt-6 block text-center text-[14px] text-ash"
             >
               {site.email}
             </a>

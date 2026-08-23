@@ -1,0 +1,125 @@
+import { useRef } from 'react'
+import { LineReveal, Reveal } from './ui/Primitives'
+
+/** Invented crew. Triangle avatars keep the particle language at card scale. */
+const members = [
+  {
+    name: 'Rafael Duarte',
+    role: 'CEO & Fundador',
+    bio: 'Dez anos automatizando operações em fintechs antes de fundar a Astro Bot.',
+    color: '#5266eb',
+  },
+  {
+    name: 'Marina Costa',
+    role: 'Head de Engenharia',
+    bio: 'Lidera a arquitetura dos sistemas — obcecada por software que não quebra na virada do mês.',
+    color: '#ededf3',
+  },
+  {
+    name: 'Lucas Ferreira',
+    role: 'Automações & IA',
+    bio: 'Transforma rotina repetitiva em robô. Se fez duas vezes na mão, ele já está automatizando.',
+    color: '#7d8bf0',
+  },
+  {
+    name: 'Ana Beltrão',
+    role: 'Produto & Design',
+    bio: 'Traduz processo confuso em tela simples. Defende o usuário em toda decisão.',
+    color: '#c3c3cc',
+  },
+  {
+    name: 'Pedro Sales',
+    role: 'Integrações',
+    bio: 'Faz ERP, CRM e WhatsApp conversarem — mesmo quando a documentação da API não ajuda.',
+    color: '#8b8fa8',
+  },
+] as const
+
+function initials(name: string) {
+  const parts = name.split(' ')
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`
+}
+
+export function Team() {
+  const trackRef = useRef<HTMLDivElement>(null)
+
+  const scrollByCard = (direction: 1 | -1) => {
+    trackRef.current?.scrollBy({ left: direction * 320, behavior: 'smooth' })
+  }
+
+  return (
+    <section id="equipe" aria-label="Equipe" className="relative z-10 py-24 md:py-36">
+      <div className="shell">
+        <LineReveal text="Quem constrói" className="text-[clamp(2.4rem,5.6vw,4.6rem)]" />
+        <Reveal delay={0.12}>
+          <p className="mt-6 max-w-md text-ash">
+            Um time pequeno de propósito: quem entende o seu problema é quem escreve o código.
+          </p>
+        </Reveal>
+      </div>
+
+      <Reveal delay={0.2}>
+        <div
+          ref={trackRef}
+          className="no-scrollbar mt-14 flex snap-x snap-mandatory gap-6 overflow-x-auto px-6 md:px-[max(48px,calc((100vw-1280px)/2+48px))]"
+        >
+          {members.map((member) => (
+            <article
+              key={member.name}
+              className="graphite-card w-72 shrink-0 snap-start bg-graphite/95 backdrop-blur-sm"
+            >
+              <svg viewBox="0 0 96 96" aria-hidden="true" className="h-24 w-24">
+                <path
+                  d="M48 10 88 82H8L48 10Z"
+                  stroke={member.color}
+                  strokeWidth="3"
+                  strokeLinejoin="round"
+                  fill="none"
+                />
+                <text
+                  x="48"
+                  y="66"
+                  textAnchor="middle"
+                  fill={member.color}
+                  fontSize="20"
+                  fontWeight="700"
+                  fontFamily="Inter Tight, sans-serif"
+                >
+                  {initials(member.name)}
+                </text>
+              </svg>
+              <h3 className="mt-6 text-[1.35rem]">{member.name}</h3>
+              <p className="mt-1 text-[12px] font-[480] tracking-[0.08em] text-cobalt uppercase">
+                {member.role}
+              </p>
+              <p className="mt-4 text-[15px] leading-[1.55] text-ash">{member.bio}</p>
+            </article>
+          ))}
+        </div>
+      </Reveal>
+
+      <div className="shell mt-10 flex gap-4">
+        <button
+          type="button"
+          onClick={() => scrollByCard(-1)}
+          aria-label="Membro anterior"
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-cobalt text-white transition-transform hover:scale-105"
+        >
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" className="h-4 w-4">
+            <path d="M11 2 5 8l6 6" stroke="currentColor" strokeWidth="1.6" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          onClick={() => scrollByCard(1)}
+          aria-label="Próximo membro"
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-cobalt text-white transition-transform hover:scale-105"
+        >
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" className="h-4 w-4">
+            <path d="M5 2l6 6-6 6" stroke="currentColor" strokeWidth="1.6" />
+          </svg>
+        </button>
+      </div>
+    </section>
+  )
+}

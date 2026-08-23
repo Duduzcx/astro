@@ -1,7 +1,7 @@
 import type { MouseEventHandler, ReactNode } from 'react'
 import { motion } from 'framer-motion'
 
-/** Eyebrow. Amber is the emphasis colour and appears nowhere else. */
+/** Eyebrow. Cobalt caps at weight 480 — the one place colour touches text. */
 export function Label({
   children,
   className = '',
@@ -11,20 +11,15 @@ export function Label({
 }) {
   return (
     <span
-      className={`block font-mono text-[12px] font-medium tracking-[0.16em] text-amber uppercase ${className}`}
+      className={`block text-[13px] font-[480] tracking-[0.08em] text-cobalt uppercase ${className}`}
     >
       {children}
     </span>
   )
 }
 
-/** Dashed hairline. The only separator in the system. */
-export function DashedRule({ className = '' }: { className?: string }) {
-  return <hr className={`dashed-rule ${className}`} />
-}
-
 /**
- * The one filled action on the page. Violet, pill, never duplicated within a
+ * The one filled action on the page. Cobalt, pill, never duplicated within a
  * view — its scarcity is what makes it read as *the* next step.
  */
 export function IrisButton({
@@ -45,14 +40,14 @@ export function IrisButton({
       whileHover={{ scale: 1.03 }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: 'spring', stiffness: 400, damping: 26 }}
-      className={`inline-flex items-center justify-center gap-2.5 rounded-full bg-iris px-7 py-4 text-[14px] font-medium tracking-[0.02em] text-platinum uppercase shadow-[0_0_0_0_rgba(128,82,255,0.5)] transition-shadow duration-300 hover:shadow-[0_0_40px_-6px_rgba(128,82,255,0.85)] ${className}`}
+      className={`inline-flex items-center justify-center gap-2.5 rounded-full bg-cobalt px-7 py-3.5 text-[15px] font-[420] text-white transition-colors duration-300 hover:bg-[#6377f2] ${className}`}
     >
       {children}
     </motion.a>
   )
 }
 
-/** Secondary action. Bare text with a rule under it — no container competes with the pill. */
+/** Secondary action. Mercury ghost: ivory hairline pill, never chromatic. */
 export function GhostButton({
   href,
   children,
@@ -68,10 +63,9 @@ export function GhostButton({
     <a
       href={href}
       onClick={onClick}
-      className={`group inline-flex items-center gap-2.5 py-4 text-[14px] font-normal tracking-[0.02em] text-silver uppercase transition-colors duration-300 hover:text-platinum ${className}`}
+      className={`inline-flex items-center justify-center gap-2.5 rounded-full border border-ivory/80 px-7 py-3.5 text-[15px] font-[420] text-ivory transition-colors duration-300 hover:bg-ivory/10 ${className}`}
     >
       {children}
-      <span className="block h-px w-6 bg-current transition-all duration-300 group-hover:w-10" />
     </a>
   )
 }
@@ -215,7 +209,7 @@ export function SectionHead({
       />
       {lead ? (
         <Reveal delay={0.2}>
-          <p className="mt-8 max-w-xl text-[clamp(1rem,1.35vw,1.125rem)] leading-[1.5] text-silver">
+          <p className="mt-8 max-w-xl text-[clamp(1rem,1.35vw,1.125rem)] leading-[1.5] text-ash">
             {lead}
           </p>
         </Reveal>
