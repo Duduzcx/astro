@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Logo } from './Logo'
 import { IrisButton } from './ui/Primitives'
 import { navLinks, site } from '../lib/site'
+import { scrollToHash } from '../lib/scroll'
 
 /** Marks the nav item whose section currently owns the viewport. */
 function useActiveSection() {
@@ -66,12 +67,15 @@ export function Nav() {
     event.preventDefault()
     setMenuOpen(false)
     requestAnimationFrame(() => {
-      document.querySelector(href)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      scrollToHash(href)
     })
   }
 
   return (
-    <header
+    <motion.header
+      initial={{ y: -24, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.7, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
       className={`fixed inset-x-0 top-0 z-50 transition-colors duration-300 ${
         scrolled ? 'bg-onyx/70 backdrop-blur-xl' : ''
       }`}
@@ -89,11 +93,18 @@ export function Nav() {
                 <a
                   href={link.href}
                   aria-current={isActive ? 'true' : undefined}
-                  className={`block text-[15px] font-[420] transition-colors ${
+                  className={`relative block pb-0.5 text-[15px] font-[420] transition-colors ${
                     isActive ? 'text-ivory' : 'text-ash hover:text-ivory'
                   }`}
                 >
                   {link.label}
+                  {isActive ? (
+                    <motion.span
+                      layoutId="nav-active"
+                      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                      className="absolute right-0 -bottom-0.5 left-0 h-px bg-gradient-to-r from-cobalt to-[#4dd6e8]"
+                    />
+                  ) : null}
                 </a>
               </li>
             )
@@ -164,6 +175,6 @@ export function Nav() {
           </motion.div>
         ) : null}
       </AnimatePresence>
-    </header>
+    </motion.header>
   )
 }

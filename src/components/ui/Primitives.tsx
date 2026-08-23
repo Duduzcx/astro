@@ -1,5 +1,8 @@
-import type { MouseEventHandler, ReactNode } from 'react'
-import { motion } from 'framer-motion'
+import { useRef, type MouseEventHandler, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { motion, useMotionValue, useSpring } from 'framer-motion'
+
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 /** Eyebrow. Cobalt caps at weight 480 — the one place colour touches text. */
 export function Label({
@@ -20,7 +23,7 @@ export function Label({
 
 /**
  * The one filled action on the page. Cobalt, pill, never duplicated within a
- * view — its scarcity is what makes it read as *the* next step.
+ * view — and magnetic: it leans a few pixels toward the cursor.
  */
 export function IrisButton({
   href,
@@ -33,17 +36,95 @@ export function IrisButton({
   className?: string
   onClick?: MouseEventHandler<HTMLAnchorElement>
 }) {
+  const x = useMotionValue(0)
+  const y = useMotionValue(0)
+  const springX = useSpring(x, { stiffness: 320, damping: 22, mass: 0.5 })
+  const springY = useSpring(y, { stiffness: 320, damping: 22, mass: 0.5 })
+
+  const onPointerMove = (event: ReactPointerEvent<HTMLAnchorElement>) => {
+    if (prefersReducedMotion()) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    x.set(((event.clientX - rect.left) / rect.width - 0.5) * 14)
+    y.set(((event.clientY - rect.top) / rect.height - 0.5) * 10)
+  }
+  const onPointerLeave = () => {
+    x.set(0)
+    y.set(0)
+  }
+
   return (
     <motion.a
       href={href}
       onClick={onClick}
+      onPointerMove={onPointerMove}
+      onPointerLeave={onPointerLeave}
+      style={{ x: springX, y: springY }}
       whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+      whileTap={{ scale: 0.97 }}
       transition={{ type: 'spring', stiffness: 400, damping: 26 }}
       className={`inline-flex items-center justify-center gap-2.5 rounded-full bg-cobalt px-7 py-3.5 text-[15px] font-[420] text-white transition-colors duration-300 hover:bg-[#6377f2] ${className}`}
     >
       {children}
     </motion.a>
+  )
+}
+
+/** Content that arrives out of focus: blur + rise, then sharp. For big claims. */
+export function BlurReveal({
+  children,
+  delay = 0,
+  className = '',
+}: {
+  children: ReactNode
+  delay?: number
+  className?: string
+}) {
+  return (
+    <motion.div
+      className={className}
+      initial={{ opacity: 0, y: 24, filter: 'blur(12px)' }}
+      whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+      viewport={{ once: true, margin: '-90px' }}
+      transition={{ duration: 0.95, delay, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {children}
+    </motion.div>
+  )
+}
+
+/** 3D tilt on hover for the product panels. Perspective lives here. */
+export function Tilt({ children, className = '' }: { children: ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const rotateX = useMotionValue(0)
+  const rotateY = useMotionValue(0)
+  const springRX = useSpring(rotateX, { stiffness: 220, damping: 24 })
+  const springRY = useSpring(rotateY, { stiffness: 220, damping: 24 })
+
+  const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (prefersReducedMotion()) return
+    const rect = ref.current?.getBoundingClientRect()
+    if (!rect) return
+    const px = (event.clientX - rect.left) / rect.width
+    const py = (event.clientY - rect.top) / rect.height
+    rotateX.set(-(py - 0.5) * 7)
+    rotateY.set((px - 0.5) * 9)
+  }
+  const onPointerLeave = () => {
+    rotateX.set(0)
+    rotateY.set(0)
+  }
+
+  return (
+    <div style={{ perspective: 900 }} className={className}>
+      <motion.div
+        ref={ref}
+        onPointerMove={onPointerMove}
+        onPointerLeave={onPointerLeave}
+        style={{ rotateX: springRX, rotateY: springRY }}
+      >
+        {children}
+      </motion.div>
+    </div>
   )
 }
 

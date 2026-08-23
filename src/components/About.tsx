@@ -1,4 +1,7 @@
+import { useRef } from 'react'
+import { motion } from 'framer-motion'
 import { LineReveal, Reveal } from './ui/Primitives'
+import { useAutoPauseVideo } from '../lib/useAutoPauseVideo'
 
 /** How the team actually works — the engineering culture, in three habits. */
 const culture = [
@@ -17,6 +20,9 @@ const culture = [
 ] as const
 
 export function About() {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  useAutoPauseVideo(videoRef)
+
   return (
     <section id="sobre" aria-label="Sobre a Astro Bot" className="relative z-10 py-24 md:py-32">
       <div className="shell">
@@ -39,8 +45,14 @@ export function About() {
             </Reveal>
           </div>
 
-          <Reveal delay={0.15}>
+          <motion.div
+            initial={{ clipPath: 'inset(12% 12% 12% 12% round 12px)', opacity: 0.4 }}
+            whileInView={{ clipPath: 'inset(0% 0% 0% 0% round 12px)', opacity: 1 }}
+            viewport={{ once: true, margin: '-120px' }}
+            transition={{ duration: 1.05, ease: [0.22, 1, 0.36, 1] }}
+          >
             <video
+              ref={videoRef}
               src="/media/office.mp4"
               autoPlay
               muted
@@ -50,7 +62,7 @@ export function About() {
               aria-label="Equipe trabalhando em um escritório com luz natural"
               className="aspect-[4/3] w-full rounded-xl object-cover opacity-90 [filter:saturate(0.75)_brightness(0.85)]"
             />
-          </Reveal>
+          </motion.div>
         </div>
 
         <div className="mt-14 grid gap-4 md:grid-cols-3">

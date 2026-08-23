@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
-import { ArrowGlyph, IrisButton, Reveal } from './ui/Primitives'
+import { ArrowGlyph, BlurReveal, IrisButton } from './ui/Primitives'
 
 /**
  * Mid-page conversion moment over the alpine photograph, with scroll parallax —
@@ -24,7 +24,7 @@ export function CtaBand() {
 
       <div className="relative py-28 md:py-36">
         <div className="shell">
-          <Reveal className="mx-auto max-w-2xl text-center">
+          <BlurReveal className="mx-auto max-w-2xl text-center">
             <p className="text-[clamp(1.9rem,4.2vw,3.2rem)] leading-[1.15] font-[480] tracking-[-0.01em] text-ivory">
               45 minutos. Zero compromisso.
               <br />O mapa do que dá pra automatizar.
@@ -38,7 +38,7 @@ export function CtaBand() {
                 Agendar conversa gratuita <ArrowGlyph />
               </IrisButton>
             </div>
-          </Reveal>
+          </BlurReveal>
         </div>
       </div>
     </section>

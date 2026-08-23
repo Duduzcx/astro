@@ -1,3 +1,5 @@
+import { motion, useScroll, useSpring, useTransform, useVelocity } from 'framer-motion'
+
 /** Infinite capability ticker under the hero — plain words, no tech jargon. */
 const capabilities = [
   'Sites que vendem',
@@ -9,6 +11,14 @@ const capabilities = [
 ] as const
 
 export function Marquee() {
+  /* The strip shears with scroll velocity — fast scrolling bends it. */
+  const { scrollY } = useScroll()
+  const velocity = useVelocity(scrollY)
+  const skewX = useSpring(useTransform(velocity, [-1600, 1600], [6, -6]), {
+    stiffness: 220,
+    damping: 32,
+  })
+
   const row = capabilities.map((capability) => (
     <span key={capability} className="flex items-center gap-8 pr-8 whitespace-nowrap">
       <span className="text-[15px] tracking-[0.02em] text-ash">{capability}</span>
@@ -20,10 +30,10 @@ export function Marquee() {
 
   return (
     <div className="relative z-10 overflow-hidden border-y border-white/5 bg-onyx/40 py-4 backdrop-blur-sm">
-      <div className="flex w-max animate-[astro-marquee_36s_linear_infinite]">
+      <motion.div style={{ skewX }} className="flex w-max animate-[astro-marquee_36s_linear_infinite]">
         <div aria-hidden="true" className="flex">{row}</div>
         <div className="flex">{row}</div>
-      </div>
+      </motion.div>
       <p className="sr-only">Capacidades da Astro Bot: {capabilities.join(', ')}.</p>
     </div>
   )

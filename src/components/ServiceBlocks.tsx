@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { LineReveal, Reveal } from './ui/Primitives'
+import { LineReveal, Reveal, Tilt } from './ui/Primitives'
 import {
   ChatPanel,
   DashboardPanel,
@@ -93,7 +93,7 @@ export function ServiceBlocks() {
               </Reveal>
             </div>
             <Reveal delay={0.15} className={index % 2 === 1 ? 'lg:order-1' : ''}>
-              {service.panel}
+              <Tilt>{service.panel}</Tilt>
             </Reveal>
           </div>
         </div>

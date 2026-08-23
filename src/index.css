@@ -31,8 +31,7 @@
   }
 
   html {
-    scroll-behavior: smooth;
-    /* Nav is fixed and ~80px tall; anchor targets must clear it. */
+    /* Lenis owns scroll easing; native smooth would fight it. */
     scroll-padding-top: 96px;
     -webkit-text-size-adjust: 100%;
   }
