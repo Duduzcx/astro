@@ -103,9 +103,14 @@ export function IrisButton({
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.97 }}
       transition={{ type: 'spring', stiffness: 400, damping: 26 }}
-      className={`inline-flex items-center justify-center gap-2.5 rounded-full bg-cobalt px-7 py-3.5 text-[15px] font-[420] text-white transition-colors duration-300 hover:bg-[#5d92ea] ${className}`}
+      className={`group relative inline-flex items-center justify-center gap-2.5 overflow-hidden rounded-full bg-cobalt px-7 py-3.5 text-[15px] font-[420] text-white transition-colors duration-300 hover:bg-[#5d92ea] ${className}`}
     >
       {children}
+      {/* Light sheen sweeping across on hover. */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full"
+      />
     </motion.a>
   )
 }

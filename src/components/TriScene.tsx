@@ -331,10 +331,20 @@ export function TriScene() {
     }
     window.addEventListener('pointermove', onPointerMove, { passive: true })
 
+    /* Mobile browsers fire resize when the URL bar collapses mid-scroll; if we
+       re-project on that, the planet visibly jumps. Only a real width change
+       (rotation, window resize) rebuilds the projection. */
+    let lastWidth = window.innerWidth
+    let lastHeight = window.innerHeight
     const onResize = () => {
-      camera.aspect = window.innerWidth / window.innerHeight
+      const width = window.innerWidth
+      const height = window.innerHeight
+      if (width === lastWidth && Math.abs(height - lastHeight) < 180) return
+      lastWidth = width
+      lastHeight = height
+      camera.aspect = width / height
       camera.updateProjectionMatrix()
-      renderer.setSize(window.innerWidth, window.innerHeight)
+      renderer.setSize(width, height)
       halfWidth = Math.tan((camera.fov * Math.PI) / 360) * camera.position.z * camera.aspect
     }
     window.addEventListener('resize', onResize)

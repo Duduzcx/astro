@@ -60,6 +60,21 @@ export function Hero() {
           </motion.div>
         </motion.div>
       </motion.div>
+
+      {/* Scroll cue: a light drop running down a hairline. */}
+      <motion.a
+        href="#servicos"
+        aria-label="Rolar para os serviços"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 2, duration: 0.8 }}
+        className="absolute bottom-7 left-1/2 z-10 hidden -translate-x-1/2 flex-col items-center gap-2.5 md:flex"
+      >
+        <span className="font-mono text-[10px] tracking-[0.24em] text-slate uppercase">Role</span>
+        <span className="relative block h-10 w-px overflow-hidden bg-white/10">
+          <span className="absolute top-0 left-0 h-3.5 w-px bg-ivory/80 animate-[astro-drop_1.9s_ease-in-out_infinite]" />
+        </span>
+      </motion.a>
     </section>
   )
 }
