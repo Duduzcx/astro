@@ -2,10 +2,13 @@ import { Suspense, lazy } from 'react'
 import { Nav } from './components/Nav'
 import { Hero } from './components/Hero'
 import { ServiceBlocks } from './components/ServiceBlocks'
+import { IntegrationsStrip } from './components/IntegrationsStrip'
 import { Manifesto } from './components/Manifesto'
+import { FilmBand } from './components/FilmBand'
 import { Mission } from './components/Mission'
 import { Process } from './components/Process'
 import { Cases } from './components/Cases'
+import { CtaBand } from './components/CtaBand'
 import { Team } from './components/Team'
 import { Clients } from './components/Clients'
 import { Testimonials } from './components/Testimonials'
@@ -41,10 +44,13 @@ export default function App() {
       <main>
         <Hero />
         <ServiceBlocks />
+        <IntegrationsStrip />
         <Manifesto />
+        <FilmBand />
         <Mission />
         <Process />
         <Cases />
+        <CtaBand />
         <Team />
         <Clients />
         <Testimonials />

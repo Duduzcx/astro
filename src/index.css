@@ -144,6 +144,15 @@
   }
 }
 
+@keyframes astro-flow {
+  from {
+    stroke-dashoffset: 18;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
 @keyframes astro-pulse {
   0%,
   100% {
