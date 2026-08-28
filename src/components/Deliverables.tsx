@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion'
 import { GiantWord, Label, Reveal, WordReveal } from './ui/Primitives'
 
 /**
@@ -71,14 +72,19 @@ export function Deliverables() {
             <Reveal key={item.title} delay={0.05 * index}>
               <article className="graphite-card h-full">
                 <div className="flex items-center gap-3">
+                  {/* The tick draws itself as the card arrives. */}
                   <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4 shrink-0">
-                    <path
+                    <motion.path
                       d="M2.5 8.5 6 12l7.5-8"
                       fill="none"
                       stroke="#8db4f5"
                       strokeWidth="1.8"
                       strokeLinecap="round"
                       strokeLinejoin="round"
+                      initial={{ pathLength: 0 }}
+                      whileInView={{ pathLength: 1 }}
+                      viewport={{ once: true, margin: '-40px' }}
+                      transition={{ duration: 0.5, delay: 0.2 + 0.05 * index, ease: 'easeOut' }}
                     />
                   </svg>
                   <h3 className="text-[1.05rem]">{item.title}</h3>

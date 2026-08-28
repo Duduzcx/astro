@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { WordReveal, Reveal } from './ui/Primitives'
 
-/** The real founding trio. Roles are provisional — refine as the company defines them. */
+/** The real team: two founders on the technical side, Luana on commercial. */
 const members = [
   {
     name: 'Eduardo',
@@ -17,8 +17,8 @@ const members = [
   },
   {
     name: 'Luana',
-    role: 'Cofundadora · Operações',
-    bio: 'Cuida da experiência do cliente do diagnóstico à entrega — e do atendimento que não dorme.',
+    role: 'Comercial',
+    bio: 'Primeiro contato da Astro: entende o desafio, organiza o diagnóstico e acompanha o cliente até a proposta.',
     color: '#f5f7fb',
   },
 ] as const
@@ -32,6 +32,8 @@ export function Team() {
   const trackRef = useRef<HTMLDivElement>(null)
   const [atStart, setAtStart] = useState(true)
   const [atEnd, setAtEnd] = useState(false)
+  /* With a small team the row fits on screen — then the arrows are noise. */
+  const [scrollable, setScrollable] = useState(false)
 
   /* Arrows go quiet at the ends instead of pretending there is more to see. */
   useEffect(() => {
@@ -40,6 +42,7 @@ export function Team() {
     const update = () => {
       setAtStart(track.scrollLeft <= 4)
       setAtEnd(track.scrollLeft >= track.scrollWidth - track.clientWidth - 4)
+      setScrollable(track.scrollWidth > track.clientWidth + 8)
     }
     update()
     track.addEventListener('scroll', update, { passive: true })
@@ -105,7 +108,7 @@ export function Team() {
         </div>
       </Reveal>
 
-      <div className="shell mt-10 flex gap-4">
+      <div className={`shell mt-10 gap-4 ${scrollable ? 'flex' : 'hidden'}`}>
         <button
           type="button"
           onClick={() => scrollByCard(-1)}

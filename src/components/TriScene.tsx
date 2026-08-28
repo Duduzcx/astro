@@ -291,16 +291,20 @@ export function TriScene() {
     if (!mount) return
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    /* Small screens get the same scene at a lighter weight: fewer triangles
-       and a lower pixel ratio — same look, steadier frame rate. */
+    /* Same scene everywhere, sized to the hardware: phones and low-core
+       machines get fewer triangles and fewer pixels to fill. */
+    const cores = navigator.hardwareConcurrency ?? 8
+    const weakDevice = cores <= 4
     const lightweight = window.innerWidth < 1024
 
     const renderer = new THREE.WebGLRenderer({
-      antialias: true,
+      antialias: !weakDevice,
       alpha: true,
       powerPreference: 'high-performance',
     })
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, lightweight ? 1.25 : 1.5))
+    renderer.setPixelRatio(
+      Math.min(window.devicePixelRatio, weakDevice ? 1 : lightweight ? 1.25 : 1.5),
+    )
     renderer.setSize(window.innerWidth, window.innerHeight)
     mount.appendChild(renderer.domElement)
 
@@ -309,13 +313,21 @@ export function TriScene() {
     camera.position.z = 3.3
 
     const spread = new THREE.Vector3(2.6, 1.7, 1.2)
-    const sphereGeometry = buildTriangles(lightweight ? 3200 : 9000, spread, true)
+    const sphereGeometry = buildTriangles(
+      weakDevice ? 3000 : lightweight ? 5200 : 8000,
+      spread,
+      true,
+    )
     const sphereMaterial = makeMaterial(0.95)
     const sphereField = new THREE.LineSegments(sphereGeometry, sphereMaterial)
     scene.add(sphereField)
 
     /* Always-dispersed ambient layer: the faint triangles floating everywhere. */
-    const ambientGeometry = buildTriangles(lightweight ? 240 : 700, new THREE.Vector3(3.2, 2.1, 1.6), false)
+    const ambientGeometry = buildTriangles(
+      lightweight ? 260 : 600,
+      new THREE.Vector3(3.2, 2.1, 1.6),
+      false,
+    )
     const ambientMaterial = makeMaterial(0.32)
     ambientMaterial.uniforms.uMix.value = 1
     const ambientField = new THREE.LineSegments(ambientGeometry, ambientMaterial)
@@ -346,22 +358,51 @@ export function TriScene() {
       camera.updateProjectionMatrix()
       renderer.setSize(width, height)
       halfWidth = Math.tan((camera.fov * Math.PI) / 360) * camera.position.z * camera.aspect
+      measureScroll()
     }
     window.addEventListener('resize', onResize)
 
     /* First rendered frame lifts the container's opacity — no canvas pop-in. */
     let revealed = false
 
+    /* Page height is cached: reading scrollHeight inside the frame loop forces
+       a layout on every single frame, which is what made scrolling stutter on
+       slower machines. Recomputed only when the document actually changes. */
+    let maxScroll = 1
+    const measureScroll = () => {
+      maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1)
+    }
+    measureScroll()
+    const pageObserver = new ResizeObserver(measureScroll)
+    pageObserver.observe(document.body)
+
     let frame = 0
     let previous = performance.now()
+
+    /* Adaptive quality: sample the first seconds of real frames and, if the
+       machine can't hold a smooth rate, drop resolution and the ambient layer
+       once. Cheap insurance for old laptops we can't feature-detect. */
+    let sampled = 0
+    let slowFrames = 0
+    let downgraded = false
+    const considerDowngrade = (delta: number) => {
+      if (downgraded || sampled > 150) return
+      sampled += 1
+      if (delta > 0.028) slowFrames += 1
+      if (sampled >= 90 && slowFrames > 30) {
+        downgraded = true
+        renderer.setPixelRatio(1)
+        renderer.setSize(window.innerWidth, window.innerHeight)
+        ambientField.visible = false
+      }
+    }
 
     const tick = (now: number) => {
       frame = requestAnimationFrame(tick)
       const delta = Math.min((now - previous) / 1000, 0.05)
       previous = now
+      considerDowngrade(delta)
 
-      const doc = document.documentElement
-      const maxScroll = Math.max(doc.scrollHeight - window.innerHeight, 1)
       const progress = window.scrollY / maxScroll
       const target = sampleKeyframes(progress)
 
@@ -369,8 +410,8 @@ export function TriScene() {
          smaller and softer so the text stays readable. */
       const narrow = camera.aspect < 0.9
       const xDamp = narrow ? 0.3 : 1
-      const scaleDamp = narrow ? 0.8 : 1
-      const opacityDamp = narrow ? 0.6 : 1
+      const scaleDamp = narrow ? 0.92 : 1
+      const opacityDamp = narrow ? 0.92 : 1
       const damping = reducedMotion ? 1 : 1 - Math.exp(-delta * 4.5)
       current.mix += (target.mix - current.mix) * damping
       current.x += (target.x * xDamp - current.x) * damping
@@ -411,6 +452,7 @@ export function TriScene() {
 
     return () => {
       cancelAnimationFrame(frame)
+      pageObserver.disconnect()
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('resize', onResize)
       window.removeEventListener('pointermove', onPointerMove)

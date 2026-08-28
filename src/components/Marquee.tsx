@@ -29,7 +29,7 @@ export function Marquee() {
   ))
 
   return (
-    <div className="relative z-10 overflow-hidden border-y border-white/5 bg-onyx/40 py-4 backdrop-blur-sm">
+    <div className="relative z-10 overflow-hidden border-y border-white/5 bg-onyx/60 py-4">
       <motion.div style={{ skewX }} className="flex w-max animate-[astro-marquee_36s_linear_infinite]">
         <div aria-hidden="true" className="flex">{row}</div>
         <div className="flex">{row}</div>
