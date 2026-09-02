@@ -1,79 +1,114 @@
-# Astro — site institucional
+# Astro Soluções — site institucional
 
-Landing page one-page da Astro. React 19 + TypeScript + Vite + Tailwind v4 + Framer Motion.
+Landing page de uma página só. React 19 + TypeScript + Vite + Tailwind v4 + Framer Motion, com uma cena em three.js atrás do documento inteiro.
 
 ## Rodar
 
 ```bash
 npm install
 npm run dev      # http://localhost:5173
+npm run lint     # oxlint
 npm run build    # gera dist/
 npm run preview  # serve o dist/
 ```
+
+## Estrutura
+
+```
+index.html            metadados, ícones, JSON-LD e o espelho do formulário do Netlify
+src/
+  main.tsx            monta o React e liga o scroll suave
+  App.tsx             ordem das seções da página
+  index.css           tokens de cor, tipografia e utilitários do Tailwind
+  lib/
+    site.ts           dados da empresa e alvos de navegação
+    scroll.ts         scroll suave (Lenis) e navegação por âncora
+    useAutoPauseVideo.ts
+  components/         uma seção por arquivo
+    brand/AstroMark   o símbolo da marca em React
+    scenes/Panels     as telas de produto fictícias usadas em ServiceBlocks
+    ui/Primitives     botões, reveals, títulos animados, wrappers de seção
+public/
+  logo/               arquivos da marca
+  media/              fotos e vídeos
+tools/                gerador dos ícones PNG
+```
+
+Ordem das seções (definida em `App.tsx`): hero, marquee, serviços, integrações, manifesto, vídeo, missão, cenários, projetos, CTA do meio, processo, entregáveis, sobre, equipe, insights, FAQ, contato, rodapé.
 
 ## O que trocar antes de publicar
 
 | Onde | O quê |
 | --- | --- |
-| `src/lib/site.ts` | e-mail, WhatsApp, LinkedIn, GitHub, cidade — hoje são placeholders |
-| `src/components/Results.tsx` | os três "cenários" são exemplos genéricos. Troque por casos reais assim que existirem |
-| `index.html` | `<title>`, description e og:description |
-| `public/astro-mark.svg` | favicon, se a marca definitiva for outra |
+| `src/lib/site.ts` | e-mail, telefone, WhatsApp, cidade e as redes sociais quando existirem |
+| `src/components/Projects.tsx` | os seis projetos são **conceitos fictícios**, marcados com o selo "Projeto conceito". Troque por casos reais (e tire o selo) quando o cliente autorizar o nome |
+| `src/components/Cases.tsx` | os três cenários são exemplos genéricos de dor por segmento |
+| `src/components/Insights.tsx` | os posts são de exemplo, até o blog existir |
+| `index.html` | `<title>`, description, og:description e o domínio dentro do JSON-LD |
+
+## Marca
+
+Os arquivos ficam em `public/logo/`:
+
+| Arquivo | Uso |
+| --- | --- |
+| `astro-mark.svg` | símbolo em degradê, para fundo claro |
+| `astro-mark-light.svg` | símbolo em ivory, para fundo escuro |
+| `astro-mark-navy.svg` | símbolo em navy sólido (também é o `mask-icon` do Safari) |
+| `favicon.svg` | símbolo navy sobre placa branca — é o favicon do site |
+| `favicon-64.png` | fallback do favicon para navegador sem suporte a SVG |
+| `astro-badge.svg` | símbolo branco sobre placa navy, para avatar de rede social |
+
+Dentro do React o símbolo é componente: `src/components/brand/AstroMark.tsx` exporta `AstroMark` (símbolo completo, com `tone` = `light` \| `gradient` \| `navy` \| `mono`) e `AstroStar` (só a estrela, usada como marcador no `Label`, no marquee e nas listas do FAQ). A geometria é a mesma dos SVGs em `public/logo/`: mudou num lugar, mude nos dois.
+
+`public/apple-touch-icon.png` (180×180) e `public/og-image.png` (1200×630) saem de `tools/icon-generator.html`. Sirva a pasta por HTTP (`python -m http.server`), abra a página e capture cada placa no tamanho CSS exato.
 
 ## Sistema visual
 
-Profundidade vem de degrau de superfície, nunca de sombra. Três níveis, definidos em `src/index.css`:
+Os tokens estão em `src/index.css`. Profundidade vem de degrau de superfície, nunca de sombra.
 
-- `void` `#030a1c` — canvas da página
-- `deep` `#020714` — superfície recuada (marquee, processo, stack, painel de contato, rodapé)
-- `orbit` `#0a2050` — card elevado e botão sólido
+**Superfícies:** `onyx #0a0f1e` (página), `graphite #131b2e` (card), `obsidian #1b2740` (preenchimento clicável).
 
-Texto: `platinum` em títulos e nav, `silver` no corpo, `mist` em ênfase, `phosphor` **só** em número grande. O gradiente azul (`nebula`) aparece exclusivamente no CTA principal.
+**Texto:** `ivory #f5f7fb` em título e nav, `ash #b9c2d4` no corpo, `slate #6d7a94` em label e legenda, `mist #e8edf5` em hover.
 
-Tipografia: Inter em peso 400/500 — títulos sempre 500, nunca negrito nem light. JetBrains Mono em label, eyebrow e dado técnico, com tracking largo.
+**Cor:** `cobalt #4d84e0` é a única. Preenche a ação principal, marca os eyebrows e pontua o campo de partículas.
 
-Raio: 16px em card, 12px nos cards do hero, pill (`rounded-full`) em botão. Nada além disso.
+**Tipografia:** Inter Tight no corpo (títulos em peso 480, nunca negrito), Anton nas frases de cartaz (`.font-impact`), Allura só na palavra "soluções" da assinatura, JetBrains Mono em label e dado técnico.
 
-Estrutura: seções de reveal ocupam 100svh com um objeto centralizado e texto flanqueando — título uppercase à esquerda, descrição em caixa mista à direita. Separadores são sempre tracejados de 1px (`.dashed-rule`), nunca sólidos e nunca decorativos.
+**Raio:** 16px no card, pill nos botões, 4px no que for pequeno.
 
-Voz tipográfica, duas e só duas:
+Utilitários próprios: `.shell` (container), `.graphite-card` (vidro), `.label-voice`, `.font-impact`, `.giant-outline`, `.aurora`, `.text-spectrum`, `.text-spectrum-animated`, `.no-scrollbar`.
 
-1. **Uppercase peso 500** — nav, títulos, labels, botões, legal. `line-height` 0.9 nos tamanhos de display, para as caixas altas se empilharem como bloco sólido.
-2. **Caixa mista peso 400** — só nos parágrafos descritivos. A troca de caixa é o sinal de que o texto virou explicação e não rótulo.
+## A cena de fundo
 
-## Objetos animados
+`TriScene.tsx` desenha um núcleo orbital: uma bola densa de triângulos vazados com três anéis inclinados girando em velocidades e sentidos diferentes, mais uma camada ambiente sempre dispersa. É um canvas fixo atrás do documento; cada seção é um estado da mesma cena.
 
-O site não usa nenhuma imagem ou vídeo externo — toda a "fotografia" é gerada em runtime. Nada para baixar, nada para licenciar, e a paleta fica exata.
+Duas tabelas de keyframes governam isso:
 
-| Componente | O que é | Custo |
-| --- | --- | --- |
-| `scenes/VideoPlate.tsx` | as duas filmagens em `public/videos`. Nada é baixado até a faixa chegar perto da viewport, e a reprodução para quando ela sai — 4K decodificando fora da tela é o jeito mais rápido de travar a página | `<video>` + IntersectionObserver |
-| `Planet.tsx` | planeta 3D: bandas com duplo domain warp e tempestades, casca de nuvens girando mais rápido que a superfície, anel com lanes, rim light por shader fresnel, rig de três luzes | three.js, carregado sob demanda |
-| `scenes/Aurora.tsx` | campo de cor que respira atrás do hero e do painel de contato — gradientes radiais em deriva elíptica | canvas 2D a meia resolução |
-| `scenes/CoverArt.tsx` | seis pratos ilustrados, um por serviço: núcleo aceso dentro de figura orbital sobre papel milimetrado. Nenhum repete a geometria do outro | SVG estático |
-| `scenes/ProductPanel.tsx` | o produto como objeto: mostrador em anel, curva suave que avança sozinha, três figuras | SVG + rAF |
-| `scenes/PipelineScene.tsx` | diagrama de integração com pacotes viajando entre ERP/e-commerce/WhatsApp, o hub e financeiro/BI/estoque | SVG + `animateMotion` |
-| `Starfield.tsx` | céu fixo atrás da página inteira, paralaxe por scroll em 3 profundidades | canvas 2D |
-| `OrbitField.tsx` | casca de 1600 pontos em esfera de Fibonacci com satélites em órbitas inclinadas | canvas 2D |
-| `Constellation.tsx` | constelação desenhada conforme você rola; cada nó é uma frente de atuação | canvas 2D |
-| `Kinetic.tsx` | marcador tipográfico gigante que deriva com o scroll | CSS + Framer Motion |
+- `KEYFRAMES` — telas largas. O objeto se move, dispersa e reagrupa ao longo da página inteira.
+- `MOBILE_KEYFRAMES` — telas em retrato (`aspect < 0.9`). Ali o objeto pertence ao hero: fica acima do título, dissolve quando você sai da primeira dobra e só volta no fechamento. Ocupando a página inteira ele virava sujeira atrás dos cards.
 
-As texturas do planeta estão em `src/lib/textures.ts` (fbm noise em `ImageData`, amostrado em círculo para não deixar costura no wrap).
+Cada linha é `[progresso da página, dispersão, x, y, escala, opacidade]`. A ordem das seções em `App.tsx` e essas tabelas andam juntas: mexeu numa, refaça as medidas da outra.
 
-Textura da página: grão de filme em `body::after` (SVG `feTurbulence` inline, 5% de opacidade). Sem ele os campos de azul aparecem em faixas em monitor barato.
+Custo controlado: three.js entra num chunk separado por `React.lazy`; a contagem de triângulos e o pixel ratio caem em celular e em máquina de poucos núcleos; e há uma queda de qualidade automática se os primeiros frames vierem lentos. Com `prefers-reduced-motion` o movimento para.
 
-Todos respeitam `prefers-reduced-motion`: desenham um frame e param.
+## Mídia
 
-### Peso
+| Arquivo | Onde |
+| --- | --- |
+| `media/plexus.mp4` | `FilmBand` — só roda a partir de `md`, decodificar isso trava o scroll no celular |
+| `media/office.mp4` | `About` |
+| `media/alpine.jpg` | `CtaBand` |
+| `media/insight-*.jpg` | `Insights` |
 
-`three.js` só é baixado quando a seção do planeta se aproxima 400px do viewport — `PlanetStage.tsx` faz `IntersectionObserver` + `React.lazy`. O bundle inicial fica em ~119 kB gzip; o planeta é um chunk separado de ~132 kB.
+Os dois vídeos somam ~28 MB e estão versionados. Se o histórico começar a incomodar, mova para Git LFS ou para um CDN e troque só os caminhos.
 
-Os dois vídeos somam ~40 MB e estão versionados no repositório. Se o histórico começar a incomodar, mova-os para Git LFS ou sirva de um CDN e troque só os caminhos em `src/lib/media.ts`.
+## Formulário
 
-### Trocar por foto ou vídeo real
+O formulário de contato é do Netlify. O `index.html` carrega um espelho oculto com os mesmos campos porque o build só enxerga HTML estático — sem ele o Netlify não registra o formulário. O envio é feito por AJAX (POST urlencoded para a própria página).
 
-Se um dia você tiver imagem própria, o lugar natural é o card do hero em `Hero.tsx` (hoje ocupado pelo `OrbitField` pequeno) e o objeto central do `VoidReveal` em `App.tsx` — os dois recebem qualquer `ReactNode`.
+**Se o deploy sair do Netlify, o formulário para de funcionar em silêncio**: o `catch` engole o erro e a tela de confirmação aparece mesmo assim. Nesse caso troque o `handleSubmit` em `Contact.tsx` pelo endpoint do novo provedor.
 
 ## Deploy
 
-Saída estática em `dist/`. Vercel, Netlify ou Cloudflare Pages: build `npm run build`, diretório `dist`.
+Saída estática em `dist/`. Build `npm run build`, diretório de publicação `dist`. O `netlify.toml` já traz o redirect de página única.
