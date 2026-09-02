@@ -31,7 +31,7 @@ export function Label({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-2.5 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 font-mono text-[11px] tracking-[0.14em] text-[#8db4f5] uppercase ${className}`}
+      className={`inline-flex items-center gap-2.5 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 font-mono text-[10px] tracking-[0.1em] text-[#8db4f5] uppercase sm:text-[11px] sm:tracking-[0.14em] ${className}`}
     >
       <AstroStar className="h-2.5 w-2.5 shrink-0" />
       {children}

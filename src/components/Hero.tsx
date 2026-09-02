@@ -30,35 +30,48 @@ export function Hero() {
           um piso. Fica acima do canvas (z-0) e abaixo do conteúdo (z-10). */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[54%] bg-gradient-to-t from-onyx via-onyx/90 to-transparent md:hidden"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[46%] bg-gradient-to-t from-onyx via-onyx/70 to-transparent lg:hidden"
       />
       <motion.div
         style={{ y: contentY, opacity: contentOpacity }}
-        className="relative z-10 flex min-h-[100svh] items-end pt-28 pb-16 md:items-center"
+        className="relative z-10 flex min-h-[100svh] items-end pt-24 pb-10 lg:items-center lg:pt-28 lg:pb-16"
       >
-        <motion.div variants={stagger} initial="hidden" animate="show" className="shell w-full">
+        <motion.div
+          id="hero-copy"
+          variants={stagger}
+          initial="hidden"
+          animate="show"
+          className="shell relative w-full"
+        >
+          {/* Em tela baixa o objeto encosta no título. Esta placa acompanha o
+              texto, em vez de uma altura fixa de viewport, e garante contraste
+              em qualquer aparelho. */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 -top-24 bottom-0 -z-10 bg-gradient-to-b from-transparent via-onyx/70 to-onyx/90 lg:hidden"
+          />
           <WordReveal
             as="h1"
             trigger="mount"
             delay={0.35}
             text={'Destrave a\nsua operação.'}
-            className="font-impact max-w-4xl text-[clamp(3.6rem,10vw,8.6rem)] leading-[0.95]"
+            className="font-impact max-w-4xl text-[clamp(3.2rem,11vw,8.6rem)] leading-[0.95]"
           />
 
-          <motion.div variants={rise} className="mt-9">
+          <motion.div variants={rise} className="mt-6 lg:mt-9">
             <Label>Conectando seu negócio ao futuro</Label>
           </motion.div>
 
           <motion.p
             variants={rise}
-            className="mt-4 max-w-md text-[clamp(1.05rem,1.4vw,1.2rem)] leading-[1.55] text-ash"
+            className="mt-4 max-w-md text-[clamp(1rem,1.4vw,1.2rem)] leading-[1.55] text-ash"
           >
             A Astro Soluções cria{' '}
             <RotatingWord words={['sites', 'sistemas', 'robôs', 'painéis', 'integrações']} /> que
             trabalham pela sua empresa. Sua equipe cuida dos clientes — o resto roda no automático.
           </motion.p>
 
-          <motion.div variants={rise} className="mt-10 flex flex-wrap items-center gap-4">
+          <motion.div variants={rise} className="mt-7 flex flex-wrap items-center gap-4 lg:mt-10">
             <IrisButton href="#contato">
               Agendar diagnóstico <ArrowGlyph />
             </IrisButton>
@@ -74,7 +87,7 @@ export function Hero() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 2, duration: 0.8 }}
-        className="absolute bottom-7 left-1/2 z-10 hidden -translate-x-1/2 flex-col items-center gap-2.5 md:flex"
+        className="absolute bottom-7 left-1/2 z-10 hidden -translate-x-1/2 flex-col items-center gap-2.5 lg:flex"
       >
         <span className="font-mono text-[10px] tracking-[0.24em] text-slate uppercase">Role</span>
         <span className="relative block h-10 w-px overflow-hidden bg-white/10">

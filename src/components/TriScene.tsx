@@ -59,24 +59,82 @@ const KEYFRAMES: Array<[number, number, number, number, number, number]> = [
   [1.0, 0.3, 0.0, -0.04, 0.9, 0.85],
 ]
 
+type Keyframes = Array<[number, number, number, number, number, number]>
+
+/**
+ * Mesmo valor do breakpoint `lg` do Tailwind, que é onde o menu vira hambúrguer.
+ * A cena e o CSS precisam trocar de composição na mesma largura: abaixo disso
+ * valem a tabela do hero e as placas de contraste marcadas com `lg:hidden`;
+ * acima, o layout de duas colunas e a tabela de página inteira.
+ */
+const MOBILE_BREAKPOINT = 1024
+
+/** Raio do objeto agrupado em unidades de mundo: o anel externo para em 1.64. */
+const OBJECT_RADIUS = 1.64
+
+/**
+ * O anel é um disco inclinado, então na tela o objeto é bem mais baixo do que
+ * largo: a altura dá cerca de 60% da largura. Sem esse fator o cálculo acha que
+ * a borda de baixo está mais embaixo do que está e sobra um buraco entre o
+ * objeto e o título.
+ */
+const OBJECT_FLATTEN = 0.6
+
+/**
+ * Onde o texto do hero começa, em fração da altura da tela. Medido no DOM em vez
+ * de constante: com 360px de largura o título quebra numa linha a mais e
+ * qualquer número fixo erra. `offsetTop` ignora o transform de parallax do hero,
+ * que é o que queremos aqui.
+ */
+function heroCopyTop() {
+  let node = document.getElementById('hero-copy') as HTMLElement | null
+  let top = 0
+  while (node) {
+    top += node.offsetTop
+    node = node.offsetParent as HTMLElement | null
+  }
+  /* Sem o elemento (ou antes do layout), assume uma dobra típica de celular. */
+  return top > 0 ? top / window.innerHeight : 0.37
+}
+
 /**
  * Tela em retrato usa outra tabela. Ocupando a página inteira o objeto vira
- * sujeira atrás dos cards, então no celular ele pertence ao hero: fica acima
- * do título, dissolve quando você sai da primeira dobra e só volta no
- * fechamento. `y` está em unidades de mundo (a meia altura desta câmera é
- * ~1.54) e `x` fica centralizado.
+ * sujeira atrás dos cards, então no celular ele pertence ao hero: entra pelo
+ * topo, encosta no título e dissolve quando você sai da primeira dobra. Só
+ * volta no fechamento da página.
+ *
+ * Posição e tamanho não são número fixo, porque a mesma constante que fica boa
+ * num iPhone Pro Max cobre o título inteiro num aparelho de 640px. O objeto é
+ * medido a partir da tela: ocupa a largura inteira, com teto de altura, e
+ * a borda de baixo encosta 8% da altura abaixo do topo do texto do hero.
  */
-const MOBILE_KEYFRAMES: Array<[number, number, number, number, number, number]> = [
-  [0.0, 0.03, 0.0, 0.92, 0.34, 1.0],
-  [0.03, 0.05, 0.0, 0.92, 0.34, 1.0],
-  [0.06, 0.45, 0.0, 0.6, 0.6, 0.4],
-  [0.1, 1.0, 0.0, 0.1, 1.0, 0.0],
-  [0.94, 1.0, 0.0, 0.0, 1.0, 0.0],
-  [0.97, 0.5, 0.0, -0.1, 0.85, 0.5],
-  [1.0, 0.12, 0.0, -0.16, 0.72, 0.9],
-]
+function mobileKeyframes(halfWidth: number, halfHeight: number, maxScroll: number): Keyframes {
+  const radius = Math.min(1.05 * halfWidth, 0.62 * halfHeight)
+  const bottom = Math.min(Math.max(heroCopyTop(), 0.14) + 0.08, 0.5)
+  /* Fração da tela (0 no topo) para unidade de mundo, e daí para o centro. */
+  const y = (1 - 2 * bottom) * halfHeight + radius * OBJECT_FLATTEN
+  const scale = radius / OBJECT_RADIUS
+  /* O disco é inclinado, então a caixa dele nasce torta: 0.09 recentraliza. */
+  const x = 0.09
 
-type Keyframes = Array<[number, number, number, number, number, number]>
+  /* Frações da página equivalentes a um quinto, meia e quatro quintos de tela
+     de rolagem: o objeto sai junto com o texto do hero, que já desaparece por
+     opacidade no mesmo trecho. */
+  const screen = window.innerHeight / maxScroll
+  const hold = Math.min(screen * 0.2, 0.2)
+  const fade = Math.min(screen * 0.5, 0.45)
+  const gone = Math.min(screen * 0.8, 0.7)
+
+  return [
+    [0.0, 0.03, x, y, scale, 1.0],
+    [hold, 0.04, x, y, scale, 1.0],
+    [fade, 0.2, x * 0.5, y * 0.75, scale * 1.15, 0.3],
+    [gone, 0.6, 0.0, 0.2, 1.0, 0.0],
+    [0.94, 1.0, 0.0, 0.0, 1.0, 0.0],
+    [0.97, 0.5, 0.0, -0.1, 0.85, 0.5],
+    [1.0, 0.12, 0.0, -0.16, 0.72, 0.9],
+  ]
+}
 
 function sampleKeyframes(table: Keyframes, progress: number) {
   const clamped = Math.min(Math.max(progress, 0), 1)
@@ -349,7 +407,19 @@ export function TriScene() {
     const ambientField = new THREE.LineSegments(ambientGeometry, ambientMaterial)
     scene.add(ambientField)
 
-    let halfWidth = Math.tan((camera.fov * Math.PI) / 360) * camera.position.z * camera.aspect
+    /* A altura da página fica em cache: ler scrollHeight dentro do loop força
+       um layout a cada frame, que era o que travava o scroll em máquina lenta.
+       Só recalcula quando o documento muda de verdade. */
+    let maxScroll = 1
+    const measureScroll = () => {
+      maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1)
+    }
+    measureScroll()
+
+    const halfHeight = Math.tan((camera.fov * Math.PI) / 360) * camera.position.z
+    let halfWidth = halfHeight * camera.aspect
+    let mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll)
+    let narrow = window.innerWidth < MOBILE_BREAKPOINT
     const current = { mix: 0.04, x: 0.58, y: 0.02, scale: 1, opacity: 1 }
     const pointer = { x: 0, y: 0 }
 
@@ -373,7 +443,9 @@ export function TriScene() {
       camera.aspect = width / height
       camera.updateProjectionMatrix()
       renderer.setSize(width, height)
-      halfWidth = Math.tan((camera.fov * Math.PI) / 360) * camera.position.z * camera.aspect
+      halfWidth = halfHeight * camera.aspect
+      mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll)
+      narrow = width < MOBILE_BREAKPOINT
       measureScroll()
     }
     window.addEventListener('resize', onResize)
@@ -381,16 +453,15 @@ export function TriScene() {
     /* O primeiro frame renderizado levanta a opacidade do container, para o canvas não aparecer de supetão. */
     let revealed = false
 
-    /* A altura da página fica em cache: ler scrollHeight dentro do loop força
-       um layout a cada frame, que era o que travava o scroll em máquina lenta.
-       Só recalcula quando o documento muda de verdade. */
-    let maxScroll = 1
-    const measureScroll = () => {
-      maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1)
+    /* A tabela do hero depende da altura do texto e da altura da página, que
+       mudam quando as fontes carregam e quando o documento cresce. */
+    const remeasure = () => {
+      measureScroll()
+      mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll)
     }
-    measureScroll()
-    const pageObserver = new ResizeObserver(measureScroll)
+    const pageObserver = new ResizeObserver(remeasure)
     pageObserver.observe(document.body)
+    document.fonts?.ready.then(remeasure)
 
     let frame = 0
     let previous = performance.now()
@@ -420,9 +491,8 @@ export function TriScene() {
       considerDowngrade(delta)
 
       const progress = window.scrollY / maxScroll
-      /* Tela em retrato roda a tabela presa ao hero, não a de página inteira. */
-      const narrow = camera.aspect < 0.9
-      const target = sampleKeyframes(narrow ? MOBILE_KEYFRAMES : KEYFRAMES, progress)
+      /* Abaixo do breakpoint roda a tabela presa ao hero, não a de página inteira. */
+      const target = sampleKeyframes(narrow ? mobileTable : KEYFRAMES, progress)
 
       const damping = reducedMotion ? 1 : 1 - Math.exp(-delta * 4.5)
       current.mix += (target.mix - current.mix) * damping
@@ -441,7 +511,7 @@ export function TriScene() {
         current.y + pointer.y * -0.04,
       )
       ambientMaterial.uniforms.uTime.value = time * 0.6
-      ambientMaterial.uniforms.uOpacity.value = narrow ? 0.32 * current.opacity : 0.32
+      ambientMaterial.uniforms.uOpacity.value = narrow ? 0.16 * current.opacity : 0.32
 
       renderer.render(scene, camera)
 
