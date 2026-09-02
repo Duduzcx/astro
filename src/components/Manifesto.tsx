@@ -1,9 +1,6 @@
 import { BlurReveal, GiantWord } from './ui/Primitives'
 
-/**
- * One full-screen statement over the dispersed particle field — the landing
- * page pauses for a single breath before showing proof.
- */
+/** Uma declaração em tela cheia sobre o campo de partículas disperso. */
 export function Manifesto() {
   return (
     <section id="manifesto" aria-label="Manifesto">

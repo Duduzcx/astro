@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { WordReveal, Reveal } from './ui/Primitives'
 
-/** The real team: two founders on the technical side, Luana on commercial. */
+/** O time: dois fundadores no técnico e a Luana no comercial. */
 const members = [
   {
     name: 'Eduardo',
@@ -32,10 +32,10 @@ export function Team() {
   const trackRef = useRef<HTMLDivElement>(null)
   const [atStart, setAtStart] = useState(true)
   const [atEnd, setAtEnd] = useState(false)
-  /* With a small team the row fits on screen — then the arrows are noise. */
+  /* Com time pequeno a linha cabe na tela e as setas viram ruído. */
   const [scrollable, setScrollable] = useState(false)
 
-  /* Arrows go quiet at the ends instead of pretending there is more to see. */
+  /* Nas pontas as setas apagam, em vez de fingir que há mais conteúdo. */
   useEffect(() => {
     const track = trackRef.current
     if (!track) return

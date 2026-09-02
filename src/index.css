@@ -1,24 +1,24 @@
 @import 'tailwindcss';
 
 @theme {
-  /* ── Surfaces. Mercury's alpine stack: onyx canvas, graphite cards one value
-     step up, obsidian for interactive fills. Separation by value, never shadow. */
+  /* Superfícies. Onyx é a página, graphite é o card um degrau acima e
+     obsidian preenche o que é clicável. A separação vem do valor, nunca de sombra. */
   --color-onyx: #0a0f1e; /* page canvas */
   --color-graphite: #131b2e; /* elevated card surface */
   --color-obsidian: #1b2740; /* secondary interactive fills */
 
-  /* ── Text. Ivory leads, ash carries body copy, slate whispers. Pure white is
-     reserved for text on cobalt. */
+  /* Texto. Ivory nos títulos, ash no corpo, slate no que sussurra.
+     Branco puro só em cima do cobalto. */
   --color-ivory: #f5f7fb; /* headings, nav, strong */
   --color-mist: #e8edf5; /* hover states, hairline borders on dark */
   --color-ash: #b9c2d4; /* default body */
   --color-slate: #6d7a94; /* muted labels, dividers */
 
-  /* ── The one chromatic note. Cobalt fills the primary action, tags the
-     eyebrows, and punctuates the particle field. Nothing else gets colour. */
+  /* A única cor. Cobalto preenche a ação principal, marca os eyebrows e
+     pontua o campo de partículas. Nada mais recebe cor. */
   --color-cobalt: #4d84e0;
 
-  /* ── Fonts. Grotesque body, condensed-impact display, mono for labels. */
+  /* Fontes: grotesca no corpo, condensada pesada no display, mono nos labels. */
   --font-display: 'Inter Tight', 'Inter', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
   --font-impact: 'Anton', 'Inter Tight', ui-sans-serif, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', monospace;
@@ -33,16 +33,16 @@
   }
 
   html {
-    /* Lenis owns scroll easing; native smooth would fight it. */
+    /* O Lenis controla a suavização do scroll; o smooth nativo brigaria com ele. */
     scroll-padding-top: 96px;
     -webkit-text-size-adjust: 100%;
   }
 
   body {
     margin: 0;
-    /* Flat colour only — the coloured washes live in a fixed layer
-       (AuroraBlobs), because background-attachment: fixed repaints on every
-       scroll frame on mobile. */
+    /* Só cor chapada. Os banhos de cor moram numa camada fixa (AuroraBlobs),
+       porque background-attachment: fixed repinta a cada frame de scroll no
+       celular. */
     background-color: var(--color-onyx);
     color: var(--color-ash);
     font-family: var(--font-display);
@@ -53,7 +53,7 @@
     overflow-x: hidden;
   }
 
-  /* Weight 480 is the signature: asserts without shouting. Never bold. */
+  /* Peso 480 é a assinatura: afirma sem gritar. Nunca negrito. */
   h1,
   h2,
   h3,
@@ -71,7 +71,7 @@
     text-wrap: pretty;
   }
 
-  /* Film grain. Keeps the large dark fields from banding — the Dala half of the mix. */
+  /* Grão de filme. Sem ele os campos grandes de azul aparecem em faixas em monitor barato. */
   body::after {
     content: '';
     position: fixed;
@@ -119,8 +119,8 @@
   }
 }
 
-/* Liquid glass surface. Layered gradients + rim light fake the refraction, so
-   no backdrop-filter is needed — the look survives on weak GPUs. */
+/* Superfície de vidro. Gradientes em camadas e uma luz de borda imitam a
+   refração, então não precisa de backdrop-filter e o efeito sobrevive em GPU fraca. */
 @utility graphite-card {
   position: relative;
   isolation: isolate;
@@ -143,7 +143,7 @@
     border-color 300ms ease,
     box-shadow 420ms ease;
 
-  /* Specular band that slides across the glass on hover. */
+  /* Faixa de brilho que desliza pelo vidro no hover. */
   &::after {
     content: '';
     position: absolute;
@@ -183,7 +183,7 @@
   }
 }
 
-/* Caption voice: eyebrows and tiny labels. Weight 480, wide-set, uppercase. */
+/* Voz de legenda: eyebrows e labels pequenos. Peso 480, espaçado, caixa alta. */
 @utility label-voice {
   font-weight: 480;
   text-transform: uppercase;
@@ -191,7 +191,7 @@
   color: var(--color-slate);
 }
 
-/* Poster voice: heavy condensed caps for the big claims. */
+/* Voz de cartaz: caixa alta condensada e pesada para as frases grandes. */
 @utility font-impact {
   font-family: var(--font-impact);
   font-weight: 400;
@@ -199,7 +199,7 @@
   letter-spacing: 0.008em;
 }
 
-/* Ghost word behind a section heading: huge, outlined, barely there. */
+/* Palavra fantasma atrás do título da seção: gigante, vazada, quase invisível. */
 @utility giant-outline {
   font-family: var(--font-impact);
   font-weight: 400;
@@ -208,9 +208,8 @@
   -webkit-text-stroke: 1.5px rgba(150, 170, 205, 0.16);
 }
 
-/* Soft colour weather behind a section — cobalt, cyan and violet at whisper
-   opacity. This is the "life" layer over the onyx canvas; never behind text
-   directly, always behind the whole section. */
+/* Banho de cor suave atrás de uma seção, em opacidade baixíssima. Nunca
+   direto atrás de um texto: sempre atrás da seção inteira. */
 @utility aurora {
   position: absolute;
   inset: 0;
@@ -221,7 +220,7 @@
     radial-gradient(520px 420px at 62% 8%, rgba(90, 143, 232, 0.1), transparent 70%);
 }
 
-/* Cobalt→cyan gradient type. For numbers and emphasised words only. */
+/* Texto em gradiente. Só para números e palavras em ênfase. */
 @utility text-spectrum {
   background: linear-gradient(92deg, #4d84e0 0%, #5a8fe8 45%, #8db4f5 100%);
   -webkit-background-clip: text;
@@ -229,7 +228,7 @@
   color: transparent;
 }
 
-/* Same gradient, alive: the colour slides through the letters on a slow loop. */
+/* O mesmo gradiente, vivo: a cor desliza pelas letras num loop lento. */
 @utility text-spectrum-animated {
   background: linear-gradient(92deg, #4d84e0, #5a8fe8, #8db4f5, #6d9df0, #4d84e0);
   background-size: 300% 100%;
@@ -248,7 +247,7 @@
   }
 }
 
-/* Hides the scrollbar on the team carousel without killing scrollability. */
+/* Esconde a barra de rolagem do carrossel da equipe sem tirar a rolagem. */
 @utility no-scrollbar {
   scrollbar-width: none;
   &::-webkit-scrollbar {
@@ -265,7 +264,7 @@
   }
 }
 
-/* Slow drifting colour blobs — the living background layer. */
+/* Manchas de cor derivando devagar: a camada viva do fundo. */
 @keyframes astro-blob-a {
   0%,
   100% {

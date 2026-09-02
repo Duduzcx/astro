@@ -1,7 +1,8 @@
+import { AstroMark } from '../brand/AstroMark'
+
 /**
- * Fake product UI, Mercury-style: graphite windows with cobalt as the only
- * chromatic note. These panels are the "product screenshots" of a product that
- * is bespoke by definition — each one sketches what a delivery looks like.
+ * Telas de produto fictícias: janelas em grafite com cobalto como única cor.
+ * Cada uma esboça a cara de um tipo de entrega.
  */
 
 const chrome = (
@@ -25,7 +26,7 @@ function Frame({ children, label }: { children: React.ReactNode; label: string }
   )
 }
 
-/** Ops dashboard: sidebar, stat tiles, revenue chart. */
+/** Painel de operação: menu lateral, blocos de número e gráfico de receita. */
 export function DashboardPanel() {
   return (
     <Frame label="Tela de um sistema de gestão com indicadores e gráfico de faturamento">
@@ -85,7 +86,7 @@ export function DashboardPanel() {
   )
 }
 
-/** Storefront: browser bar, hero, product cards. */
+/** Loja: barra do browser, banner e cards de produto. */
 export function StorefrontPanel() {
   return (
     <Frame label="Tela de um e-commerce com vitrine de produtos">
@@ -121,25 +122,23 @@ export function StorefrontPanel() {
   )
 }
 
-/** WhatsApp bot: a scheduling conversation resolving itself. */
+/** WhatsApp: uma conversa de remarcação se resolvendo sozinha. */
 export function ChatPanel() {
   const bubbles = [
     { from: 'them', text: 'Oi! Preciso remarcar minha consulta de quinta.' },
-    { from: 'bot', text: 'Claro! Tenho quinta às 16h ou sexta às 9h30. Qual prefere?' },
+    { from: 'system', text: 'Claro! Tenho quinta às 16h ou sexta às 9h30. Qual prefere?' },
     { from: 'them', text: 'Sexta 9h30.' },
-    { from: 'bot', text: 'Remarcado ✓ Enviei a confirmação por e-mail e avisei a recepção.' },
+    { from: 'system', text: 'Remarcado ✓ Enviei a confirmação por e-mail e avisei a recepção.' },
   ] as const
   return (
-    <Frame label="Conversa de WhatsApp em que o robô remarca uma consulta sozinho">
+    <Frame label="Conversa de WhatsApp em que o sistema remarca uma consulta sozinho">
       <div className="flex flex-col gap-2 p-4">
         <div className="flex items-center gap-2 pb-1">
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-obsidian">
-            <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5" aria-hidden="true">
-              <path d="M12 3 20 19H4L12 3Z" stroke="#4d84e0" strokeWidth="2" strokeLinejoin="round" />
-            </svg>
+            <AstroMark className="h-4 w-4" />
           </span>
           <div>
-            <p className="text-[11px] font-[480] text-ivory">Clínica Áurea · Assistente</p>
+            <p className="text-[11px] font-[480] text-ivory">Clínica Áurea · Agenda</p>
             <p className="text-[9px] text-[#4ade80]">online agora</p>
           </div>
         </div>
@@ -147,7 +146,7 @@ export function ChatPanel() {
           <div
             key={bubble.text}
             className={`max-w-[80%] rounded-xl px-3 py-2 text-[11px] leading-[1.45] ${
-              bubble.from === 'bot'
+              bubble.from === 'system'
                 ? 'self-end rounded-br-sm bg-cobalt/90 text-white'
                 : 'self-start rounded-bl-sm bg-obsidian text-ash'
             }`}
@@ -163,7 +162,7 @@ export function ChatPanel() {
   )
 }
 
-/** IoT telemetry: live sensor tiles + a sparkline wall. */
+/** Telemetria: blocos de sensor ao vivo e uma parede de mini-gráficos. */
 export function TelemetryPanel() {
   const sensors = [
     ['Câmara fria 01', '-18,2 °C', '#8db4f5'],
@@ -205,7 +204,7 @@ export function TelemetryPanel() {
   )
 }
 
-/** Integration hub: sources feed the triangle, outputs leave it. */
+/** Hub de integração: as fontes entram no centro e as saídas partem dele. */
 export function PipelinePanel() {
   const inputs = ['ERP', 'Site', 'WhatsApp']
   const outputs = ['Financeiro', 'BI', 'Estoque']

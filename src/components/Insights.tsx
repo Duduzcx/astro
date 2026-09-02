@@ -1,6 +1,6 @@
 import { WordReveal, Reveal } from './ui/Primitives'
 
-/** Editorial shelf — invented posts that show how the team thinks. */
+/** Prateleira editorial. Posts de exemplo até o blog existir de verdade. */
 const posts = [
   {
     tag: 'Automação',

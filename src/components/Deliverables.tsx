@@ -2,9 +2,8 @@ import { motion } from 'framer-motion'
 import { GiantWord, Label, Reveal, WordReveal } from './ui/Primitives'
 
 /**
- * Straight from the real "Dicionário de Entregáveis" annex: what transfers to
- * the client at hand-off. This section replaces invented social proof with a
- * verifiable promise — evidence, not testimonials.
+ * Lista do anexo "Dicionário de Entregáveis": o que é transferido para o
+ * cliente no encerramento do projeto.
  */
 const deliverables = [
   {
@@ -72,7 +71,7 @@ export function Deliverables() {
             <Reveal key={item.title} delay={0.05 * index}>
               <article className="graphite-card h-full">
                 <div className="flex items-center gap-3">
-                  {/* The tick draws itself as the card arrives. */}
+                  {/* O check se desenha quando o card entra na tela. */}
                   <svg viewBox="0 0 16 16" aria-hidden="true" className="h-4 w-4 shrink-0">
                     <motion.path
                       d="M2.5 8.5 6 12l7.5-8"

@@ -16,11 +16,12 @@ import {
   useSpring,
   useTransform,
 } from 'framer-motion'
+import { AstroStar } from '../brand/AstroMark'
 
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-/** Eyebrow. Bordered mono pill with the triangle glyph — the "technical" voice. */
+/** Eyebrow: pílula com borda, texto em mono e a estrela da marca. */
 export function Label({
   children,
   className = '',
@@ -32,15 +33,13 @@ export function Label({
     <span
       className={`inline-flex items-center gap-2.5 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 font-mono text-[11px] tracking-[0.14em] text-[#8db4f5] uppercase ${className}`}
     >
-      <svg viewBox="0 0 12 12" aria-hidden="true" className="h-2.5 w-2.5 shrink-0">
-        <path d="M6 1.5 10.5 10.5H1.5L6 1.5Z" fill="currentColor" />
-      </svg>
+      <AstroStar className="h-2.5 w-2.5 shrink-0" />
       {children}
     </span>
   )
 }
 
-/** Huge outlined ghost word drifting behind a section heading. */
+/** Palavra gigante vazada, derivando atrás do título da seção. */
 export function GiantWord({ word, className = '' }: { word: string; className?: string }) {
   const ref = useRef<HTMLDivElement>(null)
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] })
@@ -63,8 +62,8 @@ export function GiantWord({ word, className = '' }: { word: string; className?: 
 }
 
 /**
- * The one filled action on the page. Cobalt, pill, never duplicated within a
- * view — and magnetic: it leans a few pixels toward the cursor.
+ * A única ação preenchida da página: cobalto, pílula, nunca repetida na mesma
+ * tela. Inclina alguns pixels na direção do cursor.
  */
 export function IrisButton({
   href,
@@ -106,7 +105,7 @@ export function IrisButton({
       className={`group relative inline-flex items-center justify-center gap-2.5 overflow-hidden rounded-full bg-cobalt px-7 py-3.5 text-[15px] font-[420] text-white transition-colors duration-300 hover:bg-[#5d92ea] ${className}`}
     >
       {children}
-      {/* Light sheen sweeping across on hover. */}
+      {/* Brilho passando por cima no hover. */}
       <span
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full"
@@ -115,7 +114,7 @@ export function IrisButton({
   )
 }
 
-/** Content that arrives out of focus: blur + rise, then sharp. For big claims. */
+/** Conteúdo que chega desfocado: blur mais subida e depois nitidez. Para as frases grandes. */
 export function BlurReveal({
   children,
   delay = 0,
@@ -138,7 +137,7 @@ export function BlurReveal({
   )
 }
 
-/** 3D tilt on hover for the product panels. Perspective lives here. */
+/** Inclinação 3D no hover dos painéis de produto. A perspectiva mora aqui. */
 export function Tilt({ children, className = '' }: { children: ReactNode; className?: string }) {
   const ref = useRef<HTMLDivElement>(null)
   const rotateX = useMotionValue(0)
@@ -174,7 +173,7 @@ export function Tilt({ children, className = '' }: { children: ReactNode; classN
   )
 }
 
-/** Secondary action. Mercury ghost: ivory hairline pill, never chromatic. */
+/** Ação secundária: pílula de contorno ivory, nunca colorida. */
 export function GhostButton({
   href,
   children,
@@ -215,7 +214,7 @@ export function ArrowGlyph({ className = '' }: { className?: string }) {
   )
 }
 
-/** Shared scroll reveal. One motion vocabulary across every section. */
+/** Reveal de scroll compartilhado. Um só vocabulário de movimento no site inteiro. */
 export function Reveal({
   children,
   delay = 0,
@@ -239,8 +238,8 @@ export function Reveal({
 }
 
 /**
- * Headline that rises line by line from behind a mask. Splitting on an explicit
- * separator rather than on words keeps the line breaks the author intended.
+ * Título que sobe linha por linha de trás de uma máscara. Quebrar por separador
+ * explícito, e não por palavra, preserva as quebras que o autor quis.
  */
 export function LineReveal({
   text,
@@ -254,8 +253,8 @@ export function LineReveal({
   delay?: number
   as?: 'h1' | 'h2' | 'h3'
   /**
-   * Above the fold there is nothing to scroll into, and a parent driving variants
-   * would swallow `whileInView` anyway — so the hero animates on mount instead.
+   * Acima da dobra não há nada para rolar, e um pai controlando variants
+   * engoliria o `whileInView`. Por isso o hero anima no mount.
    */
   trigger?: 'view' | 'mount'
 }) {
@@ -264,10 +263,10 @@ export function LineReveal({
 
   return (
     /**
-     * The trigger lives on the heading, never on the masked line. A line sitting
-     * at y:110% is fully clipped by its `overflow: hidden` parent, and
-     * IntersectionObserver counts ancestor clipping — so observing the line
-     * itself yields ratio 0 forever and the reveal never fires.
+     * O gatilho fica no título, nunca na linha mascarada. Uma linha em y:110%
+     * está inteiramente cortada pelo `overflow: hidden` do pai, e o
+     * IntersectionObserver conta o corte do ancestral: observar a própria linha
+     * daria ratio 0 para sempre e o reveal nunca dispararia.
      */
     <MotionTag
       className={className}
@@ -296,8 +295,8 @@ export function LineReveal({
 }
 
 /**
- * Headline that assembles word by word — each word rises out of its own mask
- * with a small rotation. Supports explicit line breaks via \n.
+ * Título que se monta palavra por palavra, cada uma saindo da própria máscara
+ * com uma leve rotação. Aceita quebra explícita com \n.
  */
 export function WordReveal({
   text,
@@ -353,7 +352,7 @@ export function WordReveal({
   )
 }
 
-/** One word that keeps cycling — slides up, blurs out, next one arrives. */
+/** Uma palavra que fica trocando: sobe, desfoca e a próxima chega. */
 export function RotatingWord({ words, className = '' }: { words: readonly string[]; className?: string }) {
   const [index, setIndex] = useState(0)
 
@@ -382,8 +381,8 @@ export function RotatingWord({ words, className = '' }: { words: readonly string
 }
 
 /**
- * "R$ -38%"-style stat that counts from zero when scrolled into view.
- * Splits any prefix and suffix around the first integer in the string.
+ * Número que conta do zero quando entra na tela. Separa prefixo e sufixo em
+ * volta do primeiro inteiro da string.
  */
 export function AnimatedNumber({ value, className = '' }: { value: string; className?: string }) {
   const match = value.match(/^([^\d]*)(\d+)(.*)$/)
@@ -412,7 +411,7 @@ export function AnimatedNumber({ value, className = '' }: { value: string; class
   )
 }
 
-/** Section wrapper. Owns vertical rhythm so no child ever sets its own section padding. */
+/** Wrapper de seção. Dono do ritmo vertical: nenhum filho define o próprio padding. */
 export function Section({
   id,
   children,
@@ -429,7 +428,7 @@ export function Section({
   )
 }
 
-/** Section header: label, title, optional lead paragraph. */
+/** Cabeçalho de seção: label, título e parágrafo opcional. */
 export function SectionHead({
   label,
   title,

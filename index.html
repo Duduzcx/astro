@@ -2,8 +2,11 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/astro-mark.svg" />
+    <!-- Favicon com placa branca: a marca continua legível em aba clara e em aba escura. -->
+    <link rel="icon" type="image/svg+xml" href="/logo/favicon.svg" />
+    <link rel="alternate icon" type="image/png" sizes="64x64" href="/logo/favicon-64.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="mask-icon" href="/logo/astro-mark-navy.svg" color="#12294e" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0a0f1e" />
     <meta name="color-scheme" content="dark" />
@@ -36,6 +39,17 @@
         "taxID": "65.903.572/0001-26",
         "description": "Sistemas, sites, automações e integrações sob medida.",
         "slogan": "Conectando seu negócio ao futuro.",
+        "url": "https://astrosolucoes.com.br",
+        "logo": "https://astrosolucoes.com.br/logo/astro-badge.svg",
+        "email": "astrosolucoestech@gmail.com",
+        "telephone": "+55-11-92157-2675",
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "contactType": "customer support",
+          "telephone": "+55-11-92157-2675",
+          "email": "astrosolucoestech@gmail.com",
+          "availableLanguage": "Portuguese"
+        },
         "address": {
           "@type": "PostalAddress",
           "addressLocality": "São Paulo",
@@ -52,8 +66,9 @@
     />
   </head>
   <body>
-    <!-- Netlify form registration: the build bot only sees static HTML, so the
-         React form in Contact.tsx needs this hidden mirror with the same fields. -->
+    <!-- Registro do formulário no Netlify: o build só enxerga HTML estático,
+         então o formulário React de Contact.tsx precisa deste espelho oculto
+         com os mesmos campos. -->
     <form name="contato" netlify netlify-honeypot="bot-field" hidden>
       <input name="nome" /><input name="email" /><input name="empresa" />
       <textarea name="desafio"></textarea>

@@ -1,17 +1,27 @@
-/** Brand lockup from the manual: ASTRO in impact caps, "soluções" in script. */
-export function Logo({ className = '' }: { className?: string }) {
+import { AstroMark } from './brand/AstroMark'
+
+/**
+ * Assinatura da marca: símbolo, ASTRO em caixa alta e "soluções" em script.
+ * `markOnly` esconde o texto onde não cabe.
+ */
+export function Logo({
+  className = '',
+  markOnly = false,
+}: {
+  className?: string
+  markOnly?: boolean
+}) {
   return (
     <span className={`inline-flex items-center gap-2.5 ${className}`}>
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-6 w-6">
-        <path d="M12 2.6 21 20H3L12 2.6Z" stroke="#4d84e0" strokeWidth="1.8" strokeLinejoin="round" />
-        <path d="M12 9.4 16.4 18H7.6L12 9.4Z" fill="#f5f7fb" />
-      </svg>
-      <span className="flex flex-col leading-none">
-        <span className="font-impact text-[19px] tracking-[0.04em] text-ivory">ASTRO</span>
-        <span className="-mt-1 self-end text-[15px] text-[#8db4f5] [font-family:'Allura',cursive]">
-          soluções
+      <AstroMark className="h-9 w-9 shrink-0" title={markOnly ? 'Astro Soluções' : undefined} />
+      {markOnly ? null : (
+        <span className="flex flex-col leading-none">
+          <span className="font-impact text-[19px] tracking-[0.04em] text-ivory">ASTRO</span>
+          <span className="-mt-1 self-end text-[15px] text-[#8db4f5] [font-family:'Allura',cursive]">
+            soluções
+          </span>
         </span>
-      </span>
+      )}
     </span>
   )
 }

@@ -1,9 +1,9 @@
 import Lenis from 'lenis'
 
 /**
- * Site-wide smooth scroll (Lenis drives the real scroll position, so
- * framer-motion's useScroll and the WebGL scene keep working untouched).
- * Skipped entirely for reduced-motion users.
+ * Scroll suave do site inteiro. O Lenis controla a posição real do scroll, então
+ * o useScroll do framer-motion e a cena WebGL continuam funcionando sem mudança.
+ * Desligado por completo para quem pede reduced-motion.
  */
 let lenis: Lenis | null = null
 
@@ -17,7 +17,7 @@ export function initSmoothScroll() {
   }
   requestAnimationFrame(raf)
 
-  /* Anchor clicks glide through Lenis instead of jumping. */
+  /* Clique em âncora passa pelo Lenis em vez de pular. */
   document.addEventListener('click', (event) => {
     const target = event.target as HTMLElement
     const anchor = target.closest?.('a[href^="#"]') as HTMLAnchorElement | null
@@ -31,7 +31,7 @@ export function initSmoothScroll() {
   })
 }
 
-/** Programmatic variant for the mobile menu (close first, then glide). */
+/** Versão programática para o menu mobile: fecha primeiro, rola depois. */
 export function scrollToHash(hash: string) {
   const element = document.querySelector(hash)
   if (!element) return

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 
 /**
- * Mercury-style colour weather: the page's base colour drifts as you move
- * between sections — always navy, but each chapter has its own temperature.
- * One fixed div with a CSS colour transition; the observer just picks the tint.
+ * A cor de fundo da página muda conforme você troca de seção. Sempre navy, só
+ * a temperatura muda. É uma div fixa com transição de cor em CSS; o observer
+ * só escolhe o tom.
  */
 const TINTS: Array<[string, string]> = [
   ['#topo', '#0a0f1e'],
@@ -13,6 +13,7 @@ const TINTS: Array<[string, string]> = [
   ['[aria-label="Automação em ação"]', '#05070d'],
   ['[aria-label="Missão"]', '#101c38'],
   ['#resultados', '#0b1222'],
+  ['#projetos', '#0d1a33'],
   ['[aria-label="Agendar diagnóstico"]', '#05070d'],
   ['#processo', '#0a1120'],
   ['#entregaveis', '#0d1630'],

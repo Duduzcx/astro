@@ -11,6 +11,7 @@ import { Manifesto } from './components/Manifesto'
 import { FilmBand } from './components/FilmBand'
 import { Mission } from './components/Mission'
 import { Cases } from './components/Cases'
+import { Projects } from './components/Projects'
 import { CtaBand } from './components/CtaBand'
 import { Process } from './components/Process'
 import { About } from './components/About'
@@ -21,16 +22,16 @@ import { Faq } from './components/Faq'
 import { Contact } from './components/Contact'
 import { Footer } from './components/Footer'
 
-/** three.js is ~500kB minified — the scene lazy-loads and fades in under the hero. */
+/** three.js pesa ~500kB minificado, então a cena vem num chunk separado. */
 const TriScene = lazy(() =>
   import('./components/TriScene').then((module) => ({ default: module.TriScene })),
 )
 
 /**
- * Landing flow: promise → proof → conversion, twice. One fixed WebGL scene
- * behind everything; the particle field morphs per section (see TriScene
- * KEYFRAMES). Section order and the keyframe table are coupled — reorder both
- * together and re-measure the offsets.
+ * Ordem da página: promessa, prova, conversão. Duas vezes.
+ * Uma cena WebGL fixa atrás de tudo, que muda de forma a cada seção.
+ * A ordem daqui e a tabela KEYFRAMES do TriScene andam juntas: mexeu numa,
+ * refaça as medidas da outra.
  */
 export default function App() {
   return (
@@ -60,6 +61,7 @@ export default function App() {
         <FilmBand />
         <Mission />
         <Cases />
+        <Projects />
         <CtaBand />
         <Process />
         <Deliverables />

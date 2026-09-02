@@ -1,17 +1,14 @@
 import { AnimatedNumber, Reveal, WordReveal } from './ui/Primitives'
 
-/** Real commitments from the deliverables annex — verifiable, not vanity metrics. */
+/** Compromissos do anexo de entregáveis. Números verificáveis, não métrica de vaidade. */
 const stats = [
   { label: 'Frentes de entrega em todo projeto', value: '12' },
   { label: 'Propriedade do código é sua', value: '100%' },
   { label: 'Dias de garantia técnica (SLA)', value: '30–90' },
-  { label: 'Atendimento por dia, com IA de plantão', value: '24h' },
+  { label: 'Atendimento por dia, com plantão de urgência', value: '24h' },
 ] as const
 
-/**
- * Reference pattern: "Build a better world of work" — left column beside the
- * regrouped core, with italic cobalt emphasis inside the running text.
- */
+/** Coluna de texto ao lado do núcleo reagrupado, com ênfase em cobalto no meio do parágrafo. */
 export function Mission() {
   return (
     <section aria-label="Missão" className="relative z-10 flex items-center overflow-hidden py-20 lg:min-h-[100svh] lg:py-16">

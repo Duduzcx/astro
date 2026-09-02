@@ -2,10 +2,7 @@ import { useRef } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { ArrowGlyph, BlurReveal, IrisButton } from './ui/Primitives'
 
-/**
- * Mid-page conversion moment over the alpine photograph, with scroll parallax —
- * the Mercury hero treatment reused as a selling band.
- */
+/** Bloco de conversão no meio da página, com parallax na foto de fundo. */
 export function CtaBand() {
   const ref = useRef<HTMLElement>(null)
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] })

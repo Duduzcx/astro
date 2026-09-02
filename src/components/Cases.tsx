@@ -1,9 +1,8 @@
 import { AnimatedNumber, GiantWord, Reveal, WordReveal } from './ui/Primitives'
 
 /**
- * Typical scenarios (labelled by segment, not by client — the company is new
- * and doesn't claim a track record it doesn't have yet). Swap for real cases
- * with real names as they close.
+ * Cenários por segmento, sem nome de cliente. Trocar por casos reais conforme
+ * os contratos permitirem.
  */
 const cases = [
   {
@@ -20,7 +19,7 @@ const cases = [
     metric: '24h',
     metricLabel: 'de agenda funcionando',
     problem: 'Recepção afogada em ligações; paciente desiste antes de conseguir marcar.',
-    solution: 'Portal do paciente e assistente de agenda no WhatsApp, ligados ao prontuário.',
+    solution: 'Portal do paciente e agenda automática no WhatsApp, ligados ao prontuário.',
     result: 'Marcações acontecem a qualquer hora — sem depender do telefone tocar.',
     tech: ['WhatsApp', 'Agenda', 'Portal'],
   },

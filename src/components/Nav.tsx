@@ -5,7 +5,7 @@ import { ArrowGlyph, IrisButton } from './ui/Primitives'
 import { navLinks, site } from '../lib/site'
 import { scrollToHash } from '../lib/scroll'
 
-/** Marks the nav item whose section currently owns the viewport. */
+/** Marca o item do menu cuja seção está ocupando a viewport. */
 function useActiveSection() {
   const [active, setActive] = useState<string>(navLinks[0].href)
 
@@ -43,7 +43,7 @@ export function Nav() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // The mobile sheet covers the page; the page behind it must not scroll.
+  // A folha mobile cobre a página; a página atrás dela não pode rolar.
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : ''
     return () => {
@@ -60,8 +60,8 @@ export function Nav() {
   }, [])
 
   /**
-   * Closing the sheet and letting the browser follow the hash in the same tick races
-   * the `overflow: hidden` cleanup, so the jump gets swallowed. Close first, scroll after.
+   * Fechar a folha e deixar o browser seguir o hash no mesmo tick corre contra a
+   * limpeza do `overflow: hidden`, e o pulo se perde. Fecha primeiro, rola depois.
    */
   const goToSection = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
     event.preventDefault()
@@ -139,8 +139,8 @@ export function Nav() {
       </nav>
     </motion.header>
 
-    {/* The overlay must live OUTSIDE the header: the header's backdrop-blur
-        creates a containing block that would trap this fixed panel inside it. */}
+    {/* O overlay precisa ficar FORA do header: o backdrop-blur dele cria um
+        containing block que prenderia este painel fixed lá dentro. */}
     <AnimatePresence>
         {menuOpen ? (
           <motion.div
@@ -148,7 +148,7 @@ export function Nav() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed inset-0 top-14 z-40 flex flex-col overflow-hidden bg-onyx/97 md:top-20 lg:hidden"
+            className="fixed inset-0 top-14 z-40 flex flex-col overflow-hidden bg-onyx md:top-20 lg:hidden"
           >
             <div className="aurora" aria-hidden="true" />
 
@@ -202,6 +202,12 @@ export function Nav() {
               >
                 <span className="h-1.5 w-1.5 rounded-full bg-[#4ade80]" />
                 Chamar no WhatsApp
+              </a>
+              <a
+                href={site.email.href}
+                className="mt-3 block text-center text-[13px] break-all text-slate"
+              >
+                {site.email.label}
               </a>
               <p className="mt-6 text-center text-[12px] text-slate">
                 Conectando seu negócio ao futuro.

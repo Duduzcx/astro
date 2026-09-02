@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { GiantWord, Label, Reveal, WordReveal } from './ui/Primitives'
 
-/** The five real phases from the deliverables document — payment milestones ride on them. */
+/** As cinco fases do documento de entregáveis. Os marcos de pagamento seguem elas. */
 const steps = [
   {
     number: '01',
@@ -50,17 +50,15 @@ function StepCard({ step }: { step: (typeof steps)[number] }) {
 }
 
 /**
- * Reference trick (Projeto Thor): the section pins while the cards ride
- * horizontally on vertical scroll. Falls back to a plain grid below lg and
- * for reduced-motion users.
+ * A seção trava e os cards andam na horizontal conforme o scroll vertical.
+ * Cai para uma grade simples em reduced-motion.
  */
 export function Process() {
   const ref = useRef<HTMLElement>(null)
   const trackRef = useRef<HTMLDivElement>(null)
-  /* Decided on the FIRST render: if the pinned branch only appeared after an
-     effect, useScroll would initialise against a null target and the track
-     would never move. Pinned on every screen size — the mobile layout is the
-     same as desktop; only reduced-motion users get the flat grid. */
+  /* Decidido no PRIMEIRO render: se o branch travado só aparecesse depois de
+     um efeito, o useScroll inicializaria com target nulo e a trilha nunca
+     andaria. Trava em qualquer largura; só reduced-motion cai para a grade. */
   const [pinned, setPinned] = useState(
     () => !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   )
@@ -73,8 +71,8 @@ export function Process() {
     return () => still.removeEventListener('change', update)
   }, [])
 
-  /* Measured travel: track width minus viewport, so the last card always
-     parks fully on screen — on any device width. */
+  /* Curso medido: largura da trilha menos a viewport, para o último card
+     parar inteiro na tela em qualquer largura de aparelho. */
   useEffect(() => {
     const measure = () => {
       const track = trackRef.current

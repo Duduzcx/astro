@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { Reveal } from './ui/Primitives'
 
-/** Tools people already run their business on — plain text pills, no logos to license. */
+/** Ferramentas que o cliente já usa. Texto puro, sem logo de terceiro para licenciar. */
 const tools = [
   'WhatsApp Business',
   'Mercado Pago',

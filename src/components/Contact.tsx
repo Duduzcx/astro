@@ -1,18 +1,19 @@
 import { useState, type FormEvent } from 'react'
 import { ArrowGlyph, WordReveal, Reveal } from './ui/Primitives'
 import { site } from '../lib/site'
+import { AstroMark } from './brand/AstroMark'
 
 const inputClasses =
   'w-full rounded-2xl bg-obsidian px-5 py-3.5 text-[15px] text-ivory placeholder:text-slate outline-none transition-shadow focus:shadow-[inset_0_0_0_1px_#4d84e0]'
 
 /**
- * Netlify-powered form (the hidden mirror lives in index.html so the build
- * bot registers it) plus the fast lane: a 20-minute call on WhatsApp.
+ * Formulário do Netlify. O espelho oculto fica no index.html porque o build só
+ * enxerga HTML estático. Ao lado, o atalho: 20 minutos no WhatsApp.
  */
 export function Contact() {
   const [sent, setSent] = useState(false)
 
-  /* Netlify AJAX submission: post the urlencoded fields to the page itself. */
+  /* Envio por AJAX: POST urlencoded para a própria página. */
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
@@ -24,7 +25,7 @@ export function Contact() {
         body,
       })
     } catch {
-      /* Offline or local dev: still confirm — the fallback contact routes are beside the form. */
+      /* Offline ou dev local: confirma mesmo assim, os contatos diretos estão ao lado. */
     }
     setSent(true)
   }
@@ -38,8 +39,8 @@ export function Contact() {
             <WordReveal text={'Conta pra gente\no seu desafio'} className="font-impact text-[clamp(2.4rem,5.2vw,4.2rem)]" />
             <Reveal delay={0.12}>
               <p className="mt-6 max-w-md text-ash">
-                Atendimento 24h: a equipe responde das 8h às 21h e, fora disso, nosso assistente de
-                IA já começa a resolver. Se preferir pular a fila: uma conversa técnica de 20
+                Atendimento 24h: a equipe responde das 8h às 21h e, fora disso, o plantão registra
+                e encaminha o seu chamado. Se preferir pular a fila: uma conversa técnica de 20
                 minutos, direto no WhatsApp.
               </p>
             </Reveal>
@@ -56,11 +57,40 @@ export function Contact() {
                 <p className="text-[13px] text-slate">{site.hours}</p>
               </div>
             </Reveal>
+
+            {/* Quem não preenche formulário precisa de outra porta. */}
+            <Reveal delay={0.26}>
+              <dl className="mt-9 grid gap-5 border-t border-white/10 pt-7 sm:grid-cols-2">
+                <div>
+                  <dt className="label-voice text-[10px]">E-mail</dt>
+                  <dd className="mt-1.5">
+                    <a
+                      href={site.email.href}
+                      className="text-[15px] break-all text-ivory transition-colors hover:text-[#8db4f5]"
+                    >
+                      {site.email.label}
+                    </a>
+                  </dd>
+                </div>
+                <div>
+                  <dt className="label-voice text-[10px]">Telefone</dt>
+                  <dd className="mt-1.5">
+                    <a
+                      href={site.phone.href}
+                      className="text-[15px] text-ivory transition-colors hover:text-[#8db4f5]"
+                    >
+                      {site.phone.label}
+                    </a>
+                  </dd>
+                </div>
+              </dl>
+            </Reveal>
           </div>
 
           <Reveal delay={0.15}>
             {sent ? (
               <div className="graphite-card flex h-full flex-col items-start justify-center">
+                <AstroMark className="mb-5 h-12 w-12" />
                 <p className="text-[1.4rem] text-ivory">Recebido ✓</p>
                 <p className="mt-3 max-w-sm text-ash">
                   Obrigado! A gente lê com atenção e responde em até um dia útil — normalmente

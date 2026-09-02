@@ -1,0 +1,36 @@
+<!doctype html><meta charset="utf-8">
+<style>
+  body{margin:0;background:#888;font-family:'Anton',sans-serif}
+  .plate{position:relative;overflow:hidden}
+  #apple{width:180px;height:180px;background:#0f2947;display:flex;align-items:center;justify-content:center}
+  #apple svg{width:150px;height:150px}
+  #fav32{width:64px;height:64px;background:#fff;display:flex;align-items:center;justify-content:center}
+  #fav32 svg{width:64px;height:64px}
+  #og{width:1200px;height:630px;background:#0a0f1e;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;
+      background-image:radial-gradient(900px 600px at 78% -10%,rgba(77,132,224,.22),transparent 62%),radial-gradient(800px 600px at 8% 108%,rgba(122,179,255,.14),transparent 62%)}
+  #og svg{width:190px;height:190px}
+  #og .wm{display:flex;align-items:center;gap:22px}
+  #og .word{display:flex;flex-direction:column;line-height:1}
+  #og .astro{font-family:Anton,sans-serif;font-size:78px;letter-spacing:.04em;color:#f5f7fb;line-height:.9;text-transform:uppercase}
+  #og .sol{font-family:Allura,cursive;font-size:58px;color:#8db4f5;align-self:flex-end;margin-top:-4px;margin-right:4px}
+  #og p{font-family:'Inter Tight',system-ui,sans-serif;font-size:30px;color:#b9c2d4;margin:0}
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;480&family=Anton&family=Allura&display=swap" rel="stylesheet">
+<template id="mark">
+  <svg viewBox="0 0 64 64">
+    <path d="M36.7 15.4A22 14.5 -38 1 0 43 36.7" fill="none" stroke="CS" stroke-width="4.4" stroke-linecap="round"/>
+    <path d="M51.5 9.2C51.5 16.6 54.1 19.5 60.8 19.5C54.1 19.5 51.5 22.4 51.5 29.8C51.5 22.4 48.9 19.5 42.2 19.5C48.9 19.5 51.5 16.6 51.5 9.2Z" fill="CS"/>
+  </svg>
+</template>
+<div id="apple" class="plate"></div>
+<div id="fav32" class="plate"></div>
+<div id="og" class="plate"><div class="wm"></div><p>Sistemas, sites, automações e integrações sob medida.</p></div>
+<script>
+  const tpl = document.getElementById('mark').innerHTML
+  const paint = (sel, color) => { document.querySelector(sel).insertAdjacentHTML('afterbegin', tpl.replaceAll('CS', color)) }
+  paint('#apple', '#ffffff')
+  paint('#fav32', '#12294e')
+  const wm = document.querySelector('#og .wm')
+  wm.insertAdjacentHTML('afterbegin', tpl.replaceAll('CS', '#f5f7fb'))
+  wm.insertAdjacentHTML('beforeend', '<span class="word"><span class="astro">Astro</span><span class="sol">soluções</span></span>')
+</script>

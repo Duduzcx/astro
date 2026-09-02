@@ -13,9 +13,9 @@ const stagger = {
 }
 
 /**
- * Dala layout, Mercury voice: giant headline left, the particle sphere (drawn
- * by TriScene behind the page) owns the right half. Eyebrow below the
- * headline, then body, then the single cobalt pill plus a ghost secondary.
+ * Título gigante à esquerda; a metade direita é do objeto de partículas, que o
+ * TriScene desenha atrás da página. Abaixo do título vêm o eyebrow, o texto e
+ * os dois botões.
  */
 export function Hero() {
   const ref = useRef<HTMLElement>(null)
@@ -26,9 +26,15 @@ export function Hero() {
   return (
     <section ref={ref} id="topo" className="relative min-h-[100svh] overflow-hidden">
       <div className="aurora" aria-hidden="true" />
+      {/* Só no mobile: a cena ocupa o topo da dobra, então o texto precisa de
+          um piso. Fica acima do canvas (z-0) e abaixo do conteúdo (z-10). */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[54%] bg-gradient-to-t from-onyx via-onyx/90 to-transparent md:hidden"
+      />
       <motion.div
         style={{ y: contentY, opacity: contentOpacity }}
-        className="relative z-10 flex min-h-[100svh] items-center pt-28 pb-16"
+        className="relative z-10 flex min-h-[100svh] items-end pt-28 pb-16 md:items-center"
       >
         <motion.div variants={stagger} initial="hidden" animate="show" className="shell w-full">
           <WordReveal
@@ -61,7 +67,7 @@ export function Hero() {
         </motion.div>
       </motion.div>
 
-      {/* Scroll cue: a light drop running down a hairline. */}
+      {/* Indicador de scroll: uma gota de luz descendo por um fio. */}
       <motion.a
         href="#servicos"
         aria-label="Rolar para os serviços"

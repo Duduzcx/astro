@@ -2,7 +2,7 @@
   command = "npm run build"
   publish = "dist"
 
-# One-page app: any deep link falls back to the page itself.
+# Site de uma página só: qualquer link profundo cai na própria página.
 [[redirects]]
   from = "/*"
   to = "/index.html"

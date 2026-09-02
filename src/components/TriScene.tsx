@@ -2,17 +2,13 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 
 /**
- * The signature object: an ORBITAL CORE — a dense nucleus of outlined
- * triangles wrapped by three tilted rings that precess at different speeds,
- * like an atom or a small planetary system. On scroll it scatters into a field
- * and regroups, one fixed canvas behind the whole document; every section
- * change is a state of this scene, not a new scene.
+ * Núcleo orbital: uma bola densa de triângulos vazados com três anéis
+ * inclinados girando em velocidades diferentes. No scroll ele se espalha e
+ * depois volta a se juntar. É um canvas fixo atrás do documento inteiro; cada
+ * seção é um estado dessa mesma cena.
  */
 
-/**
- * Blue-hour palette with more life than pure monochrome: cobalt leads, cyan
- * and soft violet season it, ivory keeps the cool base.
- */
+/** Paleta azul: cobalto na frente, ivory segurando a base fria. */
 const PALETTE: Array<[string, number]> = [
   ['#4d84e0', 0.2],
   ['#5a8fe8', 0.14],
@@ -37,10 +33,11 @@ function pickColor(target: THREE.Color, random: () => number) {
 }
 
 /**
- * Scroll keyframes: [pageProgress, scatterMix, sphereX (fraction of half-width),
- * sphereY, scale, opacity]. Tuned to the section order in App.tsx — hero right,
- * services left, manifesto dispersed, mission regrouped right, team/clients a
- * faint sparse field (cards need quiet behind them), footer regrouped centre.
+ * Keyframes de scroll: [progresso da página, dispersão, x (fração da meia
+ * largura), y, escala, opacidade]. Casados com a ordem das seções em App.tsx:
+ * hero à direita, serviços à esquerda, manifesto disperso, missão reagrupada à
+ * direita, equipe com campo ralo (os cards precisam de silêncio atrás) e
+ * rodapé reagrupado no centro.
  */
 const KEYFRAMES: Array<[number, number, number, number, number, number]> = [
   [0.0, 0.04, 0.52, 0.02, 0.88, 1.0],
@@ -62,12 +59,31 @@ const KEYFRAMES: Array<[number, number, number, number, number, number]> = [
   [1.0, 0.3, 0.0, -0.04, 0.9, 0.85],
 ]
 
-function sampleKeyframes(progress: number) {
+/**
+ * Tela em retrato usa outra tabela. Ocupando a página inteira o objeto vira
+ * sujeira atrás dos cards, então no celular ele pertence ao hero: fica acima
+ * do título, dissolve quando você sai da primeira dobra e só volta no
+ * fechamento. `y` está em unidades de mundo (a meia altura desta câmera é
+ * ~1.54) e `x` fica centralizado.
+ */
+const MOBILE_KEYFRAMES: Array<[number, number, number, number, number, number]> = [
+  [0.0, 0.03, 0.0, 0.92, 0.34, 1.0],
+  [0.03, 0.05, 0.0, 0.92, 0.34, 1.0],
+  [0.06, 0.45, 0.0, 0.6, 0.6, 0.4],
+  [0.1, 1.0, 0.0, 0.1, 1.0, 0.0],
+  [0.94, 1.0, 0.0, 0.0, 1.0, 0.0],
+  [0.97, 0.5, 0.0, -0.1, 0.85, 0.5],
+  [1.0, 0.12, 0.0, -0.16, 0.72, 0.9],
+]
+
+type Keyframes = Array<[number, number, number, number, number, number]>
+
+function sampleKeyframes(table: Keyframes, progress: number) {
   const clamped = Math.min(Math.max(progress, 0), 1)
   let index = 0
-  while (index < KEYFRAMES.length - 2 && KEYFRAMES[index + 1][0] < clamped) index += 1
-  const from = KEYFRAMES[index]
-  const to = KEYFRAMES[index + 1]
+  while (index < table.length - 2 && table[index + 1][0] < clamped) index += 1
+  const from = table[index]
+  const to = table[index + 1]
   const span = to[0] - from[0] || 1
   const local = Math.min(Math.max((clamped - from[0]) / span, 0), 1)
   const eased = local * local * (3 - 2 * local)
@@ -93,7 +109,7 @@ const VERTEX_SHADER = /* glsl */ `
   varying vec3 vColor;
   varying float vFade;
 
-  /* Rodrigues rotation around an arbitrary unit axis. */
+  /* Rotação de Rodrigues em torno de um eixo unitário qualquer. */
   vec3 rotateAxis(vec3 p, vec3 axis, float angle) {
     float c = cos(angle);
     float s = sin(angle);
@@ -103,9 +119,9 @@ const VERTEX_SHADER = /* glsl */ `
   void main() {
     vColor = aColor;
 
-    /* The planet body spins slowly on Y; each ring band ORBITS in the shared
-       tilted disc plane at its own speed and direction — counter-rotation is
-       what makes the object feel alive. */
+    /* O corpo gira devagar no Y; cada faixa de anel orbita no plano inclinado
+       comum, em velocidade e sentido próprios. É a contra-rotação que dá vida
+       ao objeto. */
     const vec3 discAxis = vec3(0.2488, 0.7465, 0.6171);
     float speed = 0.5;
     if (aRing > 0.5 && aRing < 1.5) speed = 1.4;
@@ -123,7 +139,7 @@ const VERTEX_SHADER = /* glsl */ `
     vec3 position3 = mix(core, scatter, uMix) * uScale;
     position3.xy += uCenter;
 
-    /* Far side dims instead of disappearing; rings stay a touch brighter. */
+    /* O lado de trás escurece em vez de sumir; os anéis ficam um pouco mais claros. */
     float depth = smoothstep(-1.5, 1.2, core.z);
     float base = aRing > 0.5 ? 0.35 : 0.15;
     vFade = mix(base + (1.0 - base) * depth * depth, 0.85, uMix);
@@ -143,13 +159,13 @@ const FRAGMENT_SHADER = /* glsl */ `
 `
 
 /**
- * Builds outlined triangles as one LineSegments geometry: 3 edges → 6 vertices
- * per triangle, with the sphere-state and scatter-state positions baked into
- * attributes so the shader can morph between them.
+ * Monta os triângulos vazados como uma única geometria LineSegments: 3 arestas
+ * viram 6 vértices por triângulo, com a posição agrupada e a dispersa gravadas
+ * em atributos para o shader interpolar entre as duas.
  */
 /**
- * One shared tilted orbital plane (a ringed planet, not a brain): three
- * concentric bands with clear gaps, counter-rotating against each other.
+ * Um plano orbital inclinado comum: três faixas concêntricas com folga entre
+ * elas, girando em sentidos opostos.
  */
 const RING_NORMAL = new THREE.Vector3(0.25, 0.75, 0.62).normalize()
 const RING_BANDS: Array<[number, number]> = [
@@ -167,14 +183,14 @@ function buildTriangles(count: number, spread: THREE.Vector3, onSphere: boolean)
   const color = new THREE.Color()
 
   for (let i = 0; i < count; i += 1) {
-    /* Gathered state: 58% in a dense nucleus, the rest split across three
-       tilted orbit rings — an orbital core, not the reference's brain-sphere. */
+    /* Estado agrupado: a maior parte num núcleo denso e o resto dividido
+       entre os três anéis inclinados. */
     let anchor: THREE.Vector3
     let ring = 0
     if (onSphere) {
       const roll = Math.random()
       if (roll < 0.6) {
-        /* Planet body: dense ball on the sphere surface plus inner fill. */
+        /* Corpo: casca densa na superfície da esfera mais um preenchimento interno. */
         const t = Math.random()
         const inclination = Math.acos(1 - 2 * t)
         const azimuth = Math.random() * Math.PI * 2
@@ -195,7 +211,7 @@ function buildTriangles(count: number, spread: THREE.Vector3, onSphere: boolean)
         anchor = new THREE.Vector3()
           .addScaledVector(tangent, Math.cos(theta) * radius)
           .addScaledVector(bitangent, Math.sin(theta) * radius)
-        /* Paper-thin vertical jitter: the bands must read as a flat ring disc. */
+        /* Ruído vertical mínimo: as faixas precisam ler como um disco plano. */
         anchor.addScaledVector(RING_NORMAL, (Math.random() - 0.5) * 0.035)
       }
     } else {
@@ -212,8 +228,8 @@ function buildTriangles(count: number, spread: THREE.Vector3, onSphere: boolean)
       (Math.random() * 2 - 1) * spread.z,
     )
 
-    /* Triangle corners in a random plane around the anchor. Mostly tiny, the
-       occasional bigger one — fine grain in the core, chunkier on the rings. */
+    /* Cantos do triângulo num plano aleatório em volta da âncora. Quase todos
+       minúsculos, um ou outro maior: grão fino no núcleo, mais grosso nos anéis. */
     const size =
       (onSphere ? (ring > 0 ? 0.008 : 0.005) : 0.012) +
       Math.random() * Math.random() * (onSphere ? (ring > 0 ? 0.03 : 0.02) : 0.055)
@@ -236,7 +252,7 @@ function buildTriangles(count: number, spread: THREE.Vector3, onSphere: boolean)
     pickColor(color, Math.random)
     const random = Math.random()
 
-    /* Edges: 0-1, 1-2, 2-0. */
+    /* Arestas: 0-1, 1-2, 2-0. */
     const edgeOrder = [0, 1, 1, 2, 2, 0]
     for (let v = 0; v < 6; v += 1) {
       const corner = corners[edgeOrder[v]]
@@ -261,7 +277,7 @@ function buildTriangles(count: number, spread: THREE.Vector3, onSphere: boolean)
   geometry.setAttribute('aColor', new THREE.BufferAttribute(colors, 3))
   geometry.setAttribute('aRand', new THREE.BufferAttribute(randoms, 1))
   geometry.setAttribute('aRing', new THREE.BufferAttribute(rings, 1))
-  /* LineSegments needs a `position` attribute even though the shader ignores it. */
+  /* LineSegments exige o atributo `position` mesmo com o shader ignorando ele. */
   geometry.setAttribute('position', new THREE.BufferAttribute(spherePositions, 3))
   return geometry
 }
@@ -291,8 +307,8 @@ export function TriScene() {
     if (!mount) return
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    /* Same scene everywhere, sized to the hardware: phones and low-core
-       machines get fewer triangles and fewer pixels to fill. */
+    /* Mesma cena em todo lugar, dimensionada pelo hardware: celular e máquina
+       fraca recebem menos triângulos e menos pixels para preencher. */
     const cores = navigator.hardwareConcurrency ?? 8
     const weakDevice = cores <= 4
     const lightweight = window.innerWidth < 1024
@@ -322,7 +338,7 @@ export function TriScene() {
     const sphereField = new THREE.LineSegments(sphereGeometry, sphereMaterial)
     scene.add(sphereField)
 
-    /* Always-dispersed ambient layer: the faint triangles floating everywhere. */
+    /* Camada ambiente, sempre dispersa: os triângulos fracos flutuando em volta. */
     const ambientGeometry = buildTriangles(
       lightweight ? 260 : 600,
       new THREE.Vector3(3.2, 2.1, 1.6),
@@ -343,9 +359,9 @@ export function TriScene() {
     }
     window.addEventListener('pointermove', onPointerMove, { passive: true })
 
-    /* Mobile browsers fire resize when the URL bar collapses mid-scroll; if we
-       re-project on that, the planet visibly jumps. Only a real width change
-       (rotation, window resize) rebuilds the projection. */
+    /* Browser de celular dispara resize quando a barra de URL recolhe no meio
+       do scroll; reprojetar nisso faz o planeta pular na tela. Só mudança real
+       de largura (girar o aparelho, redimensionar a janela) refaz a projeção. */
     let lastWidth = window.innerWidth
     let lastHeight = window.innerHeight
     const onResize = () => {
@@ -362,12 +378,12 @@ export function TriScene() {
     }
     window.addEventListener('resize', onResize)
 
-    /* First rendered frame lifts the container's opacity — no canvas pop-in. */
+    /* O primeiro frame renderizado levanta a opacidade do container, para o canvas não aparecer de supetão. */
     let revealed = false
 
-    /* Page height is cached: reading scrollHeight inside the frame loop forces
-       a layout on every single frame, which is what made scrolling stutter on
-       slower machines. Recomputed only when the document actually changes. */
+    /* A altura da página fica em cache: ler scrollHeight dentro do loop força
+       um layout a cada frame, que era o que travava o scroll em máquina lenta.
+       Só recalcula quando o documento muda de verdade. */
     let maxScroll = 1
     const measureScroll = () => {
       maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1)
@@ -379,9 +395,9 @@ export function TriScene() {
     let frame = 0
     let previous = performance.now()
 
-    /* Adaptive quality: sample the first seconds of real frames and, if the
-       machine can't hold a smooth rate, drop resolution and the ambient layer
-       once. Cheap insurance for old laptops we can't feature-detect. */
+    /* Qualidade adaptativa: mede os primeiros segundos de frames reais e, se a
+       máquina não segura a taxa, derruba resolução e camada ambiente uma vez
+       só. Seguro barato para notebook velho, que não dá para detectar. */
     let sampled = 0
     let slowFrames = 0
     let downgraded = false
@@ -404,20 +420,16 @@ export function TriScene() {
       considerDowngrade(delta)
 
       const progress = window.scrollY / maxScroll
-      const target = sampleKeyframes(progress)
-
-      /* Narrow viewports put the object BEHIND the copy — same scene, slightly
-         smaller and softer so the text stays readable. */
+      /* Tela em retrato roda a tabela presa ao hero, não a de página inteira. */
       const narrow = camera.aspect < 0.9
-      const xDamp = narrow ? 0.3 : 1
-      const scaleDamp = narrow ? 0.92 : 1
-      const opacityDamp = narrow ? 0.92 : 1
+      const target = sampleKeyframes(narrow ? MOBILE_KEYFRAMES : KEYFRAMES, progress)
+
       const damping = reducedMotion ? 1 : 1 - Math.exp(-delta * 4.5)
       current.mix += (target.mix - current.mix) * damping
-      current.x += (target.x * xDamp - current.x) * damping
+      current.x += (target.x - current.x) * damping
       current.y += (target.y - current.y) * damping
-      current.scale += (target.scale * scaleDamp - current.scale) * damping
-      current.opacity += (target.opacity * opacityDamp - current.opacity) * damping
+      current.scale += (target.scale - current.scale) * damping
+      current.opacity += (target.opacity - current.opacity) * damping
 
       const time = reducedMotion ? 0 : now / 1000
       sphereMaterial.uniforms.uTime.value = time
@@ -429,6 +441,7 @@ export function TriScene() {
         current.y + pointer.y * -0.04,
       )
       ambientMaterial.uniforms.uTime.value = time * 0.6
+      ambientMaterial.uniforms.uOpacity.value = narrow ? 0.32 * current.opacity : 0.32
 
       renderer.render(scene, camera)
 
@@ -439,7 +452,7 @@ export function TriScene() {
     }
     frame = requestAnimationFrame(tick)
 
-    /* No point burning GPU while the tab is hidden. */
+    /* Sem sentido queimar GPU com a aba escondida. */
     const onVisibility = () => {
       if (document.hidden) {
         cancelAnimationFrame(frame)

@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { WordReveal, Reveal } from './ui/Primitives'
+import { AstroStar } from './brand/AstroMark'
 
-/** Answers grounded in the real deliverables annex — prices land in the proposal, not here. */
+/** Respostas tiradas do anexo de entregáveis. Preço sai na proposta, não aqui. */
 const faqs = [
   {
     question: 'Quanto custa um projeto?',
@@ -27,7 +28,7 @@ const faqs = [
   {
     question: 'Que horário vocês atendem?',
     answer:
-      'Atendimento 24h: a equipe responde das 8h às 21h, e fora desse horário um assistente de IA registra e resolve o que der — quando você acordar, já tem resposta.',
+      'Atendimento 24h: a equipe responde das 8h às 21h. Fora desse horário o plantão registra o chamado e trata o que for urgente — quando você acordar, já tem resposta.',
   },
 ] as const
 
@@ -54,14 +55,12 @@ export function Faq() {
                 <p className="label-voice text-[10px]">Sem letra miúda</p>
                 <ul className="mt-4 flex flex-col gap-3">
                   {[
-                    'Atendimento 24h — equipe + IA de plantão',
+                    'Atendimento 24h — equipe e plantão de urgência',
                     'Garantia técnica de 30 a 90 dias em contrato',
                     'Código 100% no seu nome, sem aluguel',
                   ].map((item) => (
                     <li key={item} className="flex items-center gap-3 text-[14px] text-ash">
-                      <svg viewBox="0 0 12 12" aria-hidden="true" className="h-2.5 w-2.5 shrink-0">
-                        <path d="M6 1.5 10.5 10.5H1.5L6 1.5Z" fill="none" stroke="#8db4f5" strokeWidth="1.4" />
-                      </svg>
+                      <AstroStar className="h-2.5 w-2.5 shrink-0 text-[#8db4f5]" />
                       {item}
                     </li>
                   ))}

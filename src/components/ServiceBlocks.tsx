@@ -9,9 +9,8 @@ import {
 } from './scenes/Panels'
 
 /**
- * Text + product-UI split per service, alternating sides — the Mercury
- * "text-left / image-right" rhythm. The particle field runs dim behind.
- * Each block closes with the benefit line and the stack that delivers it.
+ * Um bloco por serviço: texto de um lado, tela de produto do outro, alternando
+ * os lados. Cada bloco fecha com o benefício e a stack que entrega ele.
  */
 const services: Array<{
   title: string

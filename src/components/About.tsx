@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { WordReveal, Reveal } from './ui/Primitives'
 import { useAutoPauseVideo } from '../lib/useAutoPauseVideo'
 
-/** How the team actually works — the engineering culture, in three habits. */
+/** Como o time trabalha, em três hábitos. */
 const culture = [
   {
     title: 'Protótipo antes de proposta',

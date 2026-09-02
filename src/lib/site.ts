@@ -1,37 +1,40 @@
 /**
- * Single source of truth for company details and nav targets.
- * Real data provided by the founders; e-mail is the provisional Gmail until
- * the domain mailbox exists. No social profiles yet — add them here when live.
+ * Fonte única dos dados da empresa e dos alvos de navegação.
+ * O e-mail ainda é o Gmail provisório, até a caixa no domínio existir.
+ * Redes sociais entram aqui quando os perfis forem criados.
  */
 export const site = {
   name: 'Astro Soluções',
   cnpj: '65.903.572/0001-26',
-  /* Kept for internal use (form notifications etc.) — not displayed on the page. */
-  email: 'astro.comercial@gmail.com',
+  email: {
+    label: 'astrosolucoestech@gmail.com',
+    href: 'mailto:astrosolucoestech@gmail.com',
+  },
   phone: {
-    label: '(11) 95008-5875',
-    href: 'tel:+5511950085875',
+    label: '(11) 92157-2675',
+    href: 'tel:+5511921572675',
   },
   whatsapp: {
-    label: '(11) 95008-5875',
-    href: 'https://wa.me/5511950085875?text=Quero%20agendar%20um%20diagn%C3%B3stico%20com%20a%20Astro%20Solu%C3%A7%C3%B5es',
+    label: '(11) 92157-2675',
+    href: 'https://wa.me/5511921572675?text=Quero%20agendar%20um%20diagn%C3%B3stico%20com%20a%20Astro%20Solu%C3%A7%C3%B5es',
   },
-  hours: 'Atendimento 24h — equipe das 8h às 21h, assistente de IA no restante',
+  hours: 'Atendimento 24h — equipe das 8h às 21h e plantão para urgências no restante',
   city: 'São Paulo, Brasil',
 } as const
 
-/** Four items, no more. The nav is a legend for the page, not a table of contents. */
+/** Quatro itens, no máximo. O menu é uma legenda da página, não um índice. */
 export const navLinks = [
   { label: 'Serviços', href: '#servicos' },
+  { label: 'Projetos', href: '#projetos' },
   { label: 'Processo', href: '#processo' },
-  { label: 'Entregáveis', href: '#entregaveis' },
   { label: 'Contato', href: '#contato' },
 ] as const
 
-/** The footer can afford the full map. */
+/** O rodapé pode carregar o mapa completo. */
 export const footerLinks = [
   { label: 'Serviços', href: '#servicos' },
   { label: 'Manifesto', href: '#manifesto' },
+  { label: 'Projetos', href: '#projetos' },
   { label: 'Sobre nós', href: '#sobre' },
   { label: 'Processo', href: '#processo' },
   { label: 'O que você recebe', href: '#entregaveis' },

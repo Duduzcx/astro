@@ -4,9 +4,8 @@ import { BlurReveal } from './ui/Primitives'
 import { useAutoPauseVideo } from '../lib/useAutoPauseVideo'
 
 /**
- * Full-bleed footage with scroll parallax: a cyan network of messages finding
- * their way — literal footage of what an automation does. The particle scene
- * fades out behind it (see TriScene keyframes).
+ * Vídeo ocupando a largura toda, com parallax no scroll. A cena de partículas
+ * some atrás dele (ver KEYFRAMES em TriScene).
  */
 export function FilmBand() {
   const ref = useRef<HTMLElement>(null)
@@ -22,8 +21,8 @@ export function FilmBand() {
       aria-label="Automação em ação"
       className="relative z-10 h-[72svh] overflow-hidden"
     >
-      {/* The 1440p footage only plays from md up — decoding it wrecks mobile
-          scrolling. Phones get the tinted gradient + particle field instead. */}
+      {/* O vídeo 1440p só roda a partir de md: decodificar isso trava o scroll
+          no celular. No mobile fica só o gradiente. */}
       <motion.video
         ref={videoRef}
         style={{ y: videoY, scale: videoScale }}

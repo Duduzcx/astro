@@ -1,7 +1,7 @@
 /**
- * The living background, in one composited fixed layer: a static blue-hour
- * wash plus three blurred blobs. Blobs only animate on large screens — on
- * mobile the huge blurred layers stay still, which keeps scrolling smooth.
+ * Fundo de cor numa única camada fixa: um gradiente parado mais três manchas
+ * borradas. As manchas só animam a partir de lg; no celular ficam paradas,
+ * senão o scroll engasga.
  */
 export function AuroraBlobs() {
   return (

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Astro Soluções">
+  <rect width="64" height="64" fill="#ffffff"/>
+  <path d="M36.7 15.4A22 14.5 -38 1 0 43 36.7" fill="none" stroke="#12294e" stroke-width="4.4" stroke-linecap="round"/>
+  <path d="M51.5 9.2C51.5 16.6 54.1 19.5 60.8 19.5C54.1 19.5 51.5 22.4 51.5 29.8C51.5 22.4 48.9 19.5 42.2 19.5C48.9 19.5 51.5 16.6 51.5 9.2Z" fill="#12294e"/>
+</svg>

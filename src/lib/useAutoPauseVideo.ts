@@ -1,6 +1,6 @@
 import { useEffect, type RefObject } from 'react'
 
-/** Plays the video only while it is on screen — no GPU spent on hidden footage. */
+/** Toca o vídeo só enquanto ele está na tela. */
 export function useAutoPauseVideo(ref: RefObject<HTMLVideoElement | null>) {
   useEffect(() => {
     const video = ref.current
