@@ -18,16 +18,10 @@ export function AstroMark({
   className = '',
   tone = 'light',
   title,
-  tight = false,
 }: {
   className?: string
   tone?: Tone
   title?: string
-  /**
-   * Recorta o viewBox na caixa do desenho. A caixa quadrada padrão deixa folga
-   * em cima e embaixo; num espaço baixo e largo isso encolhe a marca à toa.
-   */
-  tight?: boolean
 }) {
   /* Os ids de gradiente precisam ser únicos: a marca aparece várias vezes na página. */
   const id = useId().replace(/:/g, '')
@@ -45,7 +39,7 @@ export function AstroMark({
 
   return (
     <svg
-      viewBox={tight ? '4.5 8.9 56.6 44.1' : '0 0 64 64'}
+      viewBox="0 0 64 64"
       className={className}
       role={title ? 'img' : undefined}
       aria-label={title}

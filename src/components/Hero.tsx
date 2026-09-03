@@ -1,7 +1,6 @@
 import { useRef } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { ArrowGlyph, GhostButton, IrisButton, Label, RotatingWord, WordReveal } from './ui/Primitives'
-import { AstroMark } from './brand/AstroMark'
 
 const rise = {
   hidden: { opacity: 0, y: 26 },
@@ -14,12 +13,9 @@ const stagger = {
 }
 
 /**
- * Desktop: título gigante à esquerda; a metade direita é do objeto de
- * partículas, que o TriScene desenha atrás da página.
- *
- * Celular: a cena 3D não monta (ver App.tsx). O vão entre o menu e o título é
- * do símbolo da marca em vetor, nítido em qualquer densidade de tela, e o texto
- * fica no pé da dobra. Nada passa por trás do texto.
+ * Título gigante à esquerda; a metade direita é do objeto de partículas, que o
+ * TriScene desenha atrás da página. Abaixo do título vêm o eyebrow, o texto e
+ * os dois botões.
  */
 export function Hero() {
   const ref = useRef<HTMLElement>(null)
@@ -32,27 +28,22 @@ export function Hero() {
       <div className="aurora" aria-hidden="true" />
       <motion.div
         style={{ y: contentY, opacity: contentOpacity }}
-        className="relative z-10 flex min-h-[100svh] flex-col pt-24 pb-10 lg:justify-center lg:pt-28 lg:pb-16"
+        className="relative z-10 flex min-h-[100svh] items-end pt-24 pb-10 lg:items-center lg:pt-28 lg:pb-16"
       >
-        {/* Símbolo no vão entre o menu e o título, só abaixo de lg. A faixa
-            ocupa o que sobra da dobra e nunca empurra o texto para baixo: os
-            filhos são absolutos, e o SVG se encaixa na caixa pelo viewBox
-            (comportamento "contain" nativo do SVG). */}
         <motion.div
-          aria-hidden="true"
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1.2, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
-          className="relative min-h-[7rem] flex-1 lg:hidden"
+          id="hero-copy"
+          variants={stagger}
+          initial="hidden"
+          animate="show"
+          className="shell relative w-full"
         >
-          <div className="absolute top-1/2 left-1/2 aspect-square w-[min(130vw,60rem)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(77,132,224,0.24),transparent_72%)]" />
-          <AstroMark
-            tight
-            className="absolute top-3 left-6 h-[calc(100%-1.5rem)] w-[calc(100%-3rem)] animate-[astro-float_7s_ease-in-out_infinite] [filter:drop-shadow(0_0_28px_rgba(141,180,245,0.32))]"
+          {/* O objeto passa por trás do texto. Esta placa acompanha o bloco de
+              texto, em vez de uma altura fixa de viewport, e é o que mantém o
+              contraste em qualquer aparelho. */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 -top-16 -bottom-12 -z-10 bg-[radial-gradient(112%_72%_at_30%_50%,color-mix(in_srgb,var(--color-onyx)_58%,transparent)_0%,color-mix(in_srgb,var(--color-onyx)_30%,transparent)_58%,transparent_86%)] lg:hidden"
           />
-        </motion.div>
-
-        <motion.div variants={stagger} initial="hidden" animate="show" className="shell w-full">
           <WordReveal
             as="h1"
             trigger="mount"
@@ -67,7 +58,7 @@ export function Hero() {
 
           <motion.p
             variants={rise}
-            className="mt-4 max-w-md text-[clamp(1rem,1.4vw,1.2rem)] leading-[1.55] text-ash"
+            className="mt-4 max-w-md text-[clamp(1rem,1.4vw,1.2rem)] leading-[1.55] text-ash [text-shadow:0_1px_14px_rgba(10,15,30,0.95)] lg:[text-shadow:none]"
           >
             A Astro Soluções cria{' '}
             <RotatingWord words={['sites', 'sistemas', 'robôs', 'painéis', 'integrações']} /> que

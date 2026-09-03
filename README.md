@@ -83,9 +83,12 @@ Utilitários próprios: `.shell` (container), `.graphite-card` (vidro), `.label-
 
 `TriScene.tsx` desenha um núcleo orbital: uma bola densa de triângulos vazados com três anéis inclinados girando em velocidades e sentidos diferentes, mais uma camada ambiente sempre dispersa. É um canvas fixo atrás do documento; cada seção é um estado da mesma cena.
 
-**A cena só monta a partir de 1024px de largura** (`useDesktopScene` em `App.tsx`, mesmo corte do `lg` do Tailwind). Em tela pequena de alta densidade os triângulos ficam menores que um pixel e o objeto vira chuvisco atrás do texto — foram três tentativas de salvar isso antes de aceitar que o problema é a técnica, não o ajuste. No celular o hero usa o símbolo da marca em vetor (`Hero.tsx`), que é nítido em qualquer densidade, e o aparelho nem chega a baixar o three.js.
+Duas tabelas de keyframes governam o movimento. Cada linha é `[progresso da página, dispersão, x, y, escala, opacidade]`:
 
-A tabela `KEYFRAMES` governa o movimento. Cada linha é `[progresso da página, dispersão, x, y, escala, opacidade]`. A ordem das seções em `App.tsx` e essa tabela andam juntas: mexeu numa, refaça as medidas da outra.
+- `KEYFRAMES` — a partir de 1024px. O objeto ocupa a metade direita e se move, dispersa e reagrupa ao longo da página inteira.
+- `mobileKeyframes()` — abaixo disso. O objeto fica centralizado na tela, atrás do texto, e o `uClear` do shader reduz o alfa dentro de uma elipse que acompanha o bloco de texto do hero (medido no DOM, em `#hero-copy`). É isso que mantém a leitura limpa sem tapar o objeto com uma placa opaca. Da primeira dobra para baixo ele cai para 10% de opacidade e vira grão de fundo, para não competir com os cards.
+
+A ordem das seções em `App.tsx` e a tabela de desktop andam juntas: mexeu numa, refaça as medidas da outra.
 
 Custo controlado: three.js entra num chunk separado por `React.lazy`; a contagem de triângulos e o pixel ratio caem em celular e em máquina de poucos núcleos; e há uma queda de qualidade automática se os primeiros frames vierem lentos. Com `prefers-reduced-motion` o movimento para.
 
