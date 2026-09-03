@@ -28,7 +28,7 @@ export function Hero() {
       <div className="aurora" aria-hidden="true" />
       <motion.div
         style={{ y: contentY, opacity: contentOpacity }}
-        className="relative z-10 flex min-h-[100svh] items-end pt-24 pb-10 lg:items-center lg:pt-28 lg:pb-16"
+        className="relative z-10 flex min-h-[100svh] items-center pt-24 pb-10 lg:pt-28 lg:pb-16"
       >
         <motion.div
           id="hero-copy"

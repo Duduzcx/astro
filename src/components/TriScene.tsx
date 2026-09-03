@@ -20,6 +20,22 @@ const PALETTE: Array<[string, number]> = [
   ['#ffffff', 0.08],
 ]
 
+/* Buraco negro: disco de acreção do branco-quente ao laranja profundo. */
+const HOLE_HOT = ['#fff6e5', '#ffe3b0']
+const HOLE_INNER = ['#fff3e0', '#ffd9a0']
+const HOLE_MID = ['#ffb25e', '#ff9a3c']
+const HOLE_OUTER = ['#e8590c', '#b64207', '#ffd9a0']
+
+/* Supernova: núcleo branco, ouro e laranja nos raios, magenta e violeta nas cascas. */
+const NOVA_CORE = ['#ffffff', '#fff3c4']
+const NOVA_GOLD = ['#ffd166', '#ffb84d']
+const NOVA_FIRE = ['#ff7b4f', '#ff9e57']
+const NOVA_EDGE = ['#e14eca', '#8d6bff', '#ff7b4f']
+
+function pickFrom(target: THREE.Color, options: readonly string[]) {
+  target.set(options[Math.floor(Math.random() * options.length)])
+}
+
 function pickColor(target: THREE.Color, random: () => number) {
   let roll = random()
   for (const [hex, weight] of PALETTE) {
@@ -39,27 +55,30 @@ function pickColor(target: THREE.Color, random: () => number) {
  * direita, equipe com campo ralo (os cards precisam de silêncio atrás) e
  * rodapé reagrupado no centro.
  */
-const KEYFRAMES: Array<[number, number, number, number, number, number]> = [
-  [0.0, 0.04, 0.52, 0.02, 0.88, 1.0],
-  [0.035, 0.05, 0.52, 0.0, 0.88, 1.0],
-  [0.075, 0.85, 0.0, 0.0, 1.25, 0.35],
-  [0.23, 0.85, 0.0, 0.0, 1.25, 0.35],
-  [0.26, 1.0, 0.0, 0.0, 1.12, 0.9],
-  [0.29, 1.0, 0.0, 0.0, 1.12, 0.9],
-  [0.31, 1.0, 0.0, 0.0, 1.12, 0.0],
-  [0.33, 0.3, 0.55, 0.0, 0.9, 0.0],
-  [0.35, 0.05, 0.55, 0.0, 0.9, 1.0],
-  [0.385, 0.06, 0.55, 0.0, 0.9, 1.0],
-  [0.42, 0.9, 0.0, 0.0, 1.35, 0.22],
-  [0.445, 0.9, 0.0, 0.0, 1.35, 0.22],
-  [0.47, 0.9, 0.0, 0.0, 1.35, 0.0],
-  [0.5, 0.9, 0.0, 0.0, 1.35, 0.0],
-  [0.53, 0.9, 0.0, 0.0, 1.35, 0.22],
-  [0.95, 0.9, 0.0, 0.0, 1.35, 0.22],
-  [1.0, 0.3, 0.0, -0.04, 0.9, 0.85],
+const KEYFRAMES: Keyframes = [
+  [0.0, 0.04, 0.52, 0.02, 0.88, 1.0, 0],
+  [0.035, 0.05, 0.52, 0.0, 0.88, 1.0, 0],
+  [0.075, 0.85, 0.0, 0.0, 1.25, 0.35, 0],
+  [0.23, 0.85, 0.0, 0.0, 1.25, 0.35, 0],
+  [0.26, 1.0, 0.0, 0.0, 1.12, 0.9, 0],
+  [0.29, 1.0, 0.0, 0.0, 1.12, 0.9, 0],
+  [0.31, 1.0, 0.0, 0.0, 1.12, 0.0, 0],
+  /* Invisível: vira buraco negro antes de reaparecer na Missão. */
+  [0.33, 0.3, 0.55, 0.0, 0.9, 0.0, 1],
+  [0.35, 0.05, 0.55, 0.0, 0.9, 1.0, 1],
+  [0.385, 0.06, 0.55, 0.0, 0.9, 1.0, 1],
+  [0.42, 0.9, 0.0, 0.0, 1.35, 0.22, 1],
+  [0.445, 0.9, 0.0, 0.0, 1.35, 0.22, 1],
+  [0.47, 0.9, 0.0, 0.0, 1.35, 0.0, 1],
+  /* Invisível de novo: vira supernova para o resto da página. */
+  [0.5, 0.9, 0.0, 0.0, 1.35, 0.0, 2],
+  [0.53, 0.9, 0.0, 0.0, 1.35, 0.22, 2],
+  [0.94, 0.9, 0.0, 0.0, 1.35, 0.22, 2],
+  [0.97, 0.35, 0.0, -0.3, 0.95, 0.6, 2],
+  [1.0, 0.25, 0.0, -0.45, 0.9, 0.7, 2],
 ]
 
-type Keyframes = Array<[number, number, number, number, number, number]>
+type Keyframes = Array<[number, number, number, number, number, number, number]>
 
 /**
  * Mesmo valor do breakpoint `lg` do Tailwind, que é onde o menu vira hambúrguer.
@@ -126,19 +145,32 @@ function mobileKeyframes(halfWidth: number, halfHeight: number, maxScroll: numbe
      página de 25.000px são 1.500px, e o objeto ainda estaria brilhando muito
      depois do hero. */
   const screen = window.innerHeight / maxScroll
-  const hold = Math.min(screen * 0.25, 0.2)
-  const settle = Math.min(screen * 0.9, 0.5)
+  const hold = Math.min(screen * 0.25, 0.12)
+  const settle = Math.min(screen * 0.9, 0.2)
 
   return [
-    /* Hero: objeto inteiro no centro da tela, atrás do texto. */
-    [0.0, 0.03, x, 0.0, scale, HERO_OPACITY],
-    [hold, 0.05, x, 0.0, scale, HERO_OPACITY],
+    /* Hero: planeta atrás do texto, um pouco acima do centro para o arco de
+       cima aparecer no vão entre o menu e o título. */
+    [0.0, 0.03, x, 0.35, scale, HERO_OPACITY, 0],
+    [hold, 0.05, x, 0.35, scale, HERO_OPACITY, 0],
     /* Ao sair da dobra ele se espalha e recua para textura de fundo. */
-    [settle, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY],
-    [0.93, 0.95, 0.0, 0.0, scale * 1.5, FIELD_OPACITY],
-    /* Fechamento: reagrupa no centro para a última tela. */
-    [0.98, 0.3, 0.0, -0.05, scale * 1.05, 0.45],
-    [1.0, 0.1, 0.0, -0.1, scale, 0.7],
+    [settle, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 0],
+    [0.14, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 0],
+    /* Troca de astro com o campo quase invisível, ninguém vê a costura. */
+    [0.16, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
+    /* Junta de novo no manifesto — agora como buraco negro. */
+    [0.195, 0.12, 0.0, 0.0, scale * 0.95, 0.5, 1],
+    [0.235, 0.12, 0.0, 0.0, scale * 0.95, 0.5, 1],
+    [0.28, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
+    [0.55, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
+    /* Disperso e quase invisível, muda de cor para a última transformação. */
+    [0.62, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 2],
+    [0.9, 0.95, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 2],
+    /* Fechamento: a supernova junta atrás da última chamada, não no rodapé
+       utilitário — lá o painel de vidro já cobre tudo. */
+    [0.945, 0.2, 0.0, -0.25, scale * 1.05, 0.55, 2],
+    [0.975, 0.06, 0.0, -0.42, scale, 0.8, 2],
+    [1.0, 0.06, 0.0, -0.42, scale, 0.8, 2],
   ]
 }
 
@@ -157,16 +189,22 @@ function sampleKeyframes(table: Keyframes, progress: number) {
     y: from[3] + (to[3] - from[3]) * eased,
     scale: from[4] + (to[4] - from[4]) * eased,
     opacity: from[5] + (to[5] - from[5]) * eased,
+    form: from[6] + (to[6] - from[6]) * eased,
   }
 }
 
 const VERTEX_SHADER = /* glsl */ `
   attribute vec3 aSphere;
   attribute vec3 aScatter;
+  attribute vec3 aHole;
+  attribute vec3 aNova;
   attribute vec3 aColor;
+  attribute vec3 aHoleColor;
+  attribute vec3 aNovaColor;
   attribute float aRand;
   attribute float aRing;
   uniform float uMix;
+  uniform float uForm;
   uniform float uTime;
   uniform float uScale;
   uniform vec2 uCenter;
@@ -184,11 +222,9 @@ const VERTEX_SHADER = /* glsl */ `
   }
 
   void main() {
-    vColor = aColor;
-
-    /* O corpo gira devagar no Y; cada faixa de anel orbita no plano inclinado
-       comum, em velocidade e sentido próprios. É a contra-rotação que dá vida
-       ao objeto. */
+    /* O corpo do planeta gira devagar no Y; cada faixa de anel orbita no plano
+       inclinado comum, em velocidade e sentido próprios. É a contra-rotação
+       que dá vida ao objeto. */
     const vec3 discAxis = vec3(0.2488, 0.7465, 0.6171);
     float speed = 0.5;
     if (aRing > 0.5 && aRing < 1.5) speed = 1.4;
@@ -198,6 +234,23 @@ const VERTEX_SHADER = /* glsl */ `
     vec3 core = aRing > 0.5
       ? rotateAxis(aSphere, discAxis, angle)
       : rotateAxis(aSphere, vec3(0.0, 1.0, 0.0), angle);
+
+    /* Buraco negro: o disco gira no próprio plano, mais depressa perto do
+       horizonte, como uma órbita kepleriana de mentira. */
+    float rHole = max(length(aHole), 0.4);
+    vec3 coreHole = rotateAxis(aHole, discAxis, uTime * 0.1 * (0.4 + 0.9 / rHole));
+
+    /* Supernova: respira para fora e gira bem devagar. */
+    float pulse = 1.0 + 0.05 * sin(uTime * 0.8 + aRand * 6.2831);
+    vec3 coreNova = rotateAxis(aNova * pulse, vec3(0.0, 1.0, 0.0), uTime * 0.05);
+
+    /* uForm anda de 0 a 2 e escolhe o astro; a troca acontece com o objeto
+       disperso ou invisível, então a interpolação nunca aparece pela metade. */
+    float wPlanet = clamp(1.0 - uForm, 0.0, 1.0);
+    float wNova = clamp(uForm - 1.0, 0.0, 1.0);
+    float wHole = 1.0 - wPlanet - wNova;
+    core = core * wPlanet + coreHole * wHole + coreNova * wNova;
+    vColor = aColor * wPlanet + aHoleColor * wHole + aNovaColor * wNova;
 
     vec3 scatter = aScatter;
     scatter.x += sin(uTime * 0.28 + aRand * 6.2831) * 0.09;
@@ -209,6 +262,8 @@ const VERTEX_SHADER = /* glsl */ `
     /* O lado de trás escurece em vez de sumir; os anéis ficam um pouco mais claros. */
     float depth = smoothstep(-1.5, 1.2, core.z);
     float base = aRing > 0.5 ? 0.35 : 0.15;
+    /* As formas novas não têm frente e verso tão marcados quanto o planeta. */
+    base = mix(base, 0.32, clamp(uForm, 0.0, 1.0));
     vFade = mix(base + (1.0 - base) * depth * depth, 0.85, uMix);
 
     vec4 clip = projectionMatrix * modelViewMatrix * vec4(position3, 1.0);
@@ -246,19 +301,95 @@ const FRAGMENT_SHADER = /* glsl */ `
  * elas, girando em sentidos opostos.
  */
 const RING_NORMAL = new THREE.Vector3(0.25, 0.75, 0.62).normalize()
+const RING_TANGENT = new THREE.Vector3(1, 0, 0).cross(RING_NORMAL).normalize()
+const RING_BITANGENT = new THREE.Vector3().crossVectors(RING_NORMAL, RING_TANGENT)
 const RING_BANDS: Array<[number, number]> = [
   [1.04, 1.2],
   [1.3, 1.46],
   [1.56, 1.64],
 ]
 
+/**
+ * Buraco negro: horizonte vazio no meio, anel de fótons apertado em volta e um
+ * disco de acreção inclinado, mais denso e mais quente perto do centro. Com
+ * blending aditivo não existe partícula escura, então o preto do buraco é
+ * literalmente a ausência de triângulos.
+ */
+function holeAnchor(anchor: THREE.Vector3, color: THREE.Color) {
+  const roll = Math.random()
+  let radius: number
+  let lift: number
+  if (roll < 0.12) {
+    radius = 0.4 + Math.random() * 0.06
+    lift = (Math.random() - 0.5) * 0.03
+    pickFrom(color, HOLE_HOT)
+  } else {
+    radius = 0.55 + 1.1 * Math.pow(Math.random(), 0.65)
+    lift = (Math.random() - 0.5) * 0.06
+    if (radius < 0.8) pickFrom(color, HOLE_INNER)
+    else if (radius < 1.2) pickFrom(color, HOLE_MID)
+    else pickFrom(color, HOLE_OUTER)
+  }
+  const theta = Math.random() * Math.PI * 2
+  anchor
+    .set(0, 0, 0)
+    .addScaledVector(RING_TANGENT, Math.cos(theta) * radius)
+    .addScaledVector(RING_BITANGENT, Math.sin(theta) * radius)
+    .addScaledVector(RING_NORMAL, lift)
+}
+
+/**
+ * Supernova: núcleo branco denso, raios radiais de ejeção e duas cascas de
+ * detonação. As cores esfriam do centro para fora.
+ */
+function novaAnchor(anchor: THREE.Vector3, color: THREE.Color) {
+  const roll = Math.random()
+  if (roll < 0.22) {
+    const radius = 0.3 * Math.cbrt(Math.random())
+    randomDirection(anchor).multiplyScalar(radius)
+    pickFrom(color, NOVA_CORE)
+    return
+  }
+  if (roll < 0.7) {
+    const radius = 0.4 + 1.2 * Math.pow(Math.random(), 0.75)
+    randomDirection(anchor).multiplyScalar(radius)
+    if (radius < 0.8) pickFrom(color, NOVA_GOLD)
+    else if (radius < 1.2) pickFrom(color, NOVA_FIRE)
+    else pickFrom(color, NOVA_EDGE)
+    return
+  }
+  const shell = Math.random() < 0.55 ? 0.95 : 1.45
+  const radius = shell + (Math.random() - 0.5) * 0.14
+  randomDirection(anchor).multiplyScalar(radius)
+  pickFrom(color, shell < 1.2 ? NOVA_FIRE : NOVA_EDGE)
+}
+
+/** Direção uniforme na esfera unitária. */
+function randomDirection(target: THREE.Vector3) {
+  const inclination = Math.acos(1 - 2 * Math.random())
+  const azimuth = Math.random() * Math.PI * 2
+  return target.set(
+    Math.sin(inclination) * Math.cos(azimuth),
+    Math.cos(inclination),
+    Math.sin(inclination) * Math.sin(azimuth),
+  )
+}
+
 function buildTriangles(count: number, spread: THREE.Vector3, onSphere: boolean) {
   const spherePositions = new Float32Array(count * 6 * 3)
   const scatterPositions = new Float32Array(count * 6 * 3)
+  const holePositions = new Float32Array(count * 6 * 3)
+  const novaPositions = new Float32Array(count * 6 * 3)
   const colors = new Float32Array(count * 6 * 3)
+  const holeColors = new Float32Array(count * 6 * 3)
+  const novaColors = new Float32Array(count * 6 * 3)
   const randoms = new Float32Array(count * 6)
   const rings = new Float32Array(count * 6)
   const color = new THREE.Color()
+  const holeColor = new THREE.Color()
+  const novaColor = new THREE.Color()
+  const holeAnchorV = new THREE.Vector3()
+  const novaAnchorV = new THREE.Vector3()
 
   for (let i = 0; i < count; i += 1) {
     /* Estado agrupado: a maior parte num núcleo denso e o resto dividido
@@ -328,6 +459,17 @@ function buildTriangles(count: number, spread: THREE.Vector3, onSphere: boolean)
     }
 
     pickColor(color, Math.random)
+    /* A camada ambiente nunca se agrupa, então as formas extras dela apontam
+       para a mesma âncora e cor do estado base. */
+    if (onSphere) {
+      holeAnchor(holeAnchorV, holeColor)
+      novaAnchor(novaAnchorV, novaColor)
+    } else {
+      holeAnchorV.copy(anchor)
+      novaAnchorV.copy(anchor)
+      holeColor.copy(color)
+      novaColor.copy(color)
+    }
     const random = Math.random()
 
     /* Arestas: 0-1, 1-2, 2-0. */
@@ -341,9 +483,21 @@ function buildTriangles(count: number, spread: THREE.Vector3, onSphere: boolean)
       scatterPositions[base] = scatterAnchor.x + corner.x
       scatterPositions[base + 1] = scatterAnchor.y + corner.y
       scatterPositions[base + 2] = scatterAnchor.z + corner.z
+      holePositions[base] = holeAnchorV.x + corner.x
+      holePositions[base + 1] = holeAnchorV.y + corner.y
+      holePositions[base + 2] = holeAnchorV.z + corner.z
+      novaPositions[base] = novaAnchorV.x + corner.x
+      novaPositions[base + 1] = novaAnchorV.y + corner.y
+      novaPositions[base + 2] = novaAnchorV.z + corner.z
       colors[base] = color.r
       colors[base + 1] = color.g
       colors[base + 2] = color.b
+      holeColors[base] = holeColor.r
+      holeColors[base + 1] = holeColor.g
+      holeColors[base + 2] = holeColor.b
+      novaColors[base] = novaColor.r
+      novaColors[base + 1] = novaColor.g
+      novaColors[base + 2] = novaColor.b
       randoms[i * 6 + v] = random
       rings[i * 6 + v] = ring
     }
@@ -352,7 +506,11 @@ function buildTriangles(count: number, spread: THREE.Vector3, onSphere: boolean)
   const geometry = new THREE.BufferGeometry()
   geometry.setAttribute('aSphere', new THREE.BufferAttribute(spherePositions, 3))
   geometry.setAttribute('aScatter', new THREE.BufferAttribute(scatterPositions, 3))
+  geometry.setAttribute('aHole', new THREE.BufferAttribute(holePositions, 3))
+  geometry.setAttribute('aNova', new THREE.BufferAttribute(novaPositions, 3))
   geometry.setAttribute('aColor', new THREE.BufferAttribute(colors, 3))
+  geometry.setAttribute('aHoleColor', new THREE.BufferAttribute(holeColors, 3))
+  geometry.setAttribute('aNovaColor', new THREE.BufferAttribute(novaColors, 3))
   geometry.setAttribute('aRand', new THREE.BufferAttribute(randoms, 1))
   geometry.setAttribute('aRing', new THREE.BufferAttribute(rings, 1))
   /* LineSegments exige o atributo `position` mesmo com o shader ignorando ele. */
@@ -369,6 +527,7 @@ function makeMaterial(opacity: number) {
     blending: THREE.AdditiveBlending,
     uniforms: {
       uMix: { value: 0 },
+      uForm: { value: 0 },
       uTime: { value: 0 },
       uScale: { value: 1 },
       uCenter: { value: new THREE.Vector2(0, 0) },
@@ -442,14 +601,15 @@ export function TriScene() {
     let halfWidth = halfHeight * camera.aspect
     let mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll)
     let narrow = window.innerWidth < MOBILE_BREAKPOINT
+    /* A intensidade da clareira é por frame (ela apaga depois do hero, para o
+       buraco negro e a supernova aparecerem inteiros); aqui só a faixa. */
     const applyClear = () => {
       const band = heroCopyBand()
       for (const material of [sphereMaterial, ambientMaterial]) {
-        material.uniforms.uClear.value = narrow ? 1 : 0
         material.uniforms.uClearBand.value.set(band[0], band[1])
       }
     }
-    const current = { mix: 0.04, x: 0.58, y: 0.02, scale: 1, opacity: 1 }
+    const current = { mix: 0.04, x: 0.58, y: 0.02, scale: 1, opacity: 1, form: 0 }
     const pointer = { x: 0, y: 0 }
 
     const onPointerMove = (event: PointerEvent) => {
@@ -533,9 +693,20 @@ export function TriScene() {
       current.y += (target.y - current.y) * damping
       current.scale += (target.scale - current.scale) * damping
       current.opacity += (target.opacity - current.opacity) * damping
+      current.form += (target.form - current.form) * damping
+
+      /* A clareira só existe enquanto o hero está na tela: dali para baixo os
+         outros astros aparecem inteiros, sem o miolo apagado. */
+      const heroClear = narrow
+        ? Math.min(Math.max(1 - window.scrollY / (window.innerHeight * 0.9), 0), 1)
+        : 0
+      sphereMaterial.uniforms.uClear.value = heroClear
+      ambientMaterial.uniforms.uClear.value = heroClear
 
       const time = reducedMotion ? 0 : now / 1000
       sphereMaterial.uniforms.uTime.value = time
+      sphereMaterial.uniforms.uForm.value = current.form
+      ambientMaterial.uniforms.uForm.value = current.form
       sphereMaterial.uniforms.uMix.value = current.mix
       sphereMaterial.uniforms.uScale.value = current.scale
       sphereMaterial.uniforms.uOpacity.value = 0.95 * current.opacity

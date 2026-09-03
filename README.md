@@ -81,12 +81,22 @@ Utilitários próprios: `.shell` (container), `.graphite-card` (vidro), `.label-
 
 ## A cena de fundo
 
-`TriScene.tsx` desenha um núcleo orbital: uma bola densa de triângulos vazados com três anéis inclinados girando em velocidades e sentidos diferentes, mais uma camada ambiente sempre dispersa. É um canvas fixo atrás do documento; cada seção é um estado da mesma cena.
+`TriScene.tsx` desenha um canvas fixo atrás do documento inteiro. Cada seção é um estado da mesma cena, e o mesmo conjunto de triângulos passa por **três astros** ao longo da rolagem:
 
-Duas tabelas de keyframes governam o movimento. Cada linha é `[progresso da página, dispersão, x, y, escala, opacidade]`:
+| Forma | Onde | Geometria | Cor |
+| --- | --- | --- | --- |
+| `0` planeta | hero | bola densa com três anéis inclinados em contra-rotação | azul cobalto e ivory |
+| `1` buraco negro | manifesto | horizonte vazio, anel de fótons e disco de acreção inclinado, mais rápido perto do centro | branco-quente, âmbar e laranja profundo |
+| `2` supernova | fechamento | núcleo branco, raios de ejeção e duas cascas de detonação que respiram | ouro, laranja, magenta e violeta |
+
+As três posições e as três cores vivem em atributos separados da mesma geometria (`aSphere`/`aHole`/`aNova` e `aColor`/`aHoleColor`/`aNovaColor`); o uniform `uForm` anda de 0 a 2 e o shader interpola entre elas. **A troca acontece sempre com o campo disperso ou invisível**, então ninguém vê a costura — é por isso que as linhas de mudança de forma na tabela caem em trechos de opacidade baixa.
+
+Com blending aditivo não existe partícula escura: o preto do buraco negro é literalmente a ausência de triângulos no meio.
+
+Duas tabelas de keyframes governam o movimento. Cada linha é `[progresso da página, dispersão, x, y, escala, opacidade, forma]`:
 
 - `KEYFRAMES` — a partir de 1024px. O objeto ocupa a metade direita e se move, dispersa e reagrupa ao longo da página inteira.
-- `mobileKeyframes()` — abaixo disso. O objeto fica centralizado na tela, atrás do texto, e o `uClear` do shader reduz o alfa dentro de uma elipse que acompanha o bloco de texto do hero (medido no DOM, em `#hero-copy`). É isso que mantém a leitura limpa sem tapar o objeto com uma placa opaca. Da primeira dobra para baixo ele cai para 10% de opacidade e vira grão de fundo, para não competir com os cards.
+- `mobileKeyframes()` — abaixo disso. O objeto fica atrás do texto e o `uClear` do shader reduz o alfa dentro de uma elipse que acompanha o bloco de texto do hero (medido no DOM, em `#hero-copy`). É isso que mantém a leitura limpa sem tapar o objeto com uma placa opaca. **A clareira só vale enquanto o hero está na tela** — dali para baixo o buraco negro e a supernova aparecem inteiros. Nos trechos entre os astros o campo cai para 10% de opacidade e vira grão de fundo, para não competir com os cards.
 
 A ordem das seções em `App.tsx` e a tabela de desktop andam juntas: mexeu numa, refaça as medidas da outra.
 
