@@ -73,66 +73,72 @@ const MOBILE_BREAKPOINT = 1024
 const OBJECT_RADIUS = 1.64
 
 /**
- * O anel é um disco inclinado, então na tela o objeto é bem mais baixo do que
- * largo: a altura dá cerca de 60% da largura. Sem esse fator o cálculo acha que
- * a borda de baixo está mais embaixo do que está e sobra um buraco entre o
- * objeto e o título.
+ * Opacidade do objeto no hero e depois dele. Com a clareira do shader abrindo
+ * espaço para o texto, o anel pode brilhar de verdade na primeira dobra; do
+ * hero para baixo ele recua para grão de fundo atrás dos cards.
  */
-const OBJECT_FLATTEN = 0.6
+const HERO_OPACITY = 0.95
+const FIELD_OPACITY = 0.1
 
 /**
- * Onde o texto do hero começa, em fração da altura da tela. Medido no DOM em vez
- * de constante: com 360px de largura o título quebra numa linha a mais e
- * qualquer número fixo erra. `offsetTop` ignora o transform de parallax do hero,
- * que é o que queremos aqui.
+ * Faixa que o texto do hero ocupa, em NDC: [centro, raio]. `offsetTop` ignora o
+ * transform de parallax do hero, que é o que queremos. Sem o elemento, assume
+ * uma dobra típica de celular.
  */
-function heroCopyTop() {
-  let node = document.getElementById('hero-copy') as HTMLElement | null
+function heroCopyBand(): [number, number] {
+  const copy = document.getElementById('hero-copy')
+  if (!copy) return [-0.35, 0.55]
+  let node: HTMLElement | null = copy
   let top = 0
   while (node) {
     top += node.offsetTop
     node = node.offsetParent as HTMLElement | null
   }
-  /* Sem o elemento (ou antes do layout), assume uma dobra típica de celular. */
-  return top > 0 ? top / window.innerHeight : 0.37
+  const viewport = window.innerHeight
+  const start = top / viewport
+  const end = (top + copy.offsetHeight) / viewport
+  /* Fração da tela (0 no topo) para NDC (1 no topo), com folga de 18%. */
+  return [1 - (start + end), (end - start) * 1.18]
 }
 
 /**
- * Tela em retrato usa outra tabela. Ocupando a página inteira o objeto vira
- * sujeira atrás dos cards, então no celular ele pertence ao hero: entra pelo
- * topo, encosta no título e dissolve quando você sai da primeira dobra. Só
- * volta no fechamento da página.
+ * Tela estreita usa outra tabela. O objeto continua sendo fundo, centralizado na
+ * tela, e o texto passa por cima dele — quem abre espaço para a leitura é a
+ * clareira do shader, não uma placa opaca por cima do objeto.
  *
- * Posição e tamanho não são número fixo, porque a mesma constante que fica boa
- * num iPhone Pro Max cobre o título inteiro num aparelho de 640px. O objeto é
- * medido a partir da tela: ocupa a largura inteira, com teto de altura, e
- * a borda de baixo encosta 8% da altura abaixo do topo do texto do hero.
+ * Da primeira dobra para baixo ele se espalha e cai para FIELD_OPACITY, virando
+ * grão de fundo: continua lá a página inteira sem competir com os cards, que era
+ * o problema de deixá-lo em brilho cheio atrás de tudo.
+ *
+ * Tamanho não é número fixo: a constante que fica boa num iPhone Pro Max vira
+ * uma mancha num aparelho de 640px. O raio sai da largura da tela, com teto de
+ * altura para não virar faixa em tela comprida.
  */
 function mobileKeyframes(halfWidth: number, halfHeight: number, maxScroll: number): Keyframes {
-  const radius = Math.min(1.05 * halfWidth, 0.62 * halfHeight)
-  const bottom = Math.min(Math.max(heroCopyTop(), 0.14) + 0.08, 0.5)
-  /* Fração da tela (0 no topo) para unidade de mundo, e daí para o centro. */
-  const y = (1 - 2 * bottom) * halfHeight + radius * OBJECT_FLATTEN
+  /* Larga o bastante para sangrar pelas laterais, com teto de altura para não
+     virar uma faixa gorda demais em tela comprida. */
+  const radius = Math.min(1.45 * halfWidth, 0.78 * halfHeight)
   const scale = radius / OBJECT_RADIUS
   /* O disco é inclinado, então a caixa dele nasce torta: 0.09 recentraliza. */
   const x = 0.09
 
-  /* Frações da página equivalentes a um quinto, meia e quatro quintos de tela
-     de rolagem: o objeto sai junto com o texto do hero, que já desaparece por
-     opacidade no mesmo trecho. */
+  /* Trechos medidos em telas de rolagem, não em fração da página: 6% de uma
+     página de 25.000px são 1.500px, e o objeto ainda estaria brilhando muito
+     depois do hero. */
   const screen = window.innerHeight / maxScroll
-  const hold = Math.min(screen * 0.2, 0.2)
-  const fade = Math.min(screen * 0.5, 0.45)
-  const gone = Math.min(screen * 0.8, 0.7)
+  const hold = Math.min(screen * 0.25, 0.2)
+  const settle = Math.min(screen * 0.9, 0.5)
 
   return [
-    [0.0, 0.03, x, y, scale, 1.0],
-    [hold, 0.04, x, y, scale, 1.0],
-    [fade, 0.2, x * 0.5, y * 0.75, scale * 1.15, 0.3],
-    [gone, 0.6, 0.0, 0.2, 1.0, 0.0],
-    [0.94, 1.0, 0.0, 0.0, 1.0, 0.0],
-    [0.97, 0.5, 0.0, -0.1, 0.85, 0.5],
-    [1.0, 0.12, 0.0, -0.16, 0.72, 0.9],
+    /* Hero: objeto inteiro no centro da tela, atrás do texto. */
+    [0.0, 0.03, x, 0.0, scale, HERO_OPACITY],
+    [hold, 0.05, x, 0.0, scale, HERO_OPACITY],
+    /* Ao sair da dobra ele se espalha e recua para textura de fundo. */
+    [settle, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY],
+    [0.93, 0.95, 0.0, 0.0, scale * 1.5, FIELD_OPACITY],
+    /* Fechamento: reagrupa no centro para a última tela. */
+    [0.98, 0.3, 0.0, -0.05, scale * 1.05, 0.45],
+    [1.0, 0.1, 0.0, -0.1, scale, 0.7],
   ]
 }
 
@@ -164,8 +170,11 @@ const VERTEX_SHADER = /* glsl */ `
   uniform float uTime;
   uniform float uScale;
   uniform vec2 uCenter;
+  uniform float uClear;
+  uniform vec2 uClearBand;
   varying vec3 vColor;
   varying float vFade;
+  varying float vClear;
 
   /* Rotação de Rodrigues em torno de um eixo unitário qualquer. */
   vec3 rotateAxis(vec3 p, vec3 axis, float angle) {
@@ -202,7 +211,17 @@ const VERTEX_SHADER = /* glsl */ `
     float base = aRing > 0.5 ? 0.35 : 0.15;
     vFade = mix(base + (1.0 - base) * depth * depth, 0.85, uMix);
 
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position3, 1.0);
+    vec4 clip = projectionMatrix * modelViewMatrix * vec4(position3, 1.0);
+    gl_Position = clip;
+
+    /* Clareira: no celular o objeto fica centralizado atrás do texto, e o
+       miolo dele cai bem em cima da leitura. Em vez de tapar o objeto com uma
+       placa opaca, ele mesmo se apaga onde o texto está e volta ao brilho
+       cheio na borda — o anel continua inteiro, só respira no meio. */
+    vec2 ndc = clip.xy / max(abs(clip.w), 0.0001);
+    float hole = length(vec2(ndc.x / 1.05, (ndc.y - uClearBand.x) / uClearBand.y));
+    float dim = mix(0.16, 1.0, smoothstep(0.28, 1.0, hole));
+    vClear = mix(1.0, dim, uClear);
   }
 `
 
@@ -210,9 +229,10 @@ const FRAGMENT_SHADER = /* glsl */ `
   uniform float uOpacity;
   varying vec3 vColor;
   varying float vFade;
+  varying float vClear;
 
   void main() {
-    gl_FragColor = vec4(vColor, uOpacity * vFade);
+    gl_FragColor = vec4(vColor, uOpacity * vFade * vClear);
   }
 `
 
@@ -352,6 +372,8 @@ function makeMaterial(opacity: number) {
       uTime: { value: 0 },
       uScale: { value: 1 },
       uCenter: { value: new THREE.Vector2(0, 0) },
+      uClear: { value: 0 },
+      uClearBand: { value: new THREE.Vector2(0, 0.5) },
       uOpacity: { value: opacity },
     },
   })
@@ -420,6 +442,13 @@ export function TriScene() {
     let halfWidth = halfHeight * camera.aspect
     let mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll)
     let narrow = window.innerWidth < MOBILE_BREAKPOINT
+    const applyClear = () => {
+      const band = heroCopyBand()
+      for (const material of [sphereMaterial, ambientMaterial]) {
+        material.uniforms.uClear.value = narrow ? 1 : 0
+        material.uniforms.uClearBand.value.set(band[0], band[1])
+      }
+    }
     const current = { mix: 0.04, x: 0.58, y: 0.02, scale: 1, opacity: 1 }
     const pointer = { x: 0, y: 0 }
 
@@ -446,6 +475,7 @@ export function TriScene() {
       halfWidth = halfHeight * camera.aspect
       mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll)
       narrow = width < MOBILE_BREAKPOINT
+      applyClear()
       measureScroll()
     }
     window.addEventListener('resize', onResize)
@@ -458,10 +488,13 @@ export function TriScene() {
     const remeasure = () => {
       measureScroll()
       mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll)
+      applyClear()
     }
     const pageObserver = new ResizeObserver(remeasure)
     pageObserver.observe(document.body)
     document.fonts?.ready.then(remeasure)
+
+    applyClear()
 
     let frame = 0
     let previous = performance.now()
@@ -511,7 +544,7 @@ export function TriScene() {
         current.y + pointer.y * -0.04,
       )
       ambientMaterial.uniforms.uTime.value = time * 0.6
-      ambientMaterial.uniforms.uOpacity.value = narrow ? 0.16 * current.opacity : 0.32
+      ambientMaterial.uniforms.uOpacity.value = narrow ? 0.12 : 0.32
 
       renderer.render(scene, camera)
 
