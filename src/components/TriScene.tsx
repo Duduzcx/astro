@@ -73,6 +73,12 @@ const MOBILE_BREAKPOINT = 1024
 const OBJECT_RADIUS = 1.64
 
 /**
+ * O anel é um disco inclinado, então na tela o objeto é mais baixo do que
+ * largo: a altura dá cerca de 60% da largura.
+ */
+const OBJECT_FLATTEN = 0.6
+
+/**
  * Opacidade do objeto no hero e depois dele. Com a clareira do shader abrindo
  * espaço para o texto, o anel pode brilhar de verdade na primeira dobra; do
  * hero para baixo ele recua para grão de fundo atrás dos cards.
@@ -81,44 +87,60 @@ const HERO_OPACITY = 0.95
 const FIELD_OPACITY = 0.1
 
 /**
- * Faixa que o texto do hero ocupa, em NDC: [centro, raio]. `offsetTop` ignora o
- * transform de parallax do hero, que é o que queremos. Sem o elemento, assume
- * uma dobra típica de celular.
+ * Geometria da primeira dobra em fração da altura da tela (0 no topo): onde o
+ * menu termina e onde o bloco de texto do hero começa e acaba. Medido no DOM
+ * porque com 360px de largura o título quebra numa linha a mais e qualquer
+ * número fixo erra. `offsetTop` ignora o transform de parallax, que é o que
+ * queremos. Sem os elementos, assume uma dobra típica de celular.
  */
-function heroCopyBand(): [number, number] {
+function measureHero() {
+  const viewport = window.innerHeight
+  const header = document.querySelector('header')
+  const navBottom = header ? header.getBoundingClientRect().height / viewport : 0.07
   const copy = document.getElementById('hero-copy')
-  if (!copy) return [-0.35, 0.55]
+  if (!copy) return { navBottom, copyStart: 0.44, copyEnd: 0.95 }
   let node: HTMLElement | null = copy
   let top = 0
   while (node) {
     top += node.offsetTop
     node = node.offsetParent as HTMLElement | null
   }
-  const viewport = window.innerHeight
-  const start = top / viewport
-  const end = (top + copy.offsetHeight) / viewport
-  /* Fração da tela (0 no topo) para NDC (1 no topo), com folga de 18%. */
-  return [1 - (start + end), (end - start) * 1.18]
+  return {
+    navBottom,
+    copyStart: top / viewport,
+    copyEnd: (top + copy.offsetHeight) / viewport,
+  }
+}
+
+/** Faixa do texto do hero em NDC, [centro, raio], com folga de 18%. */
+function heroCopyBand(): [number, number] {
+  const { copyStart, copyEnd } = measureHero()
+  return [1 - (copyStart + copyEnd), (copyEnd - copyStart) * 1.18]
 }
 
 /**
- * Tela estreita usa outra tabela. O objeto continua sendo fundo, centralizado na
- * tela, e o texto passa por cima dele — quem abre espaço para a leitura é a
- * clareira do shader, não uma placa opaca por cima do objeto.
+ * Tela estreita usa outra tabela. O objeto continua sendo fundo e o texto passa
+ * por cima da borda dele — quem abre espaço para a leitura é a clareira do
+ * shader, não uma placa opaca por cima do objeto.
  *
- * Da primeira dobra para baixo ele se espalha e cai para FIELD_OPACITY, virando
- * grão de fundo: continua lá a página inteira sem competir com os cards, que era
- * o problema de deixá-lo em brilho cheio atrás de tudo.
- *
- * Tamanho não é número fixo: a constante que fica boa num iPhone Pro Max vira
- * uma mancha num aparelho de 640px. O raio sai da largura da tela, com teto de
- * altura para não virar faixa em tela comprida.
+ * Na primeira dobra ele ocupa o vão entre o menu e o título, medido no DOM:
+ * sem isso sobrava uma faixa morta de até metade da tela em aparelho alto.
+ * Da dobra para baixo ele se espalha e cai para FIELD_OPACITY, virando grão de
+ * fundo: continua lá a página inteira sem competir com os cards.
  */
 function mobileKeyframes(halfWidth: number, halfHeight: number, maxScroll: number): Keyframes {
-  /* Larga o bastante para sangrar pelas laterais, com teto de altura para não
-     virar uma faixa gorda demais em tela comprida. */
-  const radius = Math.min(1.45 * halfWidth, 0.78 * halfHeight)
+  /* O objeto mora no vão entre o menu e o título. Centro no meio desse vão;
+     raio o bastante para preenchê-lo, sem passar da largura da tela nem
+     encolher a ponto de virar mancha em tela baixa. */
+  const { navBottom, copyStart } = measureHero()
+  const gap = Math.max(copyStart - navBottom, 0.12)
+  const centre = navBottom + gap / 2
+  /* A altura do objeto na tela é 2 × OBJECT_FLATTEN × raio, e a tela inteira
+     mede 2 × halfHeight: o raio que cabe no vão sai dessa proporção. */
+  const gapRadius = ((gap * 0.98) / OBJECT_FLATTEN) * halfHeight
+  const radius = Math.min(1.55 * halfWidth, Math.max(gapRadius, 0.85 * halfWidth))
   const scale = radius / OBJECT_RADIUS
+  const y = (1 - 2 * centre) * halfHeight
   /* O disco é inclinado, então a caixa dele nasce torta: 0.09 recentraliza. */
   const x = 0.09
 
@@ -130,9 +152,9 @@ function mobileKeyframes(halfWidth: number, halfHeight: number, maxScroll: numbe
   const settle = Math.min(screen * 0.9, 0.5)
 
   return [
-    /* Hero: objeto inteiro no centro da tela, atrás do texto. */
-    [0.0, 0.03, x, 0.0, scale, HERO_OPACITY],
-    [hold, 0.05, x, 0.0, scale, HERO_OPACITY],
+    /* Hero: objeto inteiro no vão entre o menu e o título. */
+    [0.0, 0.03, x, y, scale, HERO_OPACITY],
+    [hold, 0.05, x, y, scale, HERO_OPACITY],
     /* Ao sair da dobra ele se espalha e recua para textura de fundo. */
     [settle, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY],
     [0.93, 0.95, 0.0, 0.0, scale * 1.5, FIELD_OPACITY],

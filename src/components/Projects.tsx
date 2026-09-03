@@ -105,9 +105,6 @@ export function Projects() {
                 {/* Placa: a marca no lugar da arte de capa, enquanto não há imagem real. */}
                 <div className="relative -mx-7 -mt-7 mb-6 flex h-32 items-center justify-center overflow-hidden border-b border-white/8 bg-gradient-to-br from-[#16233d] to-[#0d1526] lg:-mx-8 lg:-mt-8">
                   <AstroMark className="h-16 w-16 opacity-25 transition-transform duration-700 group-hover/card:scale-110" />
-                  <span className="absolute top-4 left-5 font-mono text-[11px] text-slate">
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
                   <span className="absolute top-4 right-5 rounded-full border border-white/12 bg-onyx/60 px-2.5 py-0.5 font-mono text-[9px] tracking-[0.12em] text-slate uppercase">
                     Projeto conceito
                   </span>
