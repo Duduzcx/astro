@@ -6,6 +6,10 @@ import * as THREE from 'three'
  * inclinados girando em velocidades diferentes. No scroll ele se espalha e
  * depois volta a se juntar. É um canvas fixo atrás do documento inteiro; cada
  * seção é um estado dessa mesma cena.
+ *
+ * Só monta a partir de lg (ver App.tsx). Em tela pequena de alta densidade os
+ * triângulos ficam menores que um pixel e o objeto vira chuvisco; lá o hero
+ * usa o símbolo da marca em vetor.
  */
 
 /** Paleta azul: cobalto na frente, ivory segurando a base fria. */
@@ -61,109 +65,6 @@ const KEYFRAMES: Array<[number, number, number, number, number, number]> = [
 
 type Keyframes = Array<[number, number, number, number, number, number]>
 
-/**
- * Mesmo valor do breakpoint `lg` do Tailwind, que é onde o menu vira hambúrguer.
- * A cena e o CSS precisam trocar de composição na mesma largura: abaixo disso
- * valem a tabela do hero e as placas de contraste marcadas com `lg:hidden`;
- * acima, o layout de duas colunas e a tabela de página inteira.
- */
-const MOBILE_BREAKPOINT = 1024
-
-/** Raio do objeto agrupado em unidades de mundo: o anel externo para em 1.64. */
-const OBJECT_RADIUS = 1.64
-
-/**
- * O anel é um disco inclinado, então na tela o objeto é mais baixo do que
- * largo: a altura dá cerca de 60% da largura.
- */
-const OBJECT_FLATTEN = 0.6
-
-/**
- * Opacidade do objeto no hero e depois dele. Com a clareira do shader abrindo
- * espaço para o texto, o anel pode brilhar de verdade na primeira dobra; do
- * hero para baixo ele recua para grão de fundo atrás dos cards.
- */
-const HERO_OPACITY = 0.95
-const FIELD_OPACITY = 0.1
-
-/**
- * Geometria da primeira dobra em fração da altura da tela (0 no topo): onde o
- * menu termina e onde o bloco de texto do hero começa e acaba. Medido no DOM
- * porque com 360px de largura o título quebra numa linha a mais e qualquer
- * número fixo erra. `offsetTop` ignora o transform de parallax, que é o que
- * queremos. Sem os elementos, assume uma dobra típica de celular.
- */
-function measureHero() {
-  const viewport = window.innerHeight
-  const header = document.querySelector('header')
-  const navBottom = header ? header.getBoundingClientRect().height / viewport : 0.07
-  const copy = document.getElementById('hero-copy')
-  if (!copy) return { navBottom, copyStart: 0.44, copyEnd: 0.95 }
-  let node: HTMLElement | null = copy
-  let top = 0
-  while (node) {
-    top += node.offsetTop
-    node = node.offsetParent as HTMLElement | null
-  }
-  return {
-    navBottom,
-    copyStart: top / viewport,
-    copyEnd: (top + copy.offsetHeight) / viewport,
-  }
-}
-
-/** Faixa do texto do hero em NDC, [centro, raio], com folga de 18%. */
-function heroCopyBand(): [number, number] {
-  const { copyStart, copyEnd } = measureHero()
-  return [1 - (copyStart + copyEnd), (copyEnd - copyStart) * 1.18]
-}
-
-/**
- * Tela estreita usa outra tabela. O objeto continua sendo fundo e o texto passa
- * por cima da borda dele — quem abre espaço para a leitura é a clareira do
- * shader, não uma placa opaca por cima do objeto.
- *
- * Na primeira dobra ele ocupa o vão entre o menu e o título, medido no DOM:
- * sem isso sobrava uma faixa morta de até metade da tela em aparelho alto.
- * Da dobra para baixo ele se espalha e cai para FIELD_OPACITY, virando grão de
- * fundo: continua lá a página inteira sem competir com os cards.
- */
-function mobileKeyframes(halfWidth: number, halfHeight: number, maxScroll: number): Keyframes {
-  /* O objeto mora no vão entre o menu e o título. Centro no meio desse vão;
-     raio o bastante para preenchê-lo, sem passar da largura da tela nem
-     encolher a ponto de virar mancha em tela baixa. */
-  const { navBottom, copyStart } = measureHero()
-  const gap = Math.max(copyStart - navBottom, 0.12)
-  const centre = navBottom + gap / 2
-  /* A altura do objeto na tela é 2 × OBJECT_FLATTEN × raio, e a tela inteira
-     mede 2 × halfHeight: o raio que cabe no vão sai dessa proporção. */
-  const gapRadius = ((gap * 0.98) / OBJECT_FLATTEN) * halfHeight
-  const radius = Math.min(1.55 * halfWidth, Math.max(gapRadius, 0.85 * halfWidth))
-  const scale = radius / OBJECT_RADIUS
-  const y = (1 - 2 * centre) * halfHeight
-  /* O disco é inclinado, então a caixa dele nasce torta: 0.09 recentraliza. */
-  const x = 0.09
-
-  /* Trechos medidos em telas de rolagem, não em fração da página: 6% de uma
-     página de 25.000px são 1.500px, e o objeto ainda estaria brilhando muito
-     depois do hero. */
-  const screen = window.innerHeight / maxScroll
-  const hold = Math.min(screen * 0.25, 0.2)
-  const settle = Math.min(screen * 0.9, 0.5)
-
-  return [
-    /* Hero: objeto inteiro no vão entre o menu e o título. */
-    [0.0, 0.03, x, y, scale, HERO_OPACITY],
-    [hold, 0.05, x, y, scale, HERO_OPACITY],
-    /* Ao sair da dobra ele se espalha e recua para textura de fundo. */
-    [settle, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY],
-    [0.93, 0.95, 0.0, 0.0, scale * 1.5, FIELD_OPACITY],
-    /* Fechamento: reagrupa no centro para a última tela. */
-    [0.98, 0.3, 0.0, -0.05, scale * 1.05, 0.45],
-    [1.0, 0.1, 0.0, -0.1, scale, 0.7],
-  ]
-}
-
 function sampleKeyframes(table: Keyframes, progress: number) {
   const clamped = Math.min(Math.max(progress, 0), 1)
   let index = 0
@@ -192,11 +93,8 @@ const VERTEX_SHADER = /* glsl */ `
   uniform float uTime;
   uniform float uScale;
   uniform vec2 uCenter;
-  uniform float uClear;
-  uniform vec2 uClearBand;
   varying vec3 vColor;
   varying float vFade;
-  varying float vClear;
 
   /* Rotação de Rodrigues em torno de um eixo unitário qualquer. */
   vec3 rotateAxis(vec3 p, vec3 axis, float angle) {
@@ -233,17 +131,7 @@ const VERTEX_SHADER = /* glsl */ `
     float base = aRing > 0.5 ? 0.35 : 0.15;
     vFade = mix(base + (1.0 - base) * depth * depth, 0.85, uMix);
 
-    vec4 clip = projectionMatrix * modelViewMatrix * vec4(position3, 1.0);
-    gl_Position = clip;
-
-    /* Clareira: no celular o objeto fica centralizado atrás do texto, e o
-       miolo dele cai bem em cima da leitura. Em vez de tapar o objeto com uma
-       placa opaca, ele mesmo se apaga onde o texto está e volta ao brilho
-       cheio na borda — o anel continua inteiro, só respira no meio. */
-    vec2 ndc = clip.xy / max(abs(clip.w), 0.0001);
-    float hole = length(vec2(ndc.x / 1.05, (ndc.y - uClearBand.x) / uClearBand.y));
-    float dim = mix(0.16, 1.0, smoothstep(0.28, 1.0, hole));
-    vClear = mix(1.0, dim, uClear);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position3, 1.0);
   }
 `
 
@@ -251,10 +139,9 @@ const FRAGMENT_SHADER = /* glsl */ `
   uniform float uOpacity;
   varying vec3 vColor;
   varying float vFade;
-  varying float vClear;
 
   void main() {
-    gl_FragColor = vec4(vColor, uOpacity * vFade * vClear);
+    gl_FragColor = vec4(vColor, uOpacity * vFade);
   }
 `
 
@@ -394,8 +281,6 @@ function makeMaterial(opacity: number) {
       uTime: { value: 0 },
       uScale: { value: 1 },
       uCenter: { value: new THREE.Vector2(0, 0) },
-      uClear: { value: 0 },
-      uClearBand: { value: new THREE.Vector2(0, 0.5) },
       uOpacity: { value: opacity },
     },
   })
@@ -462,15 +347,6 @@ export function TriScene() {
 
     const halfHeight = Math.tan((camera.fov * Math.PI) / 360) * camera.position.z
     let halfWidth = halfHeight * camera.aspect
-    let mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll)
-    let narrow = window.innerWidth < MOBILE_BREAKPOINT
-    const applyClear = () => {
-      const band = heroCopyBand()
-      for (const material of [sphereMaterial, ambientMaterial]) {
-        material.uniforms.uClear.value = narrow ? 1 : 0
-        material.uniforms.uClearBand.value.set(band[0], band[1])
-      }
-    }
     const current = { mix: 0.04, x: 0.58, y: 0.02, scale: 1, opacity: 1 }
     const pointer = { x: 0, y: 0 }
 
@@ -495,9 +371,6 @@ export function TriScene() {
       camera.updateProjectionMatrix()
       renderer.setSize(width, height)
       halfWidth = halfHeight * camera.aspect
-      mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll)
-      narrow = width < MOBILE_BREAKPOINT
-      applyClear()
       measureScroll()
     }
     window.addEventListener('resize', onResize)
@@ -505,18 +378,8 @@ export function TriScene() {
     /* O primeiro frame renderizado levanta a opacidade do container, para o canvas não aparecer de supetão. */
     let revealed = false
 
-    /* A tabela do hero depende da altura do texto e da altura da página, que
-       mudam quando as fontes carregam e quando o documento cresce. */
-    const remeasure = () => {
-      measureScroll()
-      mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll)
-      applyClear()
-    }
-    const pageObserver = new ResizeObserver(remeasure)
+    const pageObserver = new ResizeObserver(measureScroll)
     pageObserver.observe(document.body)
-    document.fonts?.ready.then(remeasure)
-
-    applyClear()
 
     let frame = 0
     let previous = performance.now()
@@ -546,8 +409,7 @@ export function TriScene() {
       considerDowngrade(delta)
 
       const progress = window.scrollY / maxScroll
-      /* Abaixo do breakpoint roda a tabela presa ao hero, não a de página inteira. */
-      const target = sampleKeyframes(narrow ? mobileTable : KEYFRAMES, progress)
+      const target = sampleKeyframes(KEYFRAMES, progress)
 
       const damping = reducedMotion ? 1 : 1 - Math.exp(-delta * 4.5)
       current.mix += (target.mix - current.mix) * damping
@@ -566,7 +428,6 @@ export function TriScene() {
         current.y + pointer.y * -0.04,
       )
       ambientMaterial.uniforms.uTime.value = time * 0.6
-      ambientMaterial.uniforms.uOpacity.value = narrow ? 0.12 : 0.32
 
       renderer.render(scene, camera)
 

@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { TintLayer } from './components/TintLayer'
 import { AuroraBlobs } from './components/AuroraBlobs'
 import { ScrollProgress } from './components/ScrollProgress'
@@ -27,6 +27,26 @@ const TriScene = lazy(() =>
   import('./components/TriScene').then((module) => ({ default: module.TriScene })),
 )
 
+/** Mesmo corte do `lg` do Tailwind, onde o menu vira hambúrguer. */
+const DESKTOP_QUERY = '(min-width: 1024px)'
+
+/**
+ * A cena 3D só existe a partir de lg. No celular ela virava chuvisco: o objeto
+ * é feito de triângulos minúsculos que, em tela pequena de alta densidade,
+ * ficam menores que um pixel. Lá o hero usa o símbolo da marca em vetor (ver
+ * Hero.tsx) e o telefone nem chega a baixar o three.js.
+ */
+function useDesktopScene() {
+  const [desktop, setDesktop] = useState(() => window.matchMedia(DESKTOP_QUERY).matches)
+  useEffect(() => {
+    const query = window.matchMedia(DESKTOP_QUERY)
+    const onChange = (event: MediaQueryListEvent) => setDesktop(event.matches)
+    query.addEventListener('change', onChange)
+    return () => query.removeEventListener('change', onChange)
+  }, [])
+  return desktop
+}
+
 /**
  * Ordem da página: promessa, prova, conversão. Duas vezes.
  * Uma cena WebGL fixa atrás de tudo, que muda de forma a cada seção.
@@ -34,13 +54,17 @@ const TriScene = lazy(() =>
  * refaça as medidas da outra.
  */
 export default function App() {
+  const desktopScene = useDesktopScene()
+
   return (
     <>
       <TintLayer />
       <AuroraBlobs />
-      <Suspense fallback={null}>
-        <TriScene />
-      </Suspense>
+      {desktopScene ? (
+        <Suspense fallback={null}>
+          <TriScene />
+        </Suspense>
+      ) : null}
       <ScrollProgress />
 
       <a

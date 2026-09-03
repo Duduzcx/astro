@@ -83,12 +83,9 @@ Utilitários próprios: `.shell` (container), `.graphite-card` (vidro), `.label-
 
 `TriScene.tsx` desenha um núcleo orbital: uma bola densa de triângulos vazados com três anéis inclinados girando em velocidades e sentidos diferentes, mais uma camada ambiente sempre dispersa. É um canvas fixo atrás do documento; cada seção é um estado da mesma cena.
 
-Duas tabelas de keyframes governam isso:
+**A cena só monta a partir de 1024px de largura** (`useDesktopScene` em `App.tsx`, mesmo corte do `lg` do Tailwind). Em tela pequena de alta densidade os triângulos ficam menores que um pixel e o objeto vira chuvisco atrás do texto — foram três tentativas de salvar isso antes de aceitar que o problema é a técnica, não o ajuste. No celular o hero usa o símbolo da marca em vetor (`Hero.tsx`), que é nítido em qualquer densidade, e o aparelho nem chega a baixar o three.js.
 
-- `KEYFRAMES` — telas largas. O objeto se move, dispersa e reagrupa ao longo da página inteira.
-- `MOBILE_KEYFRAMES` — telas em retrato (`aspect < 0.9`). Ali o objeto pertence ao hero: fica acima do título, dissolve quando você sai da primeira dobra e só volta no fechamento. Ocupando a página inteira ele virava sujeira atrás dos cards.
-
-Cada linha é `[progresso da página, dispersão, x, y, escala, opacidade]`. A ordem das seções em `App.tsx` e essas tabelas andam juntas: mexeu numa, refaça as medidas da outra.
+A tabela `KEYFRAMES` governa o movimento. Cada linha é `[progresso da página, dispersão, x, y, escala, opacidade]`. A ordem das seções em `App.tsx` e essa tabela andam juntas: mexeu numa, refaça as medidas da outra.
 
 Custo controlado: three.js entra num chunk separado por `React.lazy`; a contagem de triângulos e o pixel ratio caem em celular e em máquina de poucos núcleos; e há uma queda de qualidade automática se os primeiros frames vierem lentos. Com `prefers-reduced-motion` o movimento para.
 
