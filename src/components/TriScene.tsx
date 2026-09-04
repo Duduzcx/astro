@@ -149,12 +149,14 @@ function heroCopyBand(): [number, number] {
  * altura para não virar faixa em tela comprida.
  */
 function mobileKeyframes(halfWidth: number, halfHeight: number, maxScroll: number): Keyframes {
-  /* Larga o bastante para sangrar pelas laterais, com teto de altura para não
-     virar uma faixa gorda demais em tela comprida. */
-  const radius = Math.min(1.45 * halfWidth, 0.78 * halfHeight)
+  /* Encosta nas laterais sem sangrar muito, com teto de altura para não virar
+     uma faixa gorda demais em tela comprida. */
+  const radius = Math.min(1.12 * halfWidth, 0.62 * halfHeight)
   const scale = radius / OBJECT_RADIUS
-  /* O disco é inclinado, então a caixa dele nasce torta: 0.09 recentraliza. */
-  const x = 0.09
+  /* O disco é inclinado, então a caixa dele nasce torta; um empurrão pequeno
+     recentraliza. Menor que antes porque o objeto encolheu: a mesma correção
+     em fração da meia largura deslocava demais. */
+  const x = 0.04
 
   /* Trechos medidos em telas de rolagem, não em fração da página: 6% de uma
      página de 25.000px são 1.500px, e o objeto ainda estaria brilhando muito
@@ -166,8 +168,8 @@ function mobileKeyframes(halfWidth: number, halfHeight: number, maxScroll: numbe
   return [
     /* Hero: planeta atrás do texto, um pouco acima do centro para o arco de
        cima aparecer no vão entre o menu e o título. */
-    [0.0, 0.03, x, 0.35, scale, HERO_OPACITY, 0],
-    [hold, 0.05, x, 0.35, scale, HERO_OPACITY, 0],
+    [0.0, 0.03, x, 0.32, scale, HERO_OPACITY, 0],
+    [hold, 0.05, x, 0.32, scale, HERO_OPACITY, 0],
     /* Ao sair da dobra ele se espalha e recua para textura de fundo. */
     [settle, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 0],
     [0.16, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 0],
@@ -626,7 +628,12 @@ export function TriScene() {
     renderer.setPixelRatio(
       Math.min(window.devicePixelRatio, weakDevice ? 1 : lightweight ? 1.25 : 1.5),
     )
-    renderer.setSize(window.innerWidth, window.innerHeight)
+    renderer.setSize(window.innerWidth, window.innerHeight, false)
+    /* O canvas se estica com o container. Assim, mesmo no intervalo entre o
+       resize e o próximo frame, nunca sobra um pedaço de tela sem desenho. */
+    renderer.domElement.style.width = '100%'
+    renderer.domElement.style.height = '100%'
+    renderer.domElement.style.display = 'block'
     mount.appendChild(renderer.domElement)
 
     const scene = new THREE.Scene()
@@ -635,7 +642,7 @@ export function TriScene() {
 
     const spread = new THREE.Vector3(2.6, 1.7, 1.2)
     const sphereGeometry = buildTriangles(
-      weakDevice ? 3000 : lightweight ? 5200 : 8000,
+      weakDevice ? 2600 : lightweight ? 4000 : 8000,
       spread,
       true,
     )
@@ -645,7 +652,7 @@ export function TriScene() {
 
     /* Camada ambiente, sempre dispersa: os triângulos fracos flutuando em volta. */
     const ambientGeometry = buildTriangles(
-      lightweight ? 260 : 600,
+      lightweight ? 180 : 600,
       new THREE.Vector3(3.2, 2.1, 1.6),
       false,
     )
@@ -684,25 +691,36 @@ export function TriScene() {
     }
     window.addEventListener('pointermove', onPointerMove, { passive: true })
 
-    /* Browser de celular dispara resize quando a barra de URL recolhe no meio
-       do scroll; reprojetar nisso faz o planeta pular na tela. Só mudança real
-       de largura (girar o aparelho, redimensionar a janela) refaz a projeção. */
+    /**
+     * Browser de celular dispara resize quando a barra de URL recolhe no meio
+     * do scroll, e as duas metades disso precisam de tratamento diferente.
+     *
+     * O buffer SEMPRE acompanha a viewport: a altura cresce ~60px quando a
+     * barra some, e um canvas do tamanho antigo deixa uma faixa sem desenho no
+     * pé da tela — era isso que aparecia como uma tira escura ao rolar.
+     *
+     * Já a remedição de scroll fica atrás da guarda de 180px: `maxScroll`
+     * depende de `innerHeight`, então recalcular no recolher da barra move o
+     * progresso e o objeto pula na tela. Isso só na mudança real de largura.
+     */
     let lastWidth = window.innerWidth
     let lastHeight = window.innerHeight
     const onResize = () => {
       const width = window.innerWidth
       const height = window.innerHeight
+      camera.aspect = width / height
+      camera.updateProjectionMatrix()
+      /* `false`: o CSS do canvas é 100%/100% e não pode virar pixel fixo. */
+      renderer.setSize(width, height, false)
+      halfWidth = halfHeight * camera.aspect
+
       if (width === lastWidth && Math.abs(height - lastHeight) < 180) return
       lastWidth = width
       lastHeight = height
-      camera.aspect = width / height
-      camera.updateProjectionMatrix()
-      renderer.setSize(width, height)
-      halfWidth = halfHeight * camera.aspect
-      mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll)
       narrow = width < MOBILE_BREAKPOINT
-      applyClear()
       measureScroll()
+      mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll)
+      applyClear()
     }
     window.addEventListener('resize', onResize)
 
@@ -738,7 +756,7 @@ export function TriScene() {
       if (sampled >= 90 && slowFrames > 30) {
         downgraded = true
         renderer.setPixelRatio(1)
-        renderer.setSize(window.innerWidth, window.innerHeight)
+        renderer.setSize(window.innerWidth, window.innerHeight, false)
         ambientField.visible = false
       }
     }
@@ -753,7 +771,9 @@ export function TriScene() {
       /* Abaixo do breakpoint roda a tabela presa ao hero, não a de página inteira. */
       const target = sampleKeyframes(narrow ? mobileTable : KEYFRAMES, progress)
 
-      const damping = reducedMotion ? 1 : 1 - Math.exp(-delta * 4.5)
+      /* Constante de tempo maior no celular: o scroll por toque chega em
+         saltos, e amortecer mais tira o solavanco de cada salto. */
+      const damping = reducedMotion ? 1 : 1 - Math.exp(-delta * (narrow ? 3.2 : 4.5))
       current.mix += (target.mix - current.mix) * damping
       current.x += (target.x - current.x) * damping
       current.y += (target.y - current.y) * damping

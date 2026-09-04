@@ -105,6 +105,8 @@ A ordem das seções em `App.tsx` e a tabela de desktop andam juntas: mexeu numa
 
 Custo controlado: three.js entra num chunk separado por `React.lazy`; a contagem de triângulos e o pixel ratio caem em celular e em máquina de poucos núcleos; e há uma queda de qualidade automática se os primeiros frames vierem lentos. Com `prefers-reduced-motion` o movimento para.
 
+**Redimensionamento tem duas metades.** O buffer do canvas acompanha a viewport em todo evento de resize: no celular a altura cresce ~60px quando a barra de URL recolhe, e um canvas do tamanho antigo deixa uma faixa sem desenho no pé da tela. Já a remedição de scroll fica atrás de uma guarda de 180px, porque `maxScroll` depende de `innerHeight` e recalcular no recolher da barra faz o progresso saltar e o objeto pular. O canvas também é esticado por CSS (`width/height: 100%`, com `setSize(..., false)`), então nem no intervalo de um frame sobra tela sem cobertura.
+
 ## Mídia
 
 | Arquivo | Onde |
