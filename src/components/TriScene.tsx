@@ -63,19 +63,22 @@ const KEYFRAMES: Keyframes = [
   [0.26, 1.0, 0.0, 0.0, 1.12, 0.9, 0],
   [0.29, 1.0, 0.0, 0.0, 1.12, 0.9, 0],
   [0.31, 1.0, 0.0, 0.0, 1.12, 0.0, 0],
-  /* Invisível: vira buraco negro antes de reaparecer na Missão. */
-  [0.33, 0.3, 0.55, 0.0, 0.9, 0.0, 1],
-  [0.35, 0.05, 0.55, 0.0, 0.9, 1.0, 1],
-  [0.385, 0.06, 0.55, 0.0, 0.9, 1.0, 1],
-  [0.42, 0.9, 0.0, 0.0, 1.35, 0.22, 1],
+  /* Invisível atrás do vídeo: troca de forma aqui, ninguém vê a costura. */
+  [0.32, 0.3, 0.55, 0.0, 0.9, 0.0, 1],
+  /* Buraco negro formado enquanto "Seu negócio em novas órbitas" está na tela
+     (a Missão ocupa 0.285 a 0.383 nesta largura). */
+  [0.337, 0.05, 0.55, 0.0, 0.9, 1.0, 1],
+  [0.375, 0.06, 0.55, 0.0, 0.9, 1.0, 1],
+  [0.41, 0.9, 0.0, 0.0, 1.35, 0.22, 1],
   [0.445, 0.9, 0.0, 0.0, 1.35, 0.22, 1],
   [0.47, 0.9, 0.0, 0.0, 1.35, 0.0, 1],
   /* Invisível de novo: vira supernova para o resto da página. */
   [0.5, 0.9, 0.0, 0.0, 1.35, 0.0, 2],
   [0.53, 0.9, 0.0, 0.0, 1.35, 0.22, 2],
-  [0.94, 0.9, 0.0, 0.0, 1.35, 0.22, 2],
-  [0.97, 0.35, 0.0, -0.3, 0.95, 0.6, 2],
-  [1.0, 0.25, 0.0, -0.45, 0.9, 0.7, 2],
+  [0.9, 0.9, 0.0, 0.0, 1.35, 0.22, 2],
+  /* Supernova pronta quando o fechamento entra (0.933), não depois dele. */
+  [0.955, 0.08, 0.0, -0.62, 0.95, 0.8, 2],
+  [1.0, 0.08, 0.0, -0.62, 0.95, 0.8, 2],
 ]
 
 type Keyframes = Array<[number, number, number, number, number, number, number]>
@@ -155,22 +158,22 @@ function mobileKeyframes(halfWidth: number, halfHeight: number, maxScroll: numbe
     [hold, 0.05, x, 0.35, scale, HERO_OPACITY, 0],
     /* Ao sair da dobra ele se espalha e recua para textura de fundo. */
     [settle, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 0],
-    [0.14, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 0],
+    [0.16, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 0],
     /* Troca de astro com o campo quase invisível, ninguém vê a costura. */
-    [0.16, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
-    /* Junta de novo no manifesto — agora como buraco negro. */
-    [0.195, 0.12, 0.0, 0.0, scale * 0.95, 0.5, 1],
-    [0.235, 0.12, 0.0, 0.0, scale * 0.95, 0.5, 1],
-    [0.28, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
+    [0.185, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
+    /* Buraco negro formado enquanto "Seu negócio em novas órbitas" está na
+       tela (a Missão ocupa 0.222 a 0.294 nesta largura). */
+    [0.25, 0.12, 0.0, -0.15, scale * 0.95, 0.38, 1],
+    [0.29, 0.12, 0.0, -0.15, scale * 0.95, 0.38, 1],
+    [0.335, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     [0.55, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     /* Disperso e quase invisível, muda de cor para a última transformação. */
     [0.62, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 2],
-    [0.9, 0.95, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 2],
-    /* Fechamento: a supernova junta atrás da última chamada, não no rodapé
-       utilitário — lá o painel de vidro já cobre tudo. */
-    [0.945, 0.2, 0.0, -0.25, scale * 1.05, 0.55, 2],
-    [0.975, 0.06, 0.0, -0.42, scale, 0.8, 2],
-    [1.0, 0.06, 0.0, -0.42, scale, 0.8, 2],
+    [0.88, 0.95, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 2],
+    /* Supernova pronta quando "A sua operação tem a resposta" entra (0.935),
+       e não lá embaixo no rodapé utilitário. */
+    [0.95, 0.08, 0.0, -0.5, scale, 0.85, 2],
+    [1.0, 0.08, 0.0, -0.5, scale, 0.85, 2],
   ]
 }
 
@@ -344,8 +347,10 @@ function holeAnchor(anchor: THREE.Vector3, color: THREE.Color) {
  */
 function novaAnchor(anchor: THREE.Vector3, color: THREE.Color) {
   const roll = Math.random()
-  if (roll < 0.22) {
-    const radius = 0.3 * Math.cbrt(Math.random())
+  if (roll < 0.1) {
+    /* Miolo propositalmente ralo: com blending aditivo, concentrar aqui vira um
+       ponto branco estourado que apaga qualquer texto por trás. */
+    const radius = 0.42 * Math.cbrt(Math.random())
     randomDirection(anchor).multiplyScalar(radius)
     pickFrom(color, NOVA_CORE)
     return
