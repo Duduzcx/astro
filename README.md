@@ -87,11 +87,12 @@ Utilitários próprios: `.shell` (container), `.graphite-card` (vidro), `.label-
 | --- | --- | --- | --- |
 | `0` planeta | hero | bola densa com três anéis inclinados em contra-rotação | azul cobalto e ivory |
 | `1` buraco negro | "Seu negócio em novas órbitas" | horizonte vazio, anel de fótons e disco de acreção inclinado, mais rápido perto do centro | branco-quente, âmbar e laranja profundo |
-| `2` supernova | "A sua operação tem a resposta" | núcleo ralo, raios de ejeção e duas cascas de detonação que respiram | ouro, laranja, magenta e violeta |
+| `2` estrela | nasce durante o contato | bola compacta com casca brilhante e coroa rala, cintilando | dourado e branco |
+| `3` supernova | "A sua operação tem a resposta" | núcleo ralo, raios de ejeção e duas cascas de detonação que respiram | ouro, laranja, magenta e violeta |
 
 Cada astro precisa estar **formado enquanto a seção dele está na tela**, e as duas tabelas trabalham em fração da página — que muda com a largura, porque o texto quebra diferente. Os números vieram de medição real: a Missão ocupa 0.222–0.294 no celular e 0.285–0.383 no desktop; o fechamento entra em 0.935 e 0.933. Mexeu na ordem ou no tamanho de alguma seção, remeça antes de confiar nesses valores.
 
-As três posições e as três cores vivem em atributos separados da mesma geometria (`aSphere`/`aHole`/`aNova` e `aColor`/`aHoleColor`/`aNovaColor`); o uniform `uForm` anda de 0 a 2 e o shader interpola entre elas. **A troca acontece sempre com o campo disperso ou invisível**, então ninguém vê a costura — é por isso que as linhas de mudança de forma na tabela caem em trechos de opacidade baixa.
+As posições e as cores de cada astro vivem em atributos separados da mesma geometria (`aSphere`/`aHole`/`aStar`/`aNova` e os `a*Color` correspondentes); o uniform `uForm` anda de 0 a 3 e o shader interpola entre vizinhos. **Quase toda troca acontece com o campo disperso ou invisível**, então ninguém vê a costura. A exceção é proposital: a passagem 2 para 3 é feita agrupada e à vista — a estrela recém-nascida detona em supernova quando o fechamento entra, e o morph dos triângulos voando do corpo compacto para as cascas de detonação É a explosão.
 
 Com blending aditivo não existe partícula escura: o preto do buraco negro é literalmente a ausência de triângulos no meio.
 

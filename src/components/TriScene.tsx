@@ -26,6 +26,11 @@ const HOLE_INNER = ['#fff3e0', '#ffd9a0']
 const HOLE_MID = ['#ffb25e', '#ff9a3c']
 const HOLE_OUTER = ['#e8590c', '#b64207', '#ffd9a0']
 
+/* Estrela: bola dourada-branca compacta com uma coroa rala. */
+const STAR_BODY = ['#ffe9a8', '#ffd166', '#fff3c4']
+const STAR_SURFACE = ['#ffffff', '#fffbe8']
+const STAR_CORONA = ['#ffd166', '#ff9e57']
+
 /* Supernova: núcleo branco, ouro e laranja nos raios, magenta e violeta nas cascas. */
 const NOVA_CORE = ['#ffffff', '#fff3c4']
 const NOVA_GOLD = ['#ffd166', '#ffb84d']
@@ -72,13 +77,20 @@ const KEYFRAMES: Keyframes = [
   [0.41, 0.9, 0.0, 0.0, 1.35, 0.22, 1],
   [0.445, 0.9, 0.0, 0.0, 1.35, 0.22, 1],
   [0.47, 0.9, 0.0, 0.0, 1.35, 0.0, 1],
-  /* Invisível de novo: vira supernova para o resto da página. */
+  /* Invisível de novo: o campo vira poeira dourada de estrela. */
   [0.5, 0.9, 0.0, 0.0, 1.35, 0.0, 2],
   [0.53, 0.9, 0.0, 0.0, 1.35, 0.22, 2],
-  [0.9, 0.9, 0.0, 0.0, 1.35, 0.22, 2],
-  /* Supernova pronta quando o fechamento entra (0.933), não depois dele. */
-  [0.955, 0.08, 0.0, -0.62, 0.95, 0.8, 2],
-  [1.0, 0.08, 0.0, -0.62, 0.95, 0.8, 2],
+  [0.885, 0.9, 0.0, 0.0, 1.35, 0.22, 2],
+  /* A poeira condensa: uma estrela nasce durante o contato... */
+  /* No vão entre a coluna de texto e o card do formulário — atrás do card ela
+     ficaria escondida. */
+  [0.92, 0.06, 0.0, 0.1, 0.52, 0.6, 2],
+  [0.94, 0.05, 0.0, 0.0, 0.56, 0.75, 2],
+  /* ...e explode à vista quando o fechamento entra (0.933): o morph 2 para 3
+     agrupado É a detonação — os triângulos voam do corpo para as cascas. */
+  [0.958, 0.08, 0.0, -0.35, 0.92, 1.0, 3],
+  [0.978, 0.08, 0.0, -0.62, 0.95, 0.8, 3],
+  [1.0, 0.08, 0.0, -0.62, 0.95, 0.8, 3],
 ]
 
 type Keyframes = Array<[number, number, number, number, number, number, number]>
@@ -167,13 +179,17 @@ function mobileKeyframes(halfWidth: number, halfHeight: number, maxScroll: numbe
     [0.29, 0.12, 0.0, -0.15, scale * 0.95, 0.38, 1],
     [0.335, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     [0.55, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
-    /* Disperso e quase invisível, muda de cor para a última transformação. */
+    /* Disperso e quase invisível, o campo vira poeira dourada de estrela. */
     [0.62, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 2],
-    [0.88, 0.95, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 2],
-    /* Supernova pronta quando "A sua operação tem a resposta" entra (0.935),
-       e não lá embaixo no rodapé utilitário. */
-    [0.95, 0.08, 0.0, -0.5, scale, 0.85, 2],
-    [1.0, 0.08, 0.0, -0.5, scale, 0.85, 2],
+    [0.875, 0.95, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 2],
+    /* A poeira condensa: uma estrela nasce durante o contato... */
+    [0.915, 0.07, 0.0, 0.15, scale * 0.58, 0.55, 2],
+    [0.935, 0.05, 0.0, 0.05, scale * 0.62, 0.7, 2],
+    /* ...e explode à vista quando "A sua operação tem a resposta" entra
+       (0.935): o morph 2 para 3 agrupado É a detonação. */
+    [0.954, 0.08, 0.0, -0.3, scale * 0.95, 1.0, 3],
+    [0.972, 0.08, 0.0, -0.5, scale, 0.85, 3],
+    [1.0, 0.08, 0.0, -0.5, scale, 0.85, 3],
   ]
 }
 
@@ -200,9 +216,11 @@ const VERTEX_SHADER = /* glsl */ `
   attribute vec3 aSphere;
   attribute vec3 aScatter;
   attribute vec3 aHole;
+  attribute vec3 aStar;
   attribute vec3 aNova;
   attribute vec3 aColor;
   attribute vec3 aHoleColor;
+  attribute vec3 aStarColor;
   attribute vec3 aNovaColor;
   attribute float aRand;
   attribute float aRing;
@@ -243,17 +261,23 @@ const VERTEX_SHADER = /* glsl */ `
     float rHole = max(length(aHole), 0.4);
     vec3 coreHole = rotateAxis(aHole, discAxis, uTime * 0.1 * (0.4 + 0.9 / rHole));
 
+    /* Estrela: cintila, respirando curto e rápido. */
+    float twinkle = 1.0 + 0.03 * sin(uTime * 1.6 + aRand * 6.2831);
+    vec3 coreStar = rotateAxis(aStar * twinkle, vec3(0.0, 1.0, 0.0), uTime * 0.06);
+
     /* Supernova: respira para fora e gira bem devagar. */
     float pulse = 1.0 + 0.05 * sin(uTime * 0.8 + aRand * 6.2831);
     vec3 coreNova = rotateAxis(aNova * pulse, vec3(0.0, 1.0, 0.0), uTime * 0.05);
 
-    /* uForm anda de 0 a 2 e escolhe o astro; a troca acontece com o objeto
-       disperso ou invisível, então a interpolação nunca aparece pela metade. */
+    /* uForm anda de 0 a 3 e escolhe o astro. Quase toda troca acontece com o
+       campo disperso ou invisível; a exceção é 2 para 3, feita agrupada e à
+       vista de propósito — a estrela explodindo em supernova. */
     float wPlanet = clamp(1.0 - uForm, 0.0, 1.0);
-    float wNova = clamp(uForm - 1.0, 0.0, 1.0);
-    float wHole = 1.0 - wPlanet - wNova;
-    core = core * wPlanet + coreHole * wHole + coreNova * wNova;
-    vColor = aColor * wPlanet + aHoleColor * wHole + aNovaColor * wNova;
+    float wHole = 1.0 - min(abs(uForm - 1.0), 1.0);
+    float wStar = 1.0 - min(abs(uForm - 2.0), 1.0);
+    float wNova = clamp(uForm - 2.0, 0.0, 1.0);
+    core = core * wPlanet + coreHole * wHole + coreStar * wStar + coreNova * wNova;
+    vColor = aColor * wPlanet + aHoleColor * wHole + aStarColor * wStar + aNovaColor * wNova;
 
     vec3 scatter = aScatter;
     scatter.x += sin(uTime * 0.28 + aRand * 6.2831) * 0.09;
@@ -342,6 +366,28 @@ function holeAnchor(anchor: THREE.Vector3, color: THREE.Color) {
 }
 
 /**
+ * Estrela: uma bola compacta e densa, casca brilhante na superfície e uma
+ * coroa rala em volta. É a forma que explode: interpolar daqui direto para a
+ * supernova (uForm 2 para 3) faz os triângulos voarem do corpo para as cascas
+ * de detonação — a única troca de astro feita à vista de propósito.
+ */
+function starAnchor(anchor: THREE.Vector3, color: THREE.Color) {
+  const roll = Math.random()
+  if (roll < 0.55) {
+    randomDirection(anchor).multiplyScalar(0.45 * Math.cbrt(Math.random()))
+    pickFrom(color, STAR_BODY)
+    return
+  }
+  if (roll < 0.82) {
+    randomDirection(anchor).multiplyScalar(0.44 + Math.random() * 0.06)
+    pickFrom(color, STAR_SURFACE)
+    return
+  }
+  randomDirection(anchor).multiplyScalar(0.55 + 0.5 * Math.pow(Math.random(), 2))
+  pickFrom(color, STAR_CORONA)
+}
+
+/**
  * Supernova: núcleo branco denso, raios radiais de ejeção e duas cascas de
  * detonação. As cores esfriam do centro para fora.
  */
@@ -384,16 +430,20 @@ function buildTriangles(count: number, spread: THREE.Vector3, onSphere: boolean)
   const spherePositions = new Float32Array(count * 6 * 3)
   const scatterPositions = new Float32Array(count * 6 * 3)
   const holePositions = new Float32Array(count * 6 * 3)
+  const starPositions = new Float32Array(count * 6 * 3)
   const novaPositions = new Float32Array(count * 6 * 3)
   const colors = new Float32Array(count * 6 * 3)
   const holeColors = new Float32Array(count * 6 * 3)
+  const starColors = new Float32Array(count * 6 * 3)
   const novaColors = new Float32Array(count * 6 * 3)
   const randoms = new Float32Array(count * 6)
   const rings = new Float32Array(count * 6)
   const color = new THREE.Color()
   const holeColor = new THREE.Color()
+  const starColor = new THREE.Color()
   const novaColor = new THREE.Color()
   const holeAnchorV = new THREE.Vector3()
+  const starAnchorV = new THREE.Vector3()
   const novaAnchorV = new THREE.Vector3()
 
   for (let i = 0; i < count; i += 1) {
@@ -468,11 +518,14 @@ function buildTriangles(count: number, spread: THREE.Vector3, onSphere: boolean)
        para a mesma âncora e cor do estado base. */
     if (onSphere) {
       holeAnchor(holeAnchorV, holeColor)
+      starAnchor(starAnchorV, starColor)
       novaAnchor(novaAnchorV, novaColor)
     } else {
       holeAnchorV.copy(anchor)
+      starAnchorV.copy(anchor)
       novaAnchorV.copy(anchor)
       holeColor.copy(color)
+      starColor.copy(color)
       novaColor.copy(color)
     }
     const random = Math.random()
@@ -491,6 +544,9 @@ function buildTriangles(count: number, spread: THREE.Vector3, onSphere: boolean)
       holePositions[base] = holeAnchorV.x + corner.x
       holePositions[base + 1] = holeAnchorV.y + corner.y
       holePositions[base + 2] = holeAnchorV.z + corner.z
+      starPositions[base] = starAnchorV.x + corner.x
+      starPositions[base + 1] = starAnchorV.y + corner.y
+      starPositions[base + 2] = starAnchorV.z + corner.z
       novaPositions[base] = novaAnchorV.x + corner.x
       novaPositions[base + 1] = novaAnchorV.y + corner.y
       novaPositions[base + 2] = novaAnchorV.z + corner.z
@@ -500,6 +556,9 @@ function buildTriangles(count: number, spread: THREE.Vector3, onSphere: boolean)
       holeColors[base] = holeColor.r
       holeColors[base + 1] = holeColor.g
       holeColors[base + 2] = holeColor.b
+      starColors[base] = starColor.r
+      starColors[base + 1] = starColor.g
+      starColors[base + 2] = starColor.b
       novaColors[base] = novaColor.r
       novaColors[base + 1] = novaColor.g
       novaColors[base + 2] = novaColor.b
@@ -512,9 +571,11 @@ function buildTriangles(count: number, spread: THREE.Vector3, onSphere: boolean)
   geometry.setAttribute('aSphere', new THREE.BufferAttribute(spherePositions, 3))
   geometry.setAttribute('aScatter', new THREE.BufferAttribute(scatterPositions, 3))
   geometry.setAttribute('aHole', new THREE.BufferAttribute(holePositions, 3))
+  geometry.setAttribute('aStar', new THREE.BufferAttribute(starPositions, 3))
   geometry.setAttribute('aNova', new THREE.BufferAttribute(novaPositions, 3))
   geometry.setAttribute('aColor', new THREE.BufferAttribute(colors, 3))
   geometry.setAttribute('aHoleColor', new THREE.BufferAttribute(holeColors, 3))
+  geometry.setAttribute('aStarColor', new THREE.BufferAttribute(starColors, 3))
   geometry.setAttribute('aNovaColor', new THREE.BufferAttribute(novaColors, 3))
   geometry.setAttribute('aRand', new THREE.BufferAttribute(randoms, 1))
   geometry.setAttribute('aRing', new THREE.BufferAttribute(rings, 1))

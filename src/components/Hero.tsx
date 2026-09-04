@@ -39,10 +39,13 @@ export function Hero() {
         >
           {/* O objeto passa por trás do texto. Esta placa acompanha o bloco de
               texto, em vez de uma altura fixa de viewport, e é o que mantém o
-              contraste em qualquer aparelho. */}
+              contraste em qualquer aparelho. O degradê precisa chegar a
+              transparente ANTES das bordas da caixa — a borda de cima fica a
+              62.5% do raio vertical, e o último stop vem antes disso — senão a
+              caixa aparece como um retângulo escuro cortando o fundo. */}
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 -top-16 -bottom-12 -z-10 bg-[radial-gradient(112%_72%_at_30%_50%,color-mix(in_srgb,var(--color-onyx)_58%,transparent)_0%,color-mix(in_srgb,var(--color-onyx)_30%,transparent)_58%,transparent_86%)] lg:hidden"
+            className="pointer-events-none absolute inset-x-0 -top-16 -bottom-12 -z-10 bg-[radial-gradient(120%_80%_at_30%_50%,color-mix(in_srgb,var(--color-onyx)_55%,transparent)_0%,color-mix(in_srgb,var(--color-onyx)_26%,transparent)_42%,transparent_60%)] lg:hidden"
           />
           <WordReveal
             as="h1"
