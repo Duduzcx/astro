@@ -72,8 +72,8 @@ const KEYFRAMES: Keyframes = [
   [0.32, 0.3, 0.55, 0.0, 0.9, 0.0, 1],
   /* Buraco negro formado enquanto "Seu negócio em novas órbitas" está na tela
      (a Missão ocupa 0.285 a 0.383 nesta largura). */
-  [0.337, 0.05, 0.55, 0.0, 0.9, 1.0, 1],
-  [0.375, 0.06, 0.55, 0.0, 0.9, 1.0, 1],
+  [0.328, 0.05, 0.55, 0.0, 0.9, 1.0, 1],
+  [0.372, 0.06, 0.55, 0.0, 0.9, 1.0, 1],
   [0.41, 0.9, 0.0, 0.0, 1.35, 0.22, 1],
   [0.445, 0.9, 0.0, 0.0, 1.35, 0.22, 1],
   [0.47, 0.9, 0.0, 0.0, 1.35, 0.0, 1],
@@ -89,7 +89,7 @@ const KEYFRAMES: Keyframes = [
   /* ...e explode à vista quando o fechamento entra (0.933): o morph 2 para 3
      agrupado É a detonação — os triângulos voam do corpo para as cascas. */
   [0.958, 0.08, 0.0, -0.35, 0.92, 1.0, 3],
-  [0.978, 0.08, 0.0, -0.62, 0.95, 0.8, 3],
+  [0.970, 0.08, 0.0, -0.62, 0.95, 0.8, 3],
   [1.0, 0.08, 0.0, -0.62, 0.95, 0.8, 3],
 ]
 
@@ -177,8 +177,8 @@ function mobileKeyframes(halfWidth: number, halfHeight: number, maxScroll: numbe
     [0.185, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     /* Buraco negro formado enquanto "Seu negócio em novas órbitas" está na
        tela (a Missão ocupa 0.222 a 0.294 nesta largura). */
-    [0.25, 0.12, 0.0, -0.15, scale * 0.95, 0.38, 1],
-    [0.29, 0.12, 0.0, -0.15, scale * 0.95, 0.38, 1],
+    [0.238, 0.12, 0.0, -0.15, scale * 0.95, 0.38, 1],
+    [0.285, 0.12, 0.0, -0.15, scale * 0.95, 0.38, 1],
     [0.335, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     [0.55, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     /* Disperso e quase invisível, o campo vira poeira dourada de estrela. */
@@ -190,7 +190,7 @@ function mobileKeyframes(halfWidth: number, halfHeight: number, maxScroll: numbe
     /* ...e explode à vista quando "A sua operação tem a resposta" entra
        (0.935): o morph 2 para 3 agrupado É a detonação. */
     [0.954, 0.08, 0.0, -0.3, scale * 0.95, 1.0, 3],
-    [0.972, 0.08, 0.0, -0.5, scale, 0.85, 3],
+    [0.964, 0.08, 0.0, -0.5, scale, 0.85, 3],
     [1.0, 0.08, 0.0, -0.5, scale, 0.85, 3],
   ]
 }

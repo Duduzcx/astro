@@ -82,8 +82,10 @@ export function Nav() {
       }`}
     >
       <nav className="shell flex h-14 items-center justify-between md:h-20" aria-label="Principal">
+        {/* Só o símbolo: o nome já está no título da página e no rodapé, e
+            repeti-lo no menu rouba altura da barra sem dizer nada de novo. */}
         <a href="#topo" className="shrink-0" aria-label="Astro Soluções — ir para o topo">
-          <Logo />
+          <Logo markOnly className="[&>svg]:h-10 [&>svg]:w-10" />
         </a>
 
         <ul className="hidden items-center gap-9 lg:flex">
