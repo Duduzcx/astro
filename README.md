@@ -50,16 +50,22 @@ Ordem das seções (definida em `App.tsx`): hero, marquee, serviços, integraç�
 
 Os arquivos ficam em `public/logo/`:
 
+O símbolo é um disco recortado em quatro pétalas; o vão entre elas desenha uma estrela de quatro pontas. As fendas têm largura constante do centro à borda, então a marca não deforma na redução. **Uma pétala só é desenhada** — as outras três são a mesma path girada em 90°.
+
 | Arquivo | Uso |
 | --- | --- |
-| `astro-mark.svg` | símbolo em degradê, para fundo claro |
-| `astro-mark-light.svg` | símbolo em ivory, para fundo escuro |
-| `astro-mark-navy.svg` | símbolo em navy sólido (também é o `mask-icon` do Safari) |
-| `favicon.svg` | símbolo navy sobre placa branca — é o favicon do site |
+| `astro-mark.svg` | tonal: as quatro peças giram em tom, do azul claro no topo ao marinho embaixo. Fundo claro |
+| `astro-mark-duo.svg` | dois tons alternados, mais gráfica e mais barata de imprimir. Fundo claro |
+| `astro-mark-navy.svg` | traço único em navy (também é o `mask-icon` do Safari) |
+| `astro-mark-light.svg` | negativo, tudo branco. Fundo escuro |
+| `astro-mark-night.svg` | branco e azul alternados — é a do site, guarda a cor que o branco puro perde |
+| `favicon.svg` | mono navy sobre placa branca. **Abaixo de 32px as fendas somam e o disco fecha, então o favicon é sempre o mono** |
 | `favicon-64.png` | fallback do favicon para navegador sem suporte a SVG |
-| `astro-badge.svg` | símbolo branco sobre placa navy, para avatar de rede social |
+| `astro-badge.svg` | negativo sobre placa navy, para avatar de rede social |
 
-Dentro do React o símbolo é componente: `src/components/brand/AstroMark.tsx` exporta `AstroMark` (símbolo completo, com `tone` = `light` \| `gradient` \| `navy` \| `mono`) e `AstroStar` (só a estrela, usada como marcador no `Label`, no marquee e nas listas do FAQ). A geometria é a mesma dos SVGs em `public/logo/`: mudou num lugar, mude nos dois.
+Paleta: `#0B2545` marinho, `#1E86CF` azul, `#2E5A87` aço, `#5B7A99` cinza-azul.
+
+Dentro do React o símbolo é componente: `src/components/brand/AstroMark.tsx` exporta `AstroMark` (com `tone` = `tonal` \| `duo` \| `mono` \| `negative` \| `night`) e `AstroStar` (só a estrela — o mesmo vão da marca remontado como contorno próprio, usada como marcador no `Label`, no marquee e nas listas do FAQ). A geometria é a mesma dos SVGs em `public/logo/`: mudou num lugar, mude nos dois.
 
 `public/apple-touch-icon.png` (180×180) e `public/og-image.png` (1200×630) saem de `tools/icon-generator.html`. Sirva a pasta por HTTP (`python -m http.server`), abra a página e capture cada placa no tamanho CSS exato.
 
@@ -117,6 +123,10 @@ Custo controlado: three.js entra num chunk separado por `React.lazy`; a contagem
 | `media/insight-*.jpg` | `Insights` |
 
 Os dois vídeos somam ~28 MB e estão versionados. Se o histórico começar a incomodar, mova para Git LFS ou para um CDN e troque só os caminhos.
+
+## Formulário
+
+**Scroll suave só no ponteiro fino.** Em tela de toque o Lenis intercepta o gesto e roda o scroll por JS: num arrastão rápido a página anda atrás do dedo e parece travamento. O celular usa o scroll nativo, que já tem inércia própria. Junto disso, `overscroll-behavior-y: none` e a cor de fundo no `html` matam a faixa que aparecia no pé do site — o vão do elástico pinta o fundo do `html`, não o do `body`, e não tem camada fixa atrás.
 
 ## Formulário
 

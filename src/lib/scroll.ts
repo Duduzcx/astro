@@ -7,8 +7,16 @@ import Lenis from 'lenis'
  */
 let lenis: Lenis | null = null
 
+/**
+ * O Lenis fica só no ponteiro fino. Em tela de toque ele intercepta o gesto e
+ * roda o scroll por JS, então um arrastão rápido acaba com a página andando
+ * atrás do dedo — parece travamento. O scroll nativo do celular já tem inércia
+ * própria e é o mais suave que existe ali.
+ */
 export function initSmoothScroll() {
-  if (lenis || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  if (lenis) return
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  if (window.matchMedia('(pointer: coarse)').matches) return
 
   lenis = new Lenis({ lerp: 0.105 })
   const raf = (time: number) => {

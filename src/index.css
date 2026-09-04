@@ -36,6 +36,12 @@
     /* O Lenis controla a suavização do scroll; o smooth nativo brigaria com ele. */
     scroll-padding-top: 96px;
     -webkit-text-size-adjust: 100%;
+    /* Sem elástico no fim da página: o vão do overscroll não tem camada fixa
+       atrás e aparecia como uma faixa de cor no pé do site. */
+    overscroll-behavior-y: none;
+    /* A cor precisa estar aqui também: o elástico pinta o fundo do html, não o
+       do body. */
+    background-color: var(--color-onyx);
   }
 
   body {

@@ -1,73 +1,82 @@
-import { useId } from 'react'
+/**
+ * Símbolo da Astro: um disco recortado em quatro pétalas, e o vão entre elas
+ * desenha uma estrela de quatro pontas. As fendas têm largura constante do
+ * centro à borda, então a marca fica idêntica em qualquer escala.
+ *
+ * Uma pétala só; as outras três são a mesma path girada em 90°. Mudou a
+ * geometria aqui, mudou nos arquivos de `public/logo/` também.
+ */
+const PETAL =
+  'M 71.84 50.99 Q 79.31 57.61 91.00 60.00 Q 79.31 62.39 71.84 69.01 L 93.91 91.08 A 46 46 0 0 0 93.91 28.92 Z'
+
+/** Ordem de desenho: topo, direita, base, esquerda. */
+const PETAL_ANGLES = [-90, 0, 90, 180] as const
+
+/* Paleta da marca. O azul lidera, o marinho fecha. */
+const BLUE = '#1E86CF'
+const STEEL = '#2E5A87'
+const NAVY = '#0B2545'
+const SLATE = '#5B7A99'
 
 /**
- * Símbolo da Astro: anel orbital aberto com uma estrela de quatro pontas na
- * abertura. Mesma geometria dos arquivos em `public/logo/`. Mudou aqui, muda lá.
+ * `tonal` é a versão cheia para fundo claro: as quatro peças giram em tom, do
+ * claro no topo ao marinho embaixo, uma volta de luz e não quatro cores soltas.
+ * `duo` alterna só dois tons, mais gráfica e mais barata de imprimir. `mono` é
+ * a de traço único, indicada abaixo de 32px, onde as fendas somam e o disco
+ * fecha. `negative` e `night` são as de fundo escuro — esta última guarda o
+ * azul da marca, que o branco puro perde.
  */
-const RING_PATH = 'M36.7 15.4A22 14.5 -38 1 0 43 36.7'
-const STAR_PATH =
-  'M51.5 9.2C51.5 16.6 54.1 19.5 60.8 19.5C54.1 19.5 51.5 22.4 51.5 29.8C51.5 22.4 48.9 19.5 42.2 19.5C48.9 19.5 51.5 16.6 51.5 9.2Z'
+type Tone = 'tonal' | 'duo' | 'mono' | 'negative' | 'night'
 
-/**
- * `light` é o padrão do site (fundo escuro). `gradient` é a versão de fundo
- * claro. `mono` herda `currentColor`, para a marca acompanhar o texto.
- */
-type Tone = 'light' | 'gradient' | 'navy' | 'mono'
+const TONES: Record<Tone, readonly [string, string, string, string]> = {
+  tonal: [BLUE, STEEL, NAVY, SLATE],
+  duo: [BLUE, NAVY, BLUE, NAVY],
+  mono: [NAVY, NAVY, NAVY, NAVY],
+  negative: ['#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF'],
+  night: ['#FFFFFF', BLUE, '#FFFFFF', BLUE],
+}
 
 export function AstroMark({
   className = '',
-  tone = 'light',
+  tone = 'night',
   title,
 }: {
   className?: string
   tone?: Tone
   title?: string
 }) {
-  /* Os ids de gradiente precisam ser únicos: a marca aparece várias vezes na página. */
-  const id = useId().replace(/:/g, '')
-  const ringId = `ring-${id}`
-  const starId = `star-${id}`
-
-  const ringStroke =
-    tone === 'gradient' ? `url(#${ringId})` : tone === 'navy' ? '#12294e' : tone === 'mono' ? 'currentColor' : '#f5f7fb'
-  const starFill =
-    tone === 'gradient' || tone === 'light'
-      ? `url(#${starId})`
-      : tone === 'navy'
-        ? '#12294e'
-        : 'currentColor'
+  const fills = TONES[tone]
 
   return (
     <svg
-      viewBox="0 0 64 64"
+      viewBox="-8 -8 136 136"
       className={className}
       role={title ? 'img' : undefined}
       aria-label={title}
       aria-hidden={title ? undefined : true}
     >
-      {tone === 'gradient' ? (
-        <linearGradient id={ringId} x1="8" y1="50" x2="46" y2="14" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#5c7fa6" />
-          <stop offset="1" stopColor="#13294c" />
-        </linearGradient>
-      ) : null}
-      {tone === 'gradient' || tone === 'light' ? (
-        <linearGradient id={starId} x1="51.5" y1="9.2" x2="51.5" y2="29.8" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor={tone === 'light' ? '#4d84e0' : '#2b7fc0'} />
-          <stop offset="1" stopColor={tone === 'light' ? '#8db4f5' : '#5fbaec'} />
-        </linearGradient>
-      ) : null}
-      <path d={RING_PATH} fill="none" stroke={ringStroke} strokeWidth="4" strokeLinecap="round" />
-      <path d={STAR_PATH} fill={starFill} />
+      {PETAL_ANGLES.map((angle, index) => (
+        <path key={angle} d={PETAL} fill={fills[index]} transform={`rotate(${angle} 60 60)`} />
+      ))}
     </svg>
   )
 }
 
-/** Só a estrela. Serve de marcador nos eyebrows e nas listas. */
+/**
+ * A estrela sozinha: é o vão entre as quatro pétalas, remontado como contorno
+ * próprio. Serve de marcador nos eyebrows e nas listas — o mesmo desenho da
+ * marca, na menor unidade possível.
+ */
+const STAR =
+  'M 71.84 50.99 Q 79.31 57.61 91 60 Q 79.31 62.39 71.84 69.01 ' +
+  'L 69.01 71.84 Q 62.39 79.31 60 91 Q 57.61 79.31 50.99 71.84 ' +
+  'L 48.16 69.01 Q 40.69 62.39 29 60 Q 40.69 57.61 48.16 50.99 ' +
+  'L 50.99 48.16 Q 57.61 40.69 60 29 Q 62.39 40.69 69.01 48.16 Z'
+
 export function AstroStar({ className = '' }: { className?: string }) {
   return (
-    <svg viewBox="41 9 20.5 21.3" className={className} aria-hidden="true">
-      <path d={STAR_PATH} fill="currentColor" />
+    <svg viewBox="29 29 62 62" className={className} aria-hidden="true">
+      <path d={STAR} fill="currentColor" />
     </svg>
   )
 }

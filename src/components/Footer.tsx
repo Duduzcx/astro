@@ -15,7 +15,7 @@ export function Footer() {
       <div className="relative flex min-h-[80svh] items-center">
         <AstroMark
           className="pointer-events-none absolute top-1/2 left-1/2 h-[62vmin] w-[62vmin] -translate-x-1/2 -translate-y-1/2 opacity-[0.045]"
-          tone="mono"
+          tone="negative"
         />
         <div className="shell relative">
           <BlurReveal className="mx-auto max-w-3xl text-center">
@@ -36,7 +36,9 @@ export function Footer() {
         </div>
       </div>
 
-      <div className="border-t border-white/10 bg-graphite/70 backdrop-blur-sm">
+      {/* Opaco de propósito: `backdrop-filter` custa caro a cada frame de scroll no
+          celular, e deixava a cor da TintLayer vazar por baixo do rodapé. */}
+      <div className="relative z-10 border-t border-white/10 bg-graphite">
         <div className="shell grid gap-10 py-14 md:grid-cols-[1.4fr_1fr_1fr]">
           <div>
             <Logo />
