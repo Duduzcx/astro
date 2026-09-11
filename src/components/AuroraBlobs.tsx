@@ -15,9 +15,9 @@ export function AuroraBlobs() {
             'radial-gradient(900px 700px at 100% 90%, rgba(122, 179, 255, 0.07), transparent 60%)',
         }}
       />
-      <div className="absolute top-[-12%] left-[8%] h-[46vh] w-[42vw] rounded-full bg-cobalt/12 blur-[90px] will-change-transform lg:animate-[astro-blob-a_26s_ease-in-out_infinite]" />
-      <div className="absolute right-[-6%] bottom-[6%] h-[42vh] w-[38vw] rounded-full bg-[#8db4f5]/10 blur-[90px] will-change-transform lg:animate-[astro-blob-b_31s_ease-in-out_infinite]" />
-      <div className="absolute top-[38%] left-[52%] h-[36vh] w-[30vw] rounded-full bg-[#5a8fe8]/10 blur-[90px] will-change-transform lg:animate-[astro-blob-a_37s_ease-in-out_infinite_reverse]" />
+      <div className="absolute top-[-12%] left-[8%] h-[46vh] w-[42vw] rounded-full bg-cobalt/12 blur-[60px] lg:blur-[90px] lg:will-change-transform lg:animate-[astro-blob-a_26s_ease-in-out_infinite]" />
+      <div className="absolute right-[-6%] bottom-[6%] h-[42vh] w-[38vw] rounded-full bg-[#8db4f5]/10 blur-[60px] lg:blur-[90px] lg:will-change-transform lg:animate-[astro-blob-b_31s_ease-in-out_infinite]" />
+      <div className="absolute top-[38%] left-[52%] h-[36vh] w-[30vw] rounded-full bg-[#5a8fe8]/10 blur-[60px] lg:blur-[90px] lg:will-change-transform lg:animate-[astro-blob-a_37s_ease-in-out_infinite_reverse]" />
     </div>
   )
 }

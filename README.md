@@ -59,8 +59,8 @@ O símbolo é um disco recortado em quatro pétalas; o vão entre elas desenha u
 | `astro-mark-navy.svg` | traço único em navy (também é o `mask-icon` do Safari) |
 | `astro-mark-light.svg` | negativo, tudo branco. Fundo escuro |
 | `astro-mark-night.svg` | branco e azul alternados — é a do site, guarda a cor que o branco puro perde |
-| `favicon.svg` | mono navy sobre placa branca. **Abaixo de 32px as fendas somam e o disco fecha, então o favicon é sempre o mono** |
-| `favicon-32.png` · `favicon-64.png` · `favicon-180.png` | favicon em PNG, mono navy sobre placa branca. Gerados por `tools/favicon-png.html` |
+| `favicon.svg` | tonal sobre placa branca — é o favicon do site |
+| `favicon-32.png` · `favicon-64.png` · `favicon-180.png` · `favicon-512.png` | favicon em PNG, **tonal** sobre placa branca. Gerados por `tools/favicon-png.html` |
 | `astro-badge.svg` | negativo sobre placa navy, para avatar de rede social |
 
 Paleta: `#0B2545` marinho, `#1E86CF` azul, `#2E5A87` aço, `#5B7A99` cinza-azul.
@@ -112,6 +112,10 @@ A ordem das seções em `App.tsx` e a tabela de desktop andam juntas: mexeu numa
 Custo controlado: three.js entra num chunk separado por `React.lazy`; a contagem de triângulos e o pixel ratio caem em celular e em máquina de poucos núcleos; e há uma queda de qualidade automática se os primeiros frames vierem lentos. Com `prefers-reduced-motion` o movimento para.
 
 **Telas de produto vivas.** Cada painel de `scenes/Panels` se monta quando entra na tela, uma vez: o gráfico do dashboard se desenha (`pathLength`) e ganha uma ponta que pulsa, os números contam, a vitrine entra card a card com um brilho varrendo as fotos, a conversa do WhatsApp cai balão a balão com o "digitando" antes de cada resposta, as sparklines da telemetria se traçam sob um radar que varre o painel, e no hub de integração os pacotes de dados correm pelas curvas (`<animateMotion>`, SMIL nativo — segue a curva exata sem custo de layout) enquanto o centro respira num anel que se expande. Loops só em transform, opacidade e traço de SVG.
+
+**Como medir antes de otimizar.** Um `requestAnimationFrame` que rola a página em passos fixos e guarda o intervalo entre frames dá p95, pior frame e porcentagem de frames acima de 24ms. Duas armadilhas: a primeira passada mede decodificação de mídia, não animação (rode duas vezes e compare), e desligar um efeito por vez no console é o único jeito de saber quem custa o quê — foi assim que o `skewY` dos grids apareceu valendo 13 pontos de frames longos por um efeito que quase ninguém nota.
+
+**O que ficou de fora por medição.** `content-visibility: auto` nas seções parecia o maior ganho estrutural, mas o `contain-intrinsic-size` mudou a altura da página em 3.400px — e as tabelas de keyframes da cena trabalham em fração da página, então os astros sairiam do lugar. Revertido.
 
 **Custo do movimento no celular.** Efeito que reage ao scroll só entra se não pagar em frames: o `DecodeText` escreve direto no nó e a 15fps (era um `setState` por frame, por eyebrow — a maior fonte de travamento), `useScrollLean` e o shear do marquee devolvem zero abaixo de 1024px (`skewY`/`skewX` repintam o bloco inteiro a cada frame), o `ScrollHud` nem monta fora do desktop, e o `TriangleDrift` cacheia o gradiente no resize em vez de alocar dois por frame em seis canvases.
 

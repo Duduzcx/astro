@@ -32,7 +32,7 @@ export function FilmBand() {
         muted
         loop
         playsInline
-        preload="metadata"
+        preload="none"
         aria-hidden="true"
       />
       <div className="absolute inset-0 bg-gradient-to-b from-[#0c1526] via-[#101c38]/60 to-onyx md:hidden" />

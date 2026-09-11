@@ -15,6 +15,7 @@ export function CtaBand() {
         src="/media/alpine.jpg"
         alt=""
         loading="lazy"
+        decoding="async"
         className="absolute inset-0 h-[124%] w-full object-cover opacity-50 [filter:saturate(0.55)_brightness(0.6)]"
       />
       <div className="absolute inset-0 bg-gradient-to-b from-onyx via-onyx/40 to-onyx" />

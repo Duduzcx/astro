@@ -61,6 +61,7 @@ export function Insights() {
                     src={post.image}
                     alt={post.alt}
                     loading="lazy"
+                    decoding="async"
                     className="aspect-[3/2] w-full object-cover opacity-80 [filter:saturate(0.55)_brightness(0.75)] transition-transform duration-500 group-hover:scale-[1.04]"
                   />
                 </div>

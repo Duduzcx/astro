@@ -641,7 +641,7 @@ export function TriScene() {
       powerPreference: 'high-performance',
     })
     renderer.setPixelRatio(
-      Math.min(window.devicePixelRatio, weakDevice ? 1 : lightweight ? 1.25 : 1.5),
+      Math.min(window.devicePixelRatio, weakDevice ? 1 : lightweight ? 1 : 1.25),
     )
     /**
      * O palco tem a altura da MAIOR tela já vista, e só cresce.
@@ -703,7 +703,7 @@ export function TriScene() {
 
     const spread = new THREE.Vector3(2.6, 1.7, 1.2)
     const sphereGeometry = buildTriangles(
-      weakDevice ? 2600 : lightweight ? 4000 : 8000,
+      weakDevice ? 2600 : lightweight ? 4000 : 5600,
       spread,
       true,
     )
@@ -713,7 +713,7 @@ export function TriScene() {
 
     /* Camada ambiente, sempre dispersa: os triângulos fracos flutuando em volta. */
     const ambientGeometry = buildTriangles(
-      lightweight ? 180 : 600,
+      lightweight ? 180 : 420,
       new THREE.Vector3(3.2, 2.1, 1.6),
       false,
     )
@@ -812,6 +812,7 @@ export function TriScene() {
     let previous = performance.now()
     let lastScrollY = window.scrollY
     let rush = 0
+    let painted = false
 
     /* Qualidade adaptativa: mede os primeiros segundos de frames reais e, se a
        máquina não segura a taxa, derruba resolução e camada ambiente uma vez
@@ -885,7 +886,17 @@ export function TriScene() {
       ambientMaterial.uniforms.uTime.value = time * 0.6
       ambientMaterial.uniforms.uOpacity.value = narrow ? 0.12 : 0.32
 
-      renderer.render(scene, camera)
+      /* A tabela tem trechos inteiros em opacidade zero — entre os astros, e
+         atrás do vídeo. Desenhar ali é preencher dois milhões de pixels com
+         nada. Pular a chamada devolve esses frames à rolagem; uma limpeza na
+         saída evita que o último quadro fique congelado na tela. */
+      if (current.opacity > 0.015) {
+        renderer.render(scene, camera)
+        painted = true
+      } else if (painted) {
+        renderer.clear()
+        painted = false
+      }
 
       if (!revealed) {
         revealed = true

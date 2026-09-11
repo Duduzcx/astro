@@ -1,6 +1,5 @@
 import { motion } from 'framer-motion'
 import { GiantWord, Label, Reveal, WordReveal  } from './ui/Primitives'
-import { useScrollLean } from '../lib/useScrollLean'
 
 /**
  * Lista do anexo "Dicionário de Entregáveis": o que é transferido para o
@@ -46,7 +45,6 @@ const deliverables = [
 ] as const
 
 export function Deliverables() {
-  const lean = useScrollLean()
   return (
     <section
       id="entregaveis"
@@ -68,7 +66,7 @@ export function Deliverables() {
           </p>
         </Reveal>
 
-        <motion.div style={{ skewY: lean }} className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {deliverables.map((item, index) => (
             <Reveal key={item.title} delay={0.05 * index}>
               <article className="graphite-card h-full">
@@ -94,7 +92,7 @@ export function Deliverables() {
               </article>
             </Reveal>
           ))}
-        </motion.div>
+        </div>
       </div>
     </section>
   )

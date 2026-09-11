@@ -58,7 +58,7 @@ export function About() {
               muted
               loop
               playsInline
-              preload="metadata"
+              preload="none"
               aria-label="Equipe trabalhando em um escritório com luz natural"
               className="aspect-[4/3] w-full rounded-xl object-cover opacity-90"
             />
