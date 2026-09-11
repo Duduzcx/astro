@@ -49,21 +49,29 @@ const GLYPHS = 'ASTRO<>/|=+*#0123456789'
 export function DecodeText({ text }: { text: string }) {
   const ref = useRef<HTMLSpanElement>(null)
   const inView = useInView(ref, { once: true, margin: '-40px' })
-  const [shown, setShown] = useState(text)
 
   useEffect(() => {
-    if (!inView || prefersReducedMotion()) return
+    const node = ref.current
+    if (!inView || !node || prefersReducedMotion()) return
     const start = performance.now()
     let frame = 0
+    let lastPaint = 0
     const tick = (now: number) => {
       const p = Math.min((now - start) / 600, 1)
-      const settled = Math.floor(p * text.length)
-      let out = ''
-      for (let i = 0; i < text.length; i += 1) {
-        const c = text[i]
-        out += c === ' ' || i < settled ? c : GLYPHS[Math.floor(Math.random() * GLYPHS.length)]
+      /* Embaralhar a 15fps: mais que isso o olho não lê como código, só
+         consome frames. E a escrita é direta no nó — setState por frame, com
+         vários eyebrows entrando juntos, custava um render do React por
+         frame cada um. Era a maior fonte de travamento na rolagem. */
+      if (now - lastPaint > 66 || p === 1) {
+        lastPaint = now
+        const settled = Math.floor(p * text.length)
+        let out = ''
+        for (let i = 0; i < text.length; i += 1) {
+          const c = text[i]
+          out += c === ' ' || i < settled ? c : GLYPHS[Math.floor(Math.random() * GLYPHS.length)]
+        }
+        node.textContent = out
       }
-      setShown(out)
       if (p < 1) frame = requestAnimationFrame(tick)
     }
     frame = requestAnimationFrame(tick)
@@ -72,7 +80,7 @@ export function DecodeText({ text }: { text: string }) {
 
   return (
     <span ref={ref} className="inline-block" style={{ minWidth: `${text.length}ch` }}>
-      {shown}
+      {text}
     </span>
   )
 }

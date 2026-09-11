@@ -15,7 +15,10 @@ export function Marquee() {
   /* A faixa inclina conforme a velocidade do scroll. */
   const { scrollY } = useScroll()
   const velocity = useVelocity(scrollY)
-  const skewX = useSpring(useTransform(velocity, [-1600, 1600], [6, -6]), {
+  /* Sem shear no celular: inclinar uma faixa desta largura repinta muito a
+     cada frame e engasga a rolagem por toque. */
+  const wide = typeof window !== 'undefined' && window.innerWidth >= 1024
+  const skewX = useSpring(useTransform(velocity, [-1600, 1600], wide ? [6, -6] : [0, 0]), {
     stiffness: 220,
     damping: 32,
   })

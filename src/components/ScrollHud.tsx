@@ -8,6 +8,23 @@ import { motion, useMotionValueEvent, useScroll, useSpring } from 'framer-motion
  * cada seção do main), então novas seções entram sozinhas.
  */
 export function ScrollHud() {
+  /* Escondido por CSS não basta: os observers e a mola continuavam rodando no
+     celular. Aqui ele nem monta. */
+  const [wide, setWide] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches,
+  )
+  useEffect(() => {
+    const q = window.matchMedia('(min-width: 1024px)')
+    const on = (e: MediaQueryListEvent) => setWide(e.matches)
+    q.addEventListener('change', on)
+    return () => q.removeEventListener('change', on)
+  }, [])
+
+  if (!wide) return null
+  return <Hud />
+}
+
+function Hud() {
   const { scrollYProgress } = useScroll()
   const bar = useSpring(scrollYProgress, { stiffness: 120, damping: 26, mass: 0.4 })
   const [percent, setPercent] = useState(0)

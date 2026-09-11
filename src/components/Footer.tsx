@@ -38,6 +38,13 @@ export function Footer() {
 
       {/* Opaco de propósito: `backdrop-filter` custa caro a cada frame de scroll no
           celular, e deixava a cor da TintLayer vazar por baixo do rodapé. */}
+      {/* O rodapé é grafite sobre uma seção transparente: a troca de cor era
+          uma borda dura que, na rolagem rápida, varria a tela como uma faixa.
+          Este degradê a dissolve em 144px antes da borda. */}
+      <div
+        aria-hidden="true"
+        className="relative z-10 -mb-px h-36 w-full bg-gradient-to-b from-transparent to-graphite"
+      />
       <div className="relative z-10 border-t border-white/10 bg-graphite">
         <div className="shell grid gap-10 py-14 md:grid-cols-[1.4fr_1fr_1fr]">
           <div>

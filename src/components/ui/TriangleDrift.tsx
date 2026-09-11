@@ -41,6 +41,7 @@ export function TriangleDrift({ className = '' }: { className?: string }) {
     let width = 0
     let height = 0
     let tris: Tri[] = []
+    let lineGrad: CanvasGradient | null = null
 
     /* Distribuição: a maioria perto do fio, alguns soltos mais longe — uma
        soma de dois aleatórios dá a concentração no meio sem cair em fórmula. */
@@ -63,7 +64,11 @@ export function TriangleDrift({ className = '' }: { className?: string }) {
       canvas.width = Math.round(width * dpr)
       canvas.height = Math.round(height * dpr)
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      const count = Math.round(width / (mobile ? 9 : 14))
+      lineGrad = ctx.createLinearGradient(0, 0, width, 0)
+      lineGrad.addColorStop(0, 'rgba(141,180,245,0)')
+      lineGrad.addColorStop(0.5, 'rgba(141,180,245,0.22)')
+      lineGrad.addColorStop(1, 'rgba(141,180,245,0)')
+      const count = Math.round(width / (mobile ? 22 : 14))
       tris = Array.from({ length: count }, () => spawn(Math.random() * width))
     }
     resize()
@@ -80,12 +85,10 @@ export function TriangleDrift({ className = '' }: { className?: string }) {
       ctx.lineWidth = 1
       ctx.lineJoin = 'round'
 
-      /* O fio: uma linha de um pixel que some nas pontas. */
-      const line = ctx.createLinearGradient(0, 0, width, 0)
-      line.addColorStop(0, 'rgba(141,180,245,0)')
-      line.addColorStop(0.5, 'rgba(141,180,245,0.22)')
-      line.addColorStop(1, 'rgba(141,180,245,0)')
-      ctx.strokeStyle = line
+      /* O fio: uma linha de um pixel que some nas pontas. O gradiente é
+         criado no resize, não a cada frame — alocar dois gradientes por frame
+         em seis canvases enchia o coletor de lixo durante a rolagem. */
+      ctx.strokeStyle = lineGrad!
       ctx.globalAlpha = 1
       ctx.beginPath()
       ctx.moveTo(0, height / 2 + 0.5)
@@ -96,15 +99,17 @@ export function TriangleDrift({ className = '' }: { className?: string }) {
          está perto dele acende; o efeito é uma onda de luz, não um objeto. */
       const cycle = (t % 7) / 7
       const pulseX = cycle < 0.6 ? (cycle / 0.6) * (width + 200) - 100 : -1000
-      const pulseGlow = ctx.createLinearGradient(pulseX - 120, 0, pulseX + 40, 0)
-      pulseGlow.addColorStop(0, 'rgba(245,247,251,0)')
-      pulseGlow.addColorStop(0.8, 'rgba(245,247,251,0.55)')
-      pulseGlow.addColorStop(1, 'rgba(245,247,251,0)')
-      ctx.strokeStyle = pulseGlow
-      ctx.beginPath()
-      ctx.moveTo(pulseX - 120, height / 2 + 0.5)
-      ctx.lineTo(pulseX + 40, height / 2 + 0.5)
-      ctx.stroke()
+      /* O pulso vira três segmentos de alfa crescente: mesma leitura de um
+         degradê, sem alocar um objeto por frame. */
+      ctx.strokeStyle = '#f5f7fb'
+      for (let k = 0; k < 3; k += 1) {
+        ctx.globalAlpha = 0.12 + k * 0.16
+        ctx.beginPath()
+        ctx.moveTo(pulseX - 120 + k * 40, height / 2 + 0.5)
+        ctx.lineTo(pulseX - 80 + k * 40, height / 2 + 0.5)
+        ctx.stroke()
+      }
+      ctx.globalAlpha = 1
 
       for (const tri of tris) {
         tri.x += tri.vx * dt

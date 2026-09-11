@@ -266,7 +266,7 @@ const VERTEX_SHADER = /* glsl */ `
     else if (aRing > 1.5 && aRing < 2.5) speed = -1.0;
     else if (aRing > 2.5) speed = 1.9;
     /* Arrastar rápido acelera a rotação e a deriva: o astro se agita. */
-    float angle = uTime * 0.07 * speed * (1.0 + uRush * 2.5);
+    float angle = uTime * 0.07 * speed * (1.0 + uRush * 0.8);
     vec3 core = aRing > 0.5
       ? rotateAxis(aSphere, discAxis, angle)
       : rotateAxis(aSphere, vec3(0.0, 1.0, 0.0), angle);
@@ -295,7 +295,7 @@ const VERTEX_SHADER = /* glsl */ `
     vColor = aColor * wPlanet + aHoleColor * wHole + aStarColor * wStar + aNovaColor * wNova;
 
     vec3 scatter = aScatter;
-    float drift = 0.09 * (1.0 + uRush * 3.0);
+    float drift = 0.09 * (1.0 + uRush * 0.9);
     scatter.x += sin(uTime * 0.28 + aRand * 6.2831) * drift;
     scatter.y += cos(uTime * 0.22 + aRand * 9.42) * drift;
 
@@ -842,8 +842,10 @@ export function TriScene() {
       const scrollNow = window.scrollY
       const speed = Math.abs(scrollNow - lastScrollY) / Math.max(delta, 0.001)
       lastScrollY = scrollNow
-      const rushTarget = Math.min(speed / 3200, 1)
-      rush += (rushTarget - rush) * (rushTarget > rush ? 0.35 : 0.06)
+      /* Sobe devagar e desce mais devagar ainda: a agitação vira uma maré,
+         não um susto. */
+      const rushTarget = Math.min(speed / 5200, 1)
+      rush += (rushTarget - rush) * (rushTarget > rush ? 0.035 : 0.015)
       const progress = scrollNow / maxScroll
       /* Abaixo do breakpoint roda a tabela presa ao hero, não a de página inteira. */
       const target = sampleKeyframes(narrow ? mobileTable : KEYFRAMES, progress)
@@ -873,7 +875,7 @@ export function TriScene() {
       sphereMaterial.uniforms.uRush.value = rush
       ambientMaterial.uniforms.uRush.value = rush
       /* O objeto afrouxa um pouco enquanto agitado e volta a fechar depois. */
-      sphereMaterial.uniforms.uMix.value = Math.min(1, current.mix + rush * 0.12)
+      sphereMaterial.uniforms.uMix.value = Math.min(1, current.mix + rush * 0.05)
       sphereMaterial.uniforms.uScale.value = current.scale
       sphereMaterial.uniforms.uOpacity.value = 0.95 * current.opacity
       sphereMaterial.uniforms.uCenter.value.set(
