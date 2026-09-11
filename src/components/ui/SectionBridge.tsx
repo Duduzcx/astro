@@ -8,7 +8,10 @@ import { motion } from 'framer-motion'
  */
 export function SectionBridge({ className = '' }: { className?: string }) {
   return (
-    <div aria-hidden="true" className={`relative z-10 h-px w-full ${className}`}>
+    <div
+      aria-hidden="true"
+      className={`relative z-10 h-px w-full overflow-x-clip ${className}`}
+    >
       <motion.div
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
@@ -25,7 +28,7 @@ export function SectionBridge({ className = '' }: { className?: string }) {
       />
       <motion.span
         initial={{ x: 0, opacity: 0 }}
-        whileInView={{ x: '84vw', opacity: [0, 1, 1, 0] }}
+        whileInView={{ x: 'calc(100vw - 12rem)', opacity: [0, 1, 1, 0] }}
         viewport={{ once: true, margin: '-12% 0px' }}
         transition={{ duration: 1.8, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
         className="absolute top-0 left-[8%] h-px w-16 bg-gradient-to-r from-transparent via-ivory to-transparent"

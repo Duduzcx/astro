@@ -88,8 +88,9 @@ const KEYFRAMES: Keyframes = [
   [0.942, 0.05, 0.0, 0.0, 0.56, 0.75, 2],
   /* ...e explode à vista quando o fechamento entra (0.933): o morph 2 para 3
      agrupado É a detonação — os triângulos voam do corpo para as cascas. */
-  [0.958, 0.08, 0.0, -0.35, 0.92, 1.0, 3],
-  [0.970, 0.08, 0.0, -0.62, 0.95, 0.8, 3],
+  [0.952, 0.08, 0.0, -0.35, 0.92, 1.0, 3],
+  /* Cauda plana: ver a nota da tabela do celular. */
+  [0.968, 0.08, 0.0, -0.62, 0.95, 0.8, 3],
   [1.0, 0.08, 0.0, -0.62, 0.95, 0.8, 3],
 ]
 
@@ -148,7 +149,12 @@ function heroCopyBand(): [number, number] {
  * uma mancha num aparelho de 640px. O raio sai da largura da tela, com teto de
  * altura para não virar faixa em tela comprida.
  */
-function mobileKeyframes(halfWidth: number, halfHeight: number, maxScroll: number): Keyframes {
+function mobileKeyframes(
+  halfWidth: number,
+  halfHeight: number,
+  maxScroll: number,
+  stage: number,
+): Keyframes {
   /* Encosta nas laterais sem sangrar muito, com teto de altura para não virar
      uma faixa gorda demais em tela comprida. */
   const radius = Math.min(1.12 * halfWidth, 0.62 * halfHeight)
@@ -161,7 +167,7 @@ function mobileKeyframes(halfWidth: number, halfHeight: number, maxScroll: numbe
   /* Trechos medidos em telas de rolagem, não em fração da página: 6% de uma
      página de 25.000px são 1.500px, e o objeto ainda estaria brilhando muito
      depois do hero. */
-  const screen = window.innerHeight / maxScroll
+  const screen = stage / maxScroll
   /* O planeta fica inteiro por meia tela de rolagem e leva mais uma tela
      para se desfazer — antes ele começava a dispersar quase no primeiro
      toque. */
@@ -192,8 +198,10 @@ function mobileKeyframes(halfWidth: number, halfHeight: number, maxScroll: numbe
     [0.938, 0.05, 0.0, 0.05, scale * 0.62, 0.72, 2],
     /* ...e explode à vista quando "A sua operação tem a resposta" entra
        (0.935): o morph 2 para 3 agrupado É a detonação. */
-    [0.954, 0.08, 0.0, -0.3, scale * 0.95, 1.0, 3],
-    [0.964, 0.08, 0.0, -0.5, scale, 0.85, 3],
+    [0.948, 0.08, 0.0, -0.3, scale * 0.95, 1.0, 3],
+    /* Daqui até o fim tudo é idêntico. No pé da página o scroll treme, e com
+       a cauda plana a tremida não vira mudança de tamanho. */
+    [0.962, 0.08, 0.0, -0.5, scale, 0.85, 3],
     [1.0, 0.08, 0.0, -0.5, scale, 0.85, 3],
   ]
 }
@@ -631,17 +639,38 @@ export function TriScene() {
     renderer.setPixelRatio(
       Math.min(window.devicePixelRatio, weakDevice ? 1 : lightweight ? 1.25 : 1.5),
     )
-    renderer.setSize(window.innerWidth, window.innerHeight, false)
-    /* O canvas se estica com o container. Assim, mesmo no intervalo entre o
-       resize e o próximo frame, nunca sobra um pedaço de tela sem desenho. */
+    /**
+     * O palco tem a altura da MAIOR tela já vista, e só cresce.
+     *
+     * A barra de URL do celular recolhe e volta o tempo todo durante o scroll.
+     * Qualquer coisa amarrada a `innerHeight` — projeção da câmera, tamanho do
+     * buffer, `maxScroll` — muda junto, e o objeto pula de tamanho de um frame
+     * para o outro. Congelando a altura do palco, a barra some e a tela apenas
+     * revela mais de um canvas que já estava desenhado ali. Nada reprojetá.
+     */
+    let stageHeight = window.innerHeight
+    renderer.setSize(window.innerWidth, stageHeight, false)
+    mount.style.height = `${stageHeight}px`
+    /* O canvas se estica com o container, então nem no intervalo entre o
+       resize e o próximo frame sobra pedaço de tela sem desenho. */
     renderer.domElement.style.width = '100%'
     renderer.domElement.style.height = '100%'
     renderer.domElement.style.display = 'block'
     mount.appendChild(renderer.domElement)
 
     const scene = new THREE.Scene()
-    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 20)
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / stageHeight, 0.1, 20)
     camera.position.z = 3.3
+
+    /* Definido depois da câmera, que ele reprojeta. */
+    const sizeStage = () => {
+      stageHeight = Math.max(stageHeight, window.innerHeight)
+      mount.style.height = `${stageHeight}px`
+      renderer.setSize(window.innerWidth, stageHeight, false)
+      camera.aspect = window.innerWidth / stageHeight
+      camera.updateProjectionMatrix()
+    }
+    sizeStage()
 
     const spread = new THREE.Vector3(2.6, 1.7, 1.2)
     const sphereGeometry = buildTriangles(
@@ -668,14 +697,17 @@ export function TriScene() {
        um layout a cada frame, que era o que travava o scroll em máquina lenta.
        Só recalcula quando o documento muda de verdade. */
     let maxScroll = 1
+    /* Medido contra a altura do palco, não contra `innerHeight`: assim o
+       progresso não se mexe quando a barra de URL entra e sai — era isso que
+       fazia a supernova oscilar de tamanho no fim da página. */
     const measureScroll = () => {
-      maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1)
+      maxScroll = Math.max(document.documentElement.scrollHeight - stageHeight, 1)
     }
     measureScroll()
 
     const halfHeight = Math.tan((camera.fov * Math.PI) / 360) * camera.position.z
     let halfWidth = halfHeight * camera.aspect
-    let mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll)
+    let mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll, stageHeight)
     let narrow = window.innerWidth < MOBILE_BREAKPOINT
     /* A intensidade da clareira é por frame (ela apaga depois do hero, para o
        buraco negro e a supernova aparecerem inteiros); aqui só a faixa. */
@@ -706,36 +738,27 @@ export function TriScene() {
      * depende de `innerHeight`, então recalcular no recolher da barra move o
      * progresso e o objeto pula na tela. Isso só na mudança real de largura.
      */
+    /**
+     * Só a LARGURA refaz a cena. Mudança de altura sozinha é a barra de URL
+     * indo e voltando: o palco cresce se precisar e nada mais se mexe, então
+     * não existe salto de tamanho possível.
+     */
     let lastWidth = window.innerWidth
-    let lastHeight = window.innerHeight
-    const BASE_FOV = camera.fov
     const onResize = () => {
       const width = window.innerWidth
-      const height = window.innerHeight
-      camera.aspect = width / height
-
-      if (width === lastWidth && Math.abs(height - lastHeight) < 180) {
-        /* Só a altura mudou (barra de URL). Com o FOV vertical fixo, uma tela
-           mais alta em px faz cada unidade de mundo valer mais pixels e o
-           objeto incha; quando a barra volta, ele encolhe. Travar o FOV
-           HORIZONTAL mantém a largura de mundo visível — e o tamanho em px —
-           exatamente iguais; a tela só ganha ou perde mundo em cima e embaixo. */
-        camera.fov = (2 * Math.atan(halfWidth / (camera.position.z * camera.aspect)) * 180) / Math.PI
-        camera.updateProjectionMatrix()
-        renderer.setSize(width, height, false)
+      if (width === lastWidth) {
+        if (window.innerHeight > stageHeight) sizeStage()
         return
       }
-
       lastWidth = width
-      lastHeight = height
-      camera.fov = BASE_FOV
-      camera.updateProjectionMatrix()
-      /* `false`: o CSS do canvas é 100%/100% e não pode virar pixel fixo. */
-      renderer.setSize(width, height, false)
+      /* Girou o aparelho ou redimensionou a janela: o palco volta a valer a
+         tela atual, em vez de guardar a altura da orientação anterior. */
+      stageHeight = window.innerHeight
+      sizeStage()
       halfWidth = halfHeight * camera.aspect
       narrow = width < MOBILE_BREAKPOINT
       measureScroll()
-      mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll)
+      mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll, stageHeight)
       applyClear()
     }
     window.addEventListener('resize', onResize)
@@ -747,7 +770,7 @@ export function TriScene() {
        mudam quando as fontes carregam e quando o documento cresce. */
     const remeasure = () => {
       measureScroll()
-      mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll)
+      mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll, stageHeight)
       applyClear()
     }
     const pageObserver = new ResizeObserver(remeasure)
@@ -772,7 +795,7 @@ export function TriScene() {
       if (sampled >= 90 && slowFrames > 30) {
         downgraded = true
         renderer.setPixelRatio(1)
-        renderer.setSize(window.innerWidth, window.innerHeight, false)
+        renderer.setSize(window.innerWidth, stageHeight, false)
         ambientField.visible = false
       }
     }
@@ -800,7 +823,7 @@ export function TriScene() {
       /* A clareira só existe enquanto o hero está na tela: dali para baixo os
          outros astros aparecem inteiros, sem o miolo apagado. */
       const heroClear = narrow
-        ? Math.min(Math.max(1 - window.scrollY / (window.innerHeight * 0.9), 0), 1)
+        ? Math.min(Math.max(1 - window.scrollY / (stageHeight * 0.9), 0), 1)
         : 0
       sphereMaterial.uniforms.uClear.value = heroClear
       ambientMaterial.uniforms.uClear.value = heroClear
@@ -858,7 +881,7 @@ export function TriScene() {
     <div
       ref={mountRef}
       aria-hidden="true"
-      className="fixed inset-0 z-0 opacity-0 transition-opacity duration-700"
+      className="pointer-events-none fixed top-0 left-0 z-0 w-full opacity-0 transition-opacity duration-700"
     />
   )
 }

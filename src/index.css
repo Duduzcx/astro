@@ -39,6 +39,10 @@
     /* Sem elástico no fim da página: o vão do overscroll não tem camada fixa
        atrás e aparecia como uma faixa de cor no pé do site. */
     overscroll-behavior-y: none;
+    /* `clip`, não `hidden`. `hidden` corta a sobra mas cria um container
+       rolável: o dedo ainda arrasta a página de lado, só que sem barra para
+       denunciar. `clip` corta sem criar container, então não há o que arrastar. */
+    overflow-x: clip;
     /* A cor precisa estar aqui também: o elástico pinta o fundo do html, não o
        do body. */
     background-color: var(--color-onyx);
@@ -56,7 +60,10 @@
     font-weight: 400;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
-    overflow-x: hidden;
+    overflow-x: clip;
+    /* O toque só pode rolar na vertical. É a garantia de que nenhum elemento
+       largo que escape do clip vire um arrasto lateral no celular. */
+    touch-action: pan-y;
   }
 
   /* Peso 480 é a assinatura: afirma sem gritar. Nunca negrito. */
