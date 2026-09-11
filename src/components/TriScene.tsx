@@ -648,7 +648,18 @@ export function TriScene() {
      * para o outro. Congelando a altura do palco, a barra some e a tela apenas
      * revela mais de um canvas que já estava desenhado ali. Nada reprojetá.
      */
-    let stageHeight = window.innerHeight
+    /**
+     * A altura inicial do palco vem de `100lvh` — o viewport GRANDE, com a
+     * barra de URL já recolhida. Assim o palco nasce no tamanho máximo e a
+     * barra recolhendo nunca o faz crescer; sem crescimento, sem reprojeção.
+     * Onde `lvh` não existe, cai para `innerHeight`.
+     */
+    const probe = document.createElement('div')
+    probe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:100lvh;pointer-events:none;visibility:hidden'
+    document.body.appendChild(probe)
+    const large = probe.offsetHeight
+    probe.remove()
+    let stageHeight = Math.max(window.innerHeight, large || 0)
     renderer.setSize(window.innerWidth, stageHeight, false)
     mount.style.height = `${stageHeight}px`
     /* O canvas se estica com o container, então nem no intervalo entre o
@@ -659,15 +670,29 @@ export function TriScene() {
     mount.appendChild(renderer.domElement)
 
     const scene = new THREE.Scene()
-    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / stageHeight, 0.1, 20)
+    const BASE_FOV = 50
+    const camera = new THREE.PerspectiveCamera(BASE_FOV, window.innerWidth / stageHeight, 0.1, 20)
     camera.position.z = 3.3
 
-    /* Definido depois da câmera, que ele reprojeta. */
+    /* Meia altura de mundo com o FOV base: constante, é a régua de todas as
+       posições e tamanhos das tabelas. A meia largura acompanha a largura da
+       tela e só muda quando a LARGURA muda. */
+    const halfHeight = Math.tan((BASE_FOV * Math.PI) / 360) * camera.position.z
+    let halfWidth = halfHeight * (window.innerWidth / stageHeight)
+
+    /**
+     * Se o palco precisar crescer mesmo assim, a projeção mantém a MESMA
+     * largura de mundo visível: o FOV vertical é recalculado para que
+     * tan(fov/2)·z·aspect continue igual a halfWidth. Pixels por unidade de
+     * mundo não mudam, então o objeto não muda de tamanho — a tela só ganha
+     * mundo em cima e embaixo.
+     */
     const sizeStage = () => {
       stageHeight = Math.max(stageHeight, window.innerHeight)
       mount.style.height = `${stageHeight}px`
       renderer.setSize(window.innerWidth, stageHeight, false)
       camera.aspect = window.innerWidth / stageHeight
+      camera.fov = (2 * Math.atan(halfWidth / (camera.position.z * camera.aspect)) * 180) / Math.PI
       camera.updateProjectionMatrix()
     }
     sizeStage()
@@ -705,8 +730,6 @@ export function TriScene() {
     }
     measureScroll()
 
-    const halfHeight = Math.tan((camera.fov * Math.PI) / 360) * camera.position.z
-    let halfWidth = halfHeight * camera.aspect
     let mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll, stageHeight)
     let narrow = window.innerWidth < MOBILE_BREAKPOINT
     /* A intensidade da clareira é por frame (ela apaga depois do hero, para o
@@ -754,8 +777,10 @@ export function TriScene() {
       /* Girou o aparelho ou redimensionou a janela: o palco volta a valer a
          tela atual, em vez de guardar a altura da orientação anterior. */
       stageHeight = window.innerHeight
+      /* Largura nova: a meia largura de mundo é refeita com o FOV base, e o
+         sizeStage a partir daí a preserva. */
+      halfWidth = halfHeight * (width / stageHeight)
       sizeStage()
-      halfWidth = halfHeight * camera.aspect
       narrow = width < MOBILE_BREAKPOINT
       measureScroll()
       mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll, stageHeight)

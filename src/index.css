@@ -341,27 +341,6 @@
   animation: astro-sheen 1.3s cubic-bezier(0.22, 1, 0.36, 1) 0.35s 1 both;
 }
 
-/* Onda entre seções: o caminho tem o dobro da largura e desliza um período
-   inteiro, então a emenda cai sempre no mesmo desenho. */
-@keyframes astro-wave {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-1440px);
-  }
-}
-
-/* A cobra: um traço curto corre pelo caminho inteiro puxado pelo dashoffset. */
-@keyframes astro-snake {
-  from {
-    stroke-dashoffset: 0;
-  }
-  to {
-    stroke-dashoffset: -2880;
-  }
-}
-
 /* Brilho varrendo um fundo (vitrine carregando, radar da telemetria). */
 @keyframes astro-shimmer {
   from {

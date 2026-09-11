@@ -22,7 +22,6 @@ import { Faq } from './components/Faq'
 import { Contact } from './components/Contact'
 import { Footer } from './components/Footer'
 import { SectionBridge } from './components/ui/SectionBridge'
-import { WaveBridge } from './components/ui/WaveBridge'
 
 /** three.js pesa ~500kB minificado, então a cena vem num chunk separado. */
 const TriScene = lazy(() =>
@@ -58,25 +57,25 @@ export default function App() {
         <Hero />
         <Marquee />
         <ServiceBlocks />
-        <WaveBridge />
+        <SectionBridge />
         <IntegrationsStrip />
         <Manifesto />
         <FilmBand />
         <Mission />
-        <WaveBridge flip />
+        <SectionBridge />
         <Cases />
         <Projects />
         <SectionBridge />
         <CtaBand />
         <Process />
         <Deliverables />
-        <WaveBridge />
+        <SectionBridge />
         <About />
         <Team />
         <SectionBridge />
         <Insights />
         <Faq />
-        <WaveBridge flip />
+        <SectionBridge />
         <Contact />
       </main>
 
