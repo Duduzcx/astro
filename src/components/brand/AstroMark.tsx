@@ -67,7 +67,7 @@ export function AstroMark({
  * próprio. Serve de marcador nos eyebrows e nas listas — o mesmo desenho da
  * marca, na menor unidade possível.
  */
-const STAR =
+export const STAR_PATH =
   'M 71.84 50.99 Q 79.31 57.61 91 60 Q 79.31 62.39 71.84 69.01 ' +
   'L 69.01 71.84 Q 62.39 79.31 60 91 Q 57.61 79.31 50.99 71.84 ' +
   'L 48.16 69.01 Q 40.69 62.39 29 60 Q 40.69 57.61 48.16 50.99 ' +
@@ -76,7 +76,7 @@ const STAR =
 export function AstroStar({ className = '' }: { className?: string }) {
   return (
     <svg viewBox="29 29 62 62" className={className} aria-hidden="true">
-      <path d={STAR} fill="currentColor" />
+      <path d={STAR_PATH} fill="currentColor" />
     </svg>
   )
 }

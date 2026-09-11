@@ -40,7 +40,7 @@ Ordem das seções (definida em `App.tsx`): hero, marquee, serviços, integraç�
 
 | Onde | O quê |
 | --- | --- |
-| `src/lib/site.ts` | e-mail, telefone, WhatsApp, cidade e as redes sociais quando existirem |
+| `src/lib/site.ts` | e-mail, telefone, WhatsApp, Instagram e cidade |
 | `src/components/Projects.tsx` | os seis projetos são **conceitos fictícios**, marcados com o selo "Projeto conceito". Troque por casos reais (e tire o selo) quando o cliente autorizar o nome |
 | `src/components/Cases.tsx` | os três cenários são exemplos genéricos de dor por segmento |
 | `src/components/Insights.tsx` | os posts são de exemplo, até o blog existir |
@@ -111,7 +111,9 @@ A ordem das seções em `App.tsx` e a tabela de desktop andam juntas: mexeu numa
 
 Custo controlado: three.js entra num chunk separado por `React.lazy`; a contagem de triângulos e o pixel ratio caem em celular e em máquina de poucos núcleos; e há uma queda de qualidade automática se os primeiros frames vierem lentos. Com `prefers-reduced-motion` o movimento para.
 
-**Redimensionamento tem duas metades.** O buffer do canvas acompanha a viewport em todo evento de resize: no celular a altura cresce ~60px quando a barra de URL recolhe, e um canvas do tamanho antigo deixa uma faixa sem desenho no pé da tela. Já a remedição de scroll fica atrás de uma guarda de 180px, porque `maxScroll` depende de `innerHeight` e recalcular no recolher da barra faz o progresso saltar e o objeto pular. O canvas também é esticado por CSS (`width/height: 100%`, com `setSize(..., false)`), então nem no intervalo de um frame sobra tela sem cobertura.
+**Movimento entre seções.** `ui/SectionBridge` é uma linha de luz que se desenha do centro para as pontas quando a costura entre duas seções entra na tela, com um clarão por baixo e uma faísca que percorre a linha uma vez — só transform e opacidade. Os cards entram com escala e um brilho que atravessa o vidro uma vez (`.is-entered .graphite-card::after`, disparado pelo `Reveal`); no desktop o mesmo brilho responde ao hover. O trilho do Processo passa por uma mola (`useSpring`) para não repassar aos cards os saltos do scroll por toque.
+
+**Redimensionamento tem duas metades.** O buffer do canvas acompanha a viewport em todo evento de resize: no celular a altura cresce ~60px quando a barra de URL recolhe, e um canvas do tamanho antigo deixa uma faixa sem desenho no pé da tela. Já a remedição de scroll fica atrás de uma guarda de 180px, porque `maxScroll` depende de `innerHeight` e recalcular no recolher da barra faz o progresso saltar e o objeto pular. Nessa mesma janela o **FOV horizontal fica travado**: com o FOV vertical fixo, uma tela mais alta em pixels faria cada unidade de mundo valer mais pixels e o objeto incharia quando a barra some, encolhendo quando ela volta. Travar a largura de mundo visível mantém o tamanho em pixels idêntico — a tela só ganha ou perde mundo em cima e embaixo. O canvas também é esticado por CSS (`width/height: 100%`, com `setSize(..., false)`), então nem no intervalo de um frame sobra tela sem cobertura.
 
 ## Mídia
 

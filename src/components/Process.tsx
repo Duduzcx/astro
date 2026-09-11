@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { motion, useScroll, useTransform } from 'framer-motion'
+import { motion, useScroll, useSpring, useTransform } from 'framer-motion'
 import { GiantWord, Label, Reveal, WordReveal } from './ui/Primitives'
 
 /** As cinco fases do documento de entregáveis. Os marcos de pagamento seguem elas. */
@@ -85,7 +85,11 @@ export function Process() {
   }, [pinned])
 
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end end'] })
-  const x = useTransform(scrollYProgress, [0.12, 0.92], [0, -shift])
+  const rawX = useTransform(scrollYProgress, [0.12, 0.92], [0, -shift])
+  /* A mola absorve os saltos do scroll por toque: o trilho desliza atrás do
+     dedo em vez de pular com ele. Rigidez baixa e massa leve = deslize longo
+     sem oscilar. */
+  const x = useSpring(rawX, { stiffness: 110, damping: 28, mass: 0.55 })
 
   const header = (
     <>

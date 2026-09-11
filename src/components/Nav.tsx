@@ -206,6 +206,14 @@ export function Nav() {
                 Chamar no WhatsApp
               </a>
               <a
+                href={site.instagram.href}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 block text-center text-[14px] text-ash"
+              >
+                Instagram {site.instagram.label}
+              </a>
+              <a
                 href={site.email.href}
                 className="mt-3 block text-center text-[13px] break-all text-slate"
               >

@@ -1,7 +1,6 @@
 /**
  * Fonte única dos dados da empresa e dos alvos de navegação.
  * O e-mail ainda é o Gmail provisório, até a caixa no domínio existir.
- * Redes sociais entram aqui quando os perfis forem criados.
  */
 export const site = {
   name: 'Astro Soluções',
@@ -17,6 +16,10 @@ export const site = {
   whatsapp: {
     label: '(11) 92157-2675',
     href: 'https://wa.me/5511921572675?text=Quero%20agendar%20um%20diagn%C3%B3stico%20com%20a%20Astro%20Solu%C3%A7%C3%B5es',
+  },
+  instagram: {
+    label: '@astros.solucoes',
+    href: 'https://www.instagram.com/astros.solucoes',
   },
   hours: 'Atendimento 24h — equipe das 8h às 21h e plantão para urgências no restante',
   city: 'São Paulo, Brasil',

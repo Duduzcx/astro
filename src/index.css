@@ -314,6 +314,38 @@
   }
 }
 
+/* Brilho que atravessa o card uma vez, quando ele entra na tela. No desktop
+   o mesmo brilho responde ao hover; no celular esta é a única chance dele. */
+@keyframes astro-sheen {
+  from {
+    background-position: 100% 0;
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  to {
+    background-position: 0 0;
+    opacity: 0;
+  }
+}
+
+.is-entered .graphite-card::after {
+  animation: astro-sheen 1.3s cubic-bezier(0.22, 1, 0.36, 1) 0.35s 1 both;
+}
+
+/* Ponte entre seções: uma linha de luz que se desenha do centro para as
+   pontas, com um clarão suave embaixo. */
+@keyframes astro-bridge-glow {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
 @keyframes astro-pulse {
   0%,
   100% {

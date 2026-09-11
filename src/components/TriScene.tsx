@@ -84,8 +84,8 @@ const KEYFRAMES: Keyframes = [
   /* A poeira condensa: uma estrela nasce durante o contato... */
   /* No vão entre a coluna de texto e o card do formulário — atrás do card ela
      ficaria escondida. */
-  [0.92, 0.06, 0.0, 0.1, 0.52, 0.6, 2],
-  [0.94, 0.05, 0.0, 0.0, 0.56, 0.75, 2],
+  [0.91, 0.06, 0.0, 0.1, 0.52, 0.6, 2],
+  [0.942, 0.05, 0.0, 0.0, 0.56, 0.75, 2],
   /* ...e explode à vista quando o fechamento entra (0.933): o morph 2 para 3
      agrupado É a detonação — os triângulos voam do corpo para as cascas. */
   [0.958, 0.08, 0.0, -0.35, 0.92, 1.0, 3],
@@ -156,14 +156,17 @@ function mobileKeyframes(halfWidth: number, halfHeight: number, maxScroll: numbe
   /* O disco é inclinado, então a caixa dele nasce torta; um empurrão pequeno
      recentraliza. Menor que antes porque o objeto encolheu: a mesma correção
      em fração da meia largura deslocava demais. */
-  const x = 0.04
+  const x = 0.0
 
   /* Trechos medidos em telas de rolagem, não em fração da página: 6% de uma
      página de 25.000px são 1.500px, e o objeto ainda estaria brilhando muito
      depois do hero. */
   const screen = window.innerHeight / maxScroll
-  const hold = Math.min(screen * 0.25, 0.12)
-  const settle = Math.min(screen * 0.9, 0.2)
+  /* O planeta fica inteiro por meia tela de rolagem e leva mais uma tela
+     para se desfazer — antes ele começava a dispersar quase no primeiro
+     toque. */
+  const hold = Math.min(screen * 0.5, 0.12)
+  const settle = Math.min(screen * 1.5, 0.2)
 
   return [
     /* Hero: planeta atrás do texto, um pouco acima do centro para o arco de
@@ -177,16 +180,16 @@ function mobileKeyframes(halfWidth: number, halfHeight: number, maxScroll: numbe
     [0.185, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     /* Buraco negro formado enquanto "Seu negócio em novas órbitas" está na
        tela (a Missão ocupa 0.222 a 0.294 nesta largura). */
-    [0.238, 0.12, 0.0, -0.15, scale * 0.95, 0.38, 1],
-    [0.285, 0.12, 0.0, -0.15, scale * 0.95, 0.38, 1],
+    [0.232, 0.12, 0.0, -0.15, scale * 0.95, 0.38, 1],
+    [0.292, 0.12, 0.0, -0.15, scale * 0.95, 0.38, 1],
     [0.335, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     [0.55, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     /* Disperso e quase invisível, o campo vira poeira dourada de estrela. */
     [0.62, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 2],
     [0.875, 0.95, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 2],
     /* A poeira condensa: uma estrela nasce durante o contato... */
-    [0.915, 0.07, 0.0, 0.15, scale * 0.58, 0.55, 2],
-    [0.935, 0.05, 0.0, 0.05, scale * 0.62, 0.7, 2],
+    [0.905, 0.07, 0.0, 0.15, scale * 0.58, 0.55, 2],
+    [0.938, 0.05, 0.0, 0.05, scale * 0.62, 0.72, 2],
     /* ...e explode à vista quando "A sua operação tem a resposta" entra
        (0.935): o morph 2 para 3 agrupado É a detonação. */
     [0.954, 0.08, 0.0, -0.3, scale * 0.95, 1.0, 3],
@@ -705,18 +708,31 @@ export function TriScene() {
      */
     let lastWidth = window.innerWidth
     let lastHeight = window.innerHeight
+    const BASE_FOV = camera.fov
     const onResize = () => {
       const width = window.innerWidth
       const height = window.innerHeight
       camera.aspect = width / height
+
+      if (width === lastWidth && Math.abs(height - lastHeight) < 180) {
+        /* Só a altura mudou (barra de URL). Com o FOV vertical fixo, uma tela
+           mais alta em px faz cada unidade de mundo valer mais pixels e o
+           objeto incha; quando a barra volta, ele encolhe. Travar o FOV
+           HORIZONTAL mantém a largura de mundo visível — e o tamanho em px —
+           exatamente iguais; a tela só ganha ou perde mundo em cima e embaixo. */
+        camera.fov = (2 * Math.atan(halfWidth / (camera.position.z * camera.aspect)) * 180) / Math.PI
+        camera.updateProjectionMatrix()
+        renderer.setSize(width, height, false)
+        return
+      }
+
+      lastWidth = width
+      lastHeight = height
+      camera.fov = BASE_FOV
       camera.updateProjectionMatrix()
       /* `false`: o CSS do canvas é 100%/100% e não pode virar pixel fixo. */
       renderer.setSize(width, height, false)
       halfWidth = halfHeight * camera.aspect
-
-      if (width === lastWidth && Math.abs(height - lastHeight) < 180) return
-      lastWidth = width
-      lastHeight = height
       narrow = width < MOBILE_BREAKPOINT
       measureScroll()
       mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll)

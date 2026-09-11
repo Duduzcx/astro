@@ -60,7 +60,7 @@ export function Contact() {
 
             {/* Quem não preenche formulário precisa de outra porta. */}
             <Reveal delay={0.26}>
-              <dl className="mt-9 grid gap-5 border-t border-white/10 pt-7 sm:grid-cols-2">
+              <dl className="mt-9 grid gap-5 border-t border-white/10 pt-7 sm:grid-cols-3">
                 <div>
                   <dt className="label-voice text-[10px]">E-mail</dt>
                   <dd className="mt-1.5">
@@ -80,6 +80,19 @@ export function Contact() {
                       className="text-[15px] text-ivory transition-colors hover:text-[#8db4f5]"
                     >
                       {site.phone.label}
+                    </a>
+                  </dd>
+                </div>
+                <div>
+                  <dt className="label-voice text-[10px]">Instagram</dt>
+                  <dd className="mt-1.5">
+                    <a
+                      href={site.instagram.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[15px] text-ivory transition-colors hover:text-[#8db4f5]"
+                    >
+                      {site.instagram.label}
                     </a>
                   </dd>
                 </div>

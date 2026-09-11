@@ -1,4 +1,4 @@
-import { AstroMark } from '../brand/AstroMark'
+import { AstroMark, STAR_PATH } from '../brand/AstroMark'
 
 /**
  * Telas de produto fictícias: janelas em grafite com cobalto como única cor.
@@ -232,7 +232,10 @@ export function PipelinePanel() {
           )
         })}
         <circle cx="222" cy="110" r="34" fill="#0a0f1e" stroke="#4d84e0" strokeWidth="1.6" />
-        <path d="M222 92 236 122H208L222 92Z" fill="none" stroke="#f5f7fb" strokeWidth="2" strokeLinejoin="round" />
+        {/* A estrela da marca no centro do hub: mesmo desenho do símbolo. */}
+        <g transform="translate(222 107) scale(0.46) translate(-60 -60)">
+          <path d={STAR_PATH} fill="#f5f7fb" />
+        </g>
         {outputs.map((label, i) => {
           const y = 45 + i * 65
           return (

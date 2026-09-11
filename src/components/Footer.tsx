@@ -46,7 +46,32 @@ export function Footer() {
               Sistemas, sites, automações e integrações sob medida para empresas que querem parar
               de operar no manual.
             </p>
-            {/* Redes sociais entram aqui quando os perfis existirem. */}
+            <ul className="mt-6 flex flex-wrap gap-2.5">
+              <li>
+                <a
+                  href={site.instagram.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/12 px-3.5 py-1.5 text-[13px] text-ash transition-colors hover:border-white/30 hover:text-ivory"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5">
+                    <rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+                    <circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" strokeWidth="1.6" />
+                    <circle cx="17.3" cy="6.7" r="1.1" fill="currentColor" />
+                  </svg>
+                  {site.instagram.label}
+                </a>
+              </li>
+              <li>
+                <a
+                  href={site.whatsapp.href}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/12 px-3.5 py-1.5 text-[13px] text-ash transition-colors hover:border-white/30 hover:text-ivory"
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#4ade80]" />
+                  WhatsApp
+                </a>
+              </li>
+            </ul>
           </div>
 
           <nav aria-label="Mapa do site">
