@@ -363,18 +363,6 @@
   }
 }
 
-/* Ponte entre seções: uma linha de luz que se desenha do centro para as
-   pontas, com um clarão suave embaixo. */
-@keyframes astro-bridge-glow {
-  0%,
-  100% {
-    opacity: 0.35;
-  }
-  50% {
-    opacity: 0.8;
-  }
-}
-
 @keyframes astro-pulse {
   0%,
   100% {
