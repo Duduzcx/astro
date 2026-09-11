@@ -813,6 +813,7 @@ export function TriScene() {
     let lastScrollY = window.scrollY
     let rush = 0
     let painted = false
+    let frameCount = 0
 
     /* Qualidade adaptativa: mede os primeiros segundos de frames reais e, se a
        máquina não segura a taxa, derruba resolução e camada ambiente uma vez
@@ -890,7 +891,11 @@ export function TriScene() {
          atrás do vídeo. Desenhar ali é preencher dois milhões de pixels com
          nada. Pular a chamada devolve esses frames à rolagem; uma limpeza na
          saída evita que o último quadro fique congelado na tela. */
-      if (current.opacity > 0.015) {
+      /* Disperso e fraco, o campo é textura: a 30fps ninguém nota, e é
+         metade do custo em mais da metade da página. */
+      frameCount += 1
+      const restful = current.mix > 0.85 && current.opacity < 0.3
+      if (current.opacity > 0.015 && !(restful && frameCount % 2)) {
         renderer.render(scene, camera)
         painted = true
       } else if (painted) {

@@ -11,23 +11,27 @@ const inputClasses =
  * enxerga HTML estático. Ao lado, o atalho: 20 minutos no WhatsApp.
  */
 export function Contact() {
-  const [sent, setSent] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
 
-  /* Envio por AJAX: POST urlencoded para a própria página. */
+  /* Envio por AJAX: POST urlencoded para a própria página. Falhou (rede,
+     deploy fora do Netlify, 4xx/5xx), a tela diz que falhou e aponta o
+     WhatsApp — confirmar sem ter enviado era perder lead em silêncio. */
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    setStatus('sending')
     const data = new FormData(event.currentTarget)
     const body = new URLSearchParams(data as unknown as Record<string, string>).toString()
     try {
-      await fetch('/', {
+      const response = await fetch('/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body,
       })
+      if (!response.ok) throw new Error(String(response.status))
+      setStatus('sent')
     } catch {
-      /* Offline ou dev local: confirma mesmo assim, os contatos diretos estão ao lado. */
+      setStatus('error')
     }
-    setSent(true)
   }
 
   return (
@@ -101,14 +105,41 @@ export function Contact() {
           </div>
 
           <Reveal delay={0.15}>
-            {sent ? (
-              <div className="graphite-card flex h-full flex-col items-start justify-center">
+            {status === 'sent' ? (
+              <div
+                role="status"
+                className="graphite-card flex h-full flex-col items-start justify-center"
+              >
                 <AstroMark className="mb-5 h-12 w-12" />
                 <p className="text-[1.4rem] text-ivory">Recebido ✓</p>
                 <p className="mt-3 max-w-sm text-ash">
                   Obrigado! A gente lê com atenção e responde em até um dia útil — normalmente
                   antes.
                 </p>
+              </div>
+            ) : status === 'error' ? (
+              <div
+                role="alert"
+                className="graphite-card flex h-full flex-col items-start justify-center"
+              >
+                <p className="text-[1.4rem] text-ivory">Não foi dessa vez.</p>
+                <p className="mt-3 max-w-sm text-ash">
+                  O envio falhou. Manda direto no WhatsApp que a gente responde na hora:
+                </p>
+                <a
+                  href={site.whatsapp.href}
+                  className="mt-5 inline-flex items-center gap-2.5 rounded-full bg-obsidian px-6 py-3.5 text-[15px] text-ivory transition-colors hover:bg-[#1e2c4c]"
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#4ade80]" />
+                  {site.whatsapp.label}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setStatus('idle')}
+                  className="mt-4 text-[13px] text-slate underline underline-offset-4 hover:text-ivory"
+                >
+                  Tentar de novo
+                </button>
               </div>
             ) : (
               <form
@@ -119,6 +150,14 @@ export function Contact() {
                 className="graphite-card flex flex-col gap-3"
               >
                 <input type="hidden" name="form-name" value="contato" />
+                {/* Honeypot: humano não vê, robô preenche, Netlify descarta. */}
+                <input
+                  name="bot-field"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden="true"
+                  className="hidden"
+                />
                 <label className="sr-only" htmlFor="contato-nome">
                   Nome
                 </label>
@@ -162,9 +201,10 @@ export function Contact() {
                 />
                 <button
                   type="submit"
-                  className="mt-2 inline-flex items-center justify-center gap-2.5 rounded-full bg-cobalt px-7 py-3.5 text-[15px] font-[420] text-white transition-colors duration-300 hover:bg-[#5d92ea]"
+                  disabled={status === 'sending'}
+                  className="mt-2 inline-flex items-center justify-center gap-2.5 rounded-full bg-cobalt px-7 py-3.5 text-[15px] font-[420] text-white transition-colors duration-300 hover:bg-[#5d92ea] disabled:opacity-60"
                 >
-                  Enviar desafio <ArrowGlyph />
+                  {status === 'sending' ? 'Enviando…' : 'Enviar desafio'} <ArrowGlyph />
                 </button>
               </form>
             )}

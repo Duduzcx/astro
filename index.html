@@ -24,7 +24,7 @@
       content="Sites, sistemas, automações e integrações. Da primeira conversa ao software rodando em produção — com o código no seu nome."
     />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:image" content="https://astrosolucoes.com.br/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
@@ -33,7 +33,8 @@
       name="twitter:description"
       content="Sites, sistemas, automações e integrações. Da primeira conversa ao software rodando em produção — com o código no seu nome."
     />
-    <meta name="twitter:image" content="/og-image.png" />
+    <meta name="twitter:image" content="https://astrosolucoes.com.br/og-image.png" />
+    <link rel="canonical" href="https://astrosolucoes.com.br/" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -74,7 +75,7 @@
          então o formulário React de Contact.tsx precisa deste espelho oculto
          com os mesmos campos. -->
     <form name="contato" netlify netlify-honeypot="bot-field" hidden>
-      <input name="nome" /><input name="email" /><input name="empresa" />
+      <input name="bot-field" /><input name="nome" /><input name="email" /><input name="empresa" />
       <textarea name="desafio"></textarea>
     </form>
     <div id="root"></div>

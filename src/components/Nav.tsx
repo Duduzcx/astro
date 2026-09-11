@@ -78,7 +78,7 @@ export function Nav() {
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.7, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
       className={`fixed inset-x-0 top-0 z-50 transition-colors duration-300 ${
-        scrolled ? 'bg-onyx/95 lg:bg-onyx/85 lg:backdrop-blur-md' : ''
+        scrolled ? 'bg-onyx/94' : ''
       }`}
     >
       <nav className="shell flex h-14 items-center justify-between md:h-20" aria-label="Principal">
@@ -150,6 +150,9 @@ export function Nav() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu"
             className="fixed inset-0 top-14 z-40 flex flex-col overflow-hidden bg-onyx md:top-20 lg:hidden"
           >
             <div className="aurora" aria-hidden="true" />
