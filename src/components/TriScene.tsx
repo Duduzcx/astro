@@ -239,6 +239,7 @@ const VERTEX_SHADER = /* glsl */ `
   attribute float aRing;
   uniform float uMix;
   uniform float uForm;
+  uniform float uRush;
   uniform float uTime;
   uniform float uScale;
   uniform vec2 uCenter;
@@ -264,7 +265,8 @@ const VERTEX_SHADER = /* glsl */ `
     if (aRing > 0.5 && aRing < 1.5) speed = 1.4;
     else if (aRing > 1.5 && aRing < 2.5) speed = -1.0;
     else if (aRing > 2.5) speed = 1.9;
-    float angle = uTime * 0.07 * speed;
+    /* Arrastar rápido acelera a rotação e a deriva: o astro se agita. */
+    float angle = uTime * 0.07 * speed * (1.0 + uRush * 2.5);
     vec3 core = aRing > 0.5
       ? rotateAxis(aSphere, discAxis, angle)
       : rotateAxis(aSphere, vec3(0.0, 1.0, 0.0), angle);
@@ -293,8 +295,9 @@ const VERTEX_SHADER = /* glsl */ `
     vColor = aColor * wPlanet + aHoleColor * wHole + aStarColor * wStar + aNovaColor * wNova;
 
     vec3 scatter = aScatter;
-    scatter.x += sin(uTime * 0.28 + aRand * 6.2831) * 0.09;
-    scatter.y += cos(uTime * 0.22 + aRand * 9.42) * 0.09;
+    float drift = 0.09 * (1.0 + uRush * 3.0);
+    scatter.x += sin(uTime * 0.28 + aRand * 6.2831) * drift;
+    scatter.y += cos(uTime * 0.22 + aRand * 9.42) * drift;
 
     vec3 position3 = mix(core, scatter, uMix) * uScale;
     position3.xy += uCenter;
@@ -607,6 +610,7 @@ function makeMaterial(opacity: number) {
     uniforms: {
       uMix: { value: 0 },
       uForm: { value: 0 },
+      uRush: { value: 0 },
       uTime: { value: 0 },
       uScale: { value: 1 },
       uCenter: { value: new THREE.Vector2(0, 0) },
@@ -806,6 +810,8 @@ export function TriScene() {
 
     let frame = 0
     let previous = performance.now()
+    let lastScrollY = window.scrollY
+    let rush = 0
 
     /* Qualidade adaptativa: mede os primeiros segundos de frames reais e, se a
        máquina não segura a taxa, derruba resolução e camada ambiente uma vez
@@ -831,7 +837,14 @@ export function TriScene() {
       previous = now
       considerDowngrade(delta)
 
-      const progress = window.scrollY / maxScroll
+      /* Velocidade do scroll vira agitação: sobe rápido no arrasto, decai
+         devagar quando o dedo para. Entra no shader como uRush. */
+      const scrollNow = window.scrollY
+      const speed = Math.abs(scrollNow - lastScrollY) / Math.max(delta, 0.001)
+      lastScrollY = scrollNow
+      const rushTarget = Math.min(speed / 3200, 1)
+      rush += (rushTarget - rush) * (rushTarget > rush ? 0.35 : 0.06)
+      const progress = scrollNow / maxScroll
       /* Abaixo do breakpoint roda a tabela presa ao hero, não a de página inteira. */
       const target = sampleKeyframes(narrow ? mobileTable : KEYFRAMES, progress)
 
@@ -857,7 +870,10 @@ export function TriScene() {
       sphereMaterial.uniforms.uTime.value = time
       sphereMaterial.uniforms.uForm.value = current.form
       ambientMaterial.uniforms.uForm.value = current.form
-      sphereMaterial.uniforms.uMix.value = current.mix
+      sphereMaterial.uniforms.uRush.value = rush
+      ambientMaterial.uniforms.uRush.value = rush
+      /* O objeto afrouxa um pouco enquanto agitado e volta a fechar depois. */
+      sphereMaterial.uniforms.uMix.value = Math.min(1, current.mix + rush * 0.12)
       sphereMaterial.uniforms.uScale.value = current.scale
       sphereMaterial.uniforms.uOpacity.value = 0.95 * current.opacity
       sphereMaterial.uniforms.uCenter.value.set(

@@ -1,4 +1,6 @@
-import { AnimatedNumber, GiantWord, Reveal, WordReveal } from './ui/Primitives'
+import { motion } from 'framer-motion'
+import { AnimatedNumber, GiantWord, Reveal, WordReveal  } from './ui/Primitives'
+import { useScrollLean } from '../lib/useScrollLean'
 
 /**
  * Cenários por segmento, sem nome de cliente. Trocar por casos reais conforme
@@ -35,6 +37,7 @@ const cases = [
 ] as const
 
 export function Cases() {
+  const lean = useScrollLean()
   return (
     <section id="resultados" aria-label="Resultados" className="relative z-10 overflow-hidden py-24 md:py-32">
       <GiantWord word="Prova" className="opacity-70" />
@@ -47,7 +50,7 @@ export function Cases() {
           </p>
         </Reveal>
 
-        <div className="mt-14 grid gap-4 md:grid-cols-3">
+        <motion.div style={{ skewY: lean }} className="mt-14 grid gap-4 md:grid-cols-3">
           {cases.map((item, index) => (
             <Reveal key={item.client} delay={0.08 * index}>
               <article className="graphite-card flex h-full flex-col">
@@ -87,7 +90,7 @@ export function Cases() {
               </article>
             </Reveal>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   )

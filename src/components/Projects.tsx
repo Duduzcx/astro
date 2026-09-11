@@ -1,4 +1,6 @@
-import { GiantWord, Label, Reveal, WordReveal } from './ui/Primitives'
+import { motion } from 'framer-motion'
+import { GiantWord, Label, Reveal, WordReveal  } from './ui/Primitives'
+import { useScrollLean } from '../lib/useScrollLean'
 import { AstroMark } from './brand/AstroMark'
 
 /**
@@ -71,6 +73,7 @@ const projects = [
 ] as const
 
 export function Projects() {
+  const lean = useScrollLean()
   return (
     <section
       id="projetos"
@@ -98,7 +101,7 @@ export function Projects() {
           </p>
         </Reveal>
 
-        <div className="mt-14 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <motion.div style={{ skewY: lean }} className="mt-14 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project, index) => (
             <Reveal key={project.name} delay={0.06 * index}>
               <article className="graphite-card group/card flex h-full flex-col overflow-hidden">
@@ -147,7 +150,7 @@ export function Projects() {
               </article>
             </Reveal>
           ))}
-        </div>
+        </motion.div>
 
         <Reveal delay={0.1}>
           <p className="mt-10 max-w-2xl text-[13px] leading-[1.6] text-slate">

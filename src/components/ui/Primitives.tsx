@@ -34,7 +34,45 @@ export function Label({
       className={`inline-flex items-center gap-2.5 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 font-mono text-[10px] tracking-[0.1em] text-[#8db4f5] uppercase sm:text-[11px] sm:tracking-[0.14em] ${className}`}
     >
       <AstroStar className="h-2.5 w-2.5 shrink-0" />
-      {children}
+      {typeof children === 'string' ? <DecodeText text={children} /> : children}
+    </span>
+  )
+}
+
+/**
+ * Texto que se decodifica ao entrar na tela: cada letra passa por glifos
+ * aleatórios e assenta da esquerda para a direita, em ~600ms. Uma vez só.
+ * Largura mínima em `ch` para o eyebrow não pular durante o embaralhado.
+ */
+const GLYPHS = 'ASTRO<>/|=+*#0123456789'
+
+export function DecodeText({ text }: { text: string }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const inView = useInView(ref, { once: true, margin: '-40px' })
+  const [shown, setShown] = useState(text)
+
+  useEffect(() => {
+    if (!inView || prefersReducedMotion()) return
+    const start = performance.now()
+    let frame = 0
+    const tick = (now: number) => {
+      const p = Math.min((now - start) / 600, 1)
+      const settled = Math.floor(p * text.length)
+      let out = ''
+      for (let i = 0; i < text.length; i += 1) {
+        const c = text[i]
+        out += c === ' ' || i < settled ? c : GLYPHS[Math.floor(Math.random() * GLYPHS.length)]
+      }
+      setShown(out)
+      if (p < 1) frame = requestAnimationFrame(tick)
+    }
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
+  }, [inView, text])
+
+  return (
+    <span ref={ref} className="inline-block" style={{ minWidth: `${text.length}ch` }}>
+      {shown}
     </span>
   )
 }
