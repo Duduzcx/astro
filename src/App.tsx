@@ -21,7 +21,7 @@ import { Insights } from './components/Insights'
 import { Faq } from './components/Faq'
 import { Contact } from './components/Contact'
 import { Footer } from './components/Footer'
-import { EnergyDivider } from './components/ui/EnergyDivider'
+import { TriangleDrift } from './components/ui/TriangleDrift'
 
 /** three.js pesa ~500kB minificado, então a cena vem num chunk separado. */
 const TriScene = lazy(() =>
@@ -57,25 +57,25 @@ export default function App() {
         <Hero />
         <Marquee />
         <ServiceBlocks />
-        <EnergyDivider hue="cobalt" intensity="calm" />
+        <TriangleDrift />
         <IntegrationsStrip />
         <Manifesto />
         <FilmBand />
         <Mission />
-        <EnergyDivider hue="ice" intensity="storm" />
+        <TriangleDrift />
         <Cases />
         <Projects />
-        <EnergyDivider hue="violet" intensity="calm" />
+        <TriangleDrift />
         <CtaBand />
         <Process />
         <Deliverables />
-        <EnergyDivider hue="cobalt" intensity="storm" />
+        <TriangleDrift />
         <About />
         <Team />
-        <EnergyDivider hue="ice" intensity="calm" />
+        <TriangleDrift />
         <Insights />
         <Faq />
-        <EnergyDivider hue="violet" intensity="storm" />
+        <TriangleDrift />
         <Contact />
       </main>
 
