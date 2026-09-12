@@ -41,7 +41,7 @@ Ordem das seções (definida em `App.tsx`): hero, marquee, serviços, integraç�
 | Onde | O quê |
 | --- | --- |
 | `src/lib/site.ts` | e-mail, telefone, WhatsApp, Instagram e cidade |
-| `src/components/Projects.tsx` | dois projetos **no ar** — Compromisso (`compromissose.com`) e Neve na Nave (`nevenanave.netlify.app`), com print em `public/media/projects/` — e seis **conceitos fictícios** com o selo "Projeto conceito". Item com `url` vira card clicável e selo verde "No ar"; sem `url`, segue como conceito. Para promover um conceito a caso real: preencha `url`, `domain` e `shot` |
+| `src/components/Projects.tsx` | só projeto publicado e autorizado: Compromisso (`compromissose.com`) e Neve na Nave (`nevenanave.netlify.app`). Para incluir outro, print da home em 1280×800 dentro de `public/media/projects/` (a CSP só aceita imagem do próprio domínio) e uma entrada na lista `projects` — todos os campos são obrigatórios, inclusive `url` |
 | `src/components/Cases.tsx` | os três cenários são exemplos genéricos de dor por segmento |
 | `src/components/Insights.tsx` | os posts são de exemplo, até o blog existir |
 | `index.html` | `<title>`, description, og:description e o domínio dentro do JSON-LD |
