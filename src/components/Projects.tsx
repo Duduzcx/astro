@@ -1,13 +1,60 @@
-import { GiantWord, Label, Reveal, WordReveal  } from './ui/Primitives'
+import { GiantWord, Label, Reveal, WordReveal } from './ui/Primitives'
 import { AstroMark } from './brand/AstroMark'
 
 /**
- * Grade de portfólio. Todo item aqui é CONCEITO, não contrato entregue: nome
- * de cliente só entra na página com autorização. O selo "Projeto conceito" e
- * a nota abaixo do título existem por causa disso. Tire os dois apenas quando
- * o item virar um caso real e autorizado.
+ * Grade de portfólio, em duas naturezas misturadas na mesma grade:
+ *
+ * - com `url`: projeto NO AR. Nome real, print real, card clicável. Só entra
+ *   aqui o que o cliente já publicou e autorizou.
+ * - sem `url`: CONCEITO. Mesma arquitetura e escopo do que entregamos, nome
+ *   fictício, porque nome de cliente sem autorização não vai para a página.
+ *   O selo "Projeto conceito" existe por isso — tire só quando virar caso real.
+ *
+ * Os que estão no ar vêm primeiro: é o que o visitante quer clicar.
  */
-const projects = [
+type Project = {
+  name: string
+  sector: string
+  year: string
+  summary: string
+  highlight: string
+  highlightLabel: string
+  stack: readonly string[]
+  /** Presente = está no ar; o card vira link e o selo muda. */
+  url?: string
+  /** Print da home, 1280×800. Sem ele, o card mostra a marca. */
+  shot?: string
+  /** Domínio como o visitante lê, sem protocolo. */
+  domain?: string
+}
+
+const projects: readonly Project[] = [
+  {
+    name: 'Compromisso',
+    sector: 'Educação',
+    year: '2026',
+    summary:
+      'Cursinho de ENEM e ETEC com portal do aluno: simulados, correção de redação por IA e evolução por matéria em um painel só. Instala como aplicativo e chama o aluno por notificação.',
+    highlight: '500+',
+    highlightLabel: 'aprovações reais, número do próprio cursinho',
+    stack: ['Next.js', 'Portal do aluno', 'Correção com IA', 'PWA + push'],
+    url: 'https://compromissose.com',
+    domain: 'compromissose.com',
+    shot: '/media/projects/compromisso.jpg',
+  },
+  {
+    name: 'Neve na Nave',
+    sector: 'Estética automotiva',
+    year: '2026',
+    summary:
+      'Estética automotiva com agendamento online: o cliente escolhe serviço e horário sozinho, e o painel do dono abre o dia já montado — sem combinar horário por mensagem.',
+    highlight: '24h',
+    highlightLabel: 'agenda aberta, sem ninguém respondendo mensagem',
+    stack: ['React', 'Supabase', 'Agendamento', 'Painel do dono'],
+    url: 'https://nevenanave.netlify.app',
+    domain: 'nevenanave.netlify.app',
+    shot: '/media/projects/neve-na-nave.jpg',
+  },
   {
     name: 'Pátio Zero',
     sector: 'Indústria',
@@ -68,7 +115,25 @@ const projects = [
     highlightLabel: 'de mensalidade paga em dia',
     stack: ['Assinatura digital', 'Pix/Boleto', 'CRM'],
   },
-] as const
+]
+
+/** Seta diagonal dos links que abrem em outra aba. */
+function ExternalGlyph() {
+  return (
+    <svg
+      viewBox="0 0 12 12"
+      aria-hidden="true"
+      className="h-3 w-3 shrink-0 transition-transform duration-300 group-hover/card:translate-x-0.5 group-hover/card:-translate-y-0.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3.5 8.5 8.5 3.5M4.4 3.5h4.1v4.1" />
+    </svg>
+  )
+}
 
 export function Projects() {
   return (
@@ -92,27 +157,73 @@ export function Projects() {
 
         <Reveal delay={0.14}>
           <p className="mt-6 max-w-xl text-ash">
-            Enquanto os primeiros contratos não liberam o nome do cliente, mostramos os projetos em
-            formato de conceito: mesma arquitetura, mesmo escopo, mesma entrega — só o nome é
-            fictício. Cada card vira um caso real assim que a empresa autoriza a publicação.
+            Os primeiros estão no ar agora — clique e navegue. Os marcados como conceito têm a
+            mesma arquitetura e o mesmo escopo do que entregamos, só com nome fictício: nome de
+            cliente só entra aqui com autorização, e cada um vira caso real assim que a empresa
+            libera.
           </p>
         </Reveal>
 
         <div className="mt-14 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project, index) => (
             <Reveal key={project.name} delay={0.06 * index}>
-              <article className="graphite-card group/card flex h-full flex-col overflow-hidden">
-                {/* Placa: a marca no lugar da arte de capa, enquanto não há imagem real. */}
-                <div className="relative -mx-7 -mt-7 mb-6 flex h-32 items-center justify-center overflow-hidden border-b border-white/8 bg-gradient-to-br from-[#16233d] to-[#0d1526] lg:-mx-8 lg:-mt-8">
-                  <AstroMark className="h-16 w-16 opacity-25 transition-transform duration-700 group-hover/card:scale-110" />
-                  <span className="absolute top-4 right-5 rounded-full border border-white/12 bg-onyx/60 px-2.5 py-0.5 font-mono text-[9px] tracking-[0.12em] text-slate uppercase">
-                    Projeto conceito
-                  </span>
+              <article className="graphite-card group/card relative flex h-full flex-col overflow-hidden">
+                {/* Capa: print de verdade quando o projeto está no ar; a marca
+                    quando é conceito e não existe tela para mostrar. */}
+                <div className="relative -mx-7 -mt-7 mb-6 h-40 overflow-hidden border-b border-white/8 bg-gradient-to-br from-[#16233d] to-[#0d1526] lg:-mx-8 lg:-mt-8">
+                  {project.shot ? (
+                    <>
+                      <img
+                        src={project.shot}
+                        alt={`Tela inicial do site ${project.name}`}
+                        width={1280}
+                        height={800}
+                        loading="lazy"
+                        decoding="async"
+                        className="h-full w-full object-cover object-top opacity-85 transition duration-700 group-hover/card:scale-[1.04] group-hover/card:opacity-100"
+                      />
+                      {/* Escurece o pé do print para o selo e a borda não
+                          brigarem com o conteúdo da imagem. */}
+                      <div
+                        aria-hidden="true"
+                        className="absolute inset-0 bg-gradient-to-t from-onyx/70 via-transparent to-onyx/40"
+                      />
+                    </>
+                  ) : (
+                    <div className="flex h-full items-center justify-center">
+                      <AstroMark className="h-16 w-16 opacity-25 transition-transform duration-700 group-hover/card:scale-110" />
+                    </div>
+                  )}
+
+                  {project.url ? (
+                    <span className="absolute top-4 right-5 inline-flex items-center gap-1.5 rounded-full border border-[#4ade80]/25 bg-onyx/70 px-2.5 py-0.5 font-mono text-[9px] tracking-[0.12em] text-[#86e8a8] uppercase backdrop-blur-[2px]">
+                      <span className="h-1 w-1 rounded-full bg-[#4ade80]" />
+                      No ar
+                    </span>
+                  ) : (
+                    <span className="absolute top-4 right-5 rounded-full border border-white/12 bg-onyx/60 px-2.5 py-0.5 font-mono text-[9px] tracking-[0.12em] text-slate uppercase">
+                      Projeto conceito
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-baseline justify-between gap-3">
                   <h3 className="font-impact text-[1.5rem] leading-none text-ivory">
-                    {project.name}
+                    {project.url ? (
+                      /* O link cobre o card inteiro (o ::after esticado), então
+                         não há outro elemento clicável dentro do article. */
+                      <a
+                        href={project.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 rounded-sm transition-colors after:absolute after:inset-0 after:content-[''] hover:text-[#8db4f5] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#8db4f5]"
+                      >
+                        {project.name}
+                        <ExternalGlyph />
+                      </a>
+                    ) : (
+                      project.name
+                    )}
                   </h3>
                   <span className="font-mono text-[11px] text-slate">{project.year}</span>
                 </div>
@@ -126,6 +237,12 @@ export function Projects() {
                 {/* Espaçador, não margem: mantém as réguas de métrica alinhadas na
                     linha, por mais longo que seja cada resumo. */}
                 <div aria-hidden="true" className="mt-6 flex-1" />
+
+                {project.domain ? (
+                  <p className="mb-4 font-mono text-[11px] break-all text-slate">
+                    {project.domain}
+                  </p>
+                ) : null}
 
                 <div className="flex items-baseline gap-3 border-t border-white/8 pt-5">
                   <span className="text-spectrum-animated text-[1.75rem] leading-none font-[480]">
