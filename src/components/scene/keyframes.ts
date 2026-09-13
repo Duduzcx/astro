@@ -21,9 +21,12 @@ export const KEYFRAMES: Keyframes = [
   [0.23, 0.05, 1.05, 0.0, 1.4, 0.45, 0],
   /* Manifesto: o encontro, planeta inteiro no centro. */
   [0.25, 0.05, 0.0, 0.0, 1.12, 1.0, 0],
-  [0.278, 0.05, 0.0, 0.0, 1.12, 1.0, 0],
-  /* Explode: os triângulos voam enquanto o campo apaga atrás do vídeo. */
-  [0.31, 1.0, 0.0, 0.0, 1.35, 0.0, 0],
+  [0.268, 0.05, 0.0, 0.1, 1.12, 1.0, 0],
+  /* Explode subindo: a faixa de vídeo entra por baixo nesse trecho, e o
+     estouro precisa acontecer acima dela. Os detritos seguem visíveis... */
+  [0.29, 1.0, 0.0, 0.25, 1.35, 0.7, 0],
+  /* ...e apagam atrás do vídeo. */
+  [0.31, 1.0, 0.0, 0.25, 1.35, 0.0, 0],
   /* Invisível atrás do vídeo: troca de forma aqui, ninguém vê a costura. */
   [0.32, 0.3, 0.55, 0.0, 0.9, 0.0, 1],
   /* Buraco negro formado enquanto "Seu negócio em novas órbitas" está na tela
@@ -115,8 +118,9 @@ export function mobileKeyframes(
     /* Manifesto: o encontro. */
     [0.212, 0.05, x, 0.0, scale * 1.15, 0.85, 0],
     [0.235, 0.05, x, 0.0, scale * 1.15, 0.85, 0],
-    /* Explode e some. */
-    [0.255, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 0],
+    /* Explode com os detritos ainda à vista, depois some. */
+    [0.25, 0.9, 0.0, 0.1, scale * 1.4, 0.6, 0],
+    [0.258, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 0],
     /* Troca de astro com o campo quase invisível, ninguém vê a costura. */
     [0.26, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     /* Buraco negro formado enquanto "Seu negócio em novas órbitas" está na
@@ -195,4 +199,15 @@ export function rocketWindow(progress: number, takeoff: number): RocketWindow {
   const lift = t * t
   const thrust = smooth(0, 0.12, t) * (1 - smooth(0.85, 1, t))
   return { visible: t < 1, lift, thrust: t >= 1 ? 0 : thrust }
+}
+
+/**
+ * Quanto o planeta já se despedaçou, lido do estado do campo: inteiro
+ * enquanto os triângulos estão agrupados, em pedaços conforme dispersam.
+ * Vale só enquanto a forma é o planeta; virou outro astro, sumiu.
+ */
+export function planetBreak(mix: number, form: number) {
+  const scatter = smooth(0.1, 0.75, mix)
+  const gone = Math.min(Math.max(form, 0), 1)
+  return Math.min(1, scatter + gone)
 }

@@ -4,6 +4,7 @@ import {
   KEYFRAMES,
   MOBILE_BREAKPOINT,
   mobileKeyframes,
+  planetBreak,
   rocketWindow,
   sampleKeyframes,
   takeoffSpan,
@@ -11,6 +12,7 @@ import {
 import { buildTriangles, makeMaterial } from './triangles'
 import { createStars } from './stars'
 import { createRocket } from './rocket'
+import { createPlanet } from './planet'
 
 /**
  * Núcleo orbital: uma bola densa de triângulos vazados com três anéis
@@ -152,6 +154,10 @@ export function TriScene() {
     const rocket = createRocket({ height: rocketHeight, lightweight })
     rocket.setPixelRatio(renderer.getPixelRatio())
     scene.add(rocket.object)
+
+    /* O planeta mora no mesmo centro e escala do campo de triângulos. */
+    const planet = createPlanet({ segments: lightweight ? 40 : 64 })
+    scene.add(planet.object)
 
     /* A altura da página fica em cache: ler scrollHeight dentro do loop força
        um layout a cada frame, que era o que travava o scroll em máquina lenta.
@@ -335,13 +341,24 @@ export function TriScene() {
       sphereMaterial.uniforms.uMix.value = Math.min(1, current.mix + rush * 0.05)
       sphereMaterial.uniforms.uScale.value = current.scale
       sphereMaterial.uniforms.uOpacity.value = 0.95 * current.opacity
-      sphereMaterial.uniforms.uCenter.value.set(
-        current.x * halfWidth + pointer.x * 0.05 + shakeX,
-        current.y + pointer.y * -0.04 + shakeY,
-      )
+      const centerX = current.x * halfWidth + pointer.x * 0.05 + shakeX
+      const centerY = current.y + pointer.y * -0.04 + shakeY
+      sphereMaterial.uniforms.uCenter.value.set(centerX, centerY)
       ambientMaterial.uniforms.uTime.value = time * 0.6
       ambientMaterial.uniforms.uOpacity.value = narrow ? 0.12 : 0.32
       stars.update({ progress, opacity: narrow ? 0.6 : 0.7 }, time)
+      /* Um pouco mais presente que o campo: em meia luz o planeta ainda
+         precisa ler como corpo, não como fantasma. */
+      planet.update(
+        {
+          x: centerX,
+          y: centerY,
+          scale: current.scale,
+          opacity: Math.min(1, current.opacity * 1.4),
+          break: planetBreak(current.mix, current.form),
+        },
+        time,
+      )
 
       /* Meia altura visível de verdade: com o palco maior que a base, o FOV
          muda e a régua não é mais halfHeight. */
@@ -404,6 +421,7 @@ export function TriScene() {
       ambientMaterial.dispose()
       stars.dispose()
       rocket.dispose()
+      planet.dispose()
       renderer.dispose()
       mount.removeChild(renderer.domElement)
     }

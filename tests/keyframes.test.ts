@@ -6,6 +6,7 @@ import {
   mobileKeyframes,
   rocketWindow,
   takeoffSpan,
+  planetBreak,
 } from '../src/components/scene/keyframes.ts'
 
 test('sampleKeyframes devolve a primeira linha em progresso 0 e a última em 1', () => {
@@ -70,4 +71,13 @@ test('rocketWindow: parado no topo, fora da tela no fim, empuxo no meio', () => 
 
   const after = rocketWindow(0.5, 0.04)
   assert.equal(after.visible, false)
+})
+
+test('planetBreak: inteiro agrupado, em pedaços disperso, some noutro astro', () => {
+  assert.equal(planetBreak(0.05, 0), 0)
+  assert.equal(planetBreak(1, 0), 1)
+  assert.equal(planetBreak(0.05, 1), 1)
+  const a = planetBreak(0.3, 0)
+  const b = planetBreak(0.5, 0)
+  assert.ok(a > 0 && b > a && b < 1, 'cresce com a dispersão')
 })
