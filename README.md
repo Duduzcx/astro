@@ -26,8 +26,12 @@ src/
     useAutoPauseVideo.ts
   components/         uma seção por arquivo
     brand/AstroMark   o símbolo da marca em React
+    scene/            a cena WebGL: TriScene (mount e loop), keyframes (tabelas),
+                      triangles (matéria e shaders), stars, rocket
     scenes/Panels     as telas de produto fictícias usadas em ServiceBlocks
     ui/Primitives     botões, reveals, títulos animados, wrappers de seção
+tests/                funções puras da cena, `npm test` (node --test)
+docs/superpowers/     spec e planos da cena espacial
 public/
   logo/               arquivos da marca
   media/              fotos e vídeos
@@ -87,16 +91,18 @@ Utilitários próprios: `.shell` (container), `.graphite-card` (vidro), `.label-
 
 ## A cena de fundo
 
-`TriScene.tsx` desenha um canvas fixo atrás do documento inteiro. Cada seção é um estado da mesma cena, e o mesmo conjunto de triângulos passa por **três astros** ao longo da rolagem:
+A cena mora em `src/components/scene/`: `TriScene.tsx` (mount, palco, loop), `keyframes.ts` (tabelas e funções puras, testadas com `npm test`), `triangles.ts` (a matéria e os shaders), `stars.ts` (estrelas ao fundo, descendo com o scroll) e `rocket.ts` (foguete, chama, fumaça, brilho da plataforma, gancho GLB em `ROCKET_MODEL_URL`). `src/components/TriScene.tsx` só reexporta.
+
+É um canvas fixo atrás do documento inteiro. O hero é do foguete: ele está na plataforma ao abrir (à direita no desktop, canto inferior direito no celular) e decola na primeira tela de rolagem (`takeoffSpan`, 90% de uma tela; `rocketWindow` dá subida com ease-in e empuxo que sobe rápido e some com o foguete). Chama por shader, fumaça de 200 pontos simulada na CPU que fica para trás no chão, tremor de câmera proporcional ao empuxo. O planeta entra nos Serviços pela borda direita, meio cortado, e chega inteiro ao centro no Manifesto, onde explode. Dali o mesmo conjunto de triângulos passa pelos astros:
 
 | Forma | Onde | Geometria | Cor |
 | --- | --- | --- | --- |
-| `0` planeta | hero | bola densa com três anéis inclinados em contra-rotação | azul cobalto e ivory |
+| `0` planeta | serviços e manifesto | bola densa com três anéis inclinados em contra-rotação | azul cobalto e ivory |
 | `1` buraco negro | "Seu negócio em novas órbitas" | horizonte vazio, anel de fótons e disco de acreção inclinado, mais rápido perto do centro | branco-quente, âmbar e laranja profundo |
 | `2` estrela | nasce durante o contato | bola compacta com casca brilhante e coroa rala, cintilando | dourado e branco |
 | `3` supernova | "A sua operação tem a resposta" | núcleo ralo, raios de ejeção e duas cascas de detonação que respiram | ouro, laranja, magenta e violeta |
 
-Cada astro precisa estar **formado enquanto a seção dele está na tela**, e as duas tabelas trabalham em fração da página — que muda com a largura, porque o texto quebra diferente. Os números vieram de medição real: a Missão ocupa 0.222–0.294 no celular e 0.285–0.383 no desktop; o fechamento entra em 0.935 e 0.933. Mexeu na ordem ou no tamanho de alguma seção, remeça antes de confiar nesses valores.
+Cada astro precisa estar **formado enquanto a seção dele está na tela**, e as duas tabelas trabalham em fração da página — que muda com a largura, porque o texto quebra diferente. Os números vieram de medição real (400×820 e 1280×900): a Missão ocupa 0.267–0.307 no celular e 0.334–0.383 no desktop; o Manifesto 0.226–0.242 e 0.257–0.299; o fechamento do rodapé entra na tela em 0.93. Mexeu na ordem ou no tamanho de alguma seção, remeça antes de confiar nesses valores — foi o que aconteceu quando os projetos conceito saíram: a página encurtou e o buraco negro passou a se formar ainda no Manifesto.
 
 As posições e as cores de cada astro vivem em atributos separados da mesma geometria (`aSphere`/`aHole`/`aStar`/`aNova` e os `a*Color` correspondentes); o uniform `uForm` anda de 0 a 3 e o shader interpola entre vizinhos. **Quase toda troca acontece com o campo disperso ou invisível**, então ninguém vê a costura. A exceção é proposital: a passagem 2 para 3 é feita agrupada e à vista — a estrela recém-nascida detona em supernova quando o fechamento entra, e o morph dos triângulos voando do corpo compacto para as cascas de detonação É a explosão.
 
@@ -104,7 +110,7 @@ Com blending aditivo não existe partícula escura: o preto do buraco negro é l
 
 Duas tabelas de keyframes governam o movimento. Cada linha é `[progresso da página, dispersão, x, y, escala, opacidade, forma]`:
 
-- `KEYFRAMES` — a partir de 1024px. O objeto ocupa a metade direita e se move, dispersa e reagrupa ao longo da página inteira.
+- `KEYFRAMES` — a partir de 1024px. Campo apagado no hero (só foguete e estrelas), planeta na borda direita nos Serviços, no centro no Manifesto, e dali se move, dispersa e reagrupa ao longo da página inteira.
 - `mobileKeyframes()` — abaixo disso. O objeto fica atrás do texto e o `uClear` do shader reduz o alfa dentro de uma elipse que acompanha o bloco de texto do hero (medido no DOM, em `#hero-copy`). É isso que mantém a leitura limpa sem tapar o objeto com uma placa opaca. **A clareira só vale enquanto o hero está na tela** — dali para baixo o buraco negro e a supernova aparecem inteiros. Nos trechos entre os astros o campo cai para 10% de opacidade e vira grão de fundo, para não competir com os cards.
 
 A ordem das seções em `App.tsx` e a tabela de desktop andam juntas: mexeu numa, refaça as medidas da outra.
@@ -112,6 +118,8 @@ A ordem das seções em `App.tsx` e a tabela de desktop andam juntas: mexeu numa
 Custo controlado: three.js entra num chunk separado por `React.lazy`; a contagem de triângulos e o pixel ratio caem em celular e em máquina de poucos núcleos; e há uma queda de qualidade automática se os primeiros frames vierem lentos. Com `prefers-reduced-motion` o movimento para.
 
 **Telas de produto vivas.** Cada painel de `scenes/Panels` se monta quando entra na tela, uma vez: o gráfico do dashboard se desenha (`pathLength`) e ganha uma ponta que pulsa, os números contam, a vitrine entra card a card com um brilho varrendo as fotos, a conversa do WhatsApp cai balão a balão com o "digitando" antes de cada resposta, as sparklines da telemetria se traçam sob um radar que varre o painel, e no hub de integração os pacotes de dados correm pelas curvas (`<animateMotion>`, SMIL nativo — segue a curva exata sem custo de layout) enquanto o centro respira num anel que se expande. Loops só em transform, opacidade e traço de SVG.
+
+**Medições.** Rolagem automatizada em passos de 14px, segunda passada, frames acima de 24ms: 13/09/2026, com estrelas e foguete — 400px 0,06% (p95 16,8ms, pior 33ms), 1280px 2,4% (p95 17ms, pior 83ms). Antes da cena espacial: 0% e 12%.
 
 **Como medir antes de otimizar.** Um `requestAnimationFrame` que rola a página em passos fixos e guarda o intervalo entre frames dá p95, pior frame e porcentagem de frames acima de 24ms. Duas armadilhas: a primeira passada mede decodificação de mídia, não animação (rode duas vezes e compare), e desligar um efeito por vez no console é o único jeito de saber quem custa o quê — foi assim que o `skewY` dos grids apareceu valendo 13 pontos de frames longos por um efeito que quase ninguém nota.
 
