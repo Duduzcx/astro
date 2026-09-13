@@ -8,24 +8,28 @@ export type Keyframes = Array<[number, number, number, number, number, number, n
 /**
  * Keyframes de scroll: [progresso da página, dispersão, x (fração da meia
  * largura), y, escala, opacidade]. Casados com a ordem das seções em App.tsx:
- * hero à direita, serviços à esquerda, manifesto disperso, missão reagrupada à
- * direita, equipe com campo ralo (os cards precisam de silêncio atrás) e
+ * hero apagado (foguete), serviços com o planeta na borda direita, manifesto
+ * com o planeta no centro, missão reagrupada à direita, equipe com campo ralo (os cards precisam de silêncio atrás) e
  * rodapé reagrupado no centro.
  */
 export const KEYFRAMES: Keyframes = [
-  [0.0, 0.04, 0.52, 0.02, 0.88, 1.0, 0],
-  [0.035, 0.05, 0.52, 0.0, 0.88, 1.0, 0],
-  [0.075, 0.85, 0.0, 0.0, 1.25, 0.35, 0],
-  [0.23, 0.85, 0.0, 0.0, 1.25, 0.35, 0],
-  [0.26, 1.0, 0.0, 0.0, 1.12, 0.9, 0],
-  [0.29, 1.0, 0.0, 0.0, 1.12, 0.9, 0],
-  [0.31, 1.0, 0.0, 0.0, 1.12, 0.0, 0],
+  /* Hero: campo apagado. Quem está na tela é o foguete e as estrelas. */
+  [0.0, 0.05, 1.05, 0.0, 1.4, 0.0, 0],
+  [0.045, 0.05, 1.05, 0.0, 1.4, 0.0, 0],
+  /* Serviços: o planeta surge pela borda direita, grande e meio cortado. */
+  [0.075, 0.05, 1.05, 0.0, 1.4, 0.45, 0],
+  [0.23, 0.05, 1.05, 0.0, 1.4, 0.45, 0],
+  /* Manifesto: o encontro, planeta inteiro no centro. */
+  [0.25, 0.05, 0.0, 0.0, 1.12, 1.0, 0],
+  [0.278, 0.05, 0.0, 0.0, 1.12, 1.0, 0],
+  /* Explode: os triângulos voam enquanto o campo apaga atrás do vídeo. */
+  [0.31, 1.0, 0.0, 0.0, 1.35, 0.0, 0],
   /* Invisível atrás do vídeo: troca de forma aqui, ninguém vê a costura. */
   [0.32, 0.3, 0.55, 0.0, 0.9, 0.0, 1],
   /* Buraco negro formado enquanto "Seu negócio em novas órbitas" está na tela
-     (a Missão ocupa 0.285 a 0.383 nesta largura). */
-  [0.328, 0.05, 0.55, 0.0, 0.9, 1.0, 1],
-  [0.372, 0.06, 0.55, 0.0, 0.9, 1.0, 1],
+     (a Missão ocupa 0.334 a 0.383 nesta largura). */
+  [0.34, 0.05, 0.55, 0.0, 0.9, 1.0, 1],
+  [0.378, 0.06, 0.55, 0.0, 0.9, 1.0, 1],
   [0.41, 0.9, 0.0, 0.0, 1.35, 0.22, 1],
   [0.445, 0.9, 0.0, 0.0, 1.35, 0.22, 1],
   [0.47, 0.9, 0.0, 0.0, 1.35, 0.0, 1],
@@ -97,27 +101,29 @@ export function mobileKeyframes(
      página de 25.000px são 1.500px, e o objeto ainda estaria brilhando muito
      depois do hero. */
   const screen = stage / maxScroll
-  /* O planeta fica inteiro por meia tela de rolagem e leva mais uma tela
-     para se desfazer — antes ele começava a dispersar quase no primeiro
-     toque. */
-  const hold = Math.min(screen * 0.5, 0.12)
-  const settle = Math.min(screen * 1.5, 0.2)
+  const takeoff = takeoffSpan(screen)
+  /* O planeta aparece uma tela depois da decolagem e fica pelos Serviços. */
+  const arrive = Math.min(takeoff + screen * 0.6, 0.12)
 
   return [
-    /* Hero: planeta atrás do texto, um pouco acima do centro para o arco de
-       cima aparecer no vão entre o menu e o título. */
-    [0.0, 0.03, x, 0.32, scale, HERO_OPACITY, 0],
-    [hold, 0.05, x, 0.32, scale, HERO_OPACITY, 0],
-    /* Ao sair da dobra ele se espalha e recua para textura de fundo. */
-    [settle, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 0],
-    [0.16, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 0],
+    /* Hero: campo apagado, foguete na plataforma. */
+    [0.0, 0.05, x, 0.1, scale * 1.1, 0.0, 0],
+    [takeoff, 0.05, x, 0.1, scale * 1.1, 0.0, 0],
+    /* Serviços: planeta centralizado atrás dos cards, em meia luz. */
+    [arrive, 0.05, x, 0.1, scale * 1.1, 0.4, 0],
+    [0.19, 0.05, x, 0.1, scale * 1.1, 0.4, 0],
+    /* Manifesto: o encontro. */
+    [0.212, 0.05, x, 0.0, scale * 1.15, 0.85, 0],
+    [0.235, 0.05, x, 0.0, scale * 1.15, 0.85, 0],
+    /* Explode e some. */
+    [0.255, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 0],
     /* Troca de astro com o campo quase invisível, ninguém vê a costura. */
-    [0.185, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
+    [0.26, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     /* Buraco negro formado enquanto "Seu negócio em novas órbitas" está na
-       tela (a Missão ocupa 0.222 a 0.294 nesta largura). */
-    [0.232, 0.12, 0.0, -0.15, scale * 0.95, 0.38, 1],
-    [0.292, 0.12, 0.0, -0.15, scale * 0.95, 0.38, 1],
-    [0.335, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
+       tela (a Missão ocupa 0.267 a 0.307 nesta largura). */
+    [0.275, 0.12, 0.0, -0.15, scale * 0.95, 0.38, 1],
+    [0.302, 0.12, 0.0, -0.15, scale * 0.95, 0.38, 1],
+    [0.33, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     [0.55, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     /* Disperso e quase invisível, o campo vira poeira dourada de estrela. */
     [0.62, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 2],
@@ -161,4 +167,32 @@ export function sampleKeyframes(table: Keyframes, progress: number): Sample {
     opacity: from[5] + (to[5] - from[5]) * eased,
     form: from[6] + (to[6] - from[6]) * eased,
   }
+}
+
+/**
+ * Quanto da página a decolagem ocupa: 90% de uma tela de rolagem, com teto
+ * para página curta. `screen` é a altura do palco dividida pelo scroll
+ * máximo, o mesmo número que a tabela do celular usa.
+ */
+export function takeoffSpan(screen: number) {
+  return Math.min(screen * 0.9, 0.12)
+}
+
+export type RocketWindow = { visible: boolean; lift: number; thrust: number }
+
+const smooth = (edge0: number, edge1: number, x: number) => {
+  const t = Math.min(Math.max((x - edge0) / (edge1 - edge0), 0), 1)
+  return t * t * (3 - 2 * t)
+}
+
+/**
+ * Foguete em função do progresso. `lift` vai de 0 (na plataforma) a 1 (fora
+ * da tela) com ease-in: começa devagar e acelera, como uma decolagem. O
+ * empuxo sobe rápido no início e cai a zero quando o foguete some.
+ */
+export function rocketWindow(progress: number, takeoff: number): RocketWindow {
+  const t = Math.min(Math.max(progress / takeoff, 0), 1)
+  const lift = t * t
+  const thrust = smooth(0, 0.12, t) * (1 - smooth(0.85, 1, t))
+  return { visible: t < 1, lift, thrust: t >= 1 ? 0 : thrust }
 }

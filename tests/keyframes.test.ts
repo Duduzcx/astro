@@ -1,6 +1,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { sampleKeyframes, KEYFRAMES, mobileKeyframes } from '../src/components/scene/keyframes.ts'
+import {
+  sampleKeyframes,
+  KEYFRAMES,
+  mobileKeyframes,
+  rocketWindow,
+  takeoffSpan,
+} from '../src/components/scene/keyframes.ts'
 
 test('sampleKeyframes devolve a primeira linha em progresso 0 e a última em 1', () => {
   const first = sampleKeyframes(KEYFRAMES, 0)
@@ -40,4 +46,28 @@ test('mobileKeyframes gera uma tabela ordenada por progresso', () => {
   }
   assert.equal(table[0][0], 0)
   assert.equal(table[table.length - 1][0], 1)
+})
+
+test('takeoffSpan é ~uma tela de rolagem, com teto', () => {
+  assert.ok(Math.abs(takeoffSpan(0.04) - 0.036) < 1e-9)
+  assert.equal(takeoffSpan(0.5), 0.12)
+})
+
+test('rocketWindow: parado no topo, fora da tela no fim, empuxo no meio', () => {
+  const start = rocketWindow(0, 0.04)
+  assert.equal(start.visible, true)
+  assert.equal(start.lift, 0)
+  assert.equal(start.thrust, 0)
+
+  const mid = rocketWindow(0.02, 0.04)
+  assert.ok(mid.lift > 0 && mid.lift < 0.5, 'ease-in: metade do trecho, menos da metade da subida')
+  assert.ok(mid.thrust > 0.9)
+
+  const end = rocketWindow(0.04, 0.04)
+  assert.equal(end.visible, false)
+  assert.equal(end.lift, 1)
+  assert.equal(end.thrust, 0)
+
+  const after = rocketWindow(0.5, 0.04)
+  assert.equal(after.visible, false)
 })
