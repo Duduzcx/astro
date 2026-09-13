@@ -7,6 +7,7 @@ import {
   sampleKeyframes,
 } from './keyframes'
 import { buildTriangles, makeMaterial } from './triangles'
+import { createStars } from './stars'
 
 /**
  * Núcleo orbital: uma bola densa de triângulos vazados com três anéis
@@ -137,6 +138,10 @@ export function TriScene() {
     const ambientField = new THREE.LineSegments(ambientGeometry, ambientMaterial)
     scene.add(ambientField)
 
+    /* Estrelas ao fundo, a página inteira. */
+    const stars = createStars(lightweight ? 1200 : 2400, renderer.getPixelRatio())
+    scene.add(stars.object)
+
     /* A altura da página fica em cache: ler scrollHeight dentro do loop força
        um layout a cada frame, que era o que travava o scroll em máquina lenta.
        Só recalcula quando o documento muda de verdade. */
@@ -227,7 +232,6 @@ export function TriScene() {
     let previous = performance.now()
     let lastScrollY = window.scrollY
     let rush = 0
-    let painted = false
     let frameCount = 0
 
     /* Qualidade adaptativa: mede os primeiros segundos de frames reais e, se a
@@ -245,6 +249,10 @@ export function TriScene() {
         renderer.setPixelRatio(1)
         renderer.setSize(window.innerWidth, stageHeight, false)
         ambientField.visible = false
+        stars.object.geometry.setDrawRange(
+          0,
+          Math.floor(stars.object.geometry.getAttribute('position').count / 2),
+        )
       }
     }
 
@@ -301,21 +309,15 @@ export function TriScene() {
       )
       ambientMaterial.uniforms.uTime.value = time * 0.6
       ambientMaterial.uniforms.uOpacity.value = narrow ? 0.12 : 0.32
+      stars.update({ progress, opacity: narrow ? 0.6 : 0.7 }, time)
 
-      /* A tabela tem trechos inteiros em opacidade zero — entre os astros, e
-         atrás do vídeo. Desenhar ali é preencher dois milhões de pixels com
-         nada. Pular a chamada devolve esses frames à rolagem; uma limpeza na
-         saída evita que o último quadro fique congelado na tela. */
-      /* Disperso e fraco, o campo é textura: a 30fps ninguém nota, e é
-         metade do custo em mais da metade da página. */
+      /* As estrelas estão sempre na tela, então todo frame desenha. Onde o
+         campo é só textura, ou está apagado, 30fps bastam: é metade do custo
+         em mais da metade da página. */
       frameCount += 1
-      const restful = current.mix > 0.85 && current.opacity < 0.3
-      if (current.opacity > 0.015 && !(restful && frameCount % 2)) {
+      const restful = current.opacity < 0.3 && (current.mix > 0.85 || current.opacity <= 0.015)
+      if (!(restful && frameCount % 2)) {
         renderer.render(scene, camera)
-        painted = true
-      } else if (painted) {
-        renderer.clear()
-        painted = false
       }
 
       if (!revealed) {
@@ -346,6 +348,7 @@ export function TriScene() {
       ambientGeometry.dispose()
       sphereMaterial.dispose()
       ambientMaterial.dispose()
+      stars.dispose()
       renderer.dispose()
       mount.removeChild(renderer.domElement)
     }
