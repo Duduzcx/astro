@@ -7,6 +7,7 @@ import {
   rocketWindow,
   takeoffSpan,
   planetBreak,
+  holePresence,
 } from '../src/components/scene/keyframes.ts'
 
 test('sampleKeyframes devolve a primeira linha em progresso 0 e a última em 1', () => {
@@ -80,4 +81,11 @@ test('planetBreak: inteiro agrupado, em pedaços disperso, some noutro astro', (
   const a = planetBreak(0.3, 0)
   const b = planetBreak(0.5, 0)
   assert.ok(a > 0 && b > a && b < 1, 'cresce com a dispersão')
+})
+
+test('holePresence: cheio em 1, zero nos vizinhos, meio no caminho', () => {
+  assert.equal(holePresence(1), 1)
+  assert.equal(holePresence(0), 0)
+  assert.equal(holePresence(2), 0)
+  assert.equal(holePresence(1.5), 0.5)
 })

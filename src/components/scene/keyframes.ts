@@ -126,8 +126,8 @@ export function mobileKeyframes(
     /* Buraco negro formado enquanto "Seu negócio em novas órbitas" está na
        tela (a Missão ocupa 0.267 a 0.307 nesta largura). */
     [0.275, 0.12, 0.0, -0.15, scale * 0.95, 0.38, 1],
-    [0.302, 0.12, 0.0, -0.15, scale * 0.95, 0.38, 1],
-    [0.33, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
+    [0.292, 0.12, 0.0, -0.15, scale * 0.95, 0.38, 1],
+    [0.32, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     [0.55, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     /* Disperso e quase invisível, o campo vira poeira dourada de estrela. */
     [0.62, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 2],
@@ -210,4 +210,9 @@ export function planetBreak(mix: number, form: number) {
   const scatter = smooth(0.1, 0.75, mix)
   const gone = Math.min(Math.max(form, 0), 1)
   return Math.min(1, scatter + gone)
+}
+
+/** Peso da forma 1 (buraco negro) para o `form` interpolado. */
+export function holePresence(form: number) {
+  return 1 - Math.min(Math.abs(form - 1), 1)
 }

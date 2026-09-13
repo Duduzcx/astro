@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import {
   KEYFRAMES,
   MOBILE_BREAKPOINT,
+  holePresence,
   mobileKeyframes,
   planetBreak,
   rocketWindow,
@@ -13,6 +14,7 @@ import { buildTriangles, makeMaterial } from './triangles'
 import { createStars } from './stars'
 import { createRocket } from './rocket'
 import { createPlanet } from './planet'
+import { createBlackHole } from './blackhole'
 
 /**
  * Núcleo orbital: uma bola densa de triângulos vazados com três anéis
@@ -158,6 +160,9 @@ export function TriScene() {
     /* O planeta mora no mesmo centro e escala do campo de triângulos. */
     const planet = createPlanet({ segments: lightweight ? 40 : 64 })
     scene.add(planet.object)
+
+    const blackHole = createBlackHole({ segments: lightweight ? 72 : 112 })
+    scene.add(blackHole.object)
 
     /* A altura da página fica em cache: ler scrollHeight dentro do loop força
        um layout a cada frame, que era o que travava o scroll em máquina lenta.
@@ -359,6 +364,17 @@ export function TriScene() {
         },
         time,
       )
+      blackHole.update(
+        {
+          x: centerX,
+          y: centerY,
+          scale: current.scale,
+          opacity: current.opacity,
+          presence: holePresence(current.form),
+          mix: current.mix,
+        },
+        time,
+      )
 
       /* Meia altura visível de verdade: com o palco maior que a base, o FOV
          muda e a régua não é mais halfHeight. */
@@ -422,6 +438,7 @@ export function TriScene() {
       stars.dispose()
       rocket.dispose()
       planet.dispose()
+      blackHole.dispose()
       renderer.dispose()
       mount.removeChild(renderer.domElement)
     }

@@ -100,6 +100,10 @@ const VERTEX_SHADER = /* glsl */ `
        horizonte, como uma órbita kepleriana de mentira. */
     float rHole = max(length(aHole), 0.4);
     vec3 coreHole = rotateAxis(aHole, discAxis, uTime * 0.1 * (0.4 + 0.9 / rHole));
+    /* Sucção: enquanto o campo ainda está disperso, o alvo no disco gira
+       com a dispersão, então cada triângulo chega em espiral, não em linha
+       reta. Agrupado, o giro extra é quase zero. */
+    coreHole = rotateAxis(coreHole, discAxis, uMix * 2.4);
 
     /* Estrela: cintila, respirando curto e rápido. */
     float twinkle = 1.0 + 0.03 * sin(uTime * 1.6 + aRand * 6.2831);
