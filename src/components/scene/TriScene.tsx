@@ -4,10 +4,13 @@ import {
   KEYFRAMES,
   MOBILE_BREAKPOINT,
   mobileKeyframes,
+  rocketWindow,
   sampleKeyframes,
+  takeoffSpan,
 } from './keyframes'
 import { buildTriangles, makeMaterial } from './triangles'
 import { createStars } from './stars'
+import { createRocket } from './rocket'
 
 /**
  * Núcleo orbital: uma bola densa de triângulos vazados com três anéis
@@ -142,6 +145,14 @@ export function TriScene() {
     const stars = createStars(lightweight ? 1200 : 2400, renderer.getPixelRatio())
     scene.add(stars.object)
 
+    /* Foguete: altura em mundo pela largura da tela. No celular ele é menor e
+       fica no canto inferior direito, abaixo do texto do hero; atrás dos
+       botões ele confundia a leitura. */
+    const rocketHeight = lightweight ? Math.min(0.6, halfWidth * 0.8) : Math.min(1.0, halfWidth * 1.15)
+    const rocket = createRocket({ height: rocketHeight, lightweight })
+    rocket.setPixelRatio(renderer.getPixelRatio())
+    scene.add(rocket.object)
+
     /* A altura da página fica em cache: ler scrollHeight dentro do loop força
        um layout a cada frame, que era o que travava o scroll em máquina lenta.
        Só recalcula quando o documento muda de verdade. */
@@ -155,6 +166,7 @@ export function TriScene() {
     measureScroll()
 
     let mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll, stageHeight)
+    let takeoff = takeoffSpan(stageHeight / maxScroll)
     let narrow = window.innerWidth < MOBILE_BREAKPOINT
     /* A intensidade da clareira é por frame (ela apaga depois do hero, para o
        buraco negro e a supernova aparecerem inteiros); aqui só a faixa. */
@@ -164,7 +176,16 @@ export function TriScene() {
         material.uniforms.uClearBand.value.set(band[0], band[1])
       }
     }
-    const current = { mix: 0.04, x: 0.58, y: 0.02, scale: 1, opacity: 1, form: 0 }
+    const current = {
+      mix: 0.04,
+      x: 0.58,
+      y: 0.02,
+      scale: 1,
+      opacity: 1,
+      form: 0,
+      lift: 0,
+      thrust: 0,
+    }
     const pointer = { x: 0, y: 0 }
 
     const onPointerMove = (event: PointerEvent) => {
@@ -208,6 +229,7 @@ export function TriScene() {
       narrow = width < MOBILE_BREAKPOINT
       measureScroll()
       mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll, stageHeight)
+      takeoff = takeoffSpan(stageHeight / maxScroll)
       applyClear()
     }
     window.addEventListener('resize', onResize)
@@ -220,6 +242,7 @@ export function TriScene() {
     const remeasure = () => {
       measureScroll()
       mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll, stageHeight)
+      takeoff = takeoffSpan(stageHeight / maxScroll)
       applyClear()
     }
     const pageObserver = new ResizeObserver(remeasure)
@@ -253,6 +276,7 @@ export function TriScene() {
           0,
           Math.floor(stars.object.geometry.getAttribute('position').count / 2),
         )
+        rocket.lighten()
       }
     }
 
@@ -274,6 +298,7 @@ export function TriScene() {
       const progress = scrollNow / maxScroll
       /* Abaixo do breakpoint roda a tabela presa ao hero, não a de página inteira. */
       const target = sampleKeyframes(narrow ? mobileTable : KEYFRAMES, progress)
+      const launch = rocketWindow(progress, takeoff)
 
       /* Constante de tempo maior no celular: o scroll por toque chega em
          saltos, e amortecer mais tira o solavanco de cada salto. */
@@ -284,6 +309,13 @@ export function TriScene() {
       current.scale += (target.scale - current.scale) * damping
       current.opacity += (target.opacity - current.opacity) * damping
       current.form += (target.form - current.form) * damping
+      /* O foguete também amortece: o scroll por toque chega em saltos. */
+      current.lift += (launch.lift - current.lift) * damping
+      current.thrust += (launch.thrust - current.thrust) * damping
+      /* Tremor de câmera proporcional ao empuxo, some com o foguete. */
+      const shake = current.thrust * Math.max(0, 1 - current.lift * 1.5) * 0.012
+      const shakeX = (Math.random() - 0.5) * 2 * shake
+      const shakeY = (Math.random() - 0.5) * 2 * shake
 
       /* A clareira só existe enquanto o hero está na tela: dali para baixo os
          outros astros aparecem inteiros, sem o miolo apagado. */
@@ -304,18 +336,40 @@ export function TriScene() {
       sphereMaterial.uniforms.uScale.value = current.scale
       sphereMaterial.uniforms.uOpacity.value = 0.95 * current.opacity
       sphereMaterial.uniforms.uCenter.value.set(
-        current.x * halfWidth + pointer.x * 0.05,
-        current.y + pointer.y * -0.04,
+        current.x * halfWidth + pointer.x * 0.05 + shakeX,
+        current.y + pointer.y * -0.04 + shakeY,
       )
       ambientMaterial.uniforms.uTime.value = time * 0.6
       ambientMaterial.uniforms.uOpacity.value = narrow ? 0.12 : 0.32
       stars.update({ progress, opacity: narrow ? 0.6 : 0.7 }, time)
 
+      /* Meia altura visível de verdade: com o palco maior que a base, o FOV
+         muda e a régua não é mais halfHeight. */
+      const visibleHalfHeight = halfWidth / camera.aspect
+      rocket.update(
+        {
+          visible: launch.visible || current.lift < 0.999,
+          lift: current.lift,
+          thrust: current.thrust,
+          x: (narrow ? 0.5 : 0.58) * halfWidth + shakeX * 2,
+          /* Acima da borda o bastante para a chama e o brilho da plataforma
+             caberem na dobra. */
+          yPad: -visibleHalfHeight + rocketHeight * 0.5 + (narrow ? 0.22 : 0.45) + shakeY * 2,
+          travel: visibleHalfHeight * 2 + rocketHeight,
+          opacity: 1,
+        },
+        time,
+        delta,
+      )
+
       /* As estrelas estão sempre na tela, então todo frame desenha. Onde o
          campo é só textura, ou está apagado, 30fps bastam: é metade do custo
          em mais da metade da página. */
       frameCount += 1
-      const restful = current.opacity < 0.3 && (current.mix > 0.85 || current.opacity <= 0.015)
+      const restful =
+        current.thrust < 0.01 &&
+        current.opacity < 0.3 &&
+        (current.mix > 0.85 || current.opacity <= 0.015)
       if (!(restful && frameCount % 2)) {
         renderer.render(scene, camera)
       }
@@ -349,6 +403,7 @@ export function TriScene() {
       sphereMaterial.dispose()
       ambientMaterial.dispose()
       stars.dispose()
+      rocket.dispose()
       renderer.dispose()
       mount.removeChild(renderer.domElement)
     }
