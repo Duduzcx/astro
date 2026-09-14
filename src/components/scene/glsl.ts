@@ -60,4 +60,16 @@ export const SIMPLEX_NOISE = /* glsl */ `
     }
     return sum;
   }
+  /* Três oitavas: suave o bastante para virar altura de relevo. Derivada de
+     tela de um campo com detalhe fino vira chuvisco. */
+  float fbm3(vec3 p) {
+    float sum = 0.0;
+    float amp = 0.5;
+    for (int i = 0; i < 3; i += 1) {
+      sum += amp * snoise(p);
+      p = p * 2.03 + 11.0;
+      amp *= 0.5;
+    }
+    return sum;
+  }
 `

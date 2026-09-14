@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import {
   KEYFRAMES,
   MOBILE_BREAKPOINT,
@@ -69,6 +70,10 @@ export function TriScene() {
     renderer.setPixelRatio(
       Math.min(window.devicePixelRatio, weakDevice ? 1 : lightweight ? 1 : 1.25),
     )
+    /* Tone mapping de filme para os materiais iluminados (o foguete): sem
+       isso o metal estoura em branco. Os shaders próprios ignoram. */
+    renderer.toneMapping = THREE.ACESFilmicToneMapping
+    renderer.toneMappingExposure = 1.05
     /**
      * O palco tem a altura da MAIOR tela já vista, e só cresce.
      *
@@ -100,6 +105,12 @@ export function TriScene() {
     mount.appendChild(renderer.domElement)
 
     const scene = new THREE.Scene()
+    /* Mapa de ambiente gerado uma vez: é o que faz metal parecer metal. Sem
+       reflexo, metalness alto é só preto. */
+    const pmrem = new THREE.PMREMGenerator(renderer)
+    const environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+    scene.environment = environment
+    pmrem.dispose()
     /* Luz de verdade para o foguete: uma direcional vinda de cima à
        esquerda, a mesma direção da luz dos planetas, e uma hemisférica azul
        para o lado da sombra não virar breu. */
@@ -162,7 +173,8 @@ export function TriScene() {
     /* Foguete: altura em mundo pela largura da tela. No celular ele é menor e
        fica no canto inferior direito, abaixo do texto do hero; atrás dos
        botões ele confundia a leitura. */
-    const rocketHeight = lightweight ? Math.min(0.6, halfWidth * 0.8) : Math.min(1.0, halfWidth * 1.15)
+    /* Esbelto, então pode ser mais alto sem ocupar largura. */
+    const rocketHeight = lightweight ? Math.min(0.8, halfWidth * 1.05) : Math.min(1.3, halfWidth * 1.35)
     const rocket = createRocket({ height: rocketHeight, lightweight })
     rocket.setPixelRatio(renderer.getPixelRatio())
     scene.add(rocket.object)
@@ -277,16 +289,14 @@ export function TriScene() {
         material.uniforms.uClearBand.value.set(band[0], band[1])
       }
     }
-    const current = {
-      mix: 0.04,
-      x: 0.58,
-      y: 0.02,
-      scale: 1,
-      opacity: 1,
-      form: 0,
-      lift: 0,
-      thrust: 0,
-    }
+    /* O estado nasce já na tabela: começando de um chute, o amortecimento
+       levava um segundo para chegar lá e o planeta-alvo aparecia no hero e
+       sumia, ao carregar. */
+    const first = sampleKeyframes(
+      narrow ? mobileTable : KEYFRAMES,
+      window.scrollY / maxScroll,
+    )
+    const current = { ...first, lift: 0, thrust: 0 }
     const pointer = { x: 0, y: 0 }
 
     const onPointerMove = (event: PointerEvent) => {
@@ -622,6 +632,7 @@ export function TriScene() {
       blackHole.dispose()
       nova.dispose()
       document.documentElement.style.removeProperty('--nova')
+      environment.dispose()
       renderer.dispose()
       mount.removeChild(renderer.domElement)
     }
