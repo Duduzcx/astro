@@ -13,10 +13,14 @@ import { SIMPLEX_NOISE } from './glsl'
 export type PlanetState = {
   x: number
   y: number
+  /** Profundidade: a Terra do hero fica longe, para caber na tela. */
+  z?: number
   scale: number
   opacity: number
   break: number
 }
+
+export type PlanetKind = 'target' | 'earth'
 
 /* Raio casado com a casca do corpo dos triângulos (0,6 a 0,66). */
 const RADIUS = 0.62
@@ -47,6 +51,7 @@ const SURFACE_FRAGMENT = /* glsl */ `
   uniform float uTime;
   uniform float uBreak;
   uniform float uOpacity;
+  uniform float uEarth;
   uniform vec3 uLight;
   varying vec3 vNormalV;
   varying vec3 vObj;
@@ -57,15 +62,30 @@ const SURFACE_FRAGMENT = /* glsl */ `
     vec3 q = vObj / ${RADIUS.toFixed(2)};
     float e = fbm(q * 2.6);
     float land = smoothstep(0.02, 0.12, e);
-    vec3 ocean = mix(vec3(0.05, 0.12, 0.34), vec3(0.11, 0.27, 0.64), smoothstep(-0.3, 0.0, e));
-    vec3 ice = mix(vec3(0.62, 0.72, 0.92), vec3(0.86, 0.9, 0.96), smoothstep(0.1, 0.35, e));
-    vec3 albedo = mix(ocean, ice, land);
-    float polar = smoothstep(0.62, 0.82, abs(q.y));
-    albedo = mix(albedo, vec3(0.94, 0.96, 0.99), polar * 0.85);
-    float c = fbm(q * 3.4 + vec3(uTime * 0.015, 0.0, uTime * 0.01));
-    float clouds = smoothstep(0.16, 0.42, c);
-    /* Nuvens contidas: o texto do Manifesto passa por cima do planeta. */
-    albedo = mix(albedo, vec3(0.9, 0.93, 0.98), clouds * 0.5);
+    vec3 albedo;
+    float clouds;
+    if (uEarth > 0.5) {
+      /* A Terra: oceano fundo, plataformas claras, verde nas baixadas e
+         terra nos planaltos, calotas, nuvens largas. */
+      vec3 ocean = mix(vec3(0.02, 0.09, 0.3), vec3(0.05, 0.3, 0.62), smoothstep(-0.35, 0.02, e));
+      vec3 terrain = mix(vec3(0.15, 0.35, 0.13), vec3(0.55, 0.47, 0.3), smoothstep(0.12, 0.42, e));
+      albedo = mix(ocean, terrain, land);
+      float polar = smoothstep(0.66, 0.84, abs(q.y));
+      albedo = mix(albedo, vec3(0.95, 0.97, 1.0), polar);
+      float c = fbm(q * 3.2 + vec3(uTime * 0.012, 0.0, uTime * 0.008));
+      clouds = smoothstep(0.14, 0.4, c);
+      albedo = mix(albedo, vec3(0.97), clouds * 0.75);
+    } else {
+      vec3 ocean = mix(vec3(0.05, 0.12, 0.34), vec3(0.11, 0.27, 0.64), smoothstep(-0.3, 0.0, e));
+      vec3 ice = mix(vec3(0.62, 0.72, 0.92), vec3(0.86, 0.9, 0.96), smoothstep(0.1, 0.35, e));
+      albedo = mix(ocean, ice, land);
+      float polar = smoothstep(0.62, 0.82, abs(q.y));
+      albedo = mix(albedo, vec3(0.94, 0.96, 0.99), polar * 0.85);
+      float c = fbm(q * 3.4 + vec3(uTime * 0.015, 0.0, uTime * 0.01));
+      clouds = smoothstep(0.16, 0.42, c);
+      /* Nuvens contidas: o texto do Manifesto passa por cima do planeta. */
+      albedo = mix(albedo, vec3(0.9, 0.93, 0.98), clouds * 0.5);
+    }
 
     vec3 n = normalize(vNormalV);
     vec3 v = normalize(vView);
@@ -77,6 +97,11 @@ const SURFACE_FRAGMENT = /* glsl */ `
     color += spec;
     float fresnel = pow(1.0 - max(dot(n, v), 0.0), 3.0);
     color += vec3(0.35, 0.55, 1.0) * fresnel * (0.3 + 0.7 * day);
+    if (uEarth > 0.5) {
+      /* Luzes de cidade no lado noturno, só em terra e fora das nuvens. */
+      float cities = smoothstep(0.5, 0.8, snoise(q * 26.0)) * land * (1.0 - clouds * 0.7);
+      color += vec3(1.0, 0.78, 0.45) * cities * (1.0 - day) * 0.9;
+    }
 
     /* Explosão: esquenta no meio do caminho e some no fim. */
     float heat = sin(clamp(uBreak, 0.0, 1.0) * 3.14159);
@@ -102,6 +127,7 @@ const ATMOSPHERE_VERTEX = /* glsl */ `
 const ATMOSPHERE_FRAGMENT = /* glsl */ `
   uniform float uOpacity;
   uniform float uBreak;
+  uniform float uEarth;
   uniform vec3 uLight;
   varying vec3 vNormalV;
   varying vec3 vView;
@@ -110,7 +136,7 @@ const ATMOSPHERE_FRAGMENT = /* glsl */ `
     vec3 v = normalize(vView);
     /* Lado de trás da esfera maior: só a borda passa por fora do planeta,
        que tapa o miolo pela profundidade. */
-    float rim = pow(1.0 - abs(dot(n, v)), 3.0);
+    float rim = pow(1.0 - abs(dot(n, v)), 3.0) * (1.0 + uEarth * 0.5);
     float day = 0.35 + 0.65 * smoothstep(-0.4, 0.5, dot(n, uLight));
     float heat = sin(clamp(uBreak, 0.0, 1.0) * 3.14159);
     vec3 color = mix(vec3(0.4, 0.62, 1.0), vec3(1.0, 0.75, 0.45), heat);
@@ -119,8 +145,18 @@ const ATMOSPHERE_FRAGMENT = /* glsl */ `
   }
 `
 
-export function createPlanet({ segments }: { segments: number }) {
+export function createPlanet({
+  segments,
+  kind = 'target',
+  spin = 0.04,
+}: {
+  segments: number
+  kind?: PlanetKind
+  /** Rotação em rad/s. A Terra, enorme, gira bem mais devagar. */
+  spin?: number
+}) {
   const object = new THREE.Group()
+  const earth = kind === 'earth' ? 1 : 0
   /* Luz fixa em espaço de câmera: o terminador fica parado enquanto a
      superfície gira. */
   const light = new THREE.Vector3(-0.55, 0.42, 0.72).normalize()
@@ -135,6 +171,7 @@ export function createPlanet({ segments }: { segments: number }) {
       uTime: { value: 0 },
       uBreak: { value: 0 },
       uOpacity: { value: 1 },
+      uEarth: { value: earth },
       uLight: { value: light },
     },
   })
@@ -155,6 +192,7 @@ export function createPlanet({ segments }: { segments: number }) {
     uniforms: {
       uOpacity: { value: 1 },
       uBreak: { value: 0 },
+      uEarth: { value: earth },
       uLight: { value: light },
     },
   })
@@ -167,9 +205,9 @@ export function createPlanet({ segments }: { segments: number }) {
     update(state: PlanetState, time: number) {
       object.visible = state.opacity > 0.015 && state.break < 0.999
       if (!object.visible) return
-      object.position.set(state.x, state.y, 0)
+      object.position.set(state.x, state.y, state.z ?? 0)
       object.scale.setScalar(state.scale)
-      surface.rotation.y = time * 0.04
+      surface.rotation.y = time * spin
       const heat = Math.sin(Math.min(Math.max(state.break, 0), 1) * Math.PI)
       atmosphere.scale.setScalar(1 + heat * 0.5)
       surfaceMaterial.uniforms.uTime.value = time

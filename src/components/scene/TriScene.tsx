@@ -17,6 +17,7 @@ import { createRocket } from './rocket'
 import { createPlanet } from './planet'
 import { createBlackHole } from './blackhole'
 import { createNova } from './nova'
+import { createSatellites } from './satellites'
 
 /**
  * Núcleo orbital: uma bola densa de triângulos vazados com três anéis
@@ -99,6 +100,13 @@ export function TriScene() {
     mount.appendChild(renderer.domElement)
 
     const scene = new THREE.Scene()
+    /* Luz de verdade para o foguete: uma direcional vinda de cima à
+       esquerda, a mesma direção da luz dos planetas, e uma hemisférica azul
+       para o lado da sombra não virar breu. */
+    const sun = new THREE.DirectionalLight(0xffffff, 2.4)
+    sun.position.set(-2, 1.6, 3)
+    scene.add(sun)
+    scene.add(new THREE.HemisphereLight(0x8db4f5, 0x1a2340, 0.7))
     const BASE_FOV = 50
     const camera = new THREE.PerspectiveCamera(BASE_FOV, window.innerWidth / stageHeight, 0.1, 20)
     camera.position.z = 3.3
@@ -162,6 +170,27 @@ export function TriScene() {
     /* O planeta mora no mesmo centro e escala do campo de triângulos. */
     const planet = createPlanet({ segments: lightweight ? 40 : 64 })
     scene.add(planet.object)
+
+    /* A Terra do hero: enorme e longe. Perto da câmera uma esfera desse
+       tamanho passaria pela lente; a EARTH_DEPTH ela cabe inteira atrás do
+       foguete e o horizonte curva na medida. Tamanho e posição aparentes
+       (no plano z = 0) viram tamanho e posição reais por perspectiva. */
+    const EARTH_DEPTH = 9.9
+    const depthScale = (camera.position.z + EARTH_DEPTH) / camera.position.z
+    const earth = createPlanet({ segments: lightweight ? 56 : 96, kind: 'earth', spin: 0.012 })
+    /* De pé o que a tela mostra é a calota polar, toda branca. Deitada, o
+       horizonte é o equador: oceano, continentes, e o giro leva os
+       continentes ao longo do arco. */
+    earth.object.rotation.x = Math.PI / 2
+    scene.add(earth.object)
+    const satellites = createSatellites(lightweight ? 14 : 24, 0.62 * 1.07, renderer.getPixelRatio())
+    earth.object.add(satellites.object)
+    const earthApparent = () => ({
+      radius: narrow ? 2.0 : Math.max(2.4, halfWidth * 1.1),
+      /* Quanto do planeta sobe acima da borda: pouco, para os botões do
+         hero ficarem sobre o céu, não sobre o oceano. */
+      reveal: narrow ? 0.34 : 0.5,
+    })
 
     const blackHole = createBlackHole({ segments: lightweight ? 72 : 112 })
     scene.add(blackHole.object)
@@ -406,15 +435,37 @@ export function TriScene() {
       /* Meia altura visível de verdade: com o palco maior que a base, o FOV
          muda e a régua não é mais halfHeight. */
       const visibleHalfHeight = halfWidth / camera.aspect
+
+      /* A Terra no pé da tela, recuando e encolhendo com a decolagem. */
+      const { radius: earthRadius, reveal } = earthApparent()
+      const earthGone = Math.min(Math.max((current.lift - 0.55) / 0.45, 0), 1)
+      const apparentRadius = earthRadius * (1 - current.lift * 0.45)
+      const apparentCenterY = -visibleHalfHeight - apparentRadius + reveal - current.lift * 1.4
+      earth.update(
+        {
+          x: 0,
+          y: apparentCenterY * depthScale,
+          z: -EARTH_DEPTH,
+          scale: (apparentRadius * depthScale) / 0.62,
+          opacity: 1 - earthGone,
+          break: 0,
+        },
+        time,
+      )
+      satellites.update(1 - earthGone, time)
+
+      /* O foguete sai do horizonte: a plataforma acompanha a curva da Terra
+         na coluna onde ele está. */
+      const rocketX = (narrow ? 0.5 : 0.58) * halfWidth
+      const horizonTop = -visibleHalfHeight + reveal
+      const horizonDrop = earthRadius - Math.sqrt(Math.max(earthRadius * earthRadius - rocketX * rocketX, 0))
       rocket.update(
         {
           visible: launch.visible || current.lift < 0.999,
           lift: current.lift,
           thrust: current.thrust,
-          x: (narrow ? 0.5 : 0.58) * halfWidth + shakeX * 2,
-          /* Acima da borda o bastante para a chama e o brilho da plataforma
-             caberem na dobra. */
-          yPad: -visibleHalfHeight + rocketHeight * 0.5 + (narrow ? 0.22 : 0.45) + shakeY * 2,
+          x: rocketX + shakeX * 2,
+          yPad: horizonTop - horizonDrop + rocketHeight * 0.52 + shakeY * 2,
           travel: visibleHalfHeight * 2 + rocketHeight,
           opacity: 1,
         },
@@ -465,6 +516,8 @@ export function TriScene() {
       stars.dispose()
       rocket.dispose()
       planet.dispose()
+      earth.dispose()
+      satellites.dispose()
       blackHole.dispose()
       nova.dispose()
       document.documentElement.style.removeProperty('--nova')

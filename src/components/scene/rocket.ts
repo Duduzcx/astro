@@ -1,13 +1,17 @@
 import * as THREE from 'three'
 
 /**
- * Foguete estilizado no visual da marca: silhueta escura quase opaca com as
- * arestas em linha, cobalto no corpo e ivory no nariz e nas aletas. Chama
- * por shader, fumaça simulada na CPU (200 pontos, custo desprezível) e um
- * brilho na plataforma que acende no empuxo.
+ * O foguete. Corpo torneado num perfil só (nariz ogival, corpo, boca de
+ * sino), material metálico branco-ivory com faixas e aletas em cobalto,
+ * janelas escuras, bocal de metal escuro. Precisa das luzes da cena: sem
+ * luz direcional tudo isso vira silhueta.
+ *
+ * Chama em duas camadas (laranja por fora, branco-azulado por dentro), brilho
+ * no bocal, brilho na plataforma e fumaça simulada na CPU que fica para
+ * trás no chão quando o foguete sobe.
  *
  * Gancho para modelo real: preencha ROCKET_MODEL_URL com um .glb (Draco em
- * /public/draco/). Carregado, o estilizado some. Vazio, nada é baixado.
+ * /public/draco/). Carregado, o torneado some. Vazio, nada é baixado.
  */
 export const ROCKET_MODEL_URL = ''
 
@@ -25,9 +29,10 @@ export type RocketState = {
   opacity: number
 }
 
-const ONYX = 0x0b1226
-const COBALT = 0x4d84e0
 const IVORY = 0xf5f7fb
+const COBALT = 0x4d84e0
+const STEEL = 0x2a3244
+const GLASS = 0x0b1226
 
 const FLAME_VERTEX = /* glsl */ `
   uniform float uThrust;
@@ -37,7 +42,7 @@ const FLAME_VERTEX = /* glsl */ `
     vUv = uv;
     vec3 p = position;
     /* Cresce para baixo com o empuxo; parado, sobra um bico curto. */
-    p.y *= 0.25 + uThrust * 0.75;
+    p.y *= 0.22 + uThrust * 0.78;
     vec3 n = normalize(normalMatrix * normal);
     vEdge = abs(n.z);
     gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
@@ -48,19 +53,19 @@ const FLAME_FRAGMENT = /* glsl */ `
   uniform float uTime;
   uniform float uThrust;
   uniform float uOpacity;
+  uniform vec3 uCore;
+  uniform vec3 uMid;
+  uniform vec3 uTail;
   varying vec2 vUv;
   varying float vEdge;
   void main() {
     /* uv.y = 1 na base (bocal), 0 na ponta. */
     float along = 1.0 - vUv.y;
-    float flicker = 0.5 + 0.5 * sin(along * 22.0 - uTime * 26.0 + sin(vUv.x * 18.85) * 1.6);
-    vec3 core = vec3(1.0, 0.97, 0.88);
-    vec3 mid = vec3(1.0, 0.62, 0.24);
-    vec3 tail = vec3(0.9, 0.25, 0.08);
-    vec3 color = mix(core, mid, smoothstep(0.0, 0.35, along));
-    color = mix(color, tail, smoothstep(0.35, 0.9, along));
-    float alpha = pow(1.0 - along, 1.4) * (0.55 + 0.45 * flicker) * pow(vEdge, 0.6);
-    gl_FragColor = vec4(color, alpha * uOpacity * (0.35 + 0.65 * uThrust));
+    float flicker = 0.5 + 0.5 * sin(along * 24.0 - uTime * 30.0 + sin(vUv.x * 18.85) * 1.8);
+    vec3 color = mix(uCore, uMid, smoothstep(0.0, 0.35, along));
+    color = mix(color, uTail, smoothstep(0.35, 0.9, along));
+    float alpha = pow(1.0 - along, 1.5) * (0.55 + 0.45 * flicker) * pow(vEdge, 0.7);
+    gl_FragColor = vec4(color, alpha * uOpacity * (0.3 + 0.7 * uThrust));
   }
 `
 
@@ -102,26 +107,65 @@ const SMOKE_FRAGMENT = /* glsl */ `
   void main() {
     float d = length(gl_PointCoord - 0.5) * 2.0;
     float soft = smoothstep(1.0, 0.2, d);
-    /* Nasce clara e esfria para o cinza-azul do fundo. */
     vec3 color = mix(vec3(0.95, 0.9, 0.85), vec3(0.45, 0.5, 0.62), vAge);
     float alpha = soft * (1.0 - vAge) * uOpacity * 0.55;
     gl_FragColor = vec4(color, alpha);
   }
 `
 
-/** Aleta: um trapézio fino extrudado, encostado no corpo. */
-function finGeometry(height: number) {
+/**
+ * Perfil do corpo, de cima para baixo, em frações da altura: ponta do nariz,
+ * ogiva, corpo reto, cintura, garganta e a boca de sino do bocal.
+ */
+function hullProfile(h: number) {
+  const points: THREE.Vector2[] = []
+  /* Ogiva: raio cresce como um arco de círculo, ponta fina. */
+  const steps = 14
+  for (let i = 0; i <= steps; i += 1) {
+    const t = i / steps
+    const r = 0.115 * Math.sqrt(1 - (1 - t) * (1 - t))
+    points.push(new THREE.Vector2(r * h, (0.62 - 0.3 * t) * h))
+  }
+  points.push(new THREE.Vector2(0.115 * h, -0.28 * h))
+  points.push(new THREE.Vector2(0.105 * h, -0.36 * h))
+  points.push(new THREE.Vector2(0.075 * h, -0.4 * h))
+  return points
+}
+
+function nozzleProfile(h: number) {
+  return [
+    new THREE.Vector2(0.06 * h, -0.4 * h),
+    new THREE.Vector2(0.055 * h, -0.43 * h),
+    new THREE.Vector2(0.075 * h, -0.5 * h),
+    new THREE.Vector2(0.105 * h, -0.56 * h),
+    new THREE.Vector2(0.1 * h, -0.565 * h),
+  ]
+}
+
+/** Faixa cobalto: um anel torneado um fio maior que o corpo. */
+function bandProfile(h: number, top: number, bottom: number, r: number) {
+  return [
+    new THREE.Vector2((r + 0.002) * h, top * h),
+    new THREE.Vector2((r + 0.002) * h, bottom * h),
+  ]
+}
+
+/** Aleta em asa: raiz longa no corpo, ponta curta, borda de fuga varrida. */
+function finGeometry(h: number) {
   const shape = new THREE.Shape()
-  shape.moveTo(0, 0)
-  shape.lineTo(0.16 * height, -0.1 * height)
-  shape.lineTo(0.16 * height, -0.3 * height)
-  shape.lineTo(0, -0.3 * height)
+  shape.moveTo(0, 0.06 * h)
+  shape.lineTo(0.2 * h, -0.14 * h)
+  shape.lineTo(0.2 * h, -0.3 * h)
+  shape.lineTo(0, -0.34 * h)
   shape.closePath()
   const geometry = new THREE.ExtrudeGeometry(shape, {
-    depth: 0.018 * height,
-    bevelEnabled: false,
+    depth: 0.016 * h,
+    bevelEnabled: true,
+    bevelThickness: 0.003 * h,
+    bevelSize: 0.003 * h,
+    bevelSegments: 1,
   })
-  geometry.translate(0, 0, -0.009 * height)
+  geometry.translate(0, 0, -0.008 * h)
   return geometry
 }
 
@@ -139,84 +183,84 @@ export function createRocket({ height, lightweight }: { height: number; lightwei
     return m
   }
 
-  /* Silhueta: quase opaca, para o campo atrás não vazar pelo corpo. */
-  const hull = trackM(new THREE.MeshBasicMaterial({ color: ONYX, transparent: true, opacity: 0.92 }))
-  const edgeCobalt = trackM(
-    new THREE.LineBasicMaterial({ color: COBALT, transparent: true, opacity: 0.9 }),
-  )
-  const edgeIvory = trackM(
-    new THREE.LineBasicMaterial({ color: IVORY, transparent: true, opacity: 0.85 }),
+  const ivory = trackM(new THREE.MeshStandardMaterial({ color: IVORY, metalness: 0.35, roughness: 0.38 }))
+  const cobalt = trackM(new THREE.MeshStandardMaterial({ color: COBALT, metalness: 0.4, roughness: 0.35 }))
+  const steel = trackM(new THREE.MeshStandardMaterial({ color: STEEL, metalness: 0.85, roughness: 0.3 }))
+  const glass = trackM(
+    new THREE.MeshStandardMaterial({ color: GLASS, metalness: 0.2, roughness: 0.15, emissive: 0x1e3a6a, emissiveIntensity: 0.6 }),
   )
 
-  const parts: Array<{
-    solid: THREE.BufferGeometry
-    wire: THREE.BufferGeometry
-    y: number
-    edge: THREE.LineBasicMaterial
-  }> = [
-    {
-      solid: track(new THREE.CylinderGeometry(0.11 * h, 0.13 * h, 0.62 * h, 24)),
-      wire: track(new THREE.CylinderGeometry(0.11 * h, 0.13 * h, 0.62 * h, 8)),
-      y: 0,
-      edge: edgeCobalt,
-    },
-    {
-      solid: track(new THREE.ConeGeometry(0.11 * h, 0.3 * h, 24)),
-      wire: track(new THREE.ConeGeometry(0.11 * h, 0.3 * h, 8)),
-      y: 0.46 * h,
-      edge: edgeIvory,
-    },
-    {
-      solid: track(new THREE.CylinderGeometry(0.07 * h, 0.11 * h, 0.14 * h, 16)),
-      wire: track(new THREE.CylinderGeometry(0.07 * h, 0.11 * h, 0.14 * h, 8)),
-      y: -0.38 * h,
-      edge: edgeCobalt,
-    },
-  ]
-  for (const part of parts) {
-    const mesh = new THREE.Mesh(part.solid, hull)
-    mesh.position.y = part.y
+  const lathe = (profile: THREE.Vector2[], material: THREE.Material) => {
+    const mesh = new THREE.Mesh(track(new THREE.LatheGeometry(profile, lightweight ? 28 : 40)), material)
     object.add(mesh)
-    /* Arestas do modelo de 8 lados: linhas longitudinais, leitura de holograma. */
-    const edges = new THREE.LineSegments(track(new THREE.EdgesGeometry(part.wire, 1)), part.edge)
-    edges.position.y = part.y
-    object.add(edges)
+    return mesh
+  }
+  lathe(hullProfile(h), ivory)
+  lathe(nozzleProfile(h), steel)
+  /* Ponta do nariz e duas faixas em cobalto. */
+  lathe(
+    hullProfile(h)
+      .slice(0, 7)
+      .map((p) => new THREE.Vector2(p.x + 0.002 * h, p.y)),
+    cobalt,
+  )
+  lathe(bandProfile(h, 0.2, 0.14, 0.115), cobalt)
+  lathe(bandProfile(h, -0.18, -0.22, 0.115), cobalt)
+
+  /* Três janelas na altura do ombro. */
+  const windowGeometry = track(new THREE.CircleGeometry(0.022 * h, 16))
+  for (let k = 0; k < 3; k += 1) {
+    const angle = (k / 3) * Math.PI * 2 + 0.5
+    const mesh = new THREE.Mesh(windowGeometry, glass)
+    mesh.position.set(Math.cos(angle) * 0.116 * h, 0.06 * h, Math.sin(angle) * 0.116 * h)
+    mesh.lookAt(mesh.position.clone().multiplyScalar(2))
+    object.add(mesh)
   }
 
+  /* Quatro aletas. */
   const fin = track(finGeometry(h))
-  const finWire = track(new THREE.EdgesGeometry(fin, 1))
-  for (let k = 0; k < 3; k += 1) {
+  for (let k = 0; k < 4; k += 1) {
     const pivot = new THREE.Group()
-    pivot.rotation.y = (k / 3) * Math.PI * 2
-    const mesh = new THREE.Mesh(fin, hull)
-    mesh.position.set(0.12 * h, -0.02 * h, 0)
-    const edges = new THREE.LineSegments(finWire, edgeIvory)
-    edges.position.copy(mesh.position)
-    pivot.add(mesh, edges)
+    pivot.rotation.y = (k / 4) * Math.PI * 2 + Math.PI / 4
+    const mesh = new THREE.Mesh(fin, cobalt)
+    mesh.position.set(0.1 * h, -0.06 * h, 0)
+    pivot.add(mesh)
     object.add(pivot)
   }
 
-  /* Chama: cone de ponta para baixo, base no bocal. */
-  const flameGeometry = track(new THREE.ConeGeometry(0.085 * h, 0.9 * h, 16, 1, true))
-  flameGeometry.rotateX(Math.PI)
-  flameGeometry.translate(0, -0.45 * h, 0)
-  const flameMaterial = trackM(
-    new THREE.ShaderMaterial({
-      vertexShader: FLAME_VERTEX,
-      fragmentShader: FLAME_FRAGMENT,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide,
-      uniforms: { uTime: { value: 0 }, uThrust: { value: 0 }, uOpacity: { value: 1 } },
-    }),
-  )
-  const flame = new THREE.Mesh(flameGeometry, flameMaterial)
-  flame.position.y = -0.45 * h
-  object.add(flame)
+  /* Chama em duas camadas: laranja por fora, branco-azulado por dentro. */
+  const flameMaterials: THREE.ShaderMaterial[] = []
+  const makeFlame = (radius: number, length: number, core: string, mid: string, tail: string) => {
+    const geometry = track(new THREE.ConeGeometry(radius * h, length * h, 20, 1, true))
+    geometry.rotateX(Math.PI)
+    geometry.translate(0, -(length / 2) * h, 0)
+    const material = trackM(
+      new THREE.ShaderMaterial({
+        vertexShader: FLAME_VERTEX,
+        fragmentShader: FLAME_FRAGMENT,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide,
+        uniforms: {
+          uTime: { value: 0 },
+          uThrust: { value: 0 },
+          uOpacity: { value: 1 },
+          uCore: { value: new THREE.Color(core) },
+          uMid: { value: new THREE.Color(mid) },
+          uTail: { value: new THREE.Color(tail) },
+        },
+      }),
+    )
+    flameMaterials.push(material)
+    const mesh = new THREE.Mesh(geometry, material)
+    mesh.position.y = -0.55 * h
+    object.add(mesh)
+  }
+  makeFlame(0.1, 1.1, '#fff2d6', '#ff9a3c', '#e8340c')
+  makeFlame(0.05, 0.7, '#ffffff', '#cfe6ff', '#6fb0ff')
 
-  /* Ponto de luz no bocal. */
-  const glowGeometry = track(new THREE.PlaneGeometry(0.5 * h, 0.5 * h))
+  const glowGeometry = track(new THREE.PlaneGeometry(0.6 * h, 0.6 * h))
   const glowMaterial = trackM(
     new THREE.ShaderMaterial({
       vertexShader: GLOW_VERTEX,
@@ -228,11 +272,10 @@ export function createRocket({ height, lightweight }: { height: number; lightwei
     }),
   )
   const glow = new THREE.Mesh(glowGeometry, glowMaterial)
-  glow.position.y = -0.48 * h
+  glow.position.y = -0.58 * h
   object.add(glow)
 
-  /* Brilho da plataforma: fica no chão, não sobe com o foguete. */
-  const padGeometry = track(new THREE.PlaneGeometry(2.2 * h, 0.7 * h))
+  const padGeometry = track(new THREE.PlaneGeometry(2.4 * h, 0.8 * h))
   const padMaterial = trackM(
     new THREE.ShaderMaterial({
       vertexShader: GLOW_VERTEX,
@@ -245,8 +288,7 @@ export function createRocket({ height, lightweight }: { height: number; lightwei
   )
   const pad = new THREE.Mesh(padGeometry, padMaterial)
 
-  /* Fumaça: simulada aqui, em mundo, para ficar para trás quando o foguete
-     sobe. 200 partículas é pouco para a CPU e o bastante para a leitura. */
+  /* Fumaça: simulada em mundo, para ficar para trás quando o foguete sobe. */
   const smokeCount = lightweight ? 120 : 200
   const smokePositions = new Float32Array(smokeCount * 3)
   const smokeAges = new Float32Array(smokeCount)
@@ -277,7 +319,6 @@ export function createRocket({ height, lightweight }: { height: number; lightwei
   const smoke = new THREE.Points(smokeGeometry, smokeMaterial)
   smoke.frustumCulled = false
 
-  /* O grupo raiz junta o que sobe e o que fica. */
   const root = new THREE.Group()
   root.add(object, pad, smoke)
 
@@ -318,9 +359,10 @@ export function createRocket({ height, lightweight }: { height: number; lightwei
         const center = new THREE.Vector3()
         box.getCenter(center)
         model.position.sub(center)
-        /* Some o estilizado, ficam chama, brilho e fumaça. */
         for (const child of [...object.children]) {
-          if (child !== flame && child !== glow) child.visible = false
+          if (!(child instanceof THREE.Mesh && flameMaterials.includes(child.material as THREE.ShaderMaterial)) && child !== glow) {
+            child.visible = false
+          }
         }
         object.add(model)
         modelLoaded = true
@@ -337,38 +379,38 @@ export function createRocket({ height, lightweight }: { height: number; lightwei
       const y = state.yPad + state.lift * state.travel
       object.position.set(state.x, y, 0)
       object.visible = state.visible
-      /* Balanço mínimo no ar: 1,5 grau, para o foguete não parecer colado. */
-      object.rotation.z = state.lift > 0 ? Math.sin(time * 1.7) * 0.026 * state.lift : 0
+      /* No ar: gira devagar para mostrar o volume, e inclina um nada. */
+      object.rotation.y = state.lift > 0 ? time * 0.35 * state.lift : 0.4
+      object.rotation.z = state.lift > 0 ? Math.sin(time * 1.7) * 0.02 * state.lift : 0
 
-      flameMaterial.uniforms.uTime.value = time
-      flameMaterial.uniforms.uThrust.value = state.thrust
-      flameMaterial.uniforms.uOpacity.value = state.opacity
-      glowMaterial.uniforms.uOpacity.value = state.thrust * state.opacity * 0.9
+      for (const material of flameMaterials) {
+        material.uniforms.uTime.value = time
+        material.uniforms.uThrust.value = state.thrust
+        material.uniforms.uOpacity.value = state.opacity
+      }
+      glowMaterial.uniforms.uOpacity.value = state.thrust * state.opacity
 
-      pad.position.set(state.x, state.yPad - 0.5 * h, -0.05)
+      pad.position.set(state.x, state.yPad - 0.58 * h, -0.05)
       padMaterial.uniforms.uOpacity.value =
         state.thrust * Math.max(0, 1 - state.lift * 2.5) * state.opacity * 0.7
 
-      /* Fumaça: nasce no bocal enquanto há empuxo e o foguete está baixo. */
       const rate = state.thrust * Math.max(0, 1 - state.lift * 1.6) * (lightweight ? 70 : 110)
       spawnDebt += rate * delta
       while (spawnDebt >= 1) {
-        spawn(state.x, y - 0.45 * h)
+        spawn(state.x, y - 0.55 * h)
         spawnDebt -= 1
       }
       alive = 0
-      const floor = state.yPad - 0.5 * h
+      const floor = state.yPad - 0.58 * h
       for (let i = 0; i < smokeCount; i += 1) {
         if (smokeAges[i] >= 1) continue
         alive += 1
         smokeAges[i] = Math.min(1, smokeAges[i] + delta / lives[i])
-        /* Perde velocidade e abre para os lados conforme envelhece. */
         velocities[i * 3 + 1] *= 1 - delta * 1.8
         velocities[i * 3] *= 1 - delta * 0.6
         smokePositions[i * 3] += velocities[i * 3] * delta
         smokePositions[i * 3 + 1] += velocities[i * 3 + 1] * delta
         smokePositions[i * 3 + 2] += velocities[i * 3 + 2] * delta
-        /* Chão: a fumaça se espalha na horizontal ao bater na plataforma. */
         if (smokePositions[i * 3 + 1] < floor) {
           smokePositions[i * 3 + 1] = floor
           velocities[i * 3] += Math.sign(velocities[i * 3] || 1) * 6 * h * delta
