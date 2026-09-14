@@ -18,29 +18,31 @@ export const KEYFRAMES: Keyframes = [
   [0.045, 0.05, 1.05, 0.0, 1.4, 0.0, 0],
   /* Serviços e Integrações são o desfile de mundos (TriScene), o alvo
      ainda não apareceu. */
-  [0.22, 0.05, 1.05, 0.0, 1.4, 0.0, 0],
-  /* Manifesto: o alvo chega pela direita e para inteiro no centro. */
-  [0.25, 0.05, 0.0, 0.0, 1.12, 1.0, 0],
-  [0.266, 0.05, 0.0, 0.1, 1.12, 1.0, 0],
-  /* Explode subindo e rápido: a faixa de vídeo entra por baixo nesse
-     trecho, e o estouro precisa acontecer acima dela. Os detritos seguem
-     visíveis... */
-  [0.28, 1.0, 0.0, 0.25, 1.35, 0.7, 0],
-  /* ...e apagam atrás do vídeo. */
-  [0.31, 1.0, 0.0, 0.25, 1.35, 0.0, 0],
-  /* Invisível atrás do vídeo: troca de forma aqui, ninguém vê a costura. */
-  [0.32, 0.9, 0.55, 0.0, 0.5, 0.0, 1],
-  /* Buraco negro nasce pequeno na Missão (0.334 a 0.383 nesta largura),
-     cresce engolindo os detritos e fica pelos Cenários inteiros. */
-  [0.335, 0.6, 0.55, 0.0, 0.55, 0.7, 1],
-  [0.36, 0.05, 0.55, 0.0, 0.85, 1.0, 1],
-  [0.4, 0.05, 0.55, 0.0, 1.0, 1.0, 1],
-  [0.44, 0.06, 0.55, 0.0, 1.0, 0.75, 1],
-  [0.47, 0.9, 0.0, 0.0, 1.35, 0.22, 1],
-  [0.49, 0.9, 0.0, 0.0, 1.35, 0.0, 1],
+  [0.24, 0.05, 1.05, 0.0, 1.4, 0.0, 0],
+  /* Manifesto: o alvo chega pela direita e para inteiro à direita do
+     centro, onde fica durante a faixa de vídeo... */
+  [0.275, 0.05, 0.45, 0.0, 1.12, 1.0, 0],
+  /* ...e na Missão ("Seu negócio em novas órbitas", 0.334 a 0.383 nesta
+     largura), ao lado do texto, inteiro, por um instante. */
+  [0.334, 0.05, 0.45, 0.05, 1.15, 1.0, 0],
+  [0.346, 0.05, 0.45, 0.05, 1.15, 1.0, 0],
+  /* Explode ali mesmo, à vista, rápido. Os detritos sobem e apagam
+     antes da seção acabar. */
+  [0.362, 1.0, 0.45, 0.15, 1.35, 0.8, 0],
+  [0.384, 1.0, 0.45, 0.2, 1.4, 0.0, 0],
+  /* Invisível: troca de forma aqui, ninguém vê a costura. */
+  [0.39, 0.9, 0.5, 0.0, 0.5, 0.0, 1],
+  /* Buraco negro nasce pequeno nos Resultados (0.386 a 0.438), cresce
+     engolindo os detritos e fica pelos Projetos inteiros. */
+  [0.4, 0.6, 0.5, 0.0, 0.55, 0.7, 1],
+  [0.425, 0.05, 0.5, 0.0, 0.85, 1.0, 1],
+  [0.46, 0.05, 0.5, 0.0, 1.0, 1.0, 1],
+  [0.5, 0.06, 0.5, 0.0, 1.0, 0.75, 1],
+  [0.525, 0.9, 0.0, 0.0, 1.35, 0.22, 1],
+  [0.545, 0.9, 0.0, 0.0, 1.35, 0.0, 1],
   /* Invisível de novo: o campo vira poeira dourada de estrela. */
-  [0.5, 0.9, 0.0, 0.0, 1.35, 0.0, 2],
-  [0.53, 0.9, 0.0, 0.0, 1.35, 0.22, 2],
+  [0.555, 0.9, 0.0, 0.0, 1.35, 0.0, 2],
+  [0.585, 0.9, 0.0, 0.0, 1.35, 0.22, 2],
   [0.885, 0.9, 0.0, 0.0, 1.35, 0.22, 2],
   /* A poeira condensa: uma estrela nasce durante o contato... */
   /* No vão entre a coluna de texto e o card do formulário — atrás do card ela
@@ -112,22 +114,24 @@ export function mobileKeyframes(
     /* Hero: campo apagado, foguete na plataforma. */
     [0.0, 0.05, x, 0.1, scale * 1.1, 0.0, 0],
     [takeoff, 0.05, x, 0.1, scale * 1.1, 0.0, 0],
-    /* Serviços e Integrações são o desfile de mundos; o alvo só chega no
-       Manifesto, vindo de baixo. */
-    [0.19, 0.05, x, -0.8, scale * 1.1, 0.0, 0],
-    [0.212, 0.05, x, 0.0, scale * 1.15, 0.85, 0],
-    [0.232, 0.05, x, 0.0, scale * 1.15, 0.85, 0],
-    /* Explode rápido, com os detritos ainda à vista, depois some. */
-    [0.244, 0.9, 0.0, 0.1, scale * 1.4, 0.6, 0],
-    [0.252, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 0],
+    /* Serviços e Integrações são o desfile de mundos; o alvo chega no
+       Manifesto, vindo de baixo... */
+    [0.215, 0.05, x, -0.8, scale * 1.1, 0.0, 0],
+    [0.24, 0.05, x, 0.0, scale * 1.15, 0.85, 0],
+    /* ...e fica inteiro até a Missão (0.268 a 0.307 nesta largura). */
+    [0.268, 0.05, x, 0.0, scale * 1.15, 0.85, 0],
+    [0.278, 0.05, x, 0.0, scale * 1.15, 0.85, 0],
+    /* Explode na Missão, à vista, e some. */
+    [0.29, 0.9, 0.0, 0.1, scale * 1.4, 0.6, 0],
+    [0.3, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 0],
     /* Troca de astro com o campo quase invisível, ninguém vê a costura. */
-    [0.256, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
-    /* Buraco negro nasce pequeno na Missão (0.267 a 0.307 nesta largura),
-       cresce engolindo os detritos e fica pelo começo dos Cenários. */
-    [0.268, 0.6, 0.0, -0.15, scale * 0.5, 0.35, 1],
-    [0.285, 0.1, 0.0, -0.15, scale * 0.85, 0.5, 1],
-    [0.315, 0.1, 0.0, -0.15, scale * 0.95, 0.5, 1],
-    [0.34, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
+    [0.305, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
+    /* Buraco negro nasce pequeno nos Resultados (0.31 a 0.389), cresce
+       engolindo os detritos e some antes dos Projetos. */
+    [0.315, 0.6, 0.0, -0.15, scale * 0.5, 0.35, 1],
+    [0.335, 0.1, 0.0, -0.15, scale * 0.85, 0.5, 1],
+    [0.37, 0.1, 0.0, -0.15, scale * 0.95, 0.5, 1],
+    [0.395, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     [0.55, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     /* Disperso e quase invisível, o campo vira poeira dourada de estrela. */
     [0.62, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 2],

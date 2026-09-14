@@ -190,7 +190,7 @@ export function TriScene() {
     })
 
     /* O espaço: panorama da Via Láctea atrás de tudo. */
-    const space = createSpace(tier('milky-way'))
+    const space = createSpace(tier('milky-way'), lightweight || weakDevice ? 0 : 0.16)
     scene.add(space.object)
 
     /* O sol do hero: um clarão macio no alto à esquerda, na direção da luz,
@@ -298,33 +298,46 @@ export function TriScene() {
     const worlds: World[] = [
       {
         planet: createPlanet({
-          segments: lightweight ? 56 : 80,
+          segments: lightweight ? 56 : 96,
           kind: 'gas',
           spin: 0.03,
           ring: true,
           maps: {
-            map: tier('jupiter'),
+            map: tier('saturn'),
             ring: { low: '/space/saturn-ring-2k.png', high: '/space/saturn-ring-4k.png' },
           },
         }),
         x: -0.95,
-        z: -2.6,
-        size: 1.7,
+        z: -3.0,
+        size: 1.9,
         from: 0.05,
         to: 0.15,
       },
       {
         planet: createPlanet({
-          segments: lightweight ? 40 : 64,
+          segments: lightweight ? 40 : 72,
           kind: 'rock',
           spin: 0.09,
           maps: { map: tier('mars') },
         }),
-        x: 0.92,
-        z: -0.9,
-        size: 0.5,
-        from: 0.105,
-        to: 0.2,
+        x: 0.95,
+        z: -0.8,
+        size: 0.42,
+        from: 0.095,
+        to: 0.185,
+      },
+      {
+        planet: createPlanet({
+          segments: lightweight ? 56 : 96,
+          kind: 'gas',
+          spin: 0.035,
+          maps: { map: tier('jupiter') },
+        }),
+        x: 0.75,
+        z: -5.5,
+        size: 2.6,
+        from: 0.14,
+        to: 0.25,
       },
       {
         planet: createPlanet({
@@ -334,11 +347,11 @@ export function TriScene() {
           maps: { map: tier('moon') },
           tint: '#c4d6f2',
         }),
-        x: -0.6,
-        z: -4.2,
-        size: 1.15,
-        from: 0.165,
-        to: 0.255,
+        x: -0.5,
+        z: -1.4,
+        size: 0.5,
+        from: 0.185,
+        to: 0.265,
       },
     ]
     for (const world of worlds) scene.add(world.planet.object)
@@ -350,7 +363,7 @@ export function TriScene() {
 
     /* O foguete em cruzeiro: pequeno, atravessando o desfile com a chama
        viva, e sumindo quando o planeta-alvo chega. */
-    const cruiser = createRocket({ height: rocketHeight * 0.45, lightweight, cruise: true })
+    const cruiser = createRocket({ height: rocketHeight * 0.55, lightweight, cruise: true })
     scene.add(cruiser.object)
     /* Rastros: o do lançamento e o do cruzeiro, cada um seguindo a sua
        própria trajetória. */
@@ -481,7 +494,6 @@ export function TriScene() {
     let lastScrollY = window.scrollY
     let rush = 0
     let frameCount = 0
-    let telemetryAt = 0
 
     /* Qualidade adaptativa: mede os primeiros segundos de frames reais e, se a
        máquina não segura a taxa, derruba resolução e camada ambiente uma vez
@@ -567,7 +579,7 @@ export function TriScene() {
       sphereMaterial.uniforms.uCenter.value.set(centerX, centerY)
       ambientMaterial.uniforms.uTime.value = time * 0.6
       ambientMaterial.uniforms.uOpacity.value = narrow ? 0.06 : 0.14
-      stars.update({ progress, opacity: narrow ? 0.5 : 0.62 }, time)
+      stars.update({ progress, opacity: narrow ? 0.6 : 0.7 }, time)
       space.update(progress, time)
       /* Um pouco mais presente que o campo: em meia luz o planeta ainda
          precisa ler como corpo, não como fantasma. */
@@ -667,43 +679,56 @@ export function TriScene() {
         /* Em cruzeiro ele sobe pela tela numa curva suave, no vão entre o
            painel e o texto dos Serviços, tombando para o lado do rumo, e
            balança devagar no tempo, para nunca estar parado. */
-        const cruiseH = rocketHeight * 0.45
-        const cruiseX0 = (narrow ? 0.62 : -0.03) * halfWidth
-        const cruiseY0 = narrow ? -0.12 : -0.28
-        const cruiseRange = narrow ? 0.6 : 0.95
-        const cruiseAmp = (narrow ? 0.035 : 0.06) * halfWidth
+        /* Em cruzeiro a nave varre a tela de um lado ao outro entre os
+           mundos, subindo, chegando perto e se afastando, com o eixo no
+           rumo. Balança devagar no tempo, para nunca estar parada. */
+        const cruiseAmp = (narrow ? 0.42 : 0.5) * halfWidth
+        const cruiseRise = visibleHalfHeight * 1.5
+        const cruiseY0 = -visibleHalfHeight * 0.75
+        const turns = Math.PI * 2 * 1.15
         const bobX = Math.sin(time * 0.7) * 0.02
         const bobY = Math.sin(time * 0.9) * 0.04
-        const cruiseTilt = (u: number) => Math.atan2(-Math.cos(u * 5.2 + 0.8) * 5.2 * cruiseAmp, cruiseRange)
+        const cruiseScale = (u: number) => 0.75 + 0.5 * (0.5 + 0.5 * Math.sin(u * turns + 1.6))
+        const cruiseTilt = (u: number) => Math.atan2(-Math.cos(u * turns + 0.4) * turns * cruiseAmp, cruiseRise)
         const cruiseAt = (u: number) => ({
-          x: cruiseX0 + Math.sin(u * 5.2 + 0.8) * cruiseAmp + bobX,
-          y: cruiseY0 + u * cruiseRange + bobY,
+          x: Math.sin(u * turns + 0.4) * cruiseAmp + bobX,
+          y: cruiseY0 + u * cruiseRise + bobY,
         })
         const cruisePath = (u: number, out: THREE.Vector3) => {
           const c = clamp01(u)
           const tilt = cruiseTilt(c)
           const at = cruiseAt(c)
-          out.set(at.x + 0.6 * cruiseH * Math.sin(tilt), at.y - 0.6 * cruiseH * Math.cos(tilt), 0)
+          const nozzle = cruiser.nozzleOffset * cruiseScale(c)
+          out.set(at.x + nozzle * Math.sin(tilt), at.y - nozzle * Math.cos(tilt), 0)
         }
         const thrust = 0.7 + 0.2 * Math.sin(time * 7.3)
-        const here = cruiseAt(clamp01(t))
+        const tNow = clamp01(t)
+        const here = cruiseAt(tNow)
+        const scaleNow = cruiseScale(tNow)
+        cruiser.object.scale.setScalar(scaleNow)
         cruiser.update(
           {
             visible: inside,
             lift: 0,
             thrust,
-            x: here.x,
-            yPad: here.y,
+            x: here.x / scaleNow,
+            yPad: here.y / scaleNow,
             travel: 0,
             opacity: fade,
-            tilt: cruiseTilt(clamp01(t)) + Math.sin(time * 1.1) * 0.03,
+            tilt: cruiseTilt(tNow) + Math.sin(time * 1.1) * 0.03,
           },
           time,
           delta,
         )
         cruiseTrail.update(
           cruisePath,
-          { head: t, span: 0.45, width: cruiseH * 0.065, opacity: fade * 0.7 * thrust, spread: 1.6 },
+          {
+            head: t,
+            span: 0.3,
+            width: rocketHeight * 0.55 * 0.065 * scaleNow,
+            opacity: fade * 0.7 * thrust,
+            spread: 1.6,
+          },
           time,
         )
       }
@@ -726,13 +751,13 @@ export function TriScene() {
         const c = clamp01(u)
         const tilt = tiltAt(c)
         out.set(
-          rocketX + arcAt(c) + drift + 0.6 * rocketHeight * Math.sin(tilt),
-          rocketPadY + c * travel - 0.6 * rocketHeight * Math.cos(tilt),
+          rocketX + arcAt(c) + drift + rocket.nozzleOffset * Math.sin(tilt),
+          rocketPadY + c * travel - rocket.nozzleOffset * Math.cos(tilt),
           0,
         )
       }
       const liftNow = clamp01(current.lift)
-      const rocketOn = launch.visible || current.lift < 0.999
+      const rocketOn = launch.visible || current.lift < 0.995
       rocket.update(
         {
           visible: rocketOn,
@@ -769,34 +794,6 @@ export function TriScene() {
       glareMaterial.opacity = 0.85 * Math.max(0, 1 - current.lift * 1.6)
       streak.position.copy(glare.position)
       streakMaterial.opacity = 0.32 * Math.max(0, 1 - current.lift * 1.6)
-
-      /* Telemetria para o HUD, dez vezes por segundo. */
-      if (now - telemetryAt > 100) {
-        telemetryAt = now
-        const stage =
-          progress < takeoff
-            ? current.lift > 0.02
-              ? 'DECOLAGEM'
-              : 'PLATAFORMA'
-            : progress < 0.25
-              ? 'TRÂNSITO'
-              : progress < 0.31
-                ? 'APROXIMAÇÃO'
-                : progress < 0.5
-                  ? 'HORIZONTE DE EVENTOS'
-                  : progress < 0.9
-                    ? 'ESPAÇO PROFUNDO'
-                    : 'SUPERNOVA'
-        window.dispatchEvent(
-          new CustomEvent('astro:telemetry', {
-            detail: {
-              altitude: progress < takeoff ? current.lift * 408 : 408 + (progress - takeoff) * 384000,
-              velocity: progress < takeoff ? current.lift * 7660 : 7660 + (progress - takeoff) * 30000,
-              stage,
-            },
-          }),
-        )
-      }
 
       /* As estrelas estão sempre na tela, então todo frame desenha. Onde o
          campo é só textura, ou está apagado, 30fps bastam: é metade do custo
