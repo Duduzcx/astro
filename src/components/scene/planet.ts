@@ -370,25 +370,52 @@ const RING_FRAGMENT = /* glsl */ `
   }
 `
 
+/**
+ * Uma textura em degraus: a leve chega primeiro e a pesada substitui quando
+ * carrega. Uma string só é um degrau só.
+ */
+export type MapTiers = string | { low: string; high: string }
+
 export type PlanetMaps = {
   /** Mapa de cor equirretangular. */
-  map?: string
+  map?: MapTiers
   /** Luzes noturnas (Terra). */
-  night?: string
+  night?: MapTiers
   /** Nuvens em cinza (branco = nuvem). */
-  clouds?: string
+  clouds?: MapTiers
   /** Anel: uma faixa RGBA ao longo do raio. */
-  ring?: string
+  ring?: MapTiers
 }
 
 const textureLoader = new THREE.TextureLoader()
-function loadMap(url: string, onLoad: (texture: THREE.Texture) => void) {
-  return textureLoader.load(url, (texture) => {
-    /* Sem gestão de cor: o shader trabalha em sRGB de ponta a ponta. */
-    texture.colorSpace = THREE.NoColorSpace
-    texture.anisotropy = 4
-    onLoad(texture)
-  })
+const ANISOTROPY = 8
+
+function prepare(texture: THREE.Texture) {
+  /* Sem gestão de cor: o shader trabalha em sRGB de ponta a ponta. */
+  texture.colorSpace = THREE.NoColorSpace
+  texture.anisotropy = ANISOTROPY
+  return texture
+}
+
+/** Carrega o degrau leve, aplica, e depois o pesado por cima. */
+function loadMap(tiers: MapTiers, onLoad: (texture: THREE.Texture) => void): THREE.Texture[] {
+  const loaded: THREE.Texture[] = []
+  if (typeof tiers === 'string') {
+    loaded.push(textureLoader.load(tiers, (texture) => onLoad(prepare(texture))))
+    return loaded
+  }
+  loaded.push(
+    textureLoader.load(tiers.low, (low) => {
+      onLoad(prepare(low))
+      loaded.push(
+        textureLoader.load(tiers.high, (high) => {
+          onLoad(prepare(high))
+          low.dispose()
+        }),
+      )
+    }),
+  )
+  return loaded
 }
 
 export function createPlanet({
@@ -445,7 +472,7 @@ export function createPlanet({
   })
   if (maps?.map) {
     textures.push(
-      loadMap(maps.map, (texture) => {
+      ...loadMap(maps.map, (texture) => {
         surfaceMaterial.uniforms.uMap.value = texture
         surfaceMaterial.uniforms.uHasMap.value = 1
       }),
@@ -453,7 +480,7 @@ export function createPlanet({
   }
   if (maps?.night) {
     textures.push(
-      loadMap(maps.night, (texture) => {
+      ...loadMap(maps.night, (texture) => {
         surfaceMaterial.uniforms.uNight.value = texture
         surfaceMaterial.uniforms.uHasNight.value = 1
       }),
@@ -488,7 +515,7 @@ export function createPlanet({
     if (maps?.clouds) {
       const material = cloudsMaterial
       textures.push(
-        loadMap(maps.clouds, (texture) => {
+        ...loadMap(maps.clouds, (texture) => {
           material.uniforms.uMap.value = texture
           material.uniforms.uHasMap.value = 1
         }),
@@ -546,7 +573,7 @@ export function createPlanet({
     if (maps?.ring) {
       const material = ringMaterial
       textures.push(
-        loadMap(maps.ring, (texture) => {
+        ...loadMap(maps.ring, (texture) => {
           material.uniforms.uMap.value = texture
           material.uniforms.uHasMap.value = 1
         }),

@@ -139,7 +139,7 @@ Custo controlado: three.js entra num chunk separado por `React.lazy`; a contagem
 
 ## Mídia
 
-Texturas dos astros e do céu em `public/space/`: Solar System Scope (CC BY 4.0, https://www.solarsystemscope.com/textures/), re-encodadas em 1k e 2k pelo navegador. O crédito está no rodapé.
+Texturas dos astros e do céu em `public/space/`: Solar System Scope (CC BY 4.0, https://www.solarsystemscope.com/textures/), re-encodadas com `sharp-cli` em três degraus (1k, 2k, 4k) a partir das fontes em 8k. A cena carrega o 1k primeiro e substitui pelo pesado quando chega: 4k no desktop (~7,6 MB no total), 2k no celular (uma textura 4k com mipmaps são 32 MB de GPU). O crédito está no rodapé.
 
 | Arquivo | Onde |
 | --- | --- |

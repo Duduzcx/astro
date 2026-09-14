@@ -31,7 +31,7 @@ const FRAGMENT = /* glsl */ `
   }
 `
 
-export function createSpace(url: string) {
+export function createSpace(urls: { low: string; high: string }) {
   const geometry = new THREE.SphereGeometry(14, 48, 32)
   const material = new THREE.ShaderMaterial({
     vertexShader: VERTEX,
@@ -52,15 +52,21 @@ export function createSpace(url: string) {
   object.frustumCulled = false
 
   const loader = new THREE.TextureLoader()
-  let texture: THREE.Texture | null = null
-  loader.load(url, (loaded) => {
+  const textures: THREE.Texture[] = []
+  const apply = (loaded: THREE.Texture) => {
     loaded.colorSpace = THREE.NoColorSpace
     loaded.minFilter = THREE.LinearMipmapLinearFilter
-    loaded.anisotropy = 4
-    texture = loaded
+    loaded.anisotropy = 8
     material.uniforms.uMap.value = loaded
     object.visible = true
-  })
+  }
+  /* Em degraus: o leve aparece primeiro, o pesado substitui. */
+  textures.push(
+    loader.load(urls.low, (low) => {
+      apply(low)
+      textures.push(loader.load(urls.high, (high) => apply(high)))
+    }),
+  )
 
   return {
     object,
@@ -75,7 +81,7 @@ export function createSpace(url: string) {
     dispose() {
       geometry.dispose()
       material.dispose()
-      texture?.dispose()
+      for (const texture of textures) texture.dispose()
     },
   }
 }

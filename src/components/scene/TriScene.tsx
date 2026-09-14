@@ -167,8 +167,17 @@ export function TriScene() {
     const ambientField = new THREE.LineSegments(ambientGeometry, ambientMaterial)
     scene.add(ambientField)
 
+    /* Texturas em degraus: 1k primeiro, e o degrau pesado substitui. No
+       celular o pesado é 2k; no desktop, 4k. Quatro mil por dois mil em RGB
+       com mipmaps são 32 MB de GPU por textura, e o celular não tem isso
+       sobrando. */
+    const tier = (name: string, ext = 'jpg') => ({
+      low: `/space/${name}-1k.${ext}`,
+      high: `/space/${name}-${lightweight ? '2k' : '4k'}.${ext}`,
+    })
+
     /* O espaço: panorama da Via Láctea atrás de tudo. */
-    const space = createSpace('/space/milky-way.jpg')
+    const space = createSpace(tier('milky-way'))
     scene.add(space.object)
 
     /* Estrelas ao fundo, a página inteira. */
@@ -187,7 +196,10 @@ export function TriScene() {
     /* O planeta mora no mesmo centro e escala do campo de triângulos. */
     const planet = createPlanet({
       segments: lightweight ? 48 : 80,
-      maps: { map: '/space/neptune.jpg', clouds: '/space/earth-clouds.jpg' },
+      maps: {
+        map: { low: '/space/neptune-1k.jpg', high: '/space/neptune-2k.jpg' },
+        clouds: tier('earth-clouds'),
+      },
     })
     scene.add(planet.object)
 
@@ -201,7 +213,7 @@ export function TriScene() {
       segments: lightweight ? 64 : 112,
       kind: 'earth',
       spin: 0.012,
-      maps: { map: '/space/earth-day.jpg', night: '/space/earth-night.jpg', clouds: '/space/earth-clouds.jpg' },
+      maps: { map: tier('earth-day'), night: tier('earth-night'), clouds: tier('earth-clouds') },
     })
     /* De pé o que a tela mostra é a calota polar, toda branca. Deitada, o
        horizonte é o equador: oceano, continentes, e o giro leva os
@@ -229,7 +241,10 @@ export function TriScene() {
           kind: 'gas',
           spin: 0.03,
           ring: true,
-          maps: { map: '/space/jupiter.jpg', ring: '/space/saturn-ring.png' },
+          maps: {
+            map: tier('jupiter'),
+            ring: { low: '/space/saturn-ring-2k.png', high: '/space/saturn-ring-4k.png' },
+          },
         }),
         x: -0.95,
         z: -2.6,
@@ -242,7 +257,7 @@ export function TriScene() {
           segments: lightweight ? 40 : 64,
           kind: 'rock',
           spin: 0.09,
-          maps: { map: '/space/mars.jpg' },
+          maps: { map: tier('mars') },
         }),
         x: 0.92,
         z: -0.9,
@@ -255,7 +270,7 @@ export function TriScene() {
           segments: lightweight ? 48 : 72,
           kind: 'ice',
           spin: 0.05,
-          maps: { map: '/space/moon.jpg' },
+          maps: { map: tier('moon') },
           tint: '#c4d6f2',
         }),
         x: -0.6,
