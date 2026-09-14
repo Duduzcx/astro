@@ -185,6 +185,57 @@ export function TriScene() {
     scene.add(earth.object)
     const satellites = createSatellites(lightweight ? 14 : 24, 0.62 * 1.07, renderer.getPixelRatio())
     earth.object.add(satellites.object)
+    /* O desfile: três mundos passando em profundidades diferentes durante
+       a viagem, entrando por cima e saindo por baixo, cada um na sua janela
+       de progresso. Meio cortados nas bordas, para não brigar com os cards. */
+    const depthAt = (z: number) => (camera.position.z - z) / camera.position.z
+    type World = {
+      planet: ReturnType<typeof createPlanet>
+      x: number
+      z: number
+      size: number
+      from: number
+      to: number
+    }
+    const worlds: World[] = [
+      {
+        planet: createPlanet({ segments: lightweight ? 48 : 72, kind: 'gas', spin: 0.03, ring: true }),
+        x: -0.95,
+        z: -2.6,
+        size: 1.7,
+        from: 0.05,
+        to: 0.15,
+      },
+      {
+        planet: createPlanet({ segments: lightweight ? 36 : 56, kind: 'rock', spin: 0.09 }),
+        x: 0.92,
+        z: -0.9,
+        size: 0.5,
+        from: 0.105,
+        to: 0.2,
+      },
+      {
+        planet: createPlanet({ segments: lightweight ? 40 : 64, kind: 'ice', spin: 0.05 }),
+        x: -0.6,
+        z: -4.2,
+        size: 1.15,
+        from: 0.165,
+        to: 0.255,
+      },
+    ]
+    for (const world of worlds) scene.add(world.planet.object)
+    /* No celular a viagem é mais curta em fração da página. */
+    const worldWindow = (world: World) =>
+      narrow
+        ? { from: world.from * 0.82, to: world.to * 0.82 }
+        : { from: world.from, to: world.to }
+
+    /* O foguete em cruzeiro: pequeno, atravessando o desfile com a chama
+       viva, e sumindo quando o planeta-alvo chega. */
+    const cruiser = createRocket({ height: rocketHeight * 0.45, lightweight, cruise: true })
+    scene.add(cruiser.object)
+    const cruiseWindow = () => (narrow ? { from: 0.035, to: 0.215 } : { from: 0.045, to: 0.26 })
+
     const earthApparent = () => ({
       radius: narrow ? 2.0 : Math.max(2.4, halfWidth * 1.1),
       /* Quanto do planeta sobe acima da borda: pouco, para os botões do
@@ -454,6 +505,54 @@ export function TriScene() {
       )
       satellites.update(1 - earthGone, time)
 
+      for (const world of worlds) {
+        const { from, to } = worldWindow(world)
+        const t = (progress - from) / (to - from)
+        if (t <= 0 || t >= 1) {
+          world.planet.update({ x: 0, y: 0, scale: 1, opacity: 0, break: 0 }, time)
+          continue
+        }
+        const fade = Math.min(t / 0.15, 1) * Math.min((1 - t) / 0.15, 1)
+        const ds = depthAt(world.z)
+        /* No celular a tela é estreita: mundos menores e mais para a borda,
+           senão o gigante cobre a largura inteira atrás do texto. */
+        const size = world.size * (narrow ? 0.6 : 1)
+        const edge = world.x * (narrow ? 1.15 : 1)
+        const halfH = visibleHalfHeight + size * 0.62
+        world.planet.update(
+          {
+            x: edge * halfWidth * ds,
+            y: (halfH - 2 * halfH * t) * ds,
+            z: world.z,
+            scale: size * ds,
+            opacity: fade,
+            break: 0,
+          },
+          time,
+        )
+      }
+
+      {
+        const { from, to } = cruiseWindow()
+        const t = (progress - from) / (to - from)
+        const inside = t > 0 && t < 1
+        const fade = inside ? Math.min(t / 0.12, 1) * Math.min((1 - t) / 0.12, 1) : 0
+        cruiser.update(
+          {
+            visible: inside,
+            lift: 0,
+            thrust: 0.7 + 0.2 * Math.sin(time * 7.3),
+            /* No vão entre o painel e o texto dos Serviços. */
+            x: (narrow ? 0.34 : -0.03) * halfWidth,
+            yPad: 0.18 + Math.sin(time * 0.9) * 0.05,
+            travel: 0,
+            opacity: fade,
+          },
+          time,
+          delta,
+        )
+      }
+
       /* O foguete sai do horizonte: a plataforma acompanha a curva da Terra
          na coluna onde ele está. */
       const rocketX = (narrow ? 0.5 : 0.58) * halfWidth
@@ -516,6 +615,8 @@ export function TriScene() {
       stars.dispose()
       rocket.dispose()
       planet.dispose()
+      for (const world of worlds) world.planet.dispose()
+      cruiser.dispose()
       earth.dispose()
       satellites.dispose()
       blackHole.dispose()

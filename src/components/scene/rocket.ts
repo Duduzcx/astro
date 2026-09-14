@@ -169,7 +169,16 @@ function finGeometry(h: number) {
   return geometry
 }
 
-export function createRocket({ height, lightweight }: { height: number; lightweight: boolean }) {
+export function createRocket({
+  height,
+  lightweight,
+  cruise = false,
+}: {
+  height: number
+  lightweight: boolean
+  /** Em cruzeiro não há plataforma nem fumaça, e a opacidade vale. */
+  cruise?: boolean
+}) {
   const object = new THREE.Group()
   const h = height
   const geometries: THREE.BufferGeometry[] = []
@@ -183,12 +192,26 @@ export function createRocket({ height, lightweight }: { height: number; lightwei
     return m
   }
 
-  const ivory = trackM(new THREE.MeshStandardMaterial({ color: IVORY, metalness: 0.35, roughness: 0.38 }))
-  const cobalt = trackM(new THREE.MeshStandardMaterial({ color: COBALT, metalness: 0.4, roughness: 0.35 }))
-  const steel = trackM(new THREE.MeshStandardMaterial({ color: STEEL, metalness: 0.85, roughness: 0.3 }))
-  const glass = trackM(
-    new THREE.MeshStandardMaterial({ color: GLASS, metalness: 0.2, roughness: 0.15, emissive: 0x1e3a6a, emissiveIntensity: 0.6 }),
+  const ivory = trackM(
+    new THREE.MeshStandardMaterial({ color: IVORY, metalness: 0.35, roughness: 0.38, transparent: cruise }),
   )
+  const cobalt = trackM(
+    new THREE.MeshStandardMaterial({ color: COBALT, metalness: 0.4, roughness: 0.35, transparent: cruise }),
+  )
+  const steel = trackM(
+    new THREE.MeshStandardMaterial({ color: STEEL, metalness: 0.85, roughness: 0.3, transparent: cruise }),
+  )
+  const glass = trackM(
+    new THREE.MeshStandardMaterial({
+      color: GLASS,
+      metalness: 0.2,
+      roughness: 0.15,
+      emissive: 0x1e3a6a,
+      emissiveIntensity: 0.6,
+      transparent: cruise,
+    }),
+  )
+  const hullMaterials = [ivory, cobalt, steel, glass]
 
   const lathe = (profile: THREE.Vector2[], material: THREE.Material) => {
     const mesh = new THREE.Mesh(track(new THREE.LatheGeometry(profile, lightweight ? 28 : 40)), material)
@@ -320,7 +343,8 @@ export function createRocket({ height, lightweight }: { height: number; lightwei
   smoke.frustumCulled = false
 
   const root = new THREE.Group()
-  root.add(object, pad, smoke)
+  root.add(object)
+  if (!cruise) root.add(pad, smoke)
 
   let spawnCursor = 0
   let spawnDebt = 0
@@ -373,15 +397,18 @@ export function createRocket({ height, lightweight }: { height: number; lightwei
   return {
     object: root,
     update(state: RocketState, time: number, delta: number) {
-      root.visible = state.visible || alive > 0
+      root.visible = state.visible || (!cruise && alive > 0)
       if (!root.visible) return
+      if (cruise) for (const material of hullMaterials) material.opacity = state.opacity
 
       const y = state.yPad + state.lift * state.travel
       object.position.set(state.x, y, 0)
       object.visible = state.visible
-      /* No ar: gira devagar para mostrar o volume, e inclina um nada. */
-      object.rotation.y = state.lift > 0 ? time * 0.35 * state.lift : 0.4
-      object.rotation.z = state.lift > 0 ? Math.sin(time * 1.7) * 0.02 * state.lift : 0
+      /* No ar: gira devagar para mostrar o volume, e inclina um nada. Em
+         cruzeiro, inclina para o lado do rumo. */
+      const flying = cruise ? 1 : state.lift
+      object.rotation.y = flying > 0 ? time * 0.35 * flying : 0.4
+      object.rotation.z = cruise ? -0.12 + Math.sin(time * 1.3) * 0.02 : state.lift > 0 ? Math.sin(time * 1.7) * 0.02 * state.lift : 0
 
       for (const material of flameMaterials) {
         material.uniforms.uTime.value = time
@@ -390,6 +417,7 @@ export function createRocket({ height, lightweight }: { height: number; lightwei
       }
       glowMaterial.uniforms.uOpacity.value = state.thrust * state.opacity
 
+      if (cruise) return
       pad.position.set(state.x, state.yPad - 0.58 * h, -0.05)
       padMaterial.uniforms.uOpacity.value =
         state.thrust * Math.max(0, 1 - state.lift * 2.5) * state.opacity * 0.7

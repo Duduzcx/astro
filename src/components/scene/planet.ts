@@ -20,7 +20,12 @@ export type PlanetState = {
   break: number
 }
 
-export type PlanetKind = 'target' | 'earth'
+/** target: o planeta que explode. earth: a Terra do hero. gas, rock, ice: o desfile. */
+export type PlanetKind = 'target' | 'earth' | 'gas' | 'rock' | 'ice'
+
+const KIND_INDEX: Record<PlanetKind, number> = { target: 0, earth: 1, gas: 2, rock: 3, ice: 4 }
+/** Força da atmosfera por tipo. */
+const KIND_RIM: Record<PlanetKind, number> = { target: 1, earth: 1.5, gas: 1.2, rock: 0.45, ice: 0.9 }
 
 /* Raio casado com a casca do corpo dos triângulos (0,6 a 0,66). */
 const RADIUS = 0.62
@@ -51,7 +56,7 @@ const SURFACE_FRAGMENT = /* glsl */ `
   uniform float uTime;
   uniform float uBreak;
   uniform float uOpacity;
-  uniform float uEarth;
+  uniform float uKind;
   uniform vec3 uLight;
   varying vec3 vNormalV;
   varying vec3 vObj;
@@ -63,8 +68,38 @@ const SURFACE_FRAGMENT = /* glsl */ `
     float e = fbm(q * 2.6);
     float land = smoothstep(0.02, 0.12, e);
     vec3 albedo;
-    float clouds;
-    if (uEarth > 0.5) {
+    float clouds = 0.0;
+    float spec = 0.0;
+    if (uKind > 1.5 && uKind < 2.5) {
+      /* Gigante gasoso: faixas por latitude, torcidas por ruído, sem chão. */
+      float twist = snoise(q * 2.0) * 0.5;
+      float band = fbm(vec3(q.y * 5.0 + twist, q.x * 0.5, q.z * 0.5));
+      vec3 cream = vec3(0.93, 0.86, 0.72);
+      vec3 tan = vec3(0.76, 0.56, 0.36);
+      vec3 rust = vec3(0.55, 0.33, 0.22);
+      albedo = mix(cream, tan, smoothstep(-0.2, 0.2, band));
+      albedo = mix(albedo, rust, smoothstep(0.25, 0.5, band));
+      float storm = smoothstep(0.35, 0.15, length(vec2(q.x - 0.55, q.y + 0.25) * vec2(1.0, 1.8)));
+      albedo = mix(albedo, vec3(0.85, 0.42, 0.28), storm * 0.8);
+      land = 1.0;
+    } else if (uKind > 2.5 && uKind < 3.5) {
+      /* Rochoso: ferrugem, crateras escuras com borda clara. */
+      float relief = fbm(q * 4.0);
+      albedo = mix(vec3(0.5, 0.25, 0.16), vec3(0.82, 0.52, 0.36), smoothstep(-0.3, 0.4, relief));
+      float craterField = snoise(q * 9.0);
+      float crater = smoothstep(0.5, 0.58, craterField);
+      float rimLight = smoothstep(0.42, 0.5, craterField) * (1.0 - crater);
+      albedo = mix(albedo, albedo * 0.45, crater);
+      albedo += rimLight * 0.15;
+      land = 1.0;
+    } else if (uKind > 3.5) {
+      /* Lua de gelo: branco-azul com fendas escuras. */
+      float sheen = fbm(q * 3.0);
+      albedo = mix(vec3(0.72, 0.82, 0.94), vec3(0.94, 0.97, 1.0), smoothstep(-0.2, 0.4, sheen));
+      float cracks = smoothstep(0.03, 0.0, abs(snoise(q * 7.0)));
+      albedo = mix(albedo, vec3(0.3, 0.45, 0.7), cracks * 0.7);
+      land = 0.2;
+    } else if (uKind > 0.5) {
       /* A Terra: oceano fundo, plataformas claras, verde nas baixadas e
          terra nos planaltos, calotas, nuvens largas. */
       vec3 ocean = mix(vec3(0.02, 0.09, 0.3), vec3(0.05, 0.3, 0.62), smoothstep(-0.35, 0.02, e));
@@ -93,11 +128,11 @@ const SURFACE_FRAGMENT = /* glsl */ `
     /* Terminador macio, noite com um resto de luz. */
     float day = smoothstep(-0.22, 0.38, facing);
     vec3 color = albedo * (0.07 + 0.93 * day);
-    float spec = pow(max(dot(reflect(-uLight, n), v), 0.0), 40.0) * (1.0 - land) * 0.35 * day;
+    spec = pow(max(dot(reflect(-uLight, n), v), 0.0), 40.0) * (1.0 - land) * 0.35 * day;
     color += spec;
     float fresnel = pow(1.0 - max(dot(n, v), 0.0), 3.0);
     color += vec3(0.35, 0.55, 1.0) * fresnel * (0.3 + 0.7 * day);
-    if (uEarth > 0.5) {
+    if (uKind > 0.5 && uKind < 1.5) {
       /* Luzes de cidade no lado noturno, só em terra e fora das nuvens. */
       float cities = smoothstep(0.5, 0.8, snoise(q * 26.0)) * land * (1.0 - clouds * 0.7);
       color += vec3(1.0, 0.78, 0.45) * cities * (1.0 - day) * 0.9;
@@ -127,7 +162,7 @@ const ATMOSPHERE_VERTEX = /* glsl */ `
 const ATMOSPHERE_FRAGMENT = /* glsl */ `
   uniform float uOpacity;
   uniform float uBreak;
-  uniform float uEarth;
+  uniform float uRim;
   uniform vec3 uLight;
   varying vec3 vNormalV;
   varying vec3 vView;
@@ -136,7 +171,7 @@ const ATMOSPHERE_FRAGMENT = /* glsl */ `
     vec3 v = normalize(vView);
     /* Lado de trás da esfera maior: só a borda passa por fora do planeta,
        que tapa o miolo pela profundidade. */
-    float rim = pow(1.0 - abs(dot(n, v)), 3.0) * (1.0 + uEarth * 0.5);
+    float rim = pow(1.0 - abs(dot(n, v)), 3.0) * uRim;
     float day = 0.35 + 0.65 * smoothstep(-0.4, 0.5, dot(n, uLight));
     float heat = sin(clamp(uBreak, 0.0, 1.0) * 3.14159);
     vec3 color = mix(vec3(0.4, 0.62, 1.0), vec3(1.0, 0.75, 0.45), heat);
@@ -145,18 +180,49 @@ const ATMOSPHERE_FRAGMENT = /* glsl */ `
   }
 `
 
+const RING_VERTEX = /* glsl */ `
+  varying vec2 vPos;
+  varying vec3 vNormalV;
+  void main() {
+    vPos = position.xy;
+    vNormalV = normalize(normalMatrix * vec3(0.0, 0.0, 1.0));
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`
+
+const RING_FRAGMENT = /* glsl */ `
+  uniform float uOpacity;
+  uniform vec3 uLight;
+  varying vec2 vPos;
+  varying vec3 vNormalV;
+  ${SIMPLEX_NOISE}
+  void main() {
+    float r = length(vPos);
+    float t = (r - ${(RADIUS * 1.45).toFixed(3)}) / ${(RADIUS * 0.9).toFixed(3)};
+    float bands = 0.5 + 0.5 * sin(t * 42.0 + snoise(vec3(t * 5.0, 0.0, 0.0)) * 3.0);
+    float gap = smoothstep(0.62, 0.66, t) * smoothstep(0.72, 0.68, t);
+    float alpha = smoothstep(0.0, 0.08, t) * smoothstep(1.0, 0.9, t) * (0.3 + 0.45 * bands) * (1.0 - gap * 0.85);
+    float lit = 0.45 + 0.55 * abs(dot(normalize(vNormalV), uLight));
+    vec3 color = mix(vec3(0.82, 0.74, 0.6), vec3(0.95, 0.9, 0.8), bands) * lit;
+    gl_FragColor = vec4(color, alpha * uOpacity);
+  }
+`
+
 export function createPlanet({
   segments,
   kind = 'target',
   spin = 0.04,
+  ring = false,
 }: {
   segments: number
   kind?: PlanetKind
   /** Rotação em rad/s. A Terra, enorme, gira bem mais devagar. */
   spin?: number
+  /** Anel inclinado, para o gigante gasoso. */
+  ring?: boolean
 }) {
   const object = new THREE.Group()
-  const earth = kind === 'earth' ? 1 : 0
+  const kindIndex = KIND_INDEX[kind]
   /* Luz fixa em espaço de câmera: o terminador fica parado enquanto a
      superfície gira. */
   const light = new THREE.Vector3(-0.55, 0.42, 0.72).normalize()
@@ -171,7 +237,7 @@ export function createPlanet({
       uTime: { value: 0 },
       uBreak: { value: 0 },
       uOpacity: { value: 1 },
-      uEarth: { value: earth },
+      uKind: { value: kindIndex },
       uLight: { value: light },
     },
   })
@@ -192,13 +258,33 @@ export function createPlanet({
     uniforms: {
       uOpacity: { value: 1 },
       uBreak: { value: 0 },
-      uEarth: { value: earth },
+      uRim: { value: KIND_RIM[kind] },
       uLight: { value: light },
     },
   })
   const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial)
   atmosphere.renderOrder = -1
   object.add(atmosphere)
+
+  /* Anel: faixas de alfa por ruído, inclinado, dos dois lados. */
+  let ringGeometry: THREE.RingGeometry | null = null
+  let ringMaterial: THREE.ShaderMaterial | null = null
+  if (ring) {
+    ringGeometry = new THREE.RingGeometry(RADIUS * 1.45, RADIUS * 2.35, 96, 3)
+    ringMaterial = new THREE.ShaderMaterial({
+      vertexShader: RING_VERTEX,
+      fragmentShader: RING_FRAGMENT,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      uniforms: { uOpacity: { value: 1 }, uLight: { value: light } },
+    })
+    const ringMesh = new THREE.Mesh(ringGeometry, ringMaterial)
+    ringMesh.rotation.x = 1.25
+    ringMesh.rotation.y = 0.3
+    ringMesh.renderOrder = -1
+    object.add(ringMesh)
+  }
 
   return {
     object,
@@ -215,12 +301,15 @@ export function createPlanet({
       surfaceMaterial.uniforms.uOpacity.value = state.opacity
       atmosphereMaterial.uniforms.uBreak.value = state.break
       atmosphereMaterial.uniforms.uOpacity.value = state.opacity
+      if (ringMaterial) ringMaterial.uniforms.uOpacity.value = state.opacity
     },
     dispose() {
       surfaceGeometry.dispose()
       surfaceMaterial.dispose()
       atmosphereGeometry.dispose()
       atmosphereMaterial.dispose()
+      ringGeometry?.dispose()
+      ringMaterial?.dispose()
     },
   }
 }

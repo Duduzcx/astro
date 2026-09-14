@@ -1,6 +1,5 @@
 import * as THREE from 'three'
 import { RING_NORMAL } from './triangles'
-import { SIMPLEX_NOISE } from './glsl'
 
 /**
  * O buraco negro por cima da forma dos triângulos: um horizonte preto que
@@ -24,7 +23,9 @@ export type BlackHoleState = {
 }
 
 const INNER = 0.44
-const OUTER = 1.7
+/* Borda externa curta: acima de 1,4 o brilho já era quase zero e cada
+   pixel do anel custa fill rate no desktop. */
+const OUTER = 1.4
 const HORIZON = 0.4
 
 const DISC_VERTEX = /* glsl */ `
@@ -47,7 +48,6 @@ const DISC_FRAGMENT = /* glsl */ `
   uniform float uGain;
   varying vec2 vPos;
   varying float vDoppler;
-  ${SIMPLEX_NOISE}
   void main() {
     float r = length(vPos);
     float a = atan(vPos.y, vPos.x);
@@ -57,11 +57,14 @@ const DISC_FRAGMENT = /* glsl */ `
     float hot = smoothstep(0.14, 0.0, rn);
     vec3 warm = mix(vec3(0.9, 0.3, 0.04), vec3(1.0, 0.68, 0.28), pow(1.0 - rn, 1.6));
     vec3 color = mix(warm, vec3(1.0, 0.96, 0.88), hot);
-    /* Estrias: ruído amostrado num referencial que gira mais depressa perto
-       do centro, órbita kepleriana de mentira. */
+    /* Estrias: duas ondas por ângulo, torcidas pelo raio, num referencial
+       que gira mais depressa perto do centro. Sem ruído por pixel: o disco
+       ocupa meia tela por um quinto da página no desktop, e cada instrução
+       aqui é fill rate. */
     float spin = uTime * (0.35 + 0.8 / max(r, ${INNER.toFixed(2)}));
-    float n = snoise(vec3(cos(a + spin) * r * 2.6, sin(a + spin) * r * 2.6, r * 7.0)) * 0.5 + 0.5;
-    float streak = 0.5 + 0.5 * n;
+    float wave = sin(a * 9.0 + spin + sin(r * 11.0 + uTime * 0.2) * 2.0);
+    float fine = sin(a * 23.0 - spin * 1.7 + r * 6.0);
+    float streak = 0.62 + 0.24 * wave + 0.14 * fine;
     float alpha = radial * streak * vDoppler;
     /* Anel de fótons: um fio branco colado ao horizonte. */
     float photon = smoothstep(0.022, 0.0, abs(r - ${INNER.toFixed(2)} - 0.012));
