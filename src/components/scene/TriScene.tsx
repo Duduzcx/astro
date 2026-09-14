@@ -66,7 +66,8 @@ export function TriScene() {
     const lightweight = window.innerWidth < 1024
 
     const renderer = new THREE.WebGLRenderer({
-      antialias: !weakDevice,
+      /* Sem MSAA no celular: é taxa de preenchimento, e scroll liso vale mais. */
+      antialias: !weakDevice && !lightweight,
       alpha: true,
       powerPreference: 'high-performance',
     })
@@ -161,7 +162,7 @@ export function TriScene() {
 
     const spread = new THREE.Vector3(2.6, 1.7, 1.2)
     const sphereGeometry = buildTriangles(
-      weakDevice ? 2600 : lightweight ? 4000 : 5600,
+      weakDevice ? 2200 : lightweight ? 2600 : 5600,
       spread,
       true,
     )
@@ -171,7 +172,7 @@ export function TriScene() {
 
     /* Camada ambiente, sempre dispersa: os triângulos fracos flutuando em volta. */
     const ambientGeometry = buildTriangles(
-      lightweight ? 180 : 420,
+      lightweight ? 120 : 420,
       new THREE.Vector3(3.2, 2.1, 1.6),
       false,
     )
@@ -184,10 +185,17 @@ export function TriScene() {
        celular o pesado é 2k; no desktop, 4k. Quatro mil por dois mil em RGB
        com mipmaps são 32 MB de GPU por textura, e o celular não tem isso
        sobrando. */
-    const tier = (name: string, ext = 'jpg') => ({
+    /* No celular só a Terra do hero passa de 1k: cada upload de textura
+       trava o thread principal por dezenas de milissegundos, e isso vira
+       tranco no scroll. */
+    const tier = (name: string, ext = 'jpg', mobileHigh = '1k') => ({
       low: `/space/${name}-1k.${ext}`,
-      high: `/space/${name}-${lightweight ? '2k' : '4k'}.${ext}`,
+      high: `/space/${name}-${lightweight ? mobileHigh : '4k'}.${ext}`,
     })
+    /* Um degrau a mais para a Terra no desktop com memória: 8k, o teto das
+       fontes livres. Com mipmaps são ~180 MB de GPU, então só com folga. */
+    const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8
+    const ultra = !lightweight && !weakDevice && memory >= 8
 
     /* O espaço: panorama da Via Láctea atrás de tudo. */
     const space = createSpace(tier('milky-way'), lightweight || weakDevice ? 0 : 0.16)
@@ -236,7 +244,7 @@ export function TriScene() {
         : null
 
     /* Estrelas ao fundo, a página inteira. */
-    const stars = createStars(lightweight ? 1200 : 2400, renderer.getPixelRatio())
+    const stars = createStars(lightweight ? 800 : 2400, renderer.getPixelRatio())
     scene.add(stars.object)
 
     /* Foguete: altura em mundo pela largura da tela. No celular ele é menor e
@@ -269,11 +277,15 @@ export function TriScene() {
       kind: 'earth',
       spin: 0.012,
       maps: {
-        map: tier('earth-day'),
+        map: { ...tier('earth-day', 'jpg', '2k'), ultra: ultra ? '/space/earth-day-8k.jpg' : undefined },
         night: tier('earth-night'),
-        clouds: tier('earth-clouds'),
-        normal: tier('earth-normal'),
-        specular: { low: '/space/earth-specular-1k.jpg', high: '/space/earth-specular-2k.jpg' },
+        clouds: tier('earth-clouds', 'jpg', '2k'),
+        /* Relevo e máscara de água só no desktop: no celular são duas
+           amostras a mais por pixel numa esfera que ocupa meia tela. */
+        normal: lightweight ? undefined : tier('earth-normal'),
+        specular: lightweight
+          ? undefined
+          : { low: '/space/earth-specular-1k.jpg', high: '/space/earth-specular-2k.jpg' },
       },
     })
     /* De pé o que a tela mostra é a calota polar, toda branca. Deitada, o
@@ -363,7 +375,7 @@ export function TriScene() {
 
     /* O foguete em cruzeiro: pequeno, atravessando o desfile com a chama
        viva, e sumindo quando o planeta-alvo chega. */
-    const cruiser = createRocket({ height: rocketHeight * 0.55, lightweight, cruise: true })
+    const cruiser = createRocket({ height: rocketHeight * 0.5, lightweight, cruise: true })
     scene.add(cruiser.object)
     /* Rastros: o do lançamento e o do cruzeiro, cada um seguindo a sua
        própria trajetória. */
@@ -725,7 +737,7 @@ export function TriScene() {
           {
             head: t,
             span: 0.3,
-            width: rocketHeight * 0.55 * 0.065 * scaleNow,
+            width: rocketHeight * 0.5 * 0.09 * scaleNow,
             opacity: fade * 0.7 * thrust,
             spread: 1.6,
           },
@@ -803,8 +815,10 @@ export function TriScene() {
         current.thrust < 0.01 &&
         current.opacity < 0.3 &&
         (current.mix > 0.85 || current.opacity <= 0.015)
-      if (!(restful && frameCount % 2)) {
-        if (postfx) postfx.render(time)
+      /* No celular a cena desenha a 30fps sempre: metade do trabalho por
+         frame no thread principal, e o scroll nativo por cima fica liso. */
+      if (!((restful || lightweight) && frameCount % 2)) {
+        if (postfx) postfx.render(time, 0.005 + rush * 0.012)
         else renderer.render(scene, camera)
       }
 

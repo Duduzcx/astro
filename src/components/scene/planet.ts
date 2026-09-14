@@ -27,7 +27,9 @@ export type PlanetKind = 'target' | 'earth' | 'gas' | 'rock' | 'ice'
 
 const KIND_INDEX: Record<PlanetKind, number> = { target: 0, earth: 1, gas: 2, rock: 3, ice: 4 }
 /** Força e cor da atmosfera por tipo. */
-const KIND_RIM: Record<PlanetKind, number> = { target: 1.0, earth: 1.6, gas: 1.1, rock: 0.5, ice: 0.8 }
+const KIND_RIM: Record<PlanetKind, number> = { target: 1.1, earth: 1.5, gas: 0.8, rock: 0.45, ice: 0.7 }
+/** Raio da casca da atmosfera em relação ao planeta: fina, como a de verdade. */
+const KIND_SHELL: Record<PlanetKind, number> = { target: 1.07, earth: 1.055, gas: 1.05, rock: 1.03, ice: 1.04 }
 const KIND_ATMOSPHERE: Record<PlanetKind, string> = {
   target: '#6aa0ff',
   earth: '#5f9dff',
@@ -43,7 +45,6 @@ const KIND_HAZE: Record<PlanetKind, number> = { target: 0.35, earth: 0.42, gas: 
 /* Raio casado com a casca do corpo dos triângulos (0,6 a 0,66). */
 const RADIUS = 0.62
 const CLOUDS = 0.632
-const ATMOSPHERE = 0.72
 
 /* Normal perturbada pela altura via derivadas de tela: uma amostra de
    altura por pixel, sem textura. É o perturbNormalArb do three. */
@@ -237,7 +238,7 @@ const SURFACE_FRAGMENT = /* glsl */ `
       /* Relevo fotografado: o mapa normal, em espaço tangente, com o verde
          apontando para o sul (convenção DirectX), daí o sinal em y. */
       vec3 nm = texture2D(uNormal, vUv).xyz * 2.0 - 1.0;
-      nm.xy *= vec2(1.7, -1.7);
+      nm.xy *= vec2(2.4, -2.4);
       n = normalize(normalize(vTangentV) * nm.x + normalize(vBitangentV) * nm.y + geomN * max(nm.z, 0.2));
     }
     vec3 v = normalize(-vViewPos);
@@ -363,6 +364,7 @@ const ATMOSPHERE_FRAGMENT = /* glsl */ `
   uniform float uOpacity;
   uniform float uBreak;
   uniform float uRim;
+  uniform float uShell;
   uniform vec3 uColor;
   uniform vec3 uLight;
   varying vec3 vNormalV;
@@ -370,14 +372,18 @@ const ATMOSPHERE_FRAGMENT = /* glsl */ `
   void main() {
     vec3 n = normalize(vNormalV);
     vec3 v = normalize(vView);
-    /* Duas camadas: um limbo fino e claro colado ao planeta e uma névoa
-       larga e fraca por fora, como o espalhamento de verdade. */
-    float mu = 1.0 - abs(dot(n, v));
-    float rim = (pow(mu, 7.0) * 1.7 + pow(mu, 2.2) * 0.28) * uRim;
-    float day = 0.2 + 0.8 * smoothstep(-0.45, 0.45, dot(n, uLight));
+    /* Na casca (BackSide) o cosseno entre normal e visada vai de 0 na
+       borda externa até cosLimb na borda do planeta; entre os dois é a
+       faixa de atmosfera que se vê: clara colada ao limbo, sumindo para
+       fora em poucos por cento do raio, como a de verdade. Atrás do
+       planeta a casca é ocluída pela profundidade da superfície. */
+    float cosLimb = sqrt(max(1.0 - uShell * uShell, 0.0));
+    float t = clamp(1.0 - abs(dot(n, v)) / cosLimb, 0.0, 1.0);
+    float rim = (pow(1.0 - t, 2.4) * 0.9 + smoothstep(0.14, 0.0, t) * 0.5) * uRim;
+    float day = 0.15 + 0.85 * smoothstep(-0.4, 0.45, dot(n, uLight));
     float heat = sin(clamp(uBreak, 0.0, 1.0) * 3.14159);
     vec3 color = mix(uColor, vec3(1.0, 0.75, 0.45), heat);
-    float alpha = rim * day * uOpacity * (1.0 - uBreak) + rim * heat * heat * 2.0 * uOpacity;
+    float alpha = rim * day * uOpacity * (1.0 - uBreak) + pow(1.0 - t, 1.5) * heat * heat * 2.0 * uOpacity * uRim;
     gl_FragColor = vec4(color, alpha);
   }
 `
@@ -437,7 +443,7 @@ const RING_FRAGMENT = /* glsl */ `
  * Uma textura em degraus: a leve chega primeiro e a pesada substitui quando
  * carrega. Uma string só é um degrau só.
  */
-export type MapTiers = string | { low: string; high: string }
+export type MapTiers = string | { low: string; high: string; ultra?: string }
 
 export type PlanetMaps = {
   /** Mapa de cor equirretangular. */
@@ -478,6 +484,16 @@ function loadMap(tiers: MapTiers, onLoad: (texture: THREE.Texture) => void): THR
         textureLoader.load(tiers.high, (high) => {
           onLoad(prepare(high))
           low.dispose()
+          /* Um terceiro degrau, opcional e pesado (8k): só quando o
+             anterior já está na tela. */
+          if (tiers.ultra) {
+            loaded.push(
+              textureLoader.load(tiers.ultra, (ultra) => {
+                onLoad(prepare(ultra))
+                high.dispose()
+              }),
+            )
+          }
         }),
       )
     }),
@@ -512,7 +528,9 @@ export function createPlanet({
   const textures: THREE.Texture[] = []
   /* Luz fixa em espaço de câmera: o terminador fica parado enquanto a
      superfície gira. */
-  const light = new THREE.Vector3(-0.55, 0.42, 0.72).normalize()
+  /* Mais de lado que de frente: o terminador aparece e a esfera ganha
+     volume, em vez de um disco chapado iluminado pela câmera. */
+  const light = new THREE.Vector3(-0.72, 0.38, 0.58).normalize()
 
   const geometries: THREE.BufferGeometry[] = []
   const materials: THREE.Material[] = []
@@ -627,7 +645,7 @@ export function createPlanet({
     materials.push(cloudsMaterial)
   }
 
-  const atmosphereGeometry = new THREE.SphereGeometry(ATMOSPHERE, segments, Math.round(segments * 0.62))
+  const atmosphereGeometry = new THREE.SphereGeometry(RADIUS * KIND_SHELL[kind], segments, Math.round(segments * 0.62))
   const atmosphereMaterial = new THREE.ShaderMaterial({
     vertexShader: ATMOSPHERE_VERTEX,
     fragmentShader: ATMOSPHERE_FRAGMENT,
@@ -639,6 +657,7 @@ export function createPlanet({
       uOpacity: { value: 1 },
       uBreak: { value: 0 },
       uRim: { value: KIND_RIM[kind] },
+      uShell: { value: 1 / KIND_SHELL[kind] },
       uColor: { value: new THREE.Color(KIND_ATMOSPHERE[kind]) },
       uLight: { value: light },
     },

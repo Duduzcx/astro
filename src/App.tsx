@@ -42,6 +42,9 @@ export default function App() {
       <Suspense fallback={null}>
         <TriScene />
       </Suspense>
+      {/* Barreira: escurece a cena por baixo do texto sem mexer na cena.
+          Mais forte à esquerda, onde o texto mora em tela larga. */}
+      <div aria-hidden="true" className="scene-scrim pointer-events-none fixed inset-0 z-0" />
       <ScrollProgress />
 
       <a

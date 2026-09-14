@@ -12,6 +12,7 @@ const FILM = {
     uTime: { value: 0 },
     uVignette: { value: 0.32 },
     uGrain: { value: 0.035 },
+    uEdgeBlur: { value: 0.0 },
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -25,10 +26,22 @@ const FILM = {
     uniform float uTime;
     uniform float uVignette;
     uniform float uGrain;
+    uniform float uEdgeBlur;
     varying vec2 vUv;
     void main() {
       vec4 c = texture2D(tDiffuse, vUv);
       float d = distance(vUv, vec2(0.5));
+      /* Cantos desfocados, como lente de cinema: nítido no centro, macio
+         para fora. Oito amostras num anel cujo raio cresce com a distância. */
+      float amount = smoothstep(0.28, 0.8, d) * uEdgeBlur;
+      if (amount > 0.0004) {
+        vec4 acc = c * 2.0;
+        for (int i = 0; i < 8; i++) {
+          float a = float(i) * 0.7853982;
+          acc += texture2D(tDiffuse, vUv + vec2(cos(a), sin(a)) * amount);
+        }
+        c = acc / 10.0;
+      }
       c.rgb *= 1.0 - smoothstep(0.42, 0.95, d) * uVignette;
       float g = fract(sin(dot(vUv + fract(uTime * 0.37), vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
       c.rgb += g * uGrain;
@@ -60,8 +73,9 @@ export function createPostFx(
   const film = new ShaderPass(FILM)
   composer.addPass(film)
   return {
-    render(time: number) {
+    render(time: number, edgeBlur = 0) {
       film.uniforms.uTime.value = time
+      film.uniforms.uEdgeBlur.value = edgeBlur
       composer.render()
     },
     setSize(w: number, h: number) {

@@ -37,12 +37,14 @@ export const KEYFRAMES: Keyframes = [
   [0.4, 0.6, 0.5, 0.0, 0.55, 0.7, 1],
   [0.425, 0.05, 0.5, 0.0, 0.85, 1.0, 1],
   [0.46, 0.05, 0.5, 0.0, 1.0, 1.0, 1],
-  [0.5, 0.06, 0.5, 0.0, 1.0, 0.75, 1],
-  [0.525, 0.9, 0.0, 0.0, 1.35, 0.22, 1],
-  [0.545, 0.9, 0.0, 0.0, 1.35, 0.0, 1],
+  /* ...e pela chamada e o começo do Processo, crescendo devagar. */
+  [0.56, 0.05, 0.5, 0.0, 1.06, 1.0, 1],
+  [0.585, 0.06, 0.5, 0.0, 1.06, 0.75, 1],
+  [0.61, 0.9, 0.0, 0.0, 1.35, 0.22, 1],
+  [0.63, 0.9, 0.0, 0.0, 1.35, 0.0, 1],
   /* Invisível de novo: o campo vira poeira dourada de estrela. */
-  [0.555, 0.9, 0.0, 0.0, 1.35, 0.0, 2],
-  [0.585, 0.9, 0.0, 0.0, 1.35, 0.22, 2],
+  [0.64, 0.9, 0.0, 0.0, 1.35, 0.0, 2],
+  [0.67, 0.9, 0.0, 0.0, 1.35, 0.22, 2],
   [0.885, 0.9, 0.0, 0.0, 1.35, 0.22, 2],
   /* A poeira condensa: uma estrela nasce durante o contato... */
   /* No vão entre a coluna de texto e o card do formulário — atrás do card ela
@@ -130,8 +132,8 @@ export function mobileKeyframes(
        engolindo os detritos e some antes dos Projetos. */
     [0.315, 0.6, 0.0, -0.15, scale * 0.5, 0.35, 1],
     [0.335, 0.1, 0.0, -0.15, scale * 0.85, 0.5, 1],
-    [0.37, 0.1, 0.0, -0.15, scale * 0.95, 0.5, 1],
-    [0.395, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
+    [0.44, 0.1, 0.0, -0.15, scale * 0.98, 0.5, 1],
+    [0.47, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     [0.55, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     /* Disperso e quase invisível, o campo vira poeira dourada de estrela. */
     [0.62, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 2],

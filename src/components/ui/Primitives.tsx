@@ -271,15 +271,18 @@ export function Reveal({
   className?: string
 }) {
   const [entered, setEntered] = useState(false)
+  /* Chega desfocado e assenta nítido, só em tela larga: animar `filter`
+     repinta o bloco a cada frame, e no celular isso pesa. */
+  const soft = typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
 
   return (
     <motion.div
       className={`${className} ${entered ? 'is-entered' : ''}`}
-      initial={{ opacity: 0, y: 22, scale: 0.975 }}
-      whileInView={{ opacity: 1, y: 0, scale: 1 }}
+      initial={{ opacity: 0, y: 22, scale: 0.975, filter: soft ? 'blur(10px)' : 'none' }}
+      whileInView={{ opacity: 1, y: 0, scale: 1, filter: soft ? 'blur(0px)' : 'none' }}
       viewport={{ once: true, margin: '-80px' }}
       onViewportEnter={() => setEntered(true)}
-      transition={{ duration: 0.75, delay, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.85, delay, ease: [0.22, 1, 0.36, 1] }}
     >
       {children}
     </motion.div>
