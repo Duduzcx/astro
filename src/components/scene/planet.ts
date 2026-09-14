@@ -509,6 +509,7 @@ export function createPlanet({
   detail = 1,
   maps,
   tint = '#ffffff',
+  warm,
 }: {
   segments: number
   kind?: PlanetKind
@@ -522,7 +523,15 @@ export function createPlanet({
   maps?: PlanetMaps
   /** Multiplica a cor do mapa (a lua vira gelo com um azul leve). */
   tint?: string
+  /** Chamado com cada textura assim que chega: sobe para a GPU na hora,
+      em vez de travar o primeiro frame em que o planeta aparece. */
+  warm?: (texture: THREE.Texture) => void
 }) {
+  const load = (tiers: MapTiers, apply: (texture: THREE.Texture) => void) =>
+    loadMap(tiers, (texture) => {
+      warm?.(texture)
+      apply(texture)
+    })
   const object = new THREE.Group()
   const kindIndex = KIND_INDEX[kind]
   const textures: THREE.Texture[] = []
@@ -570,7 +579,7 @@ export function createPlanet({
   })
   if (maps?.normal) {
     textures.push(
-      ...loadMap(maps.normal, (texture) => {
+      ...load(maps.normal, (texture) => {
         surfaceMaterial.uniforms.uNormal.value = texture
         surfaceMaterial.uniforms.uHasNormal.value = 1
       }),
@@ -578,7 +587,7 @@ export function createPlanet({
   }
   if (maps?.specular) {
     textures.push(
-      ...loadMap(maps.specular, (texture) => {
+      ...load(maps.specular, (texture) => {
         surfaceMaterial.uniforms.uSpecular.value = texture
         surfaceMaterial.uniforms.uHasSpecular.value = 1
       }),
@@ -586,7 +595,7 @@ export function createPlanet({
   }
   if (maps?.map) {
     textures.push(
-      ...loadMap(maps.map, (texture) => {
+      ...load(maps.map, (texture) => {
         surfaceMaterial.uniforms.uMap.value = texture
         surfaceMaterial.uniforms.uHasMap.value = 1
       }),
@@ -594,7 +603,7 @@ export function createPlanet({
   }
   if (maps?.night) {
     textures.push(
-      ...loadMap(maps.night, (texture) => {
+      ...load(maps.night, (texture) => {
         surfaceMaterial.uniforms.uNight.value = texture
         surfaceMaterial.uniforms.uHasNight.value = 1
       }),
@@ -629,7 +638,7 @@ export function createPlanet({
     if (maps?.clouds) {
       const material = cloudsMaterial
       textures.push(
-        ...loadMap(maps.clouds, (texture) => {
+        ...load(maps.clouds, (texture) => {
           material.uniforms.uMap.value = texture
           material.uniforms.uHasMap.value = 1
           /* A mesma foto serve de sombra no chão. */
@@ -691,7 +700,7 @@ export function createPlanet({
     if (maps?.ring) {
       const material = ringMaterial
       textures.push(
-        ...loadMap(maps.ring, (texture) => {
+        ...load(maps.ring, (texture) => {
           material.uniforms.uMap.value = texture
           material.uniforms.uHasMap.value = 1
         }),

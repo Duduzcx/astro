@@ -47,7 +47,11 @@ const FRAGMENT = /* glsl */ `
   }
 `
 
-export function createSpace(urls: { low: string; high: string }, nebula = 0) {
+export function createSpace(
+  urls: { low: string; high: string },
+  nebula = 0,
+  warm?: (texture: THREE.Texture) => void,
+) {
   const geometry = new THREE.SphereGeometry(14, 48, 32)
   const material = new THREE.ShaderMaterial({
     vertexShader: VERTEX,
@@ -74,6 +78,7 @@ export function createSpace(urls: { low: string; high: string }, nebula = 0) {
     loaded.colorSpace = THREE.NoColorSpace
     loaded.minFilter = THREE.LinearMipmapLinearFilter
     loaded.anisotropy = 8
+    warm?.(loaded)
     material.uniforms.uMap.value = loaded
     object.visible = true
   }

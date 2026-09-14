@@ -22,6 +22,7 @@ import { createSatellites } from './satellites'
 import { createSpace } from './space'
 import { createPostFx } from './postfx'
 import { createTrail } from './trail'
+import { createMeteors } from './meteors'
 
 /**
  * Núcleo orbital: uma bola densa de triângulos vazados com três anéis
@@ -66,13 +67,14 @@ export function TriScene() {
     const lightweight = window.innerWidth < 1024
 
     const renderer = new THREE.WebGLRenderer({
-      /* Sem MSAA no celular: é taxa de preenchimento, e scroll liso vale mais. */
-      antialias: !weakDevice && !lightweight,
+      antialias: !weakDevice,
       alpha: true,
       powerPreference: 'high-performance',
     })
+    /* Celular a 1,5 de razão de pixels: a 1,0 a cena era esticada quase
+       três vezes e virava desenho borrado. A taxa de 30fps segura o custo. */
     renderer.setPixelRatio(
-      Math.min(window.devicePixelRatio, weakDevice ? 1 : lightweight ? 1 : 1.25),
+      Math.min(window.devicePixelRatio, weakDevice ? 1 : lightweight ? 1.5 : 1.25),
     )
     /* Tone mapping de filme para os materiais iluminados (o foguete): sem
        isso o metal estoura em branco. Os shaders próprios ignoram. */
@@ -188,7 +190,7 @@ export function TriScene() {
     /* No celular só a Terra do hero passa de 1k: cada upload de textura
        trava o thread principal por dezenas de milissegundos, e isso vira
        tranco no scroll. */
-    const tier = (name: string, ext = 'jpg', mobileHigh = '1k') => ({
+    const tier = (name: string, ext = 'jpg', mobileHigh = '2k') => ({
       low: `/space/${name}-1k.${ext}`,
       high: `/space/${name}-${lightweight ? mobileHigh : '4k'}.${ext}`,
     })
@@ -196,9 +198,11 @@ export function TriScene() {
        fontes livres. Com mipmaps são ~180 MB de GPU, então só com folga. */
     const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8
     const ultra = !lightweight && !weakDevice && memory >= 8
+    /* Sobe a textura para a GPU assim que chega, fora do caminho do scroll. */
+    const warm = (texture: THREE.Texture) => renderer.initTexture(texture)
 
     /* O espaço: panorama da Via Láctea atrás de tudo. */
-    const space = createSpace(tier('milky-way'), lightweight || weakDevice ? 0 : 0.16)
+    const space = createSpace(tier('milky-way'), lightweight || weakDevice ? 0 : 0.3, warm)
     scene.add(space.object)
 
     /* O sol do hero: um clarão macio no alto à esquerda, na direção da luz,
@@ -244,8 +248,11 @@ export function TriScene() {
         : null
 
     /* Estrelas ao fundo, a página inteira. */
-    const stars = createStars(lightweight ? 800 : 2400, renderer.getPixelRatio())
+    const stars = createStars(lightweight ? 1000 : 2400, renderer.getPixelRatio())
     scene.add(stars.object)
+    /* Meteoros de vez em quando: o detalhe que faz o céu parecer vivo. */
+    const meteors = createMeteors(lightweight ? 1 : 2, renderer.getPixelRatio())
+    scene.add(meteors.object)
 
     /* Foguete: altura em mundo pela largura da tela. No celular ele é menor e
        fica no canto inferior direito, abaixo do texto do hero; atrás dos
@@ -258,11 +265,12 @@ export function TriScene() {
 
     /* O planeta mora no mesmo centro e escala do campo de triângulos. */
     const planet = createPlanet({
-      segments: lightweight ? 48 : 80,
+      segments: lightweight ? 64 : 96,
       maps: {
         map: { low: '/space/neptune-1k.jpg', high: '/space/neptune-2k.jpg' },
         clouds: tier('earth-clouds'),
       },
+      warm,
     })
     scene.add(planet.object)
 
@@ -273,7 +281,8 @@ export function TriScene() {
     const EARTH_DEPTH = 9.9
     const depthScale = (camera.position.z + EARTH_DEPTH) / camera.position.z
     const earth = createPlanet({
-      segments: lightweight ? 64 : 112,
+      segments: lightweight ? 80 : 128,
+      warm,
       kind: 'earth',
       spin: 0.012,
       maps: {
@@ -310,14 +319,15 @@ export function TriScene() {
     const worlds: World[] = [
       {
         planet: createPlanet({
-          segments: lightweight ? 56 : 96,
+          segments: lightweight ? 72 : 112,
           kind: 'gas',
           spin: 0.03,
           ring: true,
           maps: {
-            map: tier('saturn'),
+            map: { ...tier('saturn'), ultra: ultra ? '/space/saturn-8k.jpg' : undefined },
             ring: { low: '/space/saturn-ring-2k.png', high: '/space/saturn-ring-4k.png' },
           },
+          warm,
         }),
         x: -0.95,
         z: -3.0,
@@ -327,10 +337,11 @@ export function TriScene() {
       },
       {
         planet: createPlanet({
-          segments: lightweight ? 40 : 72,
+          segments: lightweight ? 56 : 80,
           kind: 'rock',
           spin: 0.09,
           maps: { map: tier('mars') },
+          warm,
         }),
         x: 0.95,
         z: -0.8,
@@ -340,10 +351,11 @@ export function TriScene() {
       },
       {
         planet: createPlanet({
-          segments: lightweight ? 56 : 96,
+          segments: lightweight ? 72 : 112,
           kind: 'gas',
           spin: 0.035,
-          maps: { map: tier('jupiter') },
+          maps: { map: { ...tier('jupiter'), ultra: ultra ? '/space/jupiter-8k.jpg' : undefined } },
+          warm,
         }),
         x: 0.75,
         z: -5.5,
@@ -353,11 +365,12 @@ export function TriScene() {
       },
       {
         planet: createPlanet({
-          segments: lightweight ? 48 : 72,
+          segments: lightweight ? 56 : 80,
           kind: 'ice',
           spin: 0.05,
           maps: { map: tier('moon') },
           tint: '#c4d6f2',
+          warm,
         }),
         x: -0.5,
         z: -1.4,
@@ -436,6 +449,7 @@ export function TriScene() {
     )
     const current = { ...first, lift: 0, thrust: 0 }
     const pointer = { x: 0, y: 0 }
+    const visibleHalfHeightNow = () => halfWidth / camera.aspect
     const clamp01 = (value: number) => Math.min(Math.max(value, 0), 1)
 
     const onPointerMove = (event: PointerEvent) => {
@@ -592,6 +606,7 @@ export function TriScene() {
       ambientMaterial.uniforms.uTime.value = time * 0.6
       ambientMaterial.uniforms.uOpacity.value = narrow ? 0.06 : 0.14
       stars.update({ progress, opacity: narrow ? 0.6 : 0.7 }, time)
+      meteors.update(time, delta, halfWidth, visibleHalfHeightNow())
       space.update(progress, time)
       /* Um pouco mais presente que o campo: em meia luz o planeta ainda
          precisa ler como corpo, não como fantasma. */
@@ -827,6 +842,22 @@ export function TriScene() {
         mount.style.opacity = '1'
       }
     }
+    /* Compila todos os shaders na carga, em paralelo onde o driver deixa
+       (KHR_parallel_shader_compile). Sem isso cada astro compilava o seu
+       programa no primeiro frame em que aparecia: um tranco de 100 a 300ms
+       no meio do scroll, pior no celular. A coleta dos materiais é síncrona
+       e olha só o que está visível, daí ligar tudo por um instante. */
+    {
+      const hidden: THREE.Object3D[] = []
+      scene.traverse((node) => {
+        if (!node.visible) {
+          hidden.push(node)
+          node.visible = true
+        }
+      })
+      renderer.compileAsync(scene, camera).catch(() => undefined)
+      for (const node of hidden) node.visible = false
+    }
     frame = requestAnimationFrame(tick)
 
     /* Sem sentido queimar GPU com a aba escondida. */
@@ -851,6 +882,7 @@ export function TriScene() {
       sphereMaterial.dispose()
       ambientMaterial.dispose()
       stars.dispose()
+      meteors.dispose()
       space.dispose()
       rocket.dispose()
       planet.dispose()

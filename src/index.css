@@ -434,15 +434,15 @@ footer .bg-graphite::before {
 /* A barreira de leitura sobre a cena: um véu escuro fixo, mais denso onde o
    texto fica. Não toca o canvas, então a cena segue com a qualidade toda. */
 .scene-scrim {
-  background: rgba(6, 10, 22, 0.42);
+  background: rgba(6, 10, 22, 0.36);
 }
 @media (min-width: 1024px) {
   .scene-scrim {
     background: linear-gradient(
       90deg,
-      rgba(6, 10, 22, 0.62) 0%,
-      rgba(6, 10, 22, 0.36) 46%,
-      rgba(6, 10, 22, 0.16) 100%
+      rgba(6, 10, 22, 0.58) 0%,
+      rgba(6, 10, 22, 0.3) 46%,
+      rgba(6, 10, 22, 0.1) 100%
     );
   }
 }
