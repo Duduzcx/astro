@@ -400,3 +400,33 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* A supernova esquenta a interface. A cena escreve --nova (0 a 1) no :root
+   enquanto o astro está na tela. Os tons quentes ficam em pseudo-elementos
+   com opacidade em camada própria: mudar a opacidade de uma camada é só
+   compositor, enquanto trocar a cor de um gradiente repintava a seção
+   inteira a cada frame — era isso que custava 12% de frames no fim da
+   página no celular. */
+:root {
+  --nova: 0;
+}
+#contato::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(ellipse 90% 70% at 50% 100%, rgba(255, 158, 87, 0.22), transparent 72%);
+  opacity: var(--nova);
+  will-change: opacity;
+}
+footer .bg-graphite::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: #ff9e57;
+  opacity: calc(var(--nova) * 0.1);
+  will-change: opacity;
+}

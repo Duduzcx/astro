@@ -5,6 +5,7 @@ import {
   MOBILE_BREAKPOINT,
   holePresence,
   mobileKeyframes,
+  novaPresence,
   planetBreak,
   rocketWindow,
   sampleKeyframes,
@@ -15,6 +16,7 @@ import { createStars } from './stars'
 import { createRocket } from './rocket'
 import { createPlanet } from './planet'
 import { createBlackHole } from './blackhole'
+import { createNova } from './nova'
 
 /**
  * Núcleo orbital: uma bola densa de triângulos vazados com três anéis
@@ -163,6 +165,14 @@ export function TriScene() {
 
     const blackHole = createBlackHole({ segments: lightweight ? 72 : 112 })
     scene.add(blackHole.object)
+
+    const nova = createNova()
+    scene.add(nova.object)
+    /* A supernova esquenta a interface: --nova no :root. Cada escrita é um
+       recálculo de estilo do documento, então só quando muda de verdade e no
+       máximo a cada 80ms. */
+    let novaCss = -1
+    let novaCssAt = 0
 
     /* A altura da página fica em cache: ler scrollHeight dentro do loop força
        um layout a cada frame, que era o que travava o scroll em máquina lenta.
@@ -375,6 +385,23 @@ export function TriScene() {
         },
         time,
       )
+      const novaLevel = novaPresence(current.form) * current.opacity
+      nova.update(
+        {
+          x: centerX,
+          y: centerY,
+          scale: current.scale,
+          opacity: current.opacity,
+          presence: novaPresence(current.form),
+          mix: current.mix,
+        },
+        time,
+      )
+      if (Math.abs(novaLevel - novaCss) > 0.04 && now - novaCssAt > 80) {
+        novaCss = novaLevel
+        novaCssAt = now
+        document.documentElement.style.setProperty('--nova', novaLevel.toFixed(2))
+      }
 
       /* Meia altura visível de verdade: com o palco maior que a base, o FOV
          muda e a régua não é mais halfHeight. */
@@ -439,6 +466,8 @@ export function TriScene() {
       rocket.dispose()
       planet.dispose()
       blackHole.dispose()
+      nova.dispose()
+      document.documentElement.style.removeProperty('--nova')
       renderer.dispose()
       mount.removeChild(renderer.domElement)
     }

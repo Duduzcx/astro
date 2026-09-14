@@ -216,3 +216,8 @@ export function planetBreak(mix: number, form: number) {
 export function holePresence(form: number) {
   return 1 - Math.min(Math.abs(form - 1), 1)
 }
+
+/** Peso da forma 3 (supernova) para o `form` interpolado. */
+export function novaPresence(form: number) {
+  return Math.min(Math.max(form - 2, 0), 1)
+}

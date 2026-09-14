@@ -8,6 +8,7 @@ import {
   takeoffSpan,
   planetBreak,
   holePresence,
+  novaPresence,
 } from '../src/components/scene/keyframes.ts'
 
 test('sampleKeyframes devolve a primeira linha em progresso 0 e a última em 1', () => {
@@ -88,4 +89,11 @@ test('holePresence: cheio em 1, zero nos vizinhos, meio no caminho', () => {
   assert.equal(holePresence(0), 0)
   assert.equal(holePresence(2), 0)
   assert.equal(holePresence(1.5), 0.5)
+})
+
+test('novaPresence: zero até a estrela, cheio na supernova', () => {
+  assert.equal(novaPresence(1), 0)
+  assert.equal(novaPresence(2), 0)
+  assert.equal(novaPresence(2.5), 0.5)
+  assert.equal(novaPresence(3), 1)
 })
