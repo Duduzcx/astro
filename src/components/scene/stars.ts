@@ -24,16 +24,19 @@ const VERTEX = /* glsl */ `
   uniform float uPixelRatio;
   varying float vTint;
   varying float vTwinkle;
+  varying float vSpike;
 
   void main() {
     vec3 p = position;
+    vSpike = step(5.4, aSize);
     /* Desce com o scroll e dá a volta: y sempre em [-3,5, 3,5]. */
     p.y = mod(p.y - uOffset + ${SPREAD_Y.toFixed(1)}, ${WRAP.toFixed(1)}) - ${SPREAD_Y.toFixed(1)};
     vec4 view = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * view;
     /* Cintila devagar, cada uma no seu tempo. */
     vTwinkle = 0.7 + 0.3 * sin(uTime * (0.6 + aSeed * 0.9) + aSeed * 40.0);
-    gl_PointSize = aSize * uPixelRatio * vTwinkle * (3.0 / -view.z);
+    /* As grandes ganham espículas e por isso o sprite é maior. */
+    gl_PointSize = aSize * uPixelRatio * vTwinkle * (3.0 / -view.z) * (1.0 + vSpike * 4.0);
     vTint = aTint;
   }
 `
@@ -42,10 +45,17 @@ const FRAGMENT = /* glsl */ `
   uniform float uOpacity;
   varying float vTint;
   varying float vTwinkle;
+  varying float vSpike;
 
   void main() {
-    float d = length(gl_PointCoord - 0.5);
+    vec2 q = gl_PointCoord - 0.5;
+    float d = length(q);
     float alpha = smoothstep(0.5, 0.12, d);
+    if (vSpike > 0.5) {
+      /* Cruz de difração: dois traços finos que somem para as pontas. */
+      float cross = max(smoothstep(0.02, 0.0, abs(q.x)), smoothstep(0.02, 0.0, abs(q.y))) * smoothstep(0.5, 0.05, d);
+      alpha = max(smoothstep(0.5, 0.36, d) * 0.9, cross * 0.8);
+    }
     /* Entre ivory e azul claro, sem branco puro: estrela não pode competir
        com o texto. */
     vec3 color = mix(vec3(0.96, 0.97, 0.98), vec3(0.55, 0.71, 0.96), vTint);

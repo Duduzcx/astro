@@ -116,11 +116,11 @@ export function TriScene() {
     /* Luz de verdade para o foguete: uma direcional vinda de cima à
        esquerda, a mesma direção da luz dos planetas, e uma hemisférica azul
        para o lado da sombra não virar breu. */
-    const sun = new THREE.DirectionalLight(0xfff4e0, 1.5)
+    const sun = new THREE.DirectionalLight(0xfff4e0, 1.2)
     sun.position.set(-2, 1.6, 3)
     scene.add(sun)
     /* Luz de contorno azul vinda de trás: separa o casco do fundo. */
-    const rimLight = new THREE.DirectionalLight(0x6fa8ff, 0.9)
+    const rimLight = new THREE.DirectionalLight(0x6fa8ff, 0.7)
     rimLight.position.set(2.5, 0.5, -2)
     scene.add(rimLight)
     scene.add(new THREE.HemisphereLight(0x8db4f5, 0x1a2340, 0.35))
@@ -220,6 +220,13 @@ export function TriScene() {
     glare.scale.setScalar(3.2)
     glare.renderOrder = -5
     scene.add(glare)
+    /* Estria anamórfica: a linha horizontal de luz que toda lente de cinema
+       faz numa fonte forte. */
+    const streakMaterial = glareMaterial.clone()
+    const streak = new THREE.Sprite(streakMaterial)
+    streak.scale.set(9, 0.32, 1)
+    streak.renderOrder = -5
+    scene.add(streak)
 
     /* Bloom só no desktop com máquina razoável. */
     postfx =
@@ -235,7 +242,7 @@ export function TriScene() {
        fica no canto inferior direito, abaixo do texto do hero; atrás dos
        botões ele confundia a leitura. */
     /* Esbelto, então pode ser mais alto sem ocupar largura. */
-    const rocketHeight = lightweight ? Math.min(0.8, halfWidth * 1.05) : Math.min(1.3, halfWidth * 1.35)
+    const rocketHeight = lightweight ? Math.min(0.85, halfWidth * 1.1) : Math.min(1.45, halfWidth * 1.45)
     const rocket = createRocket({ height: rocketHeight, lightweight })
     rocket.setPixelRatio(renderer.getPixelRatio())
     scene.add(rocket.object)
@@ -685,6 +692,8 @@ export function TriScene() {
       /* O sol: alto à esquerda, some com a subida. */
       glare.position.set(-halfWidth * 0.78, visibleHalfHeight * 0.62, -1)
       glareMaterial.opacity = 0.85 * Math.max(0, 1 - current.lift * 1.6)
+      streak.position.copy(glare.position)
+      streakMaterial.opacity = 0.32 * Math.max(0, 1 - current.lift * 1.6)
 
       /* Telemetria para o HUD, dez vezes por segundo. */
       if (now - telemetryAt > 100) {
@@ -723,7 +732,7 @@ export function TriScene() {
         current.opacity < 0.3 &&
         (current.mix > 0.85 || current.opacity <= 0.015)
       if (!(restful && frameCount % 2)) {
-        if (postfx) postfx.render()
+        if (postfx) postfx.render(time)
         else renderer.render(scene, camera)
       }
 
@@ -770,6 +779,7 @@ export function TriScene() {
       postfx?.dispose()
       glareTexture.dispose()
       glareMaterial.dispose()
+      streakMaterial.dispose()
       renderer.dispose()
       mount.removeChild(renderer.domElement)
     }

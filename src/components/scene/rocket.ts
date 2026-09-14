@@ -121,8 +121,8 @@ const SMOKE_FRAGMENT = /* glsl */ `
  * linha cobalto, escotilhas e a marca. É o que tira o ar de brinquedo.
  */
 function hullTexture() {
-  const width = 1024
-  const height = 2048
+  const width = 2048
+  const height = 4096
   const canvas = document.createElement('canvas')
   canvas.width = width
   canvas.height = height
@@ -137,9 +137,28 @@ function hullTexture() {
   ctx.fillStyle = base
   ctx.fillRect(0, 0, width, height)
 
+  /* Sujeira: riscos verticais fracos e manchas, como tinta que voou. */
+  for (let i = 0; i < 260; i += 1) {
+    const x = Math.random() * width
+    const y = Math.random() * height
+    const len = 40 + Math.random() * 400
+    ctx.fillStyle = `rgba(${Math.random() < 0.5 ? '30, 36, 50' : '255, 255, 255'}, ${0.02 + Math.random() * 0.05})`
+    ctx.fillRect(x, y, 2 + Math.random() * 4, len)
+  }
+  /* Sombreado de cilindro falso: duas faixas escuras onde a luz não chega
+     tanto, para o corpo ler como volume mesmo de longe. */
+  const shade = ctx.createLinearGradient(0, 0, width, 0)
+  shade.addColorStop(0, 'rgba(20, 24, 34, 0.18)')
+  shade.addColorStop(0.25, 'rgba(20, 24, 34, 0)')
+  shade.addColorStop(0.5, 'rgba(20, 24, 34, 0.12)')
+  shade.addColorStop(0.75, 'rgba(20, 24, 34, 0)')
+  shade.addColorStop(1, 'rgba(20, 24, 34, 0.18)')
+  ctx.fillStyle = shade
+  ctx.fillRect(0, 0, width, height)
+
   /* Costuras verticais entre painéis. */
-  ctx.strokeStyle = 'rgba(40, 48, 66, 0.16)'
-  ctx.lineWidth = 2
+  ctx.strokeStyle = 'rgba(40, 48, 66, 0.2)'
+  ctx.lineWidth = 3
   for (let i = 0; i < 12; i += 1) {
     const x = (i / 12) * width
     ctx.beginPath()
@@ -196,15 +215,55 @@ function hullTexture() {
   ctx.translate(width * 0.27, height * 0.585)
   ctx.rotate(-Math.PI / 2)
   ctx.fillStyle = 'rgba(29, 34, 48, 0.85)'
-  ctx.font = '700 84px "Arial Black", Impact, sans-serif'
+  ctx.font = '700 168px "Arial Black", Impact, sans-serif'
   ctx.textBaseline = 'middle'
   ctx.fillText('ASTRO', 0, 0)
   ctx.restore()
+  /* Decalques: um retângulo cobalto (a bandeira da missão) e o número de
+     série em mono, como todo lançador tem. */
+  ctx.fillStyle = '#4d84e0'
+  ctx.fillRect(width * 0.62, height * 0.5, width * 0.07, height * 0.022)
+  ctx.fillStyle = '#f5f7fb'
+  ctx.fillRect(width * 0.62, height * 0.5 + height * 0.011, width * 0.07, height * 0.004)
+  ctx.fillStyle = 'rgba(29, 34, 48, 0.75)'
+  ctx.font = '600 46px "Courier New", monospace'
+  ctx.fillText('AS-01', width * 0.62, height * 0.545)
+  ctx.fillText('MISSÃO 001', width * 0.62, height * 0.56)
 
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
   texture.wrapS = THREE.RepeatWrapping
-  texture.anisotropy = 4
+  texture.anisotropy = 8
+  return texture
+}
+
+/**
+ * Rugosidade: tinta acetinada com riscos mais brilhantes e costuras mais
+ * foscas. É o que faz a luz escorregar diferente ao longo do casco.
+ */
+function roughnessTexture() {
+  const width = 1024
+  const height = 2048
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
+  ctx.fillStyle = 'rgb(150, 150, 150)'
+  ctx.fillRect(0, 0, width, height)
+  for (let i = 0; i < 400; i += 1) {
+    const v = 110 + Math.floor(Math.random() * 80)
+    ctx.fillStyle = `rgba(${v}, ${v}, ${v}, 0.5)`
+    ctx.fillRect(Math.random() * width, Math.random() * height, 1 + Math.random() * 3, 30 + Math.random() * 300)
+  }
+  ctx.fillStyle = 'rgb(200, 200, 200)'
+  for (const v of [0.22, 0.34, 0.5, 0.62, 0.74, 0.86]) ctx.fillRect(0, v * height - 2, width, 4)
+  /* Interestágio e saia mais foscos. */
+  ctx.fillStyle = 'rgb(215, 215, 215)'
+  ctx.fillRect(0, height * 0.29, width, height * 0.05)
+  ctx.fillRect(0, height * 0.9, width, height * 0.1)
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.wrapS = THREE.RepeatWrapping
   return texture
 }
 
@@ -280,13 +339,19 @@ export function createRocket({
   }
 
   const texture = hullTexture()
+  const roughness = roughnessTexture()
+  /* Tinta acetinada, não cromo: foguete real é pintado. O reflexo de
+     ambiente entra fraco, só para o branco não ficar chapado. */
   const hull = trackM(
     new THREE.MeshStandardMaterial({
       map: texture,
-      color: 0xd9dce2,
-      metalness: 0.55,
-      roughness: 0.42,
-      envMapIntensity: 0.7,
+      roughnessMap: roughness,
+      /* Cinza-claro, não branco: sem tone mapping no composer, branco
+         iluminado passa de 1,0 e vira neve no bloom. */
+      color: 0xb4bac4,
+      metalness: 0.22,
+      roughness: 0.6,
+      envMapIntensity: 0.4,
       transparent: cruise,
       toneMapped: false,
     }),
@@ -345,6 +410,25 @@ export function createRocket({
   const conduit = new THREE.Mesh(track(new THREE.CylinderGeometry(0.006 * h, 0.006 * h, 0.66 * h, 8)), dark)
   conduit.position.set(R * 1.02 * h, -0.05 * h, 0)
   object.add(conduit)
+  /* Anéis de costura dos tanques, em relevo mínimo. */
+  const seam = track(new THREE.TorusGeometry(R * 1.004 * h, 0.0022 * h, 6, 48))
+  for (const y of [0.02, -0.14, -0.3]) {
+    const ring = new THREE.Mesh(seam, dark)
+    ring.rotation.x = Math.PI / 2
+    ring.position.y = y * h
+    object.add(ring)
+  }
+  /* Pernas de pouso recolhidas ao longo da saia. */
+  const leg = track(new THREE.BoxGeometry(0.014 * h, 0.2 * h, 0.01 * h))
+  for (let k = 0; k < 4; k += 1) {
+    const pivot = new THREE.Group()
+    pivot.rotation.y = (k / 4) * Math.PI * 2 + Math.PI / 8
+    const mesh = new THREE.Mesh(leg, dark)
+    mesh.position.set(R * 1.08 * h, -0.36 * h, 0)
+    mesh.rotation.z = -0.06
+    pivot.add(mesh)
+    object.add(pivot)
+  }
   const stageRing = new THREE.Mesh(track(new THREE.TorusGeometry(R * 1.01 * h, 0.004 * h, 8, 48)), dark)
   stageRing.rotation.x = Math.PI / 2
   stageRing.position.y = 0.19 * h
@@ -422,7 +506,7 @@ export function createRocket({
   const pad = new THREE.Mesh(padGeometry, padMaterial)
 
   /* Fumaça: simulada em mundo, para ficar para trás quando o foguete sobe. */
-  const smokeCount = lightweight ? 120 : 200
+  const smokeCount = lightweight ? 120 : 360
   const smokePositions = new Float32Array(smokeCount * 3)
   const smokeAges = new Float32Array(smokeCount)
   const smokeSizes = new Float32Array(smokeCount)
@@ -431,7 +515,7 @@ export function createRocket({
   for (let i = 0; i < smokeCount; i += 1) {
     smokeAges[i] = 1
     lives[i] = 1
-    smokeSizes[i] = 6 + Math.random() * 10
+    smokeSizes[i] = 8 + Math.random() * 16
   }
   const smokeGeometry = new THREE.BufferGeometry()
   const smokePosAttr = new THREE.BufferAttribute(smokePositions, 3)
@@ -576,6 +660,7 @@ export function createRocket({
       for (const g of geometries) g.dispose()
       for (const m of materials) m.dispose()
       texture?.dispose()
+      roughness?.dispose()
     },
   }
 }
