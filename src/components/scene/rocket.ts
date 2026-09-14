@@ -323,6 +323,30 @@ export function createRocket({
     object.add(mesh)
   }
 
+  /* Aletas de grade no ombro, conduíte ao longo do corpo, anel de estágio. */
+  const gridGeometry = track(new THREE.BoxGeometry(0.03 * h, 0.05 * h, 0.006 * h))
+  const gridSlat = track(new THREE.BoxGeometry(0.03 * h, 0.004 * h, 0.009 * h))
+  for (let k = 0; k < 4; k += 1) {
+    const pivot = new THREE.Group()
+    pivot.rotation.y = (k / 4) * Math.PI * 2
+    const frame = new THREE.Mesh(gridGeometry, dark)
+    frame.position.set(R * 1.05 * h + 0.015 * h, 0.18 * h, 0)
+    pivot.add(frame)
+    for (let s = -1; s <= 1; s += 1) {
+      const slat = new THREE.Mesh(gridSlat, bell)
+      slat.position.set(R * 1.05 * h + 0.015 * h, 0.18 * h + s * 0.014 * h, 0)
+      pivot.add(slat)
+    }
+    object.add(pivot)
+  }
+  const conduit = new THREE.Mesh(track(new THREE.CylinderGeometry(0.006 * h, 0.006 * h, 0.66 * h, 8)), dark)
+  conduit.position.set(R * 1.02 * h, -0.05 * h, 0)
+  object.add(conduit)
+  const stageRing = new THREE.Mesh(track(new THREE.TorusGeometry(R * 1.01 * h, 0.004 * h, 8, 48)), dark)
+  stageRing.rotation.x = Math.PI / 2
+  stageRing.position.y = 0.19 * h
+  object.add(stageRing)
+
   /* Quatro aletas curtas e escuras. */
   const fin = track(finGeometry(h))
   for (let k = 0; k < 4; k += 1) {

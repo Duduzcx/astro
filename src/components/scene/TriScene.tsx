@@ -19,6 +19,7 @@ import { createPlanet } from './planet'
 import { createBlackHole } from './blackhole'
 import { createNova } from './nova'
 import { createSatellites } from './satellites'
+import { createSpace } from './space'
 
 /**
  * Núcleo orbital: uma bola densa de triângulos vazados com três anéis
@@ -166,6 +167,10 @@ export function TriScene() {
     const ambientField = new THREE.LineSegments(ambientGeometry, ambientMaterial)
     scene.add(ambientField)
 
+    /* O espaço: panorama da Via Láctea atrás de tudo. */
+    const space = createSpace('/space/milky-way.jpg')
+    scene.add(space.object)
+
     /* Estrelas ao fundo, a página inteira. */
     const stars = createStars(lightweight ? 1200 : 2400, renderer.getPixelRatio())
     scene.add(stars.object)
@@ -180,7 +185,10 @@ export function TriScene() {
     scene.add(rocket.object)
 
     /* O planeta mora no mesmo centro e escala do campo de triângulos. */
-    const planet = createPlanet({ segments: lightweight ? 40 : 64 })
+    const planet = createPlanet({
+      segments: lightweight ? 48 : 80,
+      maps: { map: '/space/neptune.jpg', clouds: '/space/earth-clouds.jpg' },
+    })
     scene.add(planet.object)
 
     /* A Terra do hero: enorme e longe. Perto da câmera uma esfera desse
@@ -189,7 +197,12 @@ export function TriScene() {
        (no plano z = 0) viram tamanho e posição reais por perspectiva. */
     const EARTH_DEPTH = 9.9
     const depthScale = (camera.position.z + EARTH_DEPTH) / camera.position.z
-    const earth = createPlanet({ segments: lightweight ? 56 : 96, kind: 'earth', spin: 0.012 })
+    const earth = createPlanet({
+      segments: lightweight ? 64 : 112,
+      kind: 'earth',
+      spin: 0.012,
+      maps: { map: '/space/earth-day.jpg', night: '/space/earth-night.jpg', clouds: '/space/earth-clouds.jpg' },
+    })
     /* De pé o que a tela mostra é a calota polar, toda branca. Deitada, o
        horizonte é o equador: oceano, continentes, e o giro leva os
        continentes ao longo do arco. */
@@ -211,7 +224,13 @@ export function TriScene() {
     }
     const worlds: World[] = [
       {
-        planet: createPlanet({ segments: lightweight ? 48 : 72, kind: 'gas', spin: 0.03, ring: true }),
+        planet: createPlanet({
+          segments: lightweight ? 56 : 80,
+          kind: 'gas',
+          spin: 0.03,
+          ring: true,
+          maps: { map: '/space/jupiter.jpg', ring: '/space/saturn-ring.png' },
+        }),
         x: -0.95,
         z: -2.6,
         size: 1.7,
@@ -219,7 +238,12 @@ export function TriScene() {
         to: 0.15,
       },
       {
-        planet: createPlanet({ segments: lightweight ? 36 : 56, kind: 'rock', spin: 0.09 }),
+        planet: createPlanet({
+          segments: lightweight ? 40 : 64,
+          kind: 'rock',
+          spin: 0.09,
+          maps: { map: '/space/mars.jpg' },
+        }),
         x: 0.92,
         z: -0.9,
         size: 0.5,
@@ -227,7 +251,13 @@ export function TriScene() {
         to: 0.2,
       },
       {
-        planet: createPlanet({ segments: lightweight ? 40 : 64, kind: 'ice', spin: 0.05 }),
+        planet: createPlanet({
+          segments: lightweight ? 48 : 72,
+          kind: 'ice',
+          spin: 0.05,
+          maps: { map: '/space/moon.jpg' },
+          tint: '#c4d6f2',
+        }),
         x: -0.6,
         z: -4.2,
         size: 1.15,
@@ -452,6 +482,7 @@ export function TriScene() {
       ambientMaterial.uniforms.uTime.value = time * 0.6
       ambientMaterial.uniforms.uOpacity.value = narrow ? 0.12 : 0.32
       stars.update({ progress, opacity: narrow ? 0.6 : 0.7 }, time)
+      space.update(progress, time)
       /* Um pouco mais presente que o campo: em meia luz o planeta ainda
          precisa ler como corpo, não como fantasma. */
       planet.update(
@@ -623,6 +654,7 @@ export function TriScene() {
       sphereMaterial.dispose()
       ambientMaterial.dispose()
       stars.dispose()
+      space.dispose()
       rocket.dispose()
       planet.dispose()
       for (const world of worlds) world.planet.dispose()

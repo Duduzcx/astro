@@ -64,8 +64,10 @@ const SURFACE_VERTEX = /* glsl */ `
   varying vec3 vNormalV;
   varying vec3 vObj;
   varying vec3 vViewPos;
+  varying vec2 vUv;
   ${SIMPLEX_NOISE}
   void main() {
+    vUv = uv;
     vec3 p = position;
     float chunk = snoise(position * 2.2 + 7.0) * 0.5 + 0.5;
     float burst = uBreak * uBreak;
@@ -85,9 +87,15 @@ const SURFACE_FRAGMENT = /* glsl */ `
   uniform float uKind;
   uniform float uDetail;
   uniform vec3 uLight;
+  uniform sampler2D uMap;
+  uniform sampler2D uNight;
+  uniform float uHasMap;
+  uniform float uHasNight;
+  uniform vec3 uTint;
   varying vec3 vNormalV;
   varying vec3 vObj;
   varying vec3 vViewPos;
+  varying vec2 vUv;
   ${SIMPLEX_NOISE}
   ${PERTURB}
 
@@ -99,7 +107,22 @@ const SURFACE_FRAGMENT = /* glsl */ `
     float water = 0.0;
     float land = 1.0;
 
-    if (uKind < 0.5) {
+    if (uHasMap > 0.5) {
+      /* Fotografia: a cor vem do mapa, um pouco mais clara para compensar
+         o escurecimento de borda. Sem relevo: a foto já traz o sombreado, e
+         derivada de uma amostra bilinear é constante por texel — vira
+         mosaico na tela. */
+      vec3 photo = texture2D(uMap, vUv).rgb * uTint * 1.12;
+      albedo = photo;
+      relief = 0.0;
+      if (uKind > 0.5 && uKind < 1.5) {
+        /* Terra: água é onde o azul manda. */
+        water = smoothstep(0.02, 0.14, photo.b - max(photo.r, photo.g));
+        land = 1.0 - water;
+      } else if (uKind > 3.5) {
+        water = 0.35;
+      }
+    } else if (uKind < 0.5) {
       /* O alvo: mundo de gelo e oceano, montanhas claras. */
       float base = fbm3(q * 2.6);
       float e = base + 0.2 * fbm3(q * 5.0);
@@ -203,7 +226,11 @@ const SURFACE_FRAGMENT = /* glsl */ `
     float twilight = smoothstep(0.25, 0.0, abs(dot(geomN, uLight))) * dayGeom;
     color += vec3(0.9, 0.45, 0.2) * twilight * 0.12;
 
-    if (uKind > 0.5 && uKind < 1.5) {
+    if (uHasNight > 0.5) {
+      /* Luzes de cidade fotografadas, só do lado da noite. */
+      vec3 night = texture2D(uNight, vUv).rgb;
+      color += night * vec3(1.0, 0.85, 0.6) * (1.0 - dayGeom) * 1.4;
+    } else if (uKind > 0.5 && uKind < 1.5) {
       float cities = smoothstep(0.5, 0.8, snoise(q * 26.0)) * smoothstep(0.55, 0.75, snoise(q * 4.0 + 2.0)) * land;
       color += vec3(1.0, 0.78, 0.45) * cities * (1.0 - dayGeom) * 1.1;
     }
@@ -220,7 +247,9 @@ const CLOUDS_VERTEX = /* glsl */ `
   varying vec3 vNormalV;
   varying vec3 vObj;
   varying vec3 vView;
+  varying vec2 vUv;
   void main() {
+    vUv = uv;
     vObj = position;
     vNormalV = normalize(normalMatrix * normal);
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
@@ -234,14 +263,22 @@ const CLOUDS_FRAGMENT = /* glsl */ `
   uniform float uOpacity;
   uniform float uBreak;
   uniform vec3 uLight;
+  uniform sampler2D uMap;
+  uniform float uHasMap;
   varying vec3 vNormalV;
   varying vec3 vObj;
   varying vec3 vView;
+  varying vec2 vUv;
   ${SIMPLEX_NOISE}
   void main() {
     vec3 q = vObj / ${CLOUDS.toFixed(3)};
-    float c = fbm(q * 2.8 + vec3(uTime * 0.01, 0.0, 0.0)) + 0.15 * fbm3(q * 5.5);
-    float cover = smoothstep(0.08, 0.5, c);
+    float cover;
+    if (uHasMap > 0.5) {
+      cover = smoothstep(0.08, 0.7, texture2D(uMap, vUv).r);
+    } else {
+      float c = fbm(q * 2.8 + vec3(uTime * 0.01, 0.0, 0.0)) + 0.15 * fbm3(q * 5.5);
+      cover = smoothstep(0.08, 0.5, c);
+    }
     vec3 n = normalize(vNormalV);
     float day = smoothstep(-0.2, 0.35, dot(n, uLight));
     float limb = mix(0.6, 1.0, pow(max(dot(n, normalize(vView)), 0.0), 0.5));
@@ -296,19 +333,30 @@ const RING_FRAGMENT = /* glsl */ `
   uniform float uOpacity;
   uniform vec3 uLight;
   uniform vec3 uLightLocal;
+  uniform sampler2D uMap;
+  uniform float uHasMap;
   varying vec2 vPos;
   varying vec3 vNormalV;
   ${SIMPLEX_NOISE}
   void main() {
     float r = length(vPos);
     float t = (r - ${(RADIUS * 1.45).toFixed(3)}) / ${(RADIUS * 0.9).toFixed(3)};
-    /* Faixas finas com ruído, uma divisão limpa e uma segunda mais fraca. */
-    float bands = 0.5 + 0.5 * sin(t * 70.0 + snoise(vec3(t * 9.0, 0.0, 0.0)) * 4.0);
-    float coarse = 0.5 + 0.5 * sin(t * 14.0 + 1.0);
-    float gapA = smoothstep(0.6, 0.63, t) * smoothstep(0.7, 0.67, t);
-    float gapB = smoothstep(0.34, 0.355, t) * smoothstep(0.39, 0.375, t);
-    float alpha = smoothstep(0.0, 0.06, t) * smoothstep(1.0, 0.88, t) * (0.25 + 0.4 * bands + 0.2 * coarse);
-    alpha *= 1.0 - gapA * 0.9 - gapB * 0.5;
+    float bands;
+    float alpha;
+    if (uHasMap > 0.5) {
+      /* Fotografia de anel: cor e alfa ao longo do raio. */
+      vec4 ringTex = texture2D(uMap, vec2(clamp(t, 0.0, 1.0), 0.5));
+      bands = dot(ringTex.rgb, vec3(0.333));
+      alpha = ringTex.a * 0.95;
+    } else {
+      /* Faixas finas com ruído, uma divisão limpa e uma segunda mais fraca. */
+      bands = 0.5 + 0.5 * sin(t * 70.0 + snoise(vec3(t * 9.0, 0.0, 0.0)) * 4.0);
+      float coarse = 0.5 + 0.5 * sin(t * 14.0 + 1.0);
+      float gapA = smoothstep(0.6, 0.63, t) * smoothstep(0.7, 0.67, t);
+      float gapB = smoothstep(0.34, 0.355, t) * smoothstep(0.39, 0.375, t);
+      alpha = smoothstep(0.0, 0.06, t) * smoothstep(1.0, 0.88, t) * (0.25 + 0.4 * bands + 0.2 * coarse);
+      alpha *= 1.0 - gapA * 0.9 - gapB * 0.5;
+    }
     /* Sombra do planeta: pontos atrás dele em relação à luz, dentro do
        cilindro de sombra, escurecem. */
     vec3 p = vec3(vPos, 0.0);
@@ -317,9 +365,31 @@ const RING_FRAGMENT = /* glsl */ `
     float shadow = smoothstep(${(RADIUS * 1.02).toFixed(3)}, ${(RADIUS * 0.94).toFixed(3)}, off) * step(along, 0.0);
     float lit = 0.4 + 0.6 * abs(dot(normalize(vNormalV), uLight));
     vec3 color = mix(vec3(0.78, 0.7, 0.58), vec3(0.96, 0.92, 0.84), bands) * lit * (1.0 - shadow * 0.85);
+    if (uHasMap > 0.5) color = texture2D(uMap, vec2(clamp(t, 0.0, 1.0), 0.5)).rgb * lit * (1.0 - shadow * 0.85);
     gl_FragColor = vec4(color, alpha * uOpacity);
   }
 `
+
+export type PlanetMaps = {
+  /** Mapa de cor equirretangular. */
+  map?: string
+  /** Luzes noturnas (Terra). */
+  night?: string
+  /** Nuvens em cinza (branco = nuvem). */
+  clouds?: string
+  /** Anel: uma faixa RGBA ao longo do raio. */
+  ring?: string
+}
+
+const textureLoader = new THREE.TextureLoader()
+function loadMap(url: string, onLoad: (texture: THREE.Texture) => void) {
+  return textureLoader.load(url, (texture) => {
+    /* Sem gestão de cor: o shader trabalha em sRGB de ponta a ponta. */
+    texture.colorSpace = THREE.NoColorSpace
+    texture.anisotropy = 4
+    onLoad(texture)
+  })
+}
 
 export function createPlanet({
   segments,
@@ -327,6 +397,8 @@ export function createPlanet({
   spin = 0.04,
   ring = false,
   detail = 1,
+  maps,
+  tint = '#ffffff',
 }: {
   segments: number
   kind?: PlanetKind
@@ -336,9 +408,14 @@ export function createPlanet({
   ring?: boolean
   /** Força do relevo; 0 desliga. */
   detail?: number
+  /** Texturas fotográficas; enquanto carregam, vale o procedural. */
+  maps?: PlanetMaps
+  /** Multiplica a cor do mapa (a lua vira gelo com um azul leve). */
+  tint?: string
 }) {
   const object = new THREE.Group()
   const kindIndex = KIND_INDEX[kind]
+  const textures: THREE.Texture[] = []
   /* Luz fixa em espaço de câmera: o terminador fica parado enquanto a
      superfície gira. */
   const light = new THREE.Vector3(-0.55, 0.42, 0.72).normalize()
@@ -359,8 +436,29 @@ export function createPlanet({
       uKind: { value: kindIndex },
       uDetail: { value: detail },
       uLight: { value: light },
+      uMap: { value: null },
+      uNight: { value: null },
+      uHasMap: { value: 0 },
+      uHasNight: { value: 0 },
+      uTint: { value: new THREE.Color(tint) },
     },
   })
+  if (maps?.map) {
+    textures.push(
+      loadMap(maps.map, (texture) => {
+        surfaceMaterial.uniforms.uMap.value = texture
+        surfaceMaterial.uniforms.uHasMap.value = 1
+      }),
+    )
+  }
+  if (maps?.night) {
+    textures.push(
+      loadMap(maps.night, (texture) => {
+        surfaceMaterial.uniforms.uNight.value = texture
+        surfaceMaterial.uniforms.uHasNight.value = 1
+      }),
+    )
+  }
   const surface = new THREE.Mesh(surfaceGeometry, surfaceMaterial)
   /* Desenha antes dos triângulos: com a profundidade gravada, a metade de
      trás da casca some atrás do planeta e só a crosta da frente fica. */
@@ -383,8 +481,19 @@ export function createPlanet({
         uOpacity: { value: 1 },
         uBreak: { value: 0 },
         uLight: { value: light },
+        uMap: { value: null },
+        uHasMap: { value: 0 },
       },
     })
+    if (maps?.clouds) {
+      const material = cloudsMaterial
+      textures.push(
+        loadMap(maps.clouds, (texture) => {
+          material.uniforms.uMap.value = texture
+          material.uniforms.uHasMap.value = 1
+        }),
+      )
+    }
     clouds = new THREE.Mesh(cloudsGeometry, cloudsMaterial)
     clouds.renderOrder = -2
     object.add(clouds)
@@ -430,8 +539,19 @@ export function createPlanet({
         uOpacity: { value: 1 },
         uLight: { value: light },
         uLightLocal: { value: lightLocal },
+        uMap: { value: null },
+        uHasMap: { value: 0 },
       },
     })
+    if (maps?.ring) {
+      const material = ringMaterial
+      textures.push(
+        loadMap(maps.ring, (texture) => {
+          material.uniforms.uMap.value = texture
+          material.uniforms.uHasMap.value = 1
+        }),
+      )
+    }
     ringMesh = new THREE.Mesh(ringGeometry, ringMaterial)
     ringMesh.rotation.x = 1.3
     ringMesh.rotation.y = 0.35
@@ -472,6 +592,7 @@ export function createPlanet({
     dispose() {
       for (const g of geometries) g.dispose()
       for (const m of materials) m.dispose()
+      for (const t of textures) t.dispose()
     },
   }
 }
