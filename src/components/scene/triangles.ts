@@ -339,9 +339,11 @@ export function buildTriangles(count: number, spread: THREE.Vector3, onSphere: b
 
     /* Cantos do triângulo num plano aleatório em volta da âncora. Quase todos
        minúsculos, um ou outro maior: grão fino no núcleo, mais grosso nos anéis. */
+    /* Grão fino: triângulo grande por toda parte lê como confete de escola;
+       pequeno e denso lê como poeira e faísca. */
     const size =
-      (onSphere ? (ring > 0 ? 0.008 : 0.005) : 0.012) +
-      Math.random() * Math.random() * (onSphere ? (ring > 0 ? 0.03 : 0.02) : 0.055)
+      (onSphere ? (ring > 0 ? 0.004 : 0.003) : 0.006) +
+      Math.random() * Math.random() * (onSphere ? (ring > 0 ? 0.016 : 0.011) : 0.028)
     const normal = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize()
     const tangent = new THREE.Vector3(1, 0, 0)
     if (Math.abs(normal.x) > 0.9) tangent.set(0, 1, 0)

@@ -84,7 +84,7 @@ export function createNova() {
       object.position.set(state.x, state.y, 0)
       object.scale.setScalar(state.scale * 2.7)
       material.uniforms.uTime.value = time
-      material.uniforms.uOpacity.value = strength * 0.9
+      material.uniforms.uOpacity.value = strength * 0.7
     },
     dispose() {
       geometry.dispose()

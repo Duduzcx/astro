@@ -20,6 +20,7 @@ import { createBlackHole } from './blackhole'
 import { createNova } from './nova'
 import { createSatellites } from './satellites'
 import { createSpace } from './space'
+import { createPostFx } from './postfx'
 
 /**
  * Núcleo orbital: uma bola densa de triângulos vazados com três anéis
@@ -115,10 +116,18 @@ export function TriScene() {
     /* Luz de verdade para o foguete: uma direcional vinda de cima à
        esquerda, a mesma direção da luz dos planetas, e uma hemisférica azul
        para o lado da sombra não virar breu. */
-    const sun = new THREE.DirectionalLight(0xffffff, 2.4)
+    const sun = new THREE.DirectionalLight(0xfff4e0, 1.5)
     sun.position.set(-2, 1.6, 3)
     scene.add(sun)
-    scene.add(new THREE.HemisphereLight(0x8db4f5, 0x1a2340, 0.7))
+    /* Luz de contorno azul vinda de trás: separa o casco do fundo. */
+    const rimLight = new THREE.DirectionalLight(0x6fa8ff, 0.9)
+    rimLight.position.set(2.5, 0.5, -2)
+    scene.add(rimLight)
+    scene.add(new THREE.HemisphereLight(0x8db4f5, 0x1a2340, 0.35))
+    /* A luz do motor: laranja, presa ao bocal, acende com o empuxo e bate
+       na saia e nas aletas. */
+    const engineLight = new THREE.PointLight(0xff9a3c, 0, 3.5, 1.6)
+    scene.add(engineLight)
     const BASE_FOV = 50
     const camera = new THREE.PerspectiveCamera(BASE_FOV, window.innerWidth / stageHeight, 0.1, 20)
     camera.position.z = 3.3
@@ -136,6 +145,8 @@ export function TriScene() {
      * mundo não mudam, então o objeto não muda de tamanho — a tela só ganha
      * mundo em cima e embaixo.
      */
+    /* Declarado antes do sizeStage, que o usa e roda já na montagem. */
+    let postfx: ReturnType<typeof createPostFx> | null = null
     const sizeStage = () => {
       stageHeight = Math.max(stageHeight, window.innerHeight)
       mount.style.height = `${stageHeight}px`
@@ -143,6 +154,7 @@ export function TriScene() {
       camera.aspect = window.innerWidth / stageHeight
       camera.fov = (2 * Math.atan(halfWidth / (camera.position.z * camera.aspect)) * 180) / Math.PI
       camera.updateProjectionMatrix()
+      postfx?.setSize(window.innerWidth, stageHeight)
     }
     sizeStage()
 
@@ -179,6 +191,41 @@ export function TriScene() {
     /* O espaço: panorama da Via Láctea atrás de tudo. */
     const space = createSpace(tier('milky-way'))
     scene.add(space.object)
+
+    /* O sol do hero: um clarão macio no alto à esquerda, na direção da luz,
+       que some com a decolagem. */
+    const glareCanvas = document.createElement('canvas')
+    glareCanvas.width = 256
+    glareCanvas.height = 256
+    const glareCtx = glareCanvas.getContext('2d')
+    if (glareCtx) {
+      const g = glareCtx.createRadialGradient(128, 128, 0, 128, 128, 128)
+      g.addColorStop(0, 'rgba(255, 246, 225, 0.9)')
+      g.addColorStop(0.12, 'rgba(255, 236, 200, 0.5)')
+      g.addColorStop(0.4, 'rgba(180, 200, 255, 0.12)')
+      g.addColorStop(1, 'rgba(120, 160, 255, 0)')
+      glareCtx.fillStyle = g
+      glareCtx.fillRect(0, 0, 256, 256)
+    }
+    const glareTexture = new THREE.CanvasTexture(glareCanvas)
+    const glareMaterial = new THREE.SpriteMaterial({
+      map: glareTexture,
+      blending: THREE.AdditiveBlending,
+      transparent: true,
+      depthWrite: false,
+      depthTest: false,
+      opacity: 0,
+    })
+    const glare = new THREE.Sprite(glareMaterial)
+    glare.scale.setScalar(3.2)
+    glare.renderOrder = -5
+    scene.add(glare)
+
+    /* Bloom só no desktop com máquina razoável. */
+    postfx =
+      !lightweight && !weakDevice
+        ? createPostFx(renderer, scene, camera, window.innerWidth, stageHeight)
+        : null
 
     /* Estrelas ao fundo, a página inteira. */
     const stars = createStars(lightweight ? 1200 : 2400, renderer.getPixelRatio())
@@ -412,6 +459,7 @@ export function TriScene() {
     let lastScrollY = window.scrollY
     let rush = 0
     let frameCount = 0
+    let telemetryAt = 0
 
     /* Qualidade adaptativa: mede os primeiros segundos de frames reais e, se a
        máquina não segura a taxa, derruba resolução e camada ambiente uma vez
@@ -433,6 +481,7 @@ export function TriScene() {
           Math.floor(stars.object.geometry.getAttribute('position').count / 2),
         )
         rocket.lighten()
+        postfx?.setStrength(0)
       }
     }
 
@@ -495,7 +544,7 @@ export function TriScene() {
       const centerY = current.y + pointer.y * -0.04 + shakeY
       sphereMaterial.uniforms.uCenter.value.set(centerX, centerY)
       ambientMaterial.uniforms.uTime.value = time * 0.6
-      ambientMaterial.uniforms.uOpacity.value = narrow ? 0.12 : 0.32
+      ambientMaterial.uniforms.uOpacity.value = narrow ? 0.06 : 0.14
       stars.update({ progress, opacity: narrow ? 0.6 : 0.7 }, time)
       space.update(progress, time)
       /* Um pouco mais presente que o campo: em meia luz o planeta ainda
@@ -614,19 +663,56 @@ export function TriScene() {
       const rocketX = (narrow ? 0.5 : 0.58) * halfWidth
       const horizonTop = -visibleHalfHeight + reveal
       const horizonDrop = earthRadius - Math.sqrt(Math.max(earthRadius * earthRadius - rocketX * rocketX, 0))
+      const rocketPadY = horizonTop - horizonDrop + rocketHeight * 0.52
       rocket.update(
         {
           visible: launch.visible || current.lift < 0.999,
           lift: current.lift,
           thrust: current.thrust,
           x: rocketX + shakeX * 2,
-          yPad: horizonTop - horizonDrop + rocketHeight * 0.52 + shakeY * 2,
+          yPad: rocketPadY + shakeY * 2,
           travel: visibleHalfHeight * 2 + rocketHeight,
           opacity: 1,
         },
         time,
         delta,
       )
+      /* Luz do motor no bocal, tremulando com a chama. */
+      const rocketY = rocketPadY + current.lift * (visibleHalfHeight * 2 + rocketHeight)
+      engineLight.position.set(rocketX, rocketY - rocketHeight * 0.62, 0.25)
+      engineLight.intensity = current.thrust * (1.5 + Math.sin(time * 31) * 0.35) * (launch.visible ? 1 : 0)
+
+      /* O sol: alto à esquerda, some com a subida. */
+      glare.position.set(-halfWidth * 0.78, visibleHalfHeight * 0.62, -1)
+      glareMaterial.opacity = 0.85 * Math.max(0, 1 - current.lift * 1.6)
+
+      /* Telemetria para o HUD, dez vezes por segundo. */
+      if (now - telemetryAt > 100) {
+        telemetryAt = now
+        const stage =
+          progress < takeoff
+            ? current.lift > 0.02
+              ? 'DECOLAGEM'
+              : 'PLATAFORMA'
+            : progress < 0.25
+              ? 'TRÂNSITO'
+              : progress < 0.31
+                ? 'APROXIMAÇÃO'
+                : progress < 0.5
+                  ? 'HORIZONTE DE EVENTOS'
+                  : progress < 0.9
+                    ? 'ESPAÇO PROFUNDO'
+                    : 'SUPERNOVA'
+        window.dispatchEvent(
+          new CustomEvent('astro:telemetry', {
+            detail: {
+              altitude: progress < takeoff ? current.lift * 408 : 408 + (progress - takeoff) * 384000,
+              velocity: progress < takeoff ? current.lift * 7660 : 7660 + (progress - takeoff) * 30000,
+              stage,
+            },
+          }),
+        )
+      }
 
       /* As estrelas estão sempre na tela, então todo frame desenha. Onde o
          campo é só textura, ou está apagado, 30fps bastam: é metade do custo
@@ -637,7 +723,8 @@ export function TriScene() {
         current.opacity < 0.3 &&
         (current.mix > 0.85 || current.opacity <= 0.015)
       if (!(restful && frameCount % 2)) {
-        renderer.render(scene, camera)
+        if (postfx) postfx.render()
+        else renderer.render(scene, camera)
       }
 
       if (!revealed) {
@@ -680,6 +767,9 @@ export function TriScene() {
       nova.dispose()
       document.documentElement.style.removeProperty('--nova')
       environment.dispose()
+      postfx?.dispose()
+      glareTexture.dispose()
+      glareMaterial.dispose()
       renderer.dispose()
       mount.removeChild(renderer.domElement)
     }

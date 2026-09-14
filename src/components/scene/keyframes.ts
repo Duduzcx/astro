@@ -72,7 +72,7 @@ export const OBJECT_RADIUS = 1.64
  * hero para baixo ele recua para grão de fundo atrás dos cards.
  */
 export const HERO_OPACITY = 0.95
-export const FIELD_OPACITY = 0.1
+export const FIELD_OPACITY = 0.05
 
 /**
  * Tela estreita usa outra tabela. O objeto continua sendo fundo, centralizado na

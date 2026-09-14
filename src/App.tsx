@@ -3,6 +3,7 @@ import { TintLayer } from './components/TintLayer'
 import { AuroraBlobs } from './components/AuroraBlobs'
 import { ScrollProgress } from './components/ScrollProgress'
 import { ScrollHud } from './components/ScrollHud'
+import { SceneHud } from './components/SceneHud'
 import { Nav } from './components/Nav'
 import { Hero } from './components/Hero'
 import { Marquee } from './components/Marquee'
@@ -45,6 +46,7 @@ export default function App() {
       </Suspense>
       <ScrollProgress />
       <ScrollHud />
+      <SceneHud />
 
       <a
         href="#servicos"

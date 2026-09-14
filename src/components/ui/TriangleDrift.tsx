@@ -48,14 +48,14 @@ export function TriangleDrift({ className = '' }: { className?: string }) {
     const spawn = (x: number): Tri => ({
       x,
       y: height / 2 + ((Math.random() + Math.random() - 1) * height) / 2.4,
-      size: 2.5 + Math.random() * Math.random() * 7,
+      size: 1.5 + Math.random() * Math.random() * 4,
       rot: Math.random() * Math.PI * 2,
       spin: (Math.random() - 0.5) * 0.6,
       vx: (6 + Math.random() * 14) * (Math.random() < 0.7 ? 1 : -1),
       bob: 2 + Math.random() * 4,
       phase: Math.random() * Math.PI * 2,
       color: COLORS[Math.floor(Math.random() * COLORS.length)],
-      alpha: 0.18 + Math.random() * 0.4,
+      alpha: 0.1 + Math.random() * 0.26,
     })
 
     const resize = () => {
@@ -68,7 +68,7 @@ export function TriangleDrift({ className = '' }: { className?: string }) {
       lineGrad.addColorStop(0, 'rgba(141,180,245,0)')
       lineGrad.addColorStop(0.5, 'rgba(141,180,245,0.22)')
       lineGrad.addColorStop(1, 'rgba(141,180,245,0)')
-      const count = Math.round(width / (mobile ? 22 : 14))
+      const count = Math.round(width / (mobile ? 36 : 26))
       tris = Array.from({ length: count }, () => spawn(Math.random() * width))
     }
     resize()

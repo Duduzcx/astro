@@ -283,11 +283,12 @@ export function createRocket({
   const hull = trackM(
     new THREE.MeshStandardMaterial({
       map: texture,
-      color: 0xffffff,
+      color: 0xd9dce2,
       metalness: 0.55,
       roughness: 0.42,
-      envMapIntensity: 1.1,
+      envMapIntensity: 0.7,
       transparent: cruise,
+      toneMapped: false,
     }),
   )
   const dark = trackM(
@@ -295,8 +296,9 @@ export function createRocket({
       color: 0x1f2532,
       metalness: 0.8,
       roughness: 0.35,
-      envMapIntensity: 1.2,
+      envMapIntensity: 0.8,
       transparent: cruise,
+      toneMapped: false,
     }),
   )
   const bell = trackM(
@@ -304,9 +306,10 @@ export function createRocket({
       color: 0x8a8f9a,
       metalness: 0.95,
       roughness: 0.28,
-      envMapIntensity: 1.4,
+      envMapIntensity: 0.9,
       side: THREE.DoubleSide,
       transparent: cruise,
+      toneMapped: false,
     }),
   )
   const hullMaterials = [hull, dark, bell]

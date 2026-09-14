@@ -112,7 +112,7 @@ const SURFACE_FRAGMENT = /* glsl */ `
          o escurecimento de borda. Sem relevo: a foto já traz o sombreado, e
          derivada de uma amostra bilinear é constante por texel — vira
          mosaico na tela. */
-      vec3 photo = texture2D(uMap, vUv).rgb * uTint * 1.12;
+      vec3 photo = texture2D(uMap, vUv).rgb * uTint;
       albedo = photo;
       relief = 0.0;
       if (uKind > 0.5 && uKind < 1.5) {
@@ -310,8 +310,11 @@ const ATMOSPHERE_FRAGMENT = /* glsl */ `
   void main() {
     vec3 n = normalize(vNormalV);
     vec3 v = normalize(vView);
-    float rim = pow(1.0 - abs(dot(n, v)), 3.2) * uRim;
-    float day = 0.25 + 0.75 * smoothstep(-0.45, 0.45, dot(n, uLight));
+    /* Duas camadas: um limbo fino e claro colado ao planeta e uma névoa
+       larga e fraca por fora, como o espalhamento de verdade. */
+    float mu = 1.0 - abs(dot(n, v));
+    float rim = (pow(mu, 7.0) * 1.7 + pow(mu, 2.2) * 0.28) * uRim;
+    float day = 0.2 + 0.8 * smoothstep(-0.45, 0.45, dot(n, uLight));
     float heat = sin(clamp(uBreak, 0.0, 1.0) * 3.14159);
     vec3 color = mix(uColor, vec3(1.0, 0.75, 0.45), heat);
     float alpha = rim * day * uOpacity * (1.0 - uBreak) + rim * heat * heat * 2.0 * uOpacity;
