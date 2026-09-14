@@ -21,6 +21,7 @@ import { createNova } from './nova'
 import { createSatellites } from './satellites'
 import { createSpace } from './space'
 import { createPostFx } from './postfx'
+import { createTrail } from './trail'
 
 /**
  * Núcleo orbital: uma bola densa de triângulos vazados com três anéis
@@ -267,7 +268,13 @@ export function TriScene() {
       segments: lightweight ? 64 : 112,
       kind: 'earth',
       spin: 0.012,
-      maps: { map: tier('earth-day'), night: tier('earth-night'), clouds: tier('earth-clouds') },
+      maps: {
+        map: tier('earth-day'),
+        night: tier('earth-night'),
+        clouds: tier('earth-clouds'),
+        normal: tier('earth-normal'),
+        specular: { low: '/space/earth-specular-1k.jpg', high: '/space/earth-specular-2k.jpg' },
+      },
     })
     /* De pé o que a tela mostra é a calota polar, toda branca. Deitada, o
        horizonte é o equador: oceano, continentes, e o giro leva os
@@ -345,6 +352,13 @@ export function TriScene() {
        viva, e sumindo quando o planeta-alvo chega. */
     const cruiser = createRocket({ height: rocketHeight * 0.45, lightweight, cruise: true })
     scene.add(cruiser.object)
+    /* Rastros: o do lançamento e o do cruzeiro, cada um seguindo a sua
+       própria trajetória. */
+    const trail = createTrail({ segments: lightweight ? 24 : 40, seed: 1 })
+    scene.add(trail.object)
+    const cruiseTrail = createTrail({ segments: lightweight ? 20 : 32, seed: 5 })
+    scene.add(cruiseTrail.object)
+    const nozzlePoint = new THREE.Vector3()
     const cruiseWindow = () => (narrow ? { from: 0.035, to: 0.215 } : { from: 0.045, to: 0.26 })
 
     const earthApparent = () => ({
@@ -397,6 +411,7 @@ export function TriScene() {
     )
     const current = { ...first, lift: 0, thrust: 0 }
     const pointer = { x: 0, y: 0 }
+    const clamp01 = (value: number) => Math.min(Math.max(value, 0), 1)
 
     const onPointerMove = (event: PointerEvent) => {
       pointer.x = (event.clientX / window.innerWidth) * 2 - 1
@@ -552,7 +567,7 @@ export function TriScene() {
       sphereMaterial.uniforms.uCenter.value.set(centerX, centerY)
       ambientMaterial.uniforms.uTime.value = time * 0.6
       ambientMaterial.uniforms.uOpacity.value = narrow ? 0.06 : 0.14
-      stars.update({ progress, opacity: narrow ? 0.6 : 0.7 }, time)
+      stars.update({ progress, opacity: narrow ? 0.5 : 0.62 }, time)
       space.update(progress, time)
       /* Um pouco mais presente que o campo: em meia luz o planeta ainda
          precisa ler como corpo, não como fantasma. */
@@ -649,19 +664,47 @@ export function TriScene() {
         const t = (progress - from) / (to - from)
         const inside = t > 0 && t < 1
         const fade = inside ? Math.min(t / 0.12, 1) * Math.min((1 - t) / 0.12, 1) : 0
+        /* Em cruzeiro ele sobe pela tela numa curva suave, no vão entre o
+           painel e o texto dos Serviços, tombando para o lado do rumo, e
+           balança devagar no tempo, para nunca estar parado. */
+        const cruiseH = rocketHeight * 0.45
+        const cruiseX0 = (narrow ? 0.62 : -0.03) * halfWidth
+        const cruiseY0 = narrow ? -0.12 : -0.28
+        const cruiseRange = narrow ? 0.6 : 0.95
+        const cruiseAmp = (narrow ? 0.035 : 0.06) * halfWidth
+        const bobX = Math.sin(time * 0.7) * 0.02
+        const bobY = Math.sin(time * 0.9) * 0.04
+        const cruiseTilt = (u: number) => Math.atan2(-Math.cos(u * 5.2 + 0.8) * 5.2 * cruiseAmp, cruiseRange)
+        const cruiseAt = (u: number) => ({
+          x: cruiseX0 + Math.sin(u * 5.2 + 0.8) * cruiseAmp + bobX,
+          y: cruiseY0 + u * cruiseRange + bobY,
+        })
+        const cruisePath = (u: number, out: THREE.Vector3) => {
+          const c = clamp01(u)
+          const tilt = cruiseTilt(c)
+          const at = cruiseAt(c)
+          out.set(at.x + 0.6 * cruiseH * Math.sin(tilt), at.y - 0.6 * cruiseH * Math.cos(tilt), 0)
+        }
+        const thrust = 0.7 + 0.2 * Math.sin(time * 7.3)
+        const here = cruiseAt(clamp01(t))
         cruiser.update(
           {
             visible: inside,
             lift: 0,
-            thrust: 0.7 + 0.2 * Math.sin(time * 7.3),
-            /* No vão entre o painel e o texto dos Serviços. */
-            x: (narrow ? 0.34 : -0.03) * halfWidth,
-            yPad: 0.18 + Math.sin(time * 0.9) * 0.05,
+            thrust,
+            x: here.x,
+            yPad: here.y,
             travel: 0,
             opacity: fade,
+            tilt: cruiseTilt(clamp01(t)) + Math.sin(time * 1.1) * 0.03,
           },
           time,
           delta,
+        )
+        cruiseTrail.update(
+          cruisePath,
+          { head: t, span: 0.45, width: cruiseH * 0.065, opacity: fade * 0.7 * thrust, spread: 1.6 },
+          time,
         )
       }
 
@@ -671,22 +714,54 @@ export function TriScene() {
       const horizonTop = -visibleHalfHeight + reveal
       const horizonDrop = earthRadius - Math.sqrt(Math.max(earthRadius * earthRadius - rocketX * rocketX, 0))
       const rocketPadY = horizonTop - horizonDrop + rocketHeight * 0.52
+      const travel = visibleHalfHeight * 2 + rocketHeight
+      /* Curva de gravidade: sobe reto e vai tombando para o centro da
+         tela, com o eixo sempre no rumo, como lançador de verdade. No ar
+         ainda deriva e balança no tempo, para nunca ficar pregado. */
+      const arcAt = (u: number) => -halfWidth * 0.34 * Math.pow(u, 2.2)
+      const tiltAt = (u: number) => Math.atan2(halfWidth * 0.34 * 2.2 * Math.pow(u, 1.2), travel)
+      const drift = (Math.sin(time * 0.7) * 0.012 + Math.sin(time * 1.9) * 0.005) * current.lift
+      const sway = (Math.sin(time * 0.9) * 0.02 + Math.sin(time * 2.3) * 0.01) * current.lift
+      const launchPath = (u: number, out: THREE.Vector3) => {
+        const c = clamp01(u)
+        const tilt = tiltAt(c)
+        out.set(
+          rocketX + arcAt(c) + drift + 0.6 * rocketHeight * Math.sin(tilt),
+          rocketPadY + c * travel - 0.6 * rocketHeight * Math.cos(tilt),
+          0,
+        )
+      }
+      const liftNow = clamp01(current.lift)
+      const rocketOn = launch.visible || current.lift < 0.999
       rocket.update(
         {
-          visible: launch.visible || current.lift < 0.999,
+          visible: rocketOn,
           lift: current.lift,
           thrust: current.thrust,
-          x: rocketX + shakeX * 2,
+          x: rocketX + arcAt(liftNow) + drift + shakeX * 2,
           yPad: rocketPadY + shakeY * 2,
-          travel: visibleHalfHeight * 2 + rocketHeight,
+          travel,
           opacity: 1,
+          tilt: tiltAt(liftNow) + sway,
         },
         time,
         delta,
       )
+      /* O rastro nasce no bocal e cobre o trecho já voado; some com o foguete. */
+      const trailFade = clamp01((current.lift - 0.015) / 0.07) * (1 - clamp01((current.lift - 0.9) / 0.1))
+      trail.update(
+        launchPath,
+        {
+          head: current.lift,
+          span: 0.55,
+          width: rocketHeight * 0.07,
+          opacity: rocketOn ? current.thrust * trailFade : 0,
+        },
+        time,
+      )
       /* Luz do motor no bocal, tremulando com a chama. */
-      const rocketY = rocketPadY + current.lift * (visibleHalfHeight * 2 + rocketHeight)
-      engineLight.position.set(rocketX, rocketY - rocketHeight * 0.62, 0.25)
+      launchPath(current.lift, nozzlePoint)
+      engineLight.position.set(nozzlePoint.x, nozzlePoint.y, 0.25)
       engineLight.intensity = current.thrust * (1.5 + Math.sin(time * 31) * 0.35) * (launch.visible ? 1 : 0)
 
       /* O sol: alto à esquerda, some com a subida. */
@@ -770,6 +845,8 @@ export function TriScene() {
       planet.dispose()
       for (const world of worlds) world.planet.dispose()
       cruiser.dispose()
+      trail.dispose()
+      cruiseTrail.dispose()
       earth.dispose()
       satellites.dispose()
       blackHole.dispose()

@@ -37,6 +37,8 @@ const KIND_ATMOSPHERE: Record<PlanetKind, string> = {
 }
 /** Quem tem nuvens. */
 const KIND_CLOUDS: Record<PlanetKind, boolean> = { target: true, earth: true, gas: false, rock: false, ice: false }
+/** Névoa da atmosfera sobre a superfície, perto da borda. */
+const KIND_HAZE: Record<PlanetKind, number> = { target: 0.35, earth: 0.42, gas: 0.22, rock: 0.1, ice: 0.2 }
 
 /* Raio casado com a casca do corpo dos triângulos (0,6 a 0,66). */
 const RADIUS = 0.62
@@ -62,6 +64,8 @@ const PERTURB = /* glsl */ `
 const SURFACE_VERTEX = /* glsl */ `
   uniform float uBreak;
   varying vec3 vNormalV;
+  varying vec3 vTangentV;
+  varying vec3 vBitangentV;
   varying vec3 vObj;
   varying vec3 vViewPos;
   varying vec2 vUv;
@@ -74,6 +78,11 @@ const SURFACE_VERTEX = /* glsl */ `
     p += normal * (0.15 + 0.85 * chunk) * burst * 0.7;
     vObj = position;
     vNormalV = normalize(normalMatrix * normal);
+    /* Quadro tangente analítico da esfera: T ao longo da longitude (u
+       crescente), B = N × T ao longo da latitude (v crescente, norte). */
+    vec3 tObj = normalize(vec3(position.z, 0.0, -position.x) + vec3(1e-5, 0.0, 0.0));
+    vTangentV = normalize(normalMatrix * tObj);
+    vBitangentV = normalize(normalMatrix * cross(normalize(position), tObj));
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     vViewPos = mv.xyz;
     gl_Position = projectionMatrix * mv;
@@ -91,8 +100,20 @@ const SURFACE_FRAGMENT = /* glsl */ `
   uniform sampler2D uNight;
   uniform float uHasMap;
   uniform float uHasNight;
+  uniform sampler2D uNormal;
+  uniform float uHasNormal;
+  uniform sampler2D uSpecular;
+  uniform float uHasSpecular;
+  uniform sampler2D uClouds;
+  uniform float uHasClouds;
+  uniform vec3 uLightLocal;
+  uniform float uCloudShift;
+  uniform vec3 uHaze;
+  uniform float uHazeStrength;
   uniform vec3 uTint;
   varying vec3 vNormalV;
+  varying vec3 vTangentV;
+  varying vec3 vBitangentV;
   varying vec3 vObj;
   varying vec3 vViewPos;
   varying vec2 vUv;
@@ -115,7 +136,11 @@ const SURFACE_FRAGMENT = /* glsl */ `
       vec3 photo = texture2D(uMap, vUv).rgb * uTint;
       albedo = photo;
       relief = 0.0;
-      if (uKind > 0.5 && uKind < 1.5) {
+      if (uHasSpecular > 0.5) {
+        /* Máscara de água fotografada: branco onde o mar reflete. */
+        water = smoothstep(0.25, 0.75, texture2D(uSpecular, vUv).r);
+        land = 1.0 - water;
+      } else if (uKind > 0.5 && uKind < 1.5) {
         /* Terra: água é onde o azul manda. */
         water = smoothstep(0.02, 0.14, photo.b - max(photo.r, photo.g));
         land = 1.0 - water;
@@ -208,19 +233,54 @@ const SURFACE_FRAGMENT = /* glsl */ `
 
     vec3 geomN = normalize(vNormalV);
     vec3 n = perturb(vViewPos, geomN, height, relief * uDetail);
+    if (uHasNormal > 0.5) {
+      /* Relevo fotografado: o mapa normal, em espaço tangente, com o verde
+         apontando para o sul (convenção DirectX), daí o sinal em y. */
+      vec3 nm = texture2D(uNormal, vUv).xyz * 2.0 - 1.0;
+      nm.xy *= vec2(1.7, -1.7);
+      n = normalize(normalize(vTangentV) * nm.x + normalize(vBitangentV) * nm.y + geomN * max(nm.z, 0.2));
+    }
     vec3 v = normalize(-vViewPos);
     float facing = dot(n, uLight);
     float day = smoothstep(-0.18, 0.4, facing);
     float dayGeom = smoothstep(-0.18, 0.4, dot(geomN, uLight));
     vec3 color = albedo * (0.05 + 0.95 * day);
 
-    /* Especular só na água e no gelo. */
-    float spec = pow(max(dot(reflect(-uLight, n), v), 0.0), 60.0) * water * 0.5 * dayGeom;
+    /* Especular só na água e no gelo: um clarão apertado do sol e um
+       lustro largo e fraco em volta. */
+    float rv = max(dot(reflect(-uLight, n), v), 0.0);
+    float spec = (pow(rv, 60.0) * 0.5 + pow(rv, 8.0) * 0.07) * water * dayGeom;
     color += spec;
 
     /* Escurecimento nas bordas: uma esfera de verdade não é chapada. */
     float limb = mix(0.45, 1.0, pow(max(dot(geomN, v), 0.0), 0.55));
     color *= limb;
+
+    if (uHasClouds > 0.5) {
+      /* Sombra das nuvens no chão: de cada ponto da superfície, sobe na
+         direção da luz até a casca das nuvens e pergunta se há nuvem lá.
+         A casca é mais alta que a real, para a sombra deslocar o bastante
+         para ler. As nuvens giram mais rápido que o chão, então o ponto
+         vai para o quadro delas antes da amostra. LOD fixo: sombra é
+         macia e a costura de longitude não risca. */
+      vec3 L = uLightLocal;
+      float b = dot(vObj, L);
+      float s = -b + sqrt(max(b * b + ${((RADIUS * 1.045) ** 2).toFixed(5)} - ${(RADIUS * RADIUS).toFixed(5)}, 0.0));
+      vec3 c = vObj + L * s;
+      float ca = cos(uCloudShift);
+      float sa = sin(uCloudShift);
+      vec3 cc = vec3(c.x * ca - c.z * sa, c.y, c.x * sa + c.z * ca);
+      vec2 cuv = vec2(
+        fract(atan(cc.z, -cc.x) / 6.2831853),
+        1.0 - acos(clamp(cc.y / length(cc), -1.0, 1.0)) / 3.14159265
+      );
+      float shadow = smoothstep(0.1, 0.7, textureLod(uClouds, cuv, 2.0).r);
+      color *= 1.0 - shadow * 0.45 * dayGeom;
+    }
+
+    /* Névoa: perto da borda, o ar entre nós e o chão espalha luz do dia. */
+    float haze = pow(1.0 - max(dot(geomN, v), 0.0), 2.4) * uHazeStrength * (0.1 + 0.9 * dayGeom);
+    color += uHaze * haze;
 
     /* Terminador quente: a luz rasante esquenta a linha entre dia e noite. */
     float twilight = smoothstep(0.25, 0.0, abs(dot(geomN, uLight))) * dayGeom;
@@ -388,10 +448,14 @@ export type PlanetMaps = {
   clouds?: MapTiers
   /** Anel: uma faixa RGBA ao longo do raio. */
   ring?: MapTiers
+  /** Relevo em espaço tangente, verde para o sul (Terra). */
+  normal?: MapTiers
+  /** Máscara de água: branco onde o mar reflete (Terra). */
+  specular?: MapTiers
 }
 
 const textureLoader = new THREE.TextureLoader()
-const ANISOTROPY = 8
+const ANISOTROPY = 16
 
 function prepare(texture: THREE.Texture) {
   /* Sem gestão de cor: o shader trabalha em sRGB de ponta a ponta. */
@@ -452,6 +516,9 @@ export function createPlanet({
 
   const geometries: THREE.BufferGeometry[] = []
   const materials: THREE.Material[] = []
+  /* A luz no quadro local da superfície, para a sombra das nuvens. */
+  const surfaceLightLocal = new THREE.Vector3()
+  const surfaceQuaternion = new THREE.Quaternion()
 
   const surfaceGeometry = new THREE.SphereGeometry(RADIUS, segments, Math.round(segments * 0.62))
   const surfaceMaterial = new THREE.ShaderMaterial({
@@ -470,9 +537,35 @@ export function createPlanet({
       uNight: { value: null },
       uHasMap: { value: 0 },
       uHasNight: { value: 0 },
+      uNormal: { value: null },
+      uHasNormal: { value: 0 },
+      uSpecular: { value: null },
+      uHasSpecular: { value: 0 },
+      uClouds: { value: null },
+      uHasClouds: { value: 0 },
+      uLightLocal: { value: surfaceLightLocal },
+      uCloudShift: { value: 0 },
+      uHaze: { value: new THREE.Color(KIND_ATMOSPHERE[kind]) },
+      uHazeStrength: { value: KIND_HAZE[kind] },
       uTint: { value: new THREE.Color(tint) },
     },
   })
+  if (maps?.normal) {
+    textures.push(
+      ...loadMap(maps.normal, (texture) => {
+        surfaceMaterial.uniforms.uNormal.value = texture
+        surfaceMaterial.uniforms.uHasNormal.value = 1
+      }),
+    )
+  }
+  if (maps?.specular) {
+    textures.push(
+      ...loadMap(maps.specular, (texture) => {
+        surfaceMaterial.uniforms.uSpecular.value = texture
+        surfaceMaterial.uniforms.uHasSpecular.value = 1
+      }),
+    )
+  }
   if (maps?.map) {
     textures.push(
       ...loadMap(maps.map, (texture) => {
@@ -521,6 +614,9 @@ export function createPlanet({
         ...loadMap(maps.clouds, (texture) => {
           material.uniforms.uMap.value = texture
           material.uniforms.uHasMap.value = 1
+          /* A mesma foto serve de sombra no chão. */
+          surfaceMaterial.uniforms.uClouds.value = texture
+          surfaceMaterial.uniforms.uHasClouds.value = 1
         }),
       )
     }
@@ -600,6 +696,9 @@ export function createPlanet({
       object.scale.setScalar(state.scale)
       surface.rotation.y = time * spin
       if (clouds) clouds.rotation.y = time * spin * 1.35
+      surfaceMaterial.uniforms.uCloudShift.value = clouds ? clouds.rotation.y - surface.rotation.y : 0
+      surface.getWorldQuaternion(surfaceQuaternion).invert()
+      surfaceLightLocal.copy(light).applyQuaternion(surfaceQuaternion)
       const heat = Math.sin(Math.min(Math.max(state.break, 0), 1) * Math.PI)
       atmosphere.scale.setScalar(1 + heat * 0.5)
       surfaceMaterial.uniforms.uTime.value = time

@@ -29,6 +29,8 @@ export type RocketState = {
   /** Quanto o foguete sobe em mundo entre lift 0 e 1. */
   travel: number
   opacity: number
+  /** Inclinação do eixo em radianos; positiva tomba o bico para a esquerda. */
+  tilt?: number
 }
 
 /* Raio do corpo em fração da altura: nove diâmetros de altura. */
@@ -445,6 +447,11 @@ export function createRocket({
     object.add(pivot)
   }
 
+  /* O bocal é um grupo: chama e brilho penduram nele, e ele gimbala. */
+  const nozzle = new THREE.Group()
+  nozzle.position.y = -0.55 * h
+  object.add(nozzle)
+
   /* Chama em duas camadas: laranja por fora, branco-azulado por dentro. */
   const flameMaterials: THREE.ShaderMaterial[] = []
   const makeFlame = (radius: number, length: number, core: string, mid: string, tail: string) => {
@@ -471,8 +478,8 @@ export function createRocket({
     )
     flameMaterials.push(material)
     const mesh = new THREE.Mesh(geometry, material)
-    mesh.position.y = -0.62 * h
-    object.add(mesh)
+    mesh.position.y = -0.07 * h
+    nozzle.add(mesh)
   }
   makeFlame(0.06, 1.5, '#fff4dc', '#ff9a3c', '#d42a0a')
   makeFlame(0.028, 0.9, '#ffffff', '#d6ecff', '#79b4ff')
@@ -489,8 +496,8 @@ export function createRocket({
     }),
   )
   const glow = new THREE.Mesh(glowGeometry, glowMaterial)
-  glow.position.y = -0.64 * h
-  object.add(glow)
+  glow.position.y = -0.09 * h
+  nozzle.add(glow)
 
   const padGeometry = track(new THREE.PlaneGeometry(2.2 * h, 0.7 * h))
   const padMaterial = trackM(
@@ -520,9 +527,10 @@ export function createRocket({
   const smokeGeometry = new THREE.BufferGeometry()
   const smokePosAttr = new THREE.BufferAttribute(smokePositions, 3)
   const smokeAgeAttr = new THREE.BufferAttribute(smokeAges, 1)
+  const smokeSizeAttr = new THREE.BufferAttribute(smokeSizes, 1)
   smokeGeometry.setAttribute('position', smokePosAttr)
   smokeGeometry.setAttribute('aAge', smokeAgeAttr)
-  smokeGeometry.setAttribute('aSize', new THREE.BufferAttribute(smokeSizes, 1))
+  smokeGeometry.setAttribute('aSize', smokeSizeAttr)
   track(smokeGeometry)
   const smokeMaterial = trackM(
     new THREE.ShaderMaterial({
@@ -536,12 +544,19 @@ export function createRocket({
   const smoke = new THREE.Points(smokeGeometry, smokeMaterial)
   smoke.frustumCulled = false
 
+  /* A inclinação mora num grupo pai e o giro em torno do eixo no filho:
+     no mesmo objeto, a ordem de Euler faz a inclinação girar junto com o
+     giro, e o bico passa a apontar para fora do rumo metade do tempo. */
+  const lean = new THREE.Group()
+  lean.add(object)
   const root = new THREE.Group()
-  root.add(object)
+  root.add(lean)
   if (!cruise) root.add(pad, smoke)
 
   let spawnCursor = 0
   let spawnDebt = 0
+  let ventDebt = 0
+  let ventSide = 0
   let alive = 0
 
   const spawn = (x: number, y: number) => {
@@ -555,6 +570,23 @@ export function createRocket({
     velocities[i * 3 + 2] = (Math.random() - 0.5) * 0.3 * h
     lives[i] = 0.7 + Math.random() * 0.6
     smokeAges[i] = 0
+    smokeSizes[i] = 8 + Math.random() * 16
+  }
+  /* Respiro: na plataforma o tanque ferve e solta fios de vapor pelo
+     casco, brancos, lentos, escorrendo para o lado. É o que mostra que o
+     foguete está vivo antes da ignição. */
+  const vent = (x: number, y: number) => {
+    const i = spawnCursor
+    spawnCursor = (spawnCursor + 1) % smokeCount
+    smokePositions[i * 3] = x
+    smokePositions[i * 3 + 1] = y
+    smokePositions[i * 3 + 2] = 0.02 * h
+    velocities[i * 3] = (0.06 + Math.random() * 0.08) * h
+    velocities[i * 3 + 1] = -(0.03 + Math.random() * 0.05) * h
+    velocities[i * 3 + 2] = (Math.random() - 0.5) * 0.04 * h
+    lives[i] = 1.6 + Math.random() * 1.4
+    smokeAges[i] = 0
+    smokeSizes[i] = 2.5 + Math.random() * 3
   }
 
   let modelLoaded = false
@@ -578,8 +610,7 @@ export function createRocket({
         box.getCenter(center)
         model.position.sub(center)
         for (const child of [...object.children]) {
-          const isFlame = child instanceof THREE.Mesh && flameMaterials.includes(child.material as THREE.ShaderMaterial)
-          if (!isFlame && child !== glow) child.visible = false
+          if (child !== nozzle) child.visible = false
         }
         object.add(model)
         modelLoaded = true
@@ -595,18 +626,21 @@ export function createRocket({
       if (cruise) for (const material of hullMaterials) material.opacity = state.opacity
 
       const y = state.yPad + state.lift * state.travel
-      object.position.set(state.x, y, 0)
-      object.visible = state.visible
-      /* No ar gira devagar para mostrar o volume e inclina um nada; em
-         cruzeiro inclina para o lado do rumo. Na plataforma, a marca fica
-         virada para a câmera. */
+      lean.position.set(state.x, y, 0)
+      lean.visible = state.visible
+      /* Gira devagar até na plataforma, como peça em vitrine, e mais no
+         ar, para mostrar o volume. O eixo segue a inclinação que a cena
+         manda (o rumo) mais um balanço leve no tempo. */
       const flying = cruise ? 1 : state.lift
-      object.rotation.y = flying > 0 ? 1.4 + time * 0.3 * flying : 1.4
-      object.rotation.z = cruise
-        ? -0.12 + Math.sin(time * 1.3) * 0.02
-        : state.lift > 0
-          ? Math.sin(time * 1.7) * 0.02 * state.lift
-          : 0
+      object.rotation.y = 1.4 + time * (0.1 + 0.25 * flying)
+      const tilt = state.tilt ?? 0
+      lean.rotation.z = cruise
+        ? tilt + Math.sin(time * 1.3) * 0.02
+        : tilt + Math.sin(time * 1.7) * 0.02 * state.lift
+      /* Gimbal: o bocal corrige o rumo o tempo todo, e a chama vai junto. */
+      const gimbal = state.thrust * (cruise ? 0.6 : 1)
+      nozzle.rotation.z = (Math.sin(time * 2.1) * 0.03 + Math.sin(time * 3.7) * 0.02) * gimbal
+      nozzle.rotation.x = Math.cos(time * 2.6) * 0.025 * gimbal
 
       for (const material of flameMaterials) {
         material.uniforms.uTime.value = time
@@ -625,6 +659,13 @@ export function createRocket({
       while (spawnDebt >= 1) {
         spawn(state.x, y - 0.62 * h)
         spawnDebt -= 1
+      }
+      const ventRate = state.lift < 0.02 && state.thrust < 0.3 ? 4 : 0
+      ventDebt += ventRate * delta
+      while (ventDebt >= 1) {
+        ventDebt -= 1
+        ventSide = 1 - ventSide
+        vent(state.x + R * h * 0.96, ventSide ? y + 0.16 * h : y - 0.42 * h)
       }
       alive = 0
       const floor = state.yPad - 0.64 * h
@@ -645,6 +686,7 @@ export function createRocket({
       }
       smokePosAttr.needsUpdate = true
       smokeAgeAttr.needsUpdate = true
+      smokeSizeAttr.needsUpdate = true
       smokeMaterial.uniforms.uOpacity.value = state.opacity
 
       if (modelLoaded) object.rotation.y = time * 0.15
