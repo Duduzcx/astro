@@ -257,9 +257,23 @@ export function TriScene() {
     /* Foguete: altura em mundo pela largura da tela. No celular ele é menor e
        fica no canto inferior direito, abaixo do texto do hero; atrás dos
        botões ele confundia a leitura. */
-    /* Esbelto, então pode ser mais alto sem ocupar largura. */
-    const rocketHeight = lightweight ? Math.min(0.85, halfWidth * 1.1) : Math.min(1.45, halfWidth * 1.45)
-    const rocket = createRocket({ height: rocketHeight, lightweight })
+    /* Esbelto (o modelo tem quase catorze diâmetros de altura), então pode
+       ser mais alto sem ocupar largura. */
+    const rocketHeight = lightweight ? Math.min(1.1, halfWidth * 1.4) : Math.min(2.0, halfWidth * 0.95)
+    /* O modelo do foguete compila os programas e sobe geometria e texturas
+       antes de entrar na cena: o primeiro frame dele não pode ser um
+       tranco. O desenho num alvo de 2×2, com as luzes da cena (mesmo
+       programa), é o que faz a GPU receber os buffers agora. */
+    const warmTarget = new THREE.WebGLRenderTarget(2, 2)
+    const warmRocket = async (object: THREE.Object3D) => {
+      await renderer.compileAsync(object, camera, scene)
+      scene.add(object)
+      renderer.setRenderTarget(warmTarget)
+      renderer.render(scene, camera)
+      renderer.setRenderTarget(null)
+      scene.remove(object)
+    }
+    const rocket = createRocket({ height: rocketHeight, lightweight, warm: warmRocket })
     rocket.setPixelRatio(renderer.getPixelRatio())
     scene.add(rocket.object)
 
@@ -388,7 +402,7 @@ export function TriScene() {
 
     /* O foguete em cruzeiro: pequeno, atravessando o desfile com a chama
        viva, e sumindo quando o planeta-alvo chega. */
-    const cruiser = createRocket({ height: rocketHeight * 0.5, lightweight, cruise: true })
+    const cruiser = createRocket({ height: rocketHeight * 0.5, lightweight, cruise: true, warm: warmRocket })
     scene.add(cruiser.object)
     /* Rastros: o do lançamento e o do cruzeiro, cada um seguindo a sua
        própria trajetória. */
@@ -885,6 +899,7 @@ export function TriScene() {
       meteors.dispose()
       space.dispose()
       rocket.dispose()
+      warmTarget.dispose()
       planet.dispose()
       for (const world of worlds) world.planet.dispose()
       cruiser.dispose()
