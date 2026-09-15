@@ -56,9 +56,11 @@ const FRAGMENT = /* glsl */ `
       float cross = max(smoothstep(0.02, 0.0, abs(q.x)), smoothstep(0.02, 0.0, abs(q.y))) * smoothstep(0.5, 0.05, d);
       alpha = max(smoothstep(0.5, 0.36, d) * 0.9, cross * 0.8);
     }
-    /* Entre ivory e azul claro, sem branco puro: estrela não pode competir
-       com o texto. */
-    vec3 color = mix(vec3(0.96, 0.97, 0.98), vec3(0.55, 0.71, 0.96), vTint);
+    /* Entre ivory e azul claro, com umas poucas quentes (as de tipo K,
+       que numa foto saem douradas); sem branco puro: estrela não pode
+       competir com o texto. */
+    vec3 cool = mix(vec3(0.96, 0.97, 0.98), vec3(0.55, 0.71, 0.96), clamp(vTint / 0.7, 0.0, 1.0));
+    vec3 color = mix(cool, vec3(1.0, 0.86, 0.66), smoothstep(0.7, 1.0, vTint));
     gl_FragColor = vec4(color, alpha * uOpacity * vTwinkle);
   }
 `
@@ -72,8 +74,9 @@ export function createStars(count: number, pixelRatio: number) {
     positions[i * 3] = (Math.random() * 2 - 1) * SPREAD_X
     positions[i * 3 + 1] = (Math.random() * 2 - 1) * SPREAD_Y
     positions[i * 3 + 2] = -1.5 - Math.random() * 2.5
-    /* Quase todas minúsculas, poucas maiores. */
-    sizes[i] = 1.2 + Math.random() * Math.random() * 4.5
+    /* Quase todas minúsculas, poucas maiores; as brilhantes de verdade
+       são sprites à parte (brightstars.ts). */
+    sizes[i] = 1.35 + Math.random() * Math.random() * 4.5
     tints[i] = Math.random()
     seeds[i] = Math.random()
   }
