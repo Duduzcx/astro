@@ -1,8 +1,9 @@
 import * as THREE from 'three'
 
 /**
- * O foguete: um lançador pesado de três núcleos, no estilo dos veículos
- * reutilizáveis de hoje. Núcleo central com interestágio preto, segundo
+ * O foguete. Hoje é um modelo real (abaixo); o torneado procedural continua
+ * aqui como reserva: um lançador pesado de três núcleos, no estilo dos
+ * veículos reutilizáveis de hoje. Núcleo central com interestágio preto, segundo
  * estágio e coifa larga; dois propulsores laterais com cone, presos ao
  * núcleo; pernas de pouso recolhidas ao longo dos três corpos, grid fins
  * no alto, nove motores por núcleo (vinte e sete sinos instanciados),
@@ -17,10 +18,46 @@ import * as THREE from 'three'
  * Em cruzeiro voa só o segundo estágio com a coifa (o resto ficou para
  * trás), com um motor grande de vácuo.
  *
- * Gancho para modelo real: preencha ROCKET_MODEL_URL com um .glb (Draco em
- * /public/draco/). Carregado, o torneado some. Vazio, nada é baixado.
+ * Modelo real: com ROCKET_MODEL_URL preenchido (um .glb com Draco, decoder
+ * em /public/draco/) o torneado nem é construído; o veículo é o modelo,
+ * escalado para `height`, com a base em -0,5h e o bico no mesmo lugar do
+ * procedural, então chama, brilho, fumaça e rastro não mudam. Em cruzeiro
+ * o modelo perde o booster e voa só a nave. Vazio, o torneado de três
+ * núcleos volta a valer (é também o caminho de `model: false`).
+ *
+ * O modelo é o "SpaceX Starship Block 3" de Clarence365 (Sketchfab, CC BY
+ * 4.0, https://sketchfab.com/3d-models/spacex-starship-block-3-6f6c6f88a3eb4b4d822fdca66733fbb2),
+ * otimizado: logo e número de série removidos, motores decimados (eram
+ * metade dos 870k vértices e ocupam 20px na tela), Draco. Crédito no
+ * rodapé e no README.
  */
-export const ROCKET_MODEL_URL = ''
+export const ROCKET_MODEL_URL = '/models/starship.glb'
+
+/** Nó do modelo que é o booster (o .glb vem em dois grupos, `ship` e
+    `booster`, cada um com as malhas fundidas por material): some em cruzeiro. */
+const BOOSTER_NODE = /^booster$/i
+
+/** Uma carga por página: as duas instâncias (lançamento e cruzeiro)
+    compartilham geometria; cada uma clona só os materiais que anima. */
+let modelPromise: Promise<THREE.Group> | null = null
+function loadModel() {
+  if (!modelPromise) {
+    modelPromise = Promise.all([
+      import('three/examples/jsm/loaders/GLTFLoader.js'),
+      import('three/examples/jsm/loaders/DRACOLoader.js'),
+    ]).then(([{ GLTFLoader }, { DRACOLoader }]) => {
+      const draco = new DRACOLoader()
+      draco.setDecoderPath('/draco/')
+      const loader = new GLTFLoader()
+      loader.setDRACOLoader(draco)
+      return loader.loadAsync(ROCKET_MODEL_URL).then((gltf) => {
+        draco.dispose()
+        return gltf.scene
+      })
+    })
+  }
+  return modelPromise
+}
 
 export type RocketState = {
   visible: boolean
@@ -359,16 +396,25 @@ export function createRocket({
   height,
   lightweight,
   cruise = false,
+  model = true,
+  warm,
 }: {
   height: number
   lightweight: boolean
   /** Em cruzeiro voa só o segundo estágio com a coifa; sem plataforma nem fumaça, e a opacidade vale. */
   cruise?: boolean
+  /** `false` força o torneado procedural mesmo com modelo configurado. */
+  model?: boolean
+  /** Chamado com o modelo pronto, antes de entrar na cena: a cena compila
+      os programas e sobe as texturas fora do caminho do scroll. */
+  warm?: (object: THREE.Object3D) => Promise<unknown>
 }) {
   const object = new THREE.Group()
-  /* Em cruzeiro a altura pedida é a do segundo estágio; o veículo inteiro
-     seria maior. */
-  const h = cruise ? height / UPPER_FRACTION : height
+  const modelMode = Boolean(ROCKET_MODEL_URL) && model
+  /* Em cruzeiro a altura pedida é a do segundo estágio; no procedural o
+     veículo inteiro é torneado e depois cortado, então é maior. Com o
+     modelo, `h` é sempre a altura do que aparece. */
+  const h = cruise && !modelMode ? height / UPPER_FRACTION : height
   const geometries: THREE.BufferGeometry[] = []
   const materials: THREE.Material[] = []
   const textures: THREE.Texture[] = []
@@ -380,164 +426,169 @@ export function createRocket({
     materials.push(m)
     return m
   }
-  const size = lightweight ? 1024 : 2048
+  /* Base do veículo em fração de h: com o modelo, sempre -0,5 (a nave em
+     cruzeiro é reescalada para h inteiro); no procedural o cruzeiro corta
+     o torneado no interestágio. */
+  const bottom = cruise && !modelMode ? INTERSTAGE[1] : -0.5
+  /* Materiais do casco: em cruzeiro a opacidade da cena vale para eles. */
+  const hullMaterials: THREE.Material[] = []
 
-  const makeHull = (spec: HullSpec) => {
-    const canvases = hullCanvases(spec)
-    const map = canvases ? new THREE.CanvasTexture(canvases.color) : null
-    const roughnessMap = canvases ? new THREE.CanvasTexture(canvases.rough) : null
-    if (map) {
-      map.colorSpace = THREE.SRGBColorSpace
-      map.wrapS = THREE.RepeatWrapping
-      map.anisotropy = 8
-      textures.push(map)
+  if (!modelMode) {
+    const size = lightweight ? 1024 : 2048
+
+    const makeHull = (spec: HullSpec) => {
+      const canvases = hullCanvases(spec)
+      const map = canvases ? new THREE.CanvasTexture(canvases.color) : null
+      const roughnessMap = canvases ? new THREE.CanvasTexture(canvases.rough) : null
+      if (map) {
+        map.colorSpace = THREE.SRGBColorSpace
+        map.wrapS = THREE.RepeatWrapping
+        map.anisotropy = 8
+        textures.push(map)
+      }
+      if (roughnessMap) {
+        roughnessMap.wrapS = THREE.RepeatWrapping
+        textures.push(roughnessMap)
+      }
+      /* Tinta acetinada. Base cinza-clara: sem tone mapping no composer o
+         branco iluminado passa de 1,0 e vira neve no bloom. */
+      return trackM(
+        new THREE.MeshStandardMaterial({
+          map,
+          roughnessMap,
+          color: cruise ? 0xa9b0ba : 0xb9bfc8,
+          metalness: 0.18,
+          roughness: 0.62,
+          envMapIntensity: cruise ? 0.35 : 0.45,
+          transparent: cruise,
+          toneMapped: false,
+        }),
+      )
     }
-    if (roughnessMap) {
-      roughnessMap.wrapS = THREE.RepeatWrapping
-      textures.push(roughnessMap)
-    }
-    /* Tinta acetinada. Base cinza-clara: sem tone mapping no composer o
-       branco iluminado passa de 1,0 e vira neve no bloom. */
-    return trackM(
+    const dark = trackM(
       new THREE.MeshStandardMaterial({
-        map,
-        roughnessMap,
-        color: cruise ? 0xa9b0ba : 0xb9bfc8,
-        metalness: 0.18,
-        roughness: 0.62,
-        envMapIntensity: cruise ? 0.35 : 0.45,
+        color: 0x1c2029,
+        metalness: 0.75,
+        roughness: 0.42,
+        envMapIntensity: 0.7,
         transparent: cruise,
         toneMapped: false,
       }),
     )
-  }
-  const dark = trackM(
-    new THREE.MeshStandardMaterial({
-      color: 0x1c2029,
-      metalness: 0.75,
-      roughness: 0.42,
-      envMapIntensity: 0.7,
-      transparent: cruise,
-      toneMapped: false,
-    }),
-  )
-  const bell = trackM(
-    new THREE.MeshStandardMaterial({
-      color: 0x80858d,
-      metalness: 1,
-      roughness: 0.3,
-      envMapIntensity: 0.9,
-      side: THREE.DoubleSide,
-      transparent: cruise,
-      toneMapped: false,
-    }),
-  )
-
-  const around = lightweight ? 40 : 72
-  const bodies: THREE.Mesh[] = []
-  const bottom = cruise ? INTERSTAGE[1] : -0.5
-  /* v do interestágio e da coifa no núcleo, medidos do topo. */
-  const coreV = (y: number) => (0.5 - y) / (0.5 - bottom)
-
-  const coreHull = makeHull({
-    size,
-    interstage: cruise ? undefined : [coreV(INTERSTAGE[1]), coreV(INTERSTAGE[0])],
-    sootFrom: cruise ? 0.86 : 0.7,
-    fairingSeam: coreV(STAGE2_TOP),
-    branding: true,
-    seed: 1234,
-  })
-  const core = new THREE.Mesh(track(new THREE.LatheGeometry(profile(h, 0.5, bottom, coreRadius, 200), around)), coreHull)
-  object.add(core)
-  bodies.push(core)
-
-  const hullMaterials: THREE.Material[] = [coreHull, dark, bell]
-  const bellSize = cruise ? 0.045 : 0.019
-  const bellGeometry = track(new THREE.LatheGeometry(bellProfile(h, bellSize), 20))
-  const engineSpots: Array<[number, number]> = []
-
-  if (!cruise) {
-    /* Propulsores laterais, encostados no núcleo. */
-    const boosterHull = makeHull({ size, sootFrom: 0.72, branding: false, seed: 4321 })
-    hullMaterials.push(boosterHull)
-    const boosterGeometry = track(
-      new THREE.LatheGeometry(profile(h, BOOSTER_TOP, -0.5, boosterRadius, 160), around),
+    const bell = trackM(
+      new THREE.MeshStandardMaterial({
+        color: 0x80858d,
+        metalness: 1,
+        roughness: 0.3,
+        envMapIntensity: 0.9,
+        side: THREE.DoubleSide,
+        transparent: cruise,
+        toneMapped: false,
+      }),
     )
-    for (const side of [-1, 1]) {
-      const booster = new THREE.Mesh(boosterGeometry, boosterHull)
-      booster.position.x = side * 2.04 * R * h
-      object.add(booster)
-      bodies.push(booster)
-      /* Presilhas entre o propulsor e o núcleo, em cima e embaixo. */
-      for (const y of [0.16, -0.38]) {
-        const strut = new THREE.Mesh(track(new THREE.BoxGeometry(0.4 * R * h, 0.02 * h, 0.03 * h)), dark)
-        strut.position.set(side * 1.02 * R * h, y * h, 0)
-        object.add(strut)
-      }
-    }
-    /* Nove motores por núcleo: oito em volta e um no meio. */
-    for (const cx of [-2.04 * R, 0, 2.04 * R]) {
-      engineSpots.push([cx, 0])
-      for (let k = 0; k < 8; k += 1) {
-        const a = (k / 8) * Math.PI * 2 + Math.PI / 8
-        engineSpots.push([cx + Math.cos(a) * 0.62 * R, Math.sin(a) * 0.62 * R])
-      }
-    }
-    /* Pernas de pouso recolhidas ao longo dos três corpos, e grid fins. */
-    const leg = track(new THREE.BoxGeometry(0.016 * h, 0.27 * h, 0.022 * h))
-    const frame = track(new THREE.BoxGeometry(0.05 * h, 0.06 * h, 0.006 * h))
-    const slatH = track(new THREE.BoxGeometry(0.044 * h, 0.003 * h, 0.009 * h))
-    const slatV = track(new THREE.BoxGeometry(0.003 * h, 0.054 * h, 0.009 * h))
-    for (const [cx, finY] of [
-      [-2.04 * R, BOOSTER_SHOULDER - 0.05],
-      [0, INTERSTAGE[0] - 0.04],
-      [2.04 * R, BOOSTER_SHOULDER - 0.05],
-    ]) {
-      for (let k = 0; k < 4; k += 1) {
-        const pivot = new THREE.Group()
-        pivot.position.x = cx * h
-        pivot.rotation.y = (k / 4) * Math.PI * 2 + Math.PI / 4
-        const mesh = new THREE.Mesh(leg, dark)
-        mesh.position.set(R * 1.06 * h, -0.34 * h, 0)
-        mesh.rotation.z = -0.04
-        pivot.add(mesh)
-        const fin = new THREE.Group()
-        fin.position.set(R * h + 0.026 * h, finY * h, 0)
-        fin.add(new THREE.Mesh(frame, dark))
-        for (let i = -3; i <= 3; i += 1) {
-          const a = new THREE.Mesh(slatH, bell)
-          a.position.y = i * 0.008 * h
-          fin.add(a)
-          const b = new THREE.Mesh(slatV, bell)
-          b.position.x = i * 0.0065 * h
-          fin.add(b)
-        }
-        pivot.add(fin)
-        object.add(pivot)
-      }
-      /* Canalização ao longo do corpo. */
-      const raceway = new THREE.Mesh(track(new THREE.CylinderGeometry(0.006 * h, 0.006 * h, 0.62 * h, 8)), dark)
-      raceway.position.set(cx * h + Math.cos(0.7) * R * 1.02 * h, -0.14 * h, Math.sin(0.7) * R * 1.02 * h)
-      object.add(raceway)
-    }
-    /* Anel do interestágio. */
-    const ring = new THREE.Mesh(track(new THREE.TorusGeometry(R * 1.03 * h, 0.005 * h, 8, 64)), dark)
-    ring.rotation.x = Math.PI / 2
-    ring.position.y = INTERSTAGE[0] * h
-    object.add(ring)
-  } else {
-    /* Um motor de vácuo grande no meio. */
-    engineSpots.push([0, 0])
-  }
 
-  const bells = new THREE.InstancedMesh(bellGeometry, bell, engineSpots.length)
-  const matrix = new THREE.Matrix4()
-  engineSpots.forEach(([x, z], index) => {
-    matrix.makeTranslation(x * h, bottom * h, z * h)
-    bells.setMatrixAt(index, matrix)
-  })
-  bells.instanceMatrix.needsUpdate = true
-  object.add(bells)
+    const around = lightweight ? 40 : 72
+    /* v do interestágio e da coifa no núcleo, medidos do topo. */
+    const coreV = (y: number) => (0.5 - y) / (0.5 - bottom)
+
+    const coreHull = makeHull({
+      size,
+      interstage: cruise ? undefined : [coreV(INTERSTAGE[1]), coreV(INTERSTAGE[0])],
+      sootFrom: cruise ? 0.86 : 0.7,
+      fairingSeam: coreV(STAGE2_TOP),
+      branding: true,
+      seed: 1234,
+    })
+    const core = new THREE.Mesh(track(new THREE.LatheGeometry(profile(h, 0.5, bottom, coreRadius, 200), around)), coreHull)
+    object.add(core)
+
+  hullMaterials.push(coreHull, dark, bell)
+    const bellSize = cruise ? 0.045 : 0.019
+    const bellGeometry = track(new THREE.LatheGeometry(bellProfile(h, bellSize), 20))
+    const engineSpots: Array<[number, number]> = []
+
+    if (!cruise) {
+      /* Propulsores laterais, encostados no núcleo. */
+      const boosterHull = makeHull({ size, sootFrom: 0.72, branding: false, seed: 4321 })
+      hullMaterials.push(boosterHull)
+      const boosterGeometry = track(
+        new THREE.LatheGeometry(profile(h, BOOSTER_TOP, -0.5, boosterRadius, 160), around),
+      )
+      for (const side of [-1, 1]) {
+        const booster = new THREE.Mesh(boosterGeometry, boosterHull)
+        booster.position.x = side * 2.04 * R * h
+        object.add(booster)
+        /* Presilhas entre o propulsor e o núcleo, em cima e embaixo. */
+        for (const y of [0.16, -0.38]) {
+          const strut = new THREE.Mesh(track(new THREE.BoxGeometry(0.4 * R * h, 0.02 * h, 0.03 * h)), dark)
+          strut.position.set(side * 1.02 * R * h, y * h, 0)
+          object.add(strut)
+        }
+      }
+      /* Nove motores por núcleo: oito em volta e um no meio. */
+      for (const cx of [-2.04 * R, 0, 2.04 * R]) {
+        engineSpots.push([cx, 0])
+        for (let k = 0; k < 8; k += 1) {
+          const a = (k / 8) * Math.PI * 2 + Math.PI / 8
+          engineSpots.push([cx + Math.cos(a) * 0.62 * R, Math.sin(a) * 0.62 * R])
+        }
+      }
+      /* Pernas de pouso recolhidas ao longo dos três corpos, e grid fins. */
+      const leg = track(new THREE.BoxGeometry(0.016 * h, 0.27 * h, 0.022 * h))
+      const frame = track(new THREE.BoxGeometry(0.05 * h, 0.06 * h, 0.006 * h))
+      const slatH = track(new THREE.BoxGeometry(0.044 * h, 0.003 * h, 0.009 * h))
+      const slatV = track(new THREE.BoxGeometry(0.003 * h, 0.054 * h, 0.009 * h))
+      for (const [cx, finY] of [
+        [-2.04 * R, BOOSTER_SHOULDER - 0.05],
+        [0, INTERSTAGE[0] - 0.04],
+        [2.04 * R, BOOSTER_SHOULDER - 0.05],
+      ]) {
+        for (let k = 0; k < 4; k += 1) {
+          const pivot = new THREE.Group()
+          pivot.position.x = cx * h
+          pivot.rotation.y = (k / 4) * Math.PI * 2 + Math.PI / 4
+          const mesh = new THREE.Mesh(leg, dark)
+          mesh.position.set(R * 1.06 * h, -0.34 * h, 0)
+          mesh.rotation.z = -0.04
+          pivot.add(mesh)
+          const fin = new THREE.Group()
+          fin.position.set(R * h + 0.026 * h, finY * h, 0)
+          fin.add(new THREE.Mesh(frame, dark))
+          for (let i = -3; i <= 3; i += 1) {
+            const a = new THREE.Mesh(slatH, bell)
+            a.position.y = i * 0.008 * h
+            fin.add(a)
+            const b = new THREE.Mesh(slatV, bell)
+            b.position.x = i * 0.0065 * h
+            fin.add(b)
+          }
+          pivot.add(fin)
+          object.add(pivot)
+        }
+        /* Canalização ao longo do corpo. */
+        const raceway = new THREE.Mesh(track(new THREE.CylinderGeometry(0.006 * h, 0.006 * h, 0.62 * h, 8)), dark)
+        raceway.position.set(cx * h + Math.cos(0.7) * R * 1.02 * h, -0.14 * h, Math.sin(0.7) * R * 1.02 * h)
+        object.add(raceway)
+      }
+      /* Anel do interestágio. */
+      const ring = new THREE.Mesh(track(new THREE.TorusGeometry(R * 1.03 * h, 0.005 * h, 8, 64)), dark)
+      ring.rotation.x = Math.PI / 2
+      ring.position.y = INTERSTAGE[0] * h
+      object.add(ring)
+    } else {
+      /* Um motor de vácuo grande no meio. */
+      engineSpots.push([0, 0])
+    }
+
+    const bells = new THREE.InstancedMesh(bellGeometry, bell, engineSpots.length)
+    const matrix = new THREE.Matrix4()
+    engineSpots.forEach(([x, z], index) => {
+      matrix.makeTranslation(x * h, bottom * h, z * h)
+      bells.setMatrixAt(index, matrix)
+    })
+    bells.instanceMatrix.needsUpdate = true
+    object.add(bells)
+  }
 
   /* O bocal é um grupo: chamas e brilho penduram nele, e ele gimbala. */
   const nozzle = new THREE.Group()
@@ -574,14 +625,27 @@ export function createRocket({
     mesh.position.set(x * h, -0.06 * h, 0)
     nozzle.add(mesh)
   }
-  const plumes = cruise ? [0] : [-2.04 * R, 0, 2.04 * R]
-  for (const x of plumes) {
+  if (modelMode) {
+    /* Um corpo só: um jato largo (trinta e três motores viram uma pluma) e,
+       em cruzeiro, o da nave, mais curto: a nave é mais gorda em relação
+       à própria altura do que o veículo inteiro. */
     if (cruise) {
-      makeFlame(x, 0.05, 0.6, '#fff4dc', '#ffb36a', '#d9481a')
-      makeFlame(x, 0.024, 0.4, '#ffffff', '#d6ecff', '#79b4ff')
+      makeFlame(0, 0.075, 0.8, '#fff4dc', '#ffb36a', '#d9481a')
+      makeFlame(0, 0.038, 0.55, '#ffffff', '#d6ecff', '#79b4ff')
     } else {
-      makeFlame(x, 0.06, 1.3, '#fff4dc', '#ff9a3c', '#d42a0a')
-      makeFlame(x, 0.03, 0.85, '#ffffff', '#d6ecff', '#79b4ff')
+      makeFlame(0, 0.058, 1.35, '#fff4dc', '#ff9a3c', '#d42a0a')
+      makeFlame(0, 0.03, 0.9, '#ffffff', '#d6ecff', '#79b4ff')
+    }
+  } else {
+    const plumes = cruise ? [0] : [-2.04 * R, 0, 2.04 * R]
+    for (const x of plumes) {
+      if (cruise) {
+        makeFlame(x, 0.05, 0.6, '#fff4dc', '#ffb36a', '#d9481a')
+        makeFlame(x, 0.024, 0.4, '#ffffff', '#d6ecff', '#79b4ff')
+      } else {
+        makeFlame(x, 0.06, 1.3, '#fff4dc', '#ff9a3c', '#d42a0a')
+        makeFlame(x, 0.03, 0.85, '#ffffff', '#d6ecff', '#79b4ff')
+      }
     }
   }
 
@@ -656,7 +720,7 @@ export function createRocket({
 
   /* O segundo estágio nasce entre o interestágio e a ponta; recentrado, o
      eixo de inclinação passa pelo meio dele. */
-  const centerY = cruise ? ((0.5 + bottom) / 2) * h : 0
+  const centerY = cruise && !modelMode ? ((0.5 + bottom) / 2) * h : 0
   object.position.y = -centerY
 
   let spawnCursor = 0
@@ -694,31 +758,57 @@ export function createRocket({
     smokeSizes[i] = 2.5 + Math.random() * 3
   }
 
-  let modelLoaded = false
-  if (ROCKET_MODEL_URL) {
-    Promise.all([
-      import('three/examples/jsm/loaders/GLTFLoader.js'),
-      import('three/examples/jsm/loaders/DRACOLoader.js'),
-    ]).then(([{ GLTFLoader }, { DRACOLoader }]) => {
-      const draco = new DRACOLoader()
-      draco.setDecoderPath('/draco/')
-      const loader = new GLTFLoader()
-      loader.setDRACOLoader(draco)
-      loader.load(ROCKET_MODEL_URL, (gltf) => {
-        const model = gltf.scene
-        const box = new THREE.Box3().setFromObject(model)
-        const dimensions = new THREE.Vector3()
-        box.getSize(dimensions)
-        model.scale.setScalar(height / Math.max(dimensions.y, 0.0001))
-        box.setFromObject(model)
-        const center = new THREE.Vector3()
-        box.getCenter(center)
-        model.position.sub(center)
-        for (const child of [...object.children]) {
-          if (child !== nozzle) child.visible = false
-        }
-        object.add(model)
-        modelLoaded = true
+  /* O modelo chega depois: some o booster em cruzeiro, os materiais
+     entram no regime da cena (sem tone mapping no composer, o aço
+     refletindo o ambiente a 1,0 viraria neve no bloom), e o conjunto é
+     medido, girado, escalado e assentado com a base em -0,5h e o eixo no
+     centro, onde o torneado estaria. Aparece num fade curto. */
+  const modelMaterials: THREE.MeshStandardMaterial[] = []
+  let appear = modelMode ? 0 : 1
+  let disposed = false
+  if (modelMode) {
+    void loadModel().then((source) => {
+      if (disposed) return
+      const model = source.clone(true)
+      if (cruise) {
+        const gone: THREE.Object3D[] = []
+        model.traverse((node) => {
+          if (BOOSTER_NODE.test(node.name)) gone.push(node)
+        })
+        for (const node of gone) node.removeFromParent()
+      }
+      model.traverse((node) => {
+        if (!(node instanceof THREE.Mesh)) return
+        const original = node.material as THREE.MeshStandardMaterial
+        /* Cada instância anima a própria opacidade: clona o material
+           (as texturas continuam compartilhadas). */
+        const material = original.clone()
+        material.toneMapped = false
+        material.envMapIntensity = 0.55
+        material.transparent = true
+        material.opacity = 0
+        material.depthWrite = true
+        node.material = material
+        modelMaterials.push(material)
+        materials.push(material)
+      })
+      /* As aletas ficam no eixo z do modelo; giradas para x, abrem a
+         silhueta para a câmera, que olha ao longo de z. O sinal deixa o
+         lado de aço virado para a câmera; o das telhas pretas aparece na
+         volta lenta da subida. */
+      model.rotation.y = -Math.PI / 2
+      model.updateMatrixWorld(true)
+      const box = new THREE.Box3().setFromObject(model)
+      const size = new THREE.Vector3()
+      const center = new THREE.Vector3()
+      box.getSize(size)
+      box.getCenter(center)
+      const scale = h / Math.max(size.y, 0.0001)
+      model.scale.setScalar(scale)
+      model.position.set(-center.x * scale, -box.min.y * scale + bottom * h, -center.z * scale)
+      const ready = warm ? warm(model).catch(() => undefined) : Promise.resolve()
+      void ready.then(() => {
+        if (!disposed) object.add(model)
       })
     })
   }
@@ -731,6 +821,16 @@ export function createRocket({
       root.visible = state.visible || (!cruise && alive > 0)
       if (!root.visible) return
       if (cruise) for (const material of hullMaterials) material.opacity = state.opacity
+      if (modelMaterials.length) {
+        if (appear < 1) appear = Math.min(1, appear + delta * 2)
+        const opacity = appear * (cruise ? state.opacity : 1)
+        for (const material of modelMaterials) {
+          material.opacity = opacity
+          /* Opaco de verdade quando pode: com transparência as peças
+             internas do modelo vazam pelo casco. */
+          material.transparent = opacity < 0.999
+        }
+      }
 
       const y = state.yPad + state.lift * state.travel
       lean.position.set(state.x, y, 0)
@@ -773,7 +873,7 @@ export function createRocket({
       while (ventDebt >= 1) {
         ventDebt -= 1
         ventSide = 1 - ventSide
-        vent(state.x + R * h * 3.0, ventSide ? y + 0.1 * h : y - 0.42 * h)
+        vent(state.x + (modelMode ? 0.04 : R * 3.0) * h, ventSide ? y + 0.1 * h : y - 0.42 * h)
       }
       alive = 0
       const floor = state.yPad + (bottom - 0.02) * h
@@ -796,8 +896,6 @@ export function createRocket({
       smokeAgeAttr.needsUpdate = true
       smokeSizeAttr.needsUpdate = true
       smokeMaterial.uniforms.uOpacity.value = state.opacity
-
-      if (modelLoaded) object.rotation.y = time * 0.15
     },
     setPixelRatio(ratio: number) {
       smokeMaterial.uniforms.uPixelRatio.value = ratio
@@ -807,10 +905,10 @@ export function createRocket({
       smoke.visible = false
     },
     dispose() {
+      disposed = true
       for (const g of geometries) g.dispose()
       for (const m of materials) m.dispose()
       for (const t of textures) t.dispose()
-      void bodies
     },
   }
 }

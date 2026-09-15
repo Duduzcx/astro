@@ -127,7 +127,7 @@ export function Footer() {
             </p>
             <p className="text-[12px] font-[420] tracking-[0.01em] text-slate">
               Feito com software que trabalha de madrugada. Texturas dos astros: Solar System
-              Scope, CC BY 4.0.
+              Scope, CC BY 4.0. Foguete: Starship Block 3 por Clarence365 (Sketchfab), CC BY 4.0.
             </p>
           </div>
         </div>
