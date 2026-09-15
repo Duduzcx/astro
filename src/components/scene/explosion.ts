@@ -347,7 +347,9 @@ function buildShards(count: number) {
     randomDirection(radial)
     /* Quase todos pequenos, alguns médios, raros grandes. */
     const roll = Math.random()
-    const size = R * (roll < 0.7 ? 0.025 + Math.random() * 0.03 : roll < 0.95 ? 0.055 + Math.random() * 0.045 : 0.1 + Math.random() * 0.05)
+    /* Menores que a primeira versão: pedaço grande e chapado lia como
+       pedra de isopor; muitos pequenos leem como plasma espirrando. */
+    const size = R * (roll < 0.7 ? 0.014 + Math.random() * 0.02 : roll < 0.95 ? 0.034 + Math.random() * 0.028 : 0.062 + Math.random() * 0.03)
     const sx = 0.55 + Math.random() * 0.75
     const sy = 0.55 + Math.random() * 0.75
     const sz = 0.55 + Math.random() * 0.75
@@ -619,7 +621,7 @@ export function createExplosion({
   materials.push(planeMaterial)
 
   /* 3. Cacos. */
-  const shardGeometry = buildShards(light ? 40 : 120)
+  const shardGeometry = buildShards(light ? 48 : 170)
   const shardMaterial = new THREE.ShaderMaterial({
     vertexShader: SHARD_VERTEX,
     fragmentShader: SHARD_FRAGMENT,

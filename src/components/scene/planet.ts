@@ -500,12 +500,17 @@ function loadMap(tiers: MapTiers, onLoad: (texture: THREE.Texture) => void): THR
           /* Um terceiro degrau, opcional e pesado (8k): só quando o
              anterior já está na tela. */
           if (tiers.ultra) {
-            loaded.push(
-              textureLoader.load(tiers.ultra, (ultra) => {
-                onLoad(prepare(ultra))
-                high.dispose()
-              }),
-            )
+            const ultra = tiers.ultra
+            /* Só depois de a cena assentar: os 8k competiam pela banda com
+               os degraus leves e atrasavam a primeira aparição dos astros. */
+            window.setTimeout(() => {
+              loaded.push(
+                textureLoader.load(ultra, (texture) => {
+                  onLoad(prepare(texture))
+                  high.dispose()
+                }),
+              )
+            }, 6000)
           }
         }),
       )

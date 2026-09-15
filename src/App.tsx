@@ -24,8 +24,11 @@ import { Footer } from './components/Footer'
 import { TriangleDrift } from './components/ui/TriangleDrift'
 
 /** three.js pesa ~500kB minificado, então a cena vem num chunk separado. */
+/* O chunk da cena (three.js) começa a baixar já, junto com o resto: o lazy
+   existe para não segurar a primeira pintura, não para adiar o download. */
+const sceneChunk = import('./components/TriScene')
 const TriScene = lazy(() =>
-  import('./components/TriScene').then((module) => ({ default: module.TriScene })),
+  sceneChunk.then((module) => ({ default: module.TriScene })),
 )
 
 /**

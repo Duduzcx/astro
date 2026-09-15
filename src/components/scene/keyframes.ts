@@ -50,14 +50,18 @@ export const KEYFRAMES: Keyframes = [
   /* A poeira condensa: uma estrela nasce durante o contato... */
   /* No vão entre a coluna de texto e o card do formulário — atrás do card ela
      ficaria escondida. */
-  [0.91, 0.06, 0.0, 0.1, 0.52, 0.6, 2],
-  [0.942, 0.05, 0.0, 0.0, 0.56, 0.75, 2],
+  [0.905, 0.06, 0.0, 0.1, 0.52, 0.6, 2],
+  [0.935, 0.05, 0.0, 0.05, 0.56, 0.75, 2],
   /* ...e explode à vista quando o fechamento entra (0.933): o morph 2 para 3
      agrupado É a detonação — os triângulos voam do corpo para as cascas. */
-  [0.952, 0.08, 0.0, -0.35, 0.92, 1.0, 3],
-  /* Cauda plana: ver a nota da tabela do celular. */
-  [0.968, 0.08, 0.0, -0.62, 0.95, 0.8, 3],
-  [1.0, 0.08, 0.0, -0.62, 0.95, 0.8, 3],
+  [0.946, 0.08, 0.0, -0.2, 0.92, 1.0, 3],
+  /* ...e se dissipa antes do rodapé (o Contato acaba em 0.975 nesta
+     largura): a supernova é da página final, não do fim do site. Cauda
+     plana e apagada: no pé da página o scroll treme, e apagado nada
+     muda de tamanho. */
+  [0.958, 0.08, 0.0, -0.35, 0.95, 0.9, 3],
+  [0.974, 0.08, 0.0, -0.45, 0.95, 0.0, 3],
+  [1.0, 0.08, 0.0, -0.45, 0.95, 0.0, 3],
 ]
 
 /**
@@ -141,15 +145,17 @@ export function mobileKeyframes(
     [0.65, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 2],
     [0.875, 0.95, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 2],
     /* A poeira condensa: uma estrela nasce durante o contato... */
-    [0.905, 0.07, 0.0, 0.15, scale * 0.58, 0.55, 2],
-    [0.938, 0.05, 0.0, 0.05, scale * 0.62, 0.72, 2],
+    [0.9, 0.07, 0.0, 0.15, scale * 0.58, 0.55, 2],
+    [0.925, 0.05, 0.0, 0.05, scale * 0.62, 0.72, 2],
     /* ...e explode à vista quando "A sua operação tem a resposta" entra
        (0.935): o morph 2 para 3 agrupado É a detonação. */
-    [0.948, 0.08, 0.0, -0.3, scale * 0.95, 1.0, 3],
+    [0.935, 0.08, 0.0, -0.2, scale * 0.95, 1.0, 3],
     /* Daqui até o fim tudo é idêntico. No pé da página o scroll treme, e com
        a cauda plana a tremida não vira mudança de tamanho. */
-    [0.962, 0.08, 0.0, -0.5, scale, 0.85, 3],
-    [1.0, 0.08, 0.0, -0.5, scale, 0.85, 3],
+    /* Apaga antes do rodapé (o Contato acaba em 0.958 nesta largura). */
+    [0.946, 0.08, 0.0, -0.3, scale, 0.9, 3],
+    [0.958, 0.08, 0.0, -0.4, scale, 0.0, 3],
+    [1.0, 0.08, 0.0, -0.4, scale, 0.0, 3],
   ]
 }
 
