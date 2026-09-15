@@ -27,6 +27,7 @@ import { createTrail } from './trail'
 import { createMeteors } from './meteors'
 import { createBrightStars } from './brightstars'
 import { createSunRays } from './sunrays'
+import { createCameraMotion } from './cameraMotion'
 
 /**
  * Núcleo orbital: uma bola densa de triângulos vazados com três anéis
@@ -139,6 +140,9 @@ export function TriScene() {
     const BASE_FOV = 50
     const camera = new THREE.PerspectiveCamera(BASE_FOV, window.innerWidth / stageHeight, 0.1, 20)
     camera.position.z = 3.3
+    /* Deriva e push-in da câmera: mexe só em x, y e FOV, nunca em z, então a
+       régua de tamanhos abaixo continua valendo. */
+    const cameraMotion = createCameraMotion(camera)
 
     /* Meia altura de mundo com o FOV base: constante, é a régua de todas as
        posições e tamanhos das tabelas. A meia largura acompanha a largura da
@@ -162,6 +166,7 @@ export function TriScene() {
       camera.aspect = window.innerWidth / stageHeight
       camera.fov = (2 * Math.atan(halfWidth / (camera.position.z * camera.aspect)) * 180) / Math.PI
       camera.updateProjectionMatrix()
+      cameraMotion.setBaseFov(camera.fov)
       postfx?.setSize(window.innerWidth, stageHeight)
     }
     sizeStage()
@@ -440,7 +445,7 @@ export function TriScene() {
       reveal: narrow ? 0.34 : 0.5,
     })
 
-    const blackHole = createBlackHole({ segments: lightweight ? 72 : 112 })
+    const blackHole = createBlackHole({ segments: lightweight ? 72 : 112, lightweight })
     scene.add(blackHole.object)
 
     const nova = createNova()
@@ -611,10 +616,12 @@ export function TriScene() {
       /* O foguete também amortece: o scroll por toque chega em saltos. */
       current.lift += (launch.lift - current.lift) * damping
       current.thrust += (launch.thrust - current.thrust) * damping
-      /* Tremor de câmera proporcional ao empuxo, some com o foguete. */
+      /* Tremor de câmera proporcional ao empuxo, some com o foguete. É
+         vibração (senos rápidos que não batem), não ruído por frame: o
+         ruído puro fazia o foguete pular de posição a 60Hz e lia como bug. */
       const shake = current.thrust * Math.max(0, 1 - current.lift * 1.5) * 0.012
-      const shakeX = (Math.random() - 0.5) * 2 * shake
-      const shakeY = (Math.random() - 0.5) * 2 * shake
+      const shakeX = (Math.sin(now * 0.041) * 0.6 + Math.sin(now * 0.097) * 0.4) * shake
+      const shakeY = (Math.cos(now * 0.053) * 0.6 + Math.sin(now * 0.083) * 0.4) * shake
 
       /* A clareira só existe enquanto o hero está na tela: dali para baixo os
          outros astros aparecem inteiros, sem o miolo apagado. */
@@ -867,18 +874,32 @@ export function TriScene() {
       streakMaterial.opacity = 0.32 * Math.max(0, 1 - current.lift * 1.6)
       sunRays.update(glare.position, Math.max(0, 1 - current.lift * 1.6), time)
 
-      /* As estrelas estão sempre na tela, então todo frame desenha. Onde o
-         campo é só textura, ou está apagado, 30fps bastam: é metade do custo
-         em mais da metade da página. */
+      /* No desktop todo frame desenha: com grão e cintilação no passe de
+         filme, pular frames virava um piscar a 30Hz nas partes "paradas" da
+         página, e a cadência trocando de 60 para 30 a cada limiar lia como
+         engasgo. Só a máquina que já provou não aguentar (rebaixada pela
+         qualidade adaptativa) volta a desenhar a 30fps onde a cena está
+         quieta: campo só textura, ou apagado. No celular a cena desenha a
+         30fps sempre: metade do trabalho por frame no thread principal, e o
+         scroll nativo por cima fica liso. */
       frameCount += 1
       const restful =
+        downgraded &&
         current.thrust < 0.01 &&
         current.opacity < 0.3 &&
         (current.mix > 0.85 || current.opacity <= 0.015)
-      /* No celular a cena desenha a 30fps sempre: metade do trabalho por
-         frame no thread principal, e o scroll nativo por cima fica liso. */
       if (!((restful || lightweight) && frameCount % 2)) {
-        if (postfx) postfx.render(time, 0.005 + rush * 0.012)
+        /* A câmera se mexe por último, com o estado já amortecido: deriva
+           contínua de poucos pixels e push-in na ignição e na explosão. */
+        cameraMotion.update({
+          time,
+          pixel: (2 * halfWidth) / window.innerWidth,
+          thrust: current.thrust,
+          lift: current.lift,
+          explode: planetBreak(current.mix, current.form) * (1 - clamp01(current.form)),
+          still: reducedMotion,
+        })
+        if (postfx) postfx.render(time, 0.006 + rush * 0.014, rush)
         else renderer.render(scene, camera)
       }
 

@@ -33,10 +33,12 @@ const VERTEX = /* glsl */ `
     p.y = mod(p.y - uOffset + ${SPREAD_Y.toFixed(1)}, ${WRAP.toFixed(1)}) - ${SPREAD_Y.toFixed(1)};
     vec4 view = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * view;
-    /* Cintila devagar, cada uma no seu tempo. */
-    vTwinkle = 0.7 + 0.3 * sin(uTime * (0.6 + aSeed * 0.9) + aSeed * 40.0);
+    /* Cintila devagar, cada uma no seu tempo. Só o brilho respira: o
+       tamanho do sprite fica fixo, porque uma estrela de 1–2px mudando de
+       tamanho a cada frame vira um pisca-pisca de subpixel. */
+    vTwinkle = 0.78 + 0.22 * sin(uTime * (0.35 + aSeed * 0.55) + aSeed * 40.0);
     /* As grandes ganham espículas e por isso o sprite é maior. */
-    gl_PointSize = aSize * uPixelRatio * vTwinkle * (3.0 / -view.z) * (1.0 + vSpike * 4.0);
+    gl_PointSize = aSize * uPixelRatio * (3.0 / -view.z) * (1.0 + vSpike * 4.0);
     vTint = aTint;
   }
 `

@@ -4,15 +4,34 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 
-/* Vinheta leve e grão fino: os dois truques mais baratos de fotografia de
-   cinema, e os que mais tiram o ar de render limpo demais. */
+/**
+ * A "lente": tudo o que uma câmera de cinema faz com a imagem, num passe só.
+ *
+ * - Vinheta e grão: os dois truques mais baratos de fotografia, e os que
+ *   mais tiram o ar de render limpo demais.
+ * - Profundidade de campo radial: nítido no centro, macio para os cantos,
+ *   como lente aberta. Oito amostras num anel que cresce com a distância ao
+ *   centro; o anel gira por pixel (hash fixo) para não deixar oito fantasmas.
+ * - Dolly e aberração cromática presos à velocidade do scroll: rolando
+ *   rápido a imagem fecha 3% do centro e o vermelho e o azul se separam
+ *   1–2px nas bordas; parado, nada disso existe. É o que faz o scroll
+ *   parecer movimento de câmera, não de página.
+ *
+ * Tudo aqui é leitura de textura no mesmo passe: nenhum passe de tela cheia
+ * a mais foi adicionado.
+ */
 const FILM = {
   uniforms: {
     tDiffuse: { value: null as THREE.Texture | null },
+    uResolution: { value: new THREE.Vector2(1, 1) },
     uTime: { value: 0 },
-    uVignette: { value: 0.32 },
-    uGrain: { value: 0.035 },
+    uVignette: { value: 0.3 },
+    /* Grão quase invisível: acima disso, sobre fundo escuro, o ruído por
+       frame lê como chuvisco de TV, não como filme. */
+    uGrain: { value: 0.009 },
     uEdgeBlur: { value: 0.0 },
+    uZoom: { value: 1.0 },
+    uAberration: { value: 0.0 },
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -23,28 +42,62 @@ const FILM = {
   `,
   fragmentShader: /* glsl */ `
     uniform sampler2D tDiffuse;
+    uniform vec2 uResolution;
     uniform float uTime;
     uniform float uVignette;
     uniform float uGrain;
     uniform float uEdgeBlur;
+    uniform float uZoom;
+    uniform float uAberration;
     varying vec2 vUv;
+
+    float hash(vec2 p) {
+      return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+    }
+
     void main() {
-      vec4 c = texture2D(tDiffuse, vUv);
-      float d = distance(vUv, vec2(0.5));
-      /* Cantos desfocados, como lente de cinema: nítido no centro, macio
-         para fora. Oito amostras num anel cujo raio cresce com a distância. */
-      float amount = smoothstep(0.28, 0.8, d) * uEdgeBlur;
-      if (amount > 0.0004) {
+      vec2 centered = vUv - 0.5;
+      float d = length(centered);
+      /* Dolly: o quadro é amostrado mais perto do centro, então a imagem
+         cresce a partir dele. Zoom para dentro nunca lê fora da textura. */
+      vec2 uv = 0.5 + centered / uZoom;
+
+      vec4 base = texture2D(tDiffuse, uv);
+      vec4 c = base;
+
+      /* Profundidade de campo: o raio do anel cresce com a distância ao
+         centro numa curva côncava, então o miolo da tela fica nítido de
+         verdade e só os cantos amolecem. */
+      float focus = smoothstep(0.3, 0.82, d);
+      float amount = focus * sqrt(focus) * uEdgeBlur;
+      /* Abaixo de ~1px de raio o anel não muda nada visível e custa nove
+         leituras por pixel: o miolo da tela pula o laço inteiro. */
+      if (amount > 0.001) {
+        float spin = hash(vUv) * 6.2831853;
         vec4 acc = c * 2.0;
         for (int i = 0; i < 8; i++) {
-          float a = float(i) * 0.7853982;
-          acc += texture2D(tDiffuse, vUv + vec2(cos(a), sin(a)) * amount);
+          float a = spin + float(i) * 0.7853982;
+          acc += texture2D(tDiffuse, uv + vec2(cos(a), sin(a)) * amount);
         }
         c = acc / 10.0;
       }
+
+      /* Aberração cromática: vermelho para fora, azul para dentro, ao longo
+         do raio. Zero no centro; nos cantos vale uAberration pixels. Entra
+         como diferença sobre a amostra central, então onde há desfoque a
+         franja se soma ao macio em vez de trazer um canal nítido de volta. */
+      if (uAberration > 0.01) {
+        vec2 shift = centered * (smoothstep(0.06, 0.7, d) * uAberration * 1.4) / uResolution;
+        c.r += texture2D(tDiffuse, uv + shift).r - base.r;
+        c.b += texture2D(tDiffuse, uv - shift).b - base.b;
+      }
+
       c.rgb *= 1.0 - smoothstep(0.42, 0.95, d) * uVignette;
-      float g = fract(sin(dot(vUv + fract(uTime * 0.37), vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
-      c.rgb += g * uGrain;
+      /* Grão de filme: mora nos meios-tons e quase some no preto, que é
+         onde o olho mais nota ruído; por pixel físico, fino de verdade. */
+      float g = hash(gl_FragCoord.xy * 0.37 + fract(uTime * 0.37)) - 0.5;
+      float luma = dot(c.rgb, vec3(0.299, 0.587, 0.114));
+      c.rgb += g * uGrain * (0.25 + 0.75 * smoothstep(0.0, 0.5, luma));
       gl_FragColor = c;
     }
   `,
@@ -67,20 +120,34 @@ export function createPostFx(
   composer.setPixelRatio(renderer.getPixelRatio())
   composer.addPass(new RenderPass(scene, camera))
   /* Limiar alto: só o que é luz de verdade sangra (motor, disco, núcleo da
-     supernova, limbo da atmosfera). Abaixo disso o casco branco virava neve. */
-  const bloom = new UnrealBloomPass(new THREE.Vector2(width / 2, height / 2), 0.38, 0.45, 0.92)
+     supernova, limbo da atmosfera). Abaixo disso o casco branco virava neve.
+     Raio mais largo e força contida: o halo se espalha macio em vez de
+     engrossar o branco em volta da fonte. */
+  /* Um quarto da resolução: o halo é macio por natureza, e a pirâmide de
+     cinco níveis a meia resolução era o passe mais caro da lente. */
+  const bloom = new UnrealBloomPass(new THREE.Vector2(width / 4, height / 4), 0.36, 0.62, 0.92)
   composer.addPass(bloom)
   const film = new ShaderPass(FILM)
+  film.uniforms.uResolution.value.set(width, height)
   composer.addPass(film)
   return {
-    render(time: number, edgeBlur = 0) {
+    /**
+     * `edgeBlur` é o raio do anel nos cantos, em fração da tela. `rush`
+     * (0..1) é a velocidade do scroll já amortecida: vira dolly de até 3% e
+     * até 2px de franja nos cantos.
+     */
+    render(time: number, edgeBlur = 0, rush = 0) {
+      const k = Math.min(rush * 1.6, 1)
       film.uniforms.uTime.value = time
       film.uniforms.uEdgeBlur.value = edgeBlur
+      film.uniforms.uZoom.value = 1 + 0.03 * k
+      film.uniforms.uAberration.value = 2.0 * k
       composer.render()
     },
     setSize(w: number, h: number) {
       composer.setSize(w, h)
-      bloom.resolution.set(w / 2, h / 2)
+      bloom.resolution.set(w / 4, h / 4)
+      film.uniforms.uResolution.value.set(w, h)
     },
     setStrength(value: number) {
       bloom.strength = value

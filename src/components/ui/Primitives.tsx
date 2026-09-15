@@ -21,6 +21,13 @@ import { AstroStar } from '../brand/AstroMark'
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
+/**
+ * A curva de todo reveal do site: expo-out. Sai rápido e gasta a segunda
+ * metade do tempo assentando, então nada "chega" — o elemento já está quase
+ * no lugar quando o olho o encontra, e o resto é só ganhar nitidez.
+ */
+const REVEAL_EASE: [number, number, number, number] = [0.16, 1, 0.3, 1]
+
 /** Eyebrow: pílula com borda, texto em mono e a estrela da marca. */
 export function Label({
   children,
@@ -173,10 +180,10 @@ export function BlurReveal({
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, y: 24, filter: 'blur(12px)' }}
+      initial={{ opacity: 0, y: 26, filter: 'blur(10px)' }}
       whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
       viewport={{ once: true, margin: '-90px' }}
-      transition={{ duration: 0.95, delay, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 1.0, delay, ease: REVEAL_EASE }}
     >
       {children}
     </motion.div>
@@ -278,11 +285,11 @@ export function Reveal({
   return (
     <motion.div
       className={`${className} ${entered ? 'is-entered' : ''}`}
-      initial={{ opacity: 0, y: 22, scale: 0.975, filter: soft ? 'blur(10px)' : 'none' }}
+      initial={{ opacity: 0, y: 24, scale: 0.985, filter: soft ? 'blur(8px)' : 'none' }}
       whileInView={{ opacity: 1, y: 0, scale: 1, filter: soft ? 'blur(0px)' : 'none' }}
       viewport={{ once: true, margin: '-80px' }}
       onViewportEnter={() => setEntered(true)}
-      transition={{ duration: 0.85, delay, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.9, delay, ease: REVEAL_EASE }}
     >
       {children}
     </motion.div>
@@ -422,7 +429,7 @@ export function RotatingWord({ words, className = '' }: { words: readonly string
           initial={{ y: '85%', opacity: 0, filter: 'blur(6px)' }}
           animate={{ y: '0%', opacity: 1, filter: 'blur(0px)' }}
           exit={{ y: '-85%', opacity: 0, filter: 'blur(6px)' }}
-          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.55, ease: REVEAL_EASE }}
           className="text-spectrum-animated inline-block font-[480]"
         >
           {words[index]}

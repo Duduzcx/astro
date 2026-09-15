@@ -97,13 +97,15 @@ const VERTEX_SHADER = /* glsl */ `
       : rotateAxis(aSphere, vec3(0.0, 1.0, 0.0), angle);
 
     /* Buraco negro: o disco gira no próprio plano, mais depressa perto do
-       horizonte, como uma órbita kepleriana de mentira. */
+       horizonte, como uma órbita kepleriana de mentira. O eixo é o do
+       disco de acreção (HOLE_NORMAL), quase de lado para a câmera. */
+    const vec3 holeAxis = vec3(-0.2801, 0.9182, 0.2801);
     float rHole = max(length(aHole), 0.4);
-    vec3 coreHole = rotateAxis(aHole, discAxis, uTime * 0.1 * (0.4 + 0.9 / rHole));
+    vec3 coreHole = rotateAxis(aHole, holeAxis, uTime * 0.1 * (0.4 + 0.9 / rHole));
     /* Sucção: enquanto o campo ainda está disperso, o alvo no disco gira
        com a dispersão, então cada triângulo chega em espiral, não em linha
        reta. Agrupado, o giro extra é quase zero. */
-    coreHole = rotateAxis(coreHole, discAxis, uMix * 2.4);
+    coreHole = rotateAxis(coreHole, holeAxis, uMix * 2.4);
 
     /* Estrela: cintila, respirando curto e rápido. */
     float twinkle = 1.0 + 0.03 * sin(uTime * 1.6 + aRand * 6.2831);
@@ -173,8 +175,16 @@ const FRAGMENT_SHADER = /* glsl */ `
  * elas, girando em sentidos opostos.
  */
 export const RING_NORMAL = new THREE.Vector3(0.25, 0.75, 0.62).normalize()
-const RING_TANGENT = new THREE.Vector3(1, 0, 0).cross(RING_NORMAL).normalize()
-const RING_BITANGENT = new THREE.Vector3().crossVectors(RING_NORMAL, RING_TANGENT)
+/**
+ * O plano do disco de acreção do buraco negro: quase de lado para a câmera
+ * (a normal tem pouco Z), com o eixo maior da elipse subindo para a direita.
+ * É o que faz a silhueta do Interstellar — o disco fino cruzando a sombra
+ * e a luz do lado de trás dobrada por cima. O shader repete o vetor em
+ * `holeAxis`; blackhole.ts orienta o disco por ele.
+ */
+export const HOLE_NORMAL = new THREE.Vector3(-0.28, 0.918, 0.28).normalize()
+const HOLE_TANGENT = new THREE.Vector3(1, 0, 0).cross(HOLE_NORMAL).normalize()
+const HOLE_BITANGENT = new THREE.Vector3().crossVectors(HOLE_NORMAL, HOLE_TANGENT)
 const RING_BANDS: Array<[number, number]> = [
   [1.04, 1.2],
   [1.3, 1.46],
@@ -205,9 +215,9 @@ function holeAnchor(anchor: THREE.Vector3, color: THREE.Color) {
   const theta = Math.random() * Math.PI * 2
   anchor
     .set(0, 0, 0)
-    .addScaledVector(RING_TANGENT, Math.cos(theta) * radius)
-    .addScaledVector(RING_BITANGENT, Math.sin(theta) * radius)
-    .addScaledVector(RING_NORMAL, lift)
+    .addScaledVector(HOLE_TANGENT, Math.cos(theta) * radius)
+    .addScaledVector(HOLE_BITANGENT, Math.sin(theta) * radius)
+    .addScaledVector(HOLE_NORMAL, lift)
 }
 
 /**
