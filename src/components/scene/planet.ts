@@ -135,6 +135,12 @@ const SURFACE_FRAGMENT = /* glsl */ `
          derivada de uma amostra bilinear é constante por texel — vira
          mosaico na tela. */
       vec3 photo = texture2D(uMap, vUv).rgb * uTint;
+      if (uKind > 1.5 && uKind < 2.5) {
+        /* Gigante fotografado: as faixas tremem de leve, como nuvens que
+           correm em latitudes diferentes; a foto deixa de ser um adesivo. */
+        float shimmer = snoise(vec3(vUv.y * 46.0, vUv.x * 4.0 + uTime * 0.05, uTime * 0.03));
+        photo *= 1.0 + 0.05 * shimmer;
+      }
       albedo = photo;
       relief = 0.0;
       if (uHasSpecular > 0.5) {
@@ -246,6 +252,9 @@ const SURFACE_FRAGMENT = /* glsl */ `
     float day = smoothstep(-0.18, 0.4, facing);
     float dayGeom = smoothstep(-0.18, 0.4, dot(geomN, uLight));
     vec3 color = albedo * (0.05 + 0.95 * day);
+    /* O lado da noite não é breu: a luz das estrelas e do céu enche de um
+       azul frio e fraco, e a esfera continua lendo como esfera. */
+    color += albedo * vec3(0.3, 0.45, 0.8) * 0.09 * (1.0 - day);
 
     /* Especular só na água e no gelo: um clarão apertado do sol e um
        lustro largo e fraco em volta. */
@@ -282,6 +291,10 @@ const SURFACE_FRAGMENT = /* glsl */ `
     /* Névoa: perto da borda, o ar entre nós e o chão espalha luz do dia. */
     float haze = pow(1.0 - max(dot(geomN, v), 0.0), 2.4) * uHazeStrength * (0.1 + 0.9 * dayGeom);
     color += uHaze * haze;
+    /* Espalhamento de borda: no limbo iluminado o ar acende numa linha
+       fina e clara, a assinatura de esfera com atmosfera vista do espaço. */
+    float rimScatter = pow(1.0 - max(dot(geomN, v), 0.0), 7.0) * smoothstep(-0.1, 0.5, dot(geomN, uLight));
+    color += mix(uHaze, vec3(1.0), 0.5) * rimScatter * uHazeStrength * 1.6;
 
     /* Terminador quente: a luz rasante esquenta a linha entre dia e noite. */
     float twilight = smoothstep(0.25, 0.0, abs(dot(geomN, uLight))) * dayGeom;

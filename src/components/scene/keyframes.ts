@@ -26,10 +26,11 @@ export const KEYFRAMES: Keyframes = [
      largura), ao lado do texto, inteiro, por um instante. */
   [0.334, 0.05, 0.45, 0.05, 1.15, 1.0, 0],
   [0.346, 0.05, 0.45, 0.05, 1.15, 1.0, 0],
-  /* Explode ali mesmo, à vista, rápido. Os detritos sobem e apagam
-     antes da seção acabar. */
-  [0.362, 1.0, 0.45, 0.15, 1.35, 0.8, 0],
-  [0.384, 1.0, 0.45, 0.2, 1.4, 0.0, 0],
+  /* A supernova ali mesmo, à vista: a estrela agoniza, estoura, a onda
+     de choque e a ejeta se abrem e o remanescente fica brilhando até a
+     seção acabar. A opacidade é quem apaga o remanescente. */
+  [0.378, 1.0, 0.45, 0.12, 1.35, 0.85, 0],
+  [0.388, 1.0, 0.45, 0.16, 1.4, 0.0, 0],
   /* Invisível: troca de forma aqui, ninguém vê a costura. */
   [0.39, 0.9, 0.5, 0.0, 0.5, 0.0, 1],
   /* Buraco negro nasce pequeno nos Resultados (0.386 a 0.438), cresce
@@ -123,11 +124,12 @@ export function mobileKeyframes(
     /* ...e fica inteiro até a Missão (0.268 a 0.307 nesta largura). */
     [0.268, 0.05, x, 0.0, scale * 1.15, 0.85, 0],
     [0.278, 0.05, x, 0.0, scale * 1.15, 0.85, 0],
-    /* Explode na Missão, à vista, e some. */
-    [0.29, 0.9, 0.0, 0.1, scale * 1.4, 0.6, 0],
-    [0.3, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 0],
+    /* A supernova na Missão, à vista; o remanescente apaga com a
+       opacidade antes da seção acabar. */
+    [0.3, 0.95, 0.0, 0.08, scale * 1.4, 0.65, 0],
+    [0.307, 0.95, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 0],
     /* Troca de astro com o campo quase invisível, ninguém vê a costura. */
-    [0.305, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
+    [0.309, 0.95, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     /* Buraco negro nasce pequeno nos Resultados (0.31 a 0.389), cresce
        engolindo os detritos e some antes dos Projetos. */
     [0.315, 0.6, 0.0, -0.15, scale * 0.5, 0.35, 1],
@@ -213,7 +215,9 @@ export function rocketWindow(progress: number, takeoff: number): RocketWindow {
  * Vale só enquanto a forma é o planeta; virou outro astro, sumiu.
  */
 export function planetBreak(mix: number, form: number) {
-  const scatter = smooth(0.1, 0.75, mix)
+  /* Faixa larga: a explosão inteira (agonia, estouro, remanescente) cabe
+     na dispersão do campo, em vez de acabar com o campo pela metade. */
+  const scatter = smooth(0.08, 0.92, mix)
   const gone = Math.min(Math.max(form, 0), 1)
   return Math.min(1, scatter + gone)
 }

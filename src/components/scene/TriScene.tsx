@@ -16,6 +16,8 @@ import { buildTriangles, makeMaterial } from './triangles'
 import { createStars } from './stars'
 import { createRocket } from './rocket'
 import { createPlanet } from './planet'
+import { createSun } from './sun'
+import { createExplosion } from './explosion'
 import { createBlackHole } from './blackhole'
 import { createNova } from './nova'
 import { createSatellites } from './satellites'
@@ -263,16 +265,16 @@ export function TriScene() {
     rocket.setPixelRatio(renderer.getPixelRatio())
     scene.add(rocket.object)
 
-    /* O planeta mora no mesmo centro e escala do campo de triângulos. */
-    const planet = createPlanet({
-      segments: lightweight ? 64 : 96,
-      maps: {
-        map: { low: '/space/neptune-1k.jpg', high: '/space/neptune-2k.jpg' },
-        clouds: tier('earth-clouds'),
-      },
-      warm,
+    /* O alvo é o Sol: mora no mesmo centro e escala do campo de triângulos
+       e explode em supernova na Missão; os destroços são outro módulo,
+       tocado pelo mesmo relógio. */
+    const star = createSun({
+      segments: lightweight ? 64 : 112,
+      lightweight: lightweight || weakDevice,
     })
-    scene.add(planet.object)
+    scene.add(star.object)
+    const explosion = createExplosion({ lightweight, weakDevice, pixelRatio: renderer.getPixelRatio() })
+    scene.add(explosion.object)
 
     /* A Terra do hero: enorme e longe. Perto da câmera uma esfera desse
        tamanho passaria pela lente; a EARTH_DEPTH ela cabe inteira atrás do
@@ -608,15 +610,24 @@ export function TriScene() {
       stars.update({ progress, opacity: narrow ? 0.6 : 0.7 }, time)
       meteors.update(time, delta, halfWidth, visibleHalfHeightNow())
       space.update(progress, time)
-      /* Um pouco mais presente que o campo: em meia luz o planeta ainda
+      /* Um pouco mais presente que o campo: em meia luz o Sol ainda
          precisa ler como corpo, não como fantasma. */
-      planet.update(
+      const targetBreak = planetBreak(current.mix, current.form)
+      const targetOpacity = Math.min(1, current.opacity * 1.4)
+      star.update(
+        { x: centerX, y: centerY, scale: current.scale, opacity: targetOpacity, break: targetBreak },
+        time,
+      )
+      /* Os destroços só existem enquanto a forma ainda é o Sol: com o
+         buraco negro `break` também vale 1, e o remanescente voltaria. */
+      explosion.update(
         {
           x: centerX,
           y: centerY,
           scale: current.scale,
-          opacity: Math.min(1, current.opacity * 1.4),
-          break: planetBreak(current.mix, current.form),
+          opacity: targetOpacity * (1 - clamp01(current.form * 2)),
+          break: targetBreak,
+          pixelsPerUnit: stageHeight / (2 * visibleHalfHeightNow()),
         },
         time,
       )
@@ -885,7 +896,8 @@ export function TriScene() {
       meteors.dispose()
       space.dispose()
       rocket.dispose()
-      planet.dispose()
+      star.dispose()
+      explosion.dispose()
       for (const world of worlds) world.planet.dispose()
       cruiser.dispose()
       trail.dispose()
