@@ -25,6 +25,8 @@ import { createSpace } from './space'
 import { createPostFx } from './postfx'
 import { createTrail } from './trail'
 import { createMeteors } from './meteors'
+import { createBrightStars } from './brightstars'
+import { createSunRays } from './sunrays'
 
 /**
  * Núcleo orbital: uma bola densa de triângulos vazados com três anéis
@@ -203,8 +205,13 @@ export function TriScene() {
     /* Sobe a textura para a GPU assim que chega, fora do caminho do scroll. */
     const warm = (texture: THREE.Texture) => renderer.initTexture(texture)
 
-    /* O espaço: panorama da Via Láctea atrás de tudo. */
-    const space = createSpace(tier('milky-way'), lightweight || weakDevice ? 0 : 0.3, warm)
+    /* O espaço: panorama da Via Láctea atrás de tudo, com as nebulosas
+       assadas numa textura (menor no celular) e as galáxias distantes. */
+    const space = createSpace(tier('milky-way'), lightweight || weakDevice ? 0.62 : 0.8, warm, {
+      renderer,
+      bakeSize: lightweight || weakDevice ? [768, 384] : [1536, 768],
+      view: { halfWidth, halfHeight, cameraZ: camera.position.z },
+    })
     scene.add(space.object)
 
     /* O sol do hero: um clarão macio no alto à esquerda, na direção da luz,
@@ -242,6 +249,10 @@ export function TriScene() {
     streak.scale.set(9, 0.32, 1)
     streak.renderOrder = -5
     scene.add(streak)
+    /* Raios do sol, girando devagar atrás do clarão; menor no celular,
+       onde um leque largo viraria um quad da tela inteira. */
+    const sunRays = createSunRays(lightweight ? 3.8 : 5.4)
+    scene.add(sunRays.object)
 
     /* Bloom só no desktop com máquina razoável. */
     postfx =
@@ -249,11 +260,18 @@ export function TriScene() {
         ? createPostFx(renderer, scene, camera, window.innerWidth, stageHeight)
         : null
 
-    /* Estrelas ao fundo, a página inteira. */
-    const stars = createStars(lightweight ? 1000 : 2400, renderer.getPixelRatio())
+    /* Estrelas ao fundo, a página inteira. No celular são menos pontos: a
+       camada densa assada na nebulosa (space.ts) já dá a profundidade. */
+    const stars = createStars(lightweight ? 800 : 3600, renderer.getPixelRatio())
     scene.add(stars.object)
+    /* Umas poucas brilhantes de verdade, com halo e espículas. */
+    const brightStars = createBrightStars(lightweight ? 4 : 8, {
+      rightBias: !lightweight,
+      view: { halfWidth, cameraZ: camera.position.z },
+    })
+    scene.add(brightStars.object)
     /* Meteoros de vez em quando: o detalhe que faz o céu parecer vivo. */
-    const meteors = createMeteors(lightweight ? 1 : 2, renderer.getPixelRatio())
+    const meteors = createMeteors(lightweight ? 1 : 3, renderer.getPixelRatio())
     scene.add(meteors.object)
 
     /* Foguete: altura em mundo pela largura da tela. No celular ele é menor e
@@ -621,7 +639,8 @@ export function TriScene() {
       sphereMaterial.uniforms.uCenter.value.set(centerX, centerY)
       ambientMaterial.uniforms.uTime.value = time * 0.6
       ambientMaterial.uniforms.uOpacity.value = narrow ? 0.06 : 0.14
-      stars.update({ progress, opacity: narrow ? 0.6 : 0.7 }, time)
+      stars.update({ progress, opacity: narrow ? 0.72 : 0.85 }, time)
+      brightStars.update({ progress, opacity: narrow ? 0.7 : 0.9 }, time)
       meteors.update(time, delta, halfWidth, visibleHalfHeightNow())
       space.update(progress, time)
       /* Um pouco mais presente que o campo: em meia luz o Sol ainda
@@ -846,6 +865,7 @@ export function TriScene() {
       glareMaterial.opacity = 0.85 * Math.max(0, 1 - current.lift * 1.6)
       streak.position.copy(glare.position)
       streakMaterial.opacity = 0.32 * Math.max(0, 1 - current.lift * 1.6)
+      sunRays.update(glare.position, Math.max(0, 1 - current.lift * 1.6), time)
 
       /* As estrelas estão sempre na tela, então todo frame desenha. Onde o
          campo é só textura, ou está apagado, 30fps bastam: é metade do custo
@@ -907,6 +927,8 @@ export function TriScene() {
       sphereMaterial.dispose()
       ambientMaterial.dispose()
       stars.dispose()
+      brightStars.dispose()
+      sunRays.dispose()
       meteors.dispose()
       space.dispose()
       rocket.dispose()

@@ -25,7 +25,10 @@ const FRAGMENT = /* glsl */ `
   void main() {
     float d = length(gl_PointCoord - 0.5) * 2.0;
     float soft = smoothstep(1.0, 0.1, d);
-    gl_FragColor = vec4(vec3(0.85, 0.92, 1.0), soft * vAlpha);
+    /* Cabeça quase branca, cauda esfriando para o turquesa: o rastro de
+       um meteoro de verdade muda de cor conforme esfria. */
+    vec3 color = mix(vec3(0.5, 0.85, 1.0), vec3(0.95, 0.97, 1.0), smoothstep(0.15, 0.8, vAlpha));
+    gl_FragColor = vec4(color, soft * vAlpha);
   }
 `
 
@@ -124,7 +127,7 @@ export function createMeteors(count: number, pixelRatio: number) {
         any = true
         if (meteor.t >= 1) {
           meteor.active = false
-          meteor.next = time + 5 + Math.random() * 9
+          meteor.next = time + 4 + Math.random() * 8
           for (let i = 0; i < POINTS; i += 1) alphas[m * POINTS + i] = 0
         }
       })
