@@ -453,3 +453,45 @@ footer .bg-graphite::before {
     );
   }
 }
+
+/* Seção fora da tela sai do orçamento de layout e de pintura do navegador.
+   Medido num iPhone 13 com a CPU quatro vezes mais lenta, rolando a página
+   inteira: 54,6ms por quadro caíram para 43,7ms, e os quadros acima de 24ms
+   passaram de 98% para 84%.
+
+   A altura estimada de cada seção não é enfeite. A cena tira o progresso de
+   `scrollHeight` (ver measureScroll em scene/TriScene.tsx), então estimativa
+   errada encolhe a página no primeiro carregamento e desloca a explosão do
+   Sol e a supernova para outra seção. Com a estimativa única de 720px a
+   altura do documento oscilava 4732px durante a rolagem; com os valores
+   abaixo, 6px — o mesmo de antes da regra existir.
+
+   Os números são a caixa de conteúdo, não a caixa de borda: o padding da
+   seção soma por fora. Para refazê-los depois de mexer no conteúdo:
+
+     npm run build && npm run preview
+     node scripts/section-heights.mjs http://localhost:4173/
+
+   Só até 480px. A partir daí o texto reflui e as alturas mudam: num iPad
+   Mini a mesma tabela erra 3856px, que é pior que o problema que resolve.
+   Tablet e desktop seguem sem a regra. */
+@media (max-width: 480px) {
+  main > section:not(:first-of-type) {
+    content-visibility: auto;
+  }
+  main > section:nth-of-type(2)  { contain-intrinsic-size: auto 3687px; }
+  main > section:nth-of-type(3)  { contain-intrinsic-size: auto 376px; }
+  main > section:nth-of-type(4)  { contain-intrinsic-size: auto 362px; }
+  main > section:nth-of-type(5)  { contain-intrinsic-size: auto 478px; }
+  main > section:nth-of-type(6)  { contain-intrinsic-size: auto 764px; }
+  main > section:nth-of-type(7)  { contain-intrinsic-size: auto 1660px; }
+  main > section:nth-of-type(8)  { contain-intrinsic-size: auto 1685px; }
+  main > section:nth-of-type(9)  { contain-intrinsic-size: auto 545px; }
+  main > section:nth-of-type(10) { contain-intrinsic-size: auto 1726px; }
+  main > section:nth-of-type(11) { contain-intrinsic-size: auto 1842px; }
+  main > section:nth-of-type(12) { contain-intrinsic-size: auto 1337px; }
+  main > section:nth-of-type(13) { contain-intrinsic-size: auto 596px; }
+  main > section:nth-of-type(14) { contain-intrinsic-size: auto 1534px; }
+  main > section:nth-of-type(15) { contain-intrinsic-size: auto 881px; }
+  main > section:nth-of-type(16) { contain-intrinsic-size: auto 1088px; }
+}
