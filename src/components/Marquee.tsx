@@ -1,5 +1,6 @@
 import { motion, useScroll, useSpring, useTransform, useVelocity } from 'framer-motion'
 import { AstroStar } from './brand/AstroMark'
+import { usePausedOffscreen } from '../lib/usePausedOffscreen'
 
 /** Faixa infinita de capacidades embaixo do hero, em português comum. */
 const capabilities = [
@@ -12,6 +13,10 @@ const capabilities = [
 ] as const
 
 export function Marquee() {
+  /* A faixa fica logo abaixo do hero e não está dentro de nenhuma seção, então
+     o `content-visibility` não a alcança: sem isto ela seguiria correndo a
+     página inteira, muito depois de ninguém mais poder vê-la. */
+  const bandRef = usePausedOffscreen<HTMLDivElement>()
   /* A faixa inclina conforme a velocidade do scroll. */
   const { scrollY } = useScroll()
   const velocity = useVelocity(scrollY)
@@ -32,7 +37,11 @@ export function Marquee() {
 
   return (
     <div className="relative z-10 overflow-hidden border-y border-white/5 bg-onyx/60 py-4">
-      <motion.div style={{ skewX }} className="flex w-max animate-[astro-marquee_36s_linear_infinite]">
+      <motion.div
+        ref={bandRef}
+        style={{ skewX }}
+        className="flex w-max animate-[astro-marquee_36s_linear_infinite]"
+      >
         <div aria-hidden="true" className="flex">{row}</div>
         <div className="flex">{row}</div>
       </motion.div>

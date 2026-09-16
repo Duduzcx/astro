@@ -70,3 +70,17 @@ cada quadro e não some quando a frase sai da tela.
 | ------ | ----- | ------ |
 | Depois do passo 2 | 39,5ms | 70,1% |
 | `will-change` e curso de 6% no celular | 37,5ms | 65,7% |
+
+## Passo 4 — animação CSS pausada fora da tela
+
+| Versão | Média | Longos |
+| ------ | ----- | ------ |
+| Depois do passo 3 | 37,5ms | 65,7% |
+| Marquee pausado fora da tela | 37,0ms | 64,8% |
+
+Sem ganho mensurável, e faz sentido: o Marquee anima `translate3d`, que é
+composição pura e quase não custa quadro. As animações que doem de verdade —
+`astro-shimmer` e `astro-flow`, nos painéis de serviço — já eram cobertas
+pelo passo 1, porque seção pulada não pinta. O hook fica pelo que economiza
+de bateria e porque acima de 480px, onde o `content-visibility` não vale, ele
+é a única defesa.
