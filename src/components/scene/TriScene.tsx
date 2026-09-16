@@ -27,7 +27,7 @@ import { createMeteors } from './meteors'
 import { createBrightStars } from './brightstars'
 import { createSunRays } from './sunrays'
 import { createCameraMotion } from './cameraMotion'
-import { createSpaceEnvironment } from './environment'
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
 /**
  * Núcleo orbital: uma bola densa de triângulos vazados com três anéis
@@ -117,10 +117,18 @@ export function TriScene() {
 
     const scene = new THREE.Scene()
     /* Mapa de ambiente gerado uma vez: é o que faz metal parecer metal. Sem
-       reflexo, metalness alto é só preto. O ambiente é o espaço (sol, Terra
-       por baixo, contorno frio), não uma sala de estúdio. */
-    const environmentTarget = createSpaceEnvironment(renderer)
+       reflexo, metalness alto é só preto.
+       A 256 (o padrão) o prefiltro custava 2,2 s de thread principal na
+       carga — era a maior parte da demora até a cena aparecer. A 32 sai em
+       poucos milissegundos, e num reflexo borrado de propósito ninguém vê
+       diferença. Um ambiente de espaço de verdade (sol, Terra, preto) foi
+       testado e recusado: metal só reflete o que existe em volta, e no
+       vácuo isso deixa o casco quase preto. A sala mente, mas é ela que faz
+       o aço parecer aço. */
+    const pmrem = new THREE.PMREMGenerator(renderer)
+    const environmentTarget = pmrem.fromScene(new RoomEnvironment(), 0.04, 0.1, 100, { size: 32 })
     scene.environment = environmentTarget.texture
+    pmrem.dispose()
     /* Luz de verdade para o foguete: uma direcional vinda de cima à
        esquerda, a mesma direção da luz dos planetas, e uma hemisférica azul
        para o lado da sombra não virar breu. */
@@ -264,11 +272,11 @@ export function TriScene() {
     const sunRays = createSunRays(lightweight ? 3.8 : 5.4)
     scene.add(sunRays.object)
 
-    /* Bloom só no desktop com máquina razoável. */
-    postfx =
-      !lightweight && !weakDevice
-        ? createPostFx(renderer, scene, camera, window.innerWidth, stageHeight)
-        : null
+    /* Bloom só no desktop com máquina razoável, e só depois que a cena já
+       está na tela: a cadeia do bloom são uma dúzia de programas para
+       compilar, e nenhum deles precisa existir no primeiro frame. */
+    const wantsPostFx = !lightweight && !weakDevice
+    let postFxFrames = 0
 
     /* Estrelas ao fundo, a página inteira. No celular são menos pontos: a
        camada densa assada na nebulosa (space.ts) já dá a profundidade. */
@@ -902,6 +910,12 @@ export function TriScene() {
       /* Uma textura por frame sobe para a GPU. */
       const pending = warmQueueTextures.shift()
       if (pending) renderer.initTexture(pending)
+
+      /* Depois de alguns frames desenhados, a lente entra. */
+      if (wantsPostFx && !postfx && postFxFrames > 4) {
+        postfx = createPostFx(renderer, scene, camera, window.innerWidth, stageHeight)
+      }
+      postFxFrames += 1
 
       frameCount += 1
       const restful =

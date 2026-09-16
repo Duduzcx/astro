@@ -247,7 +247,10 @@ export function createSpace(
         bakeGeometry.dispose()
       }
     }
-    requestAnimationFrame(bakeStrip)
+    /* Começa depois da primeira pintura: o programa da assadeira é o mais
+       pesado de compilar de toda a cena, e compilá-lo antes do primeiro
+       frame atrasa tudo o que o visitante vê. */
+    window.setTimeout(() => requestAnimationFrame(bakeStrip), 600)
     material.uniforms.uNebulaMap.value = bakeTarget.texture
     material.uniforms.uNebula.value = nebula
   }

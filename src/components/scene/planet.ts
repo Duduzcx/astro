@@ -79,13 +79,17 @@ const SURFACE_VERTEX = /* glsl */ `
   varying vec3 vObj;
   varying vec3 vViewPos;
   varying vec2 vUv;
+#ifndef PHOTO_ONLY
   ${SIMPLEX_NOISE}
+#endif
   void main() {
     vUv = uv;
     vec3 p = position;
+#ifndef PHOTO_ONLY
     float chunk = snoise(position * 2.2 + 7.0) * 0.5 + 0.5;
     float burst = uBreak * uBreak;
     p += normal * (0.15 + 0.85 * chunk) * burst * 0.7;
+#endif
     vObj = position;
     vNormalV = normalize(normalMatrix * normal);
     /* Quadro tangente analítico da esfera: T ao longo da longitude (u
@@ -129,11 +133,15 @@ const SURFACE_FRAGMENT = /* glsl */ `
   varying vec3 vObj;
   varying vec3 vViewPos;
   varying vec2 vUv;
+#ifndef PHOTO_ONLY
   ${SIMPLEX_NOISE}
+#endif
   ${PERTURB}
 
   void main() {
+#ifndef PHOTO_ONLY
     vec3 q = vObj / ${RADIUS.toFixed(2)};
+#endif
     vec3 albedo;
     float height = 0.0;
     float relief = 1.0;
@@ -149,7 +157,13 @@ const SURFACE_FRAGMENT = /* glsl */ `
       if (uKind > 1.5 && uKind < 2.5) {
         /* Gigante fotografado: as faixas tremem de leve, como nuvens que
            correm em latitudes diferentes; a foto deixa de ser um adesivo. */
-        float shimmer = snoise(vec3(vUv.y * 46.0, vUv.x * 4.0 + uTime * 0.05, uTime * 0.03));
+        /* Sem ruído simplex aqui: com PHOTO_ONLY o gerador procedural não é
+           compilado, e três senos de frequências primas dão a mesma
+           sensação de faixa que corre por um custo muito menor. */
+        float shimmer =
+          sin(vUv.y * 46.0 + uTime * 0.31) * 0.5 +
+          sin(vUv.y * 113.0 - vUv.x * 4.0 + uTime * 0.17) * 0.3 +
+          sin(vUv.y * 7.0 + vUv.x * 2.0 - uTime * 0.09) * 0.2;
         photo *= 1.0 + 0.05 * shimmer;
       }
       albedo = photo;
@@ -165,7 +179,9 @@ const SURFACE_FRAGMENT = /* glsl */ `
       } else if (uKind > 3.5) {
         water = 0.35;
       }
-    } else if (uKind < 0.5) {
+    }
+#ifndef PHOTO_ONLY
+    else if (uKind < 0.5) {
       /* O alvo: mundo de gelo e oceano, montanhas claras. */
       float base = fbm3(q * 2.6);
       float e = base + 0.2 * fbm3(q * 5.0);
@@ -248,6 +264,7 @@ const SURFACE_FRAGMENT = /* glsl */ `
       relief = 0.6;
       water = 0.35;
     }
+#endif
 
     vec3 geomN = normalize(vNormalV);
     vec3 n = perturb(vViewPos, geomN, height, relief * uDetail);
@@ -341,10 +358,13 @@ const SURFACE_FRAGMENT = /* glsl */ `
       /* Luzes de cidade fotografadas, só do lado da noite. */
       vec3 night = texture2D(uNight, vUv).rgb;
       color += night * vec3(1.0, 0.85, 0.6) * (1.0 - dayGeom) * 1.4;
-    } else if (uKind > 0.5 && uKind < 1.5) {
+    }
+#ifndef PHOTO_ONLY
+    else if (uKind > 0.5 && uKind < 1.5) {
       float cities = smoothstep(0.5, 0.8, snoise(q * 26.0)) * smoothstep(0.55, 0.75, snoise(q * 4.0 + 2.0)) * land;
       color += vec3(1.0, 0.78, 0.45) * cities * (1.0 - dayGeom) * 1.1;
     }
+#endif
 
     float heat = sin(clamp(uBreak, 0.0, 1.0) * 3.14159);
     color = mix(color, vec3(1.0, 0.55, 0.2), heat * 0.7);
@@ -380,16 +400,22 @@ const CLOUDS_FRAGMENT = /* glsl */ `
   varying vec3 vObj;
   varying vec3 vView;
   varying vec2 vUv;
+#ifndef PHOTO_ONLY
   ${SIMPLEX_NOISE}
+#endif
   void main() {
-    vec3 q = vObj / ${CLOUDS.toFixed(3)};
     float cover;
+#ifdef PHOTO_ONLY
+    cover = smoothstep(0.08, 0.7, texture2D(uMap, vUv).r);
+#else
+    vec3 q = vObj / ${CLOUDS.toFixed(3)};
     if (uHasMap > 0.5) {
       cover = smoothstep(0.08, 0.7, texture2D(uMap, vUv).r);
     } else {
       float c = fbm(q * 2.8 + vec3(uTime * 0.01, 0.0, 0.0)) + 0.15 * fbm3(q * 5.5);
       cover = smoothstep(0.08, 0.5, c);
     }
+#endif
     vec3 n = normalize(vNormalV);
     float day = smoothstep(-0.2, 0.35, dot(n, uLight));
     float limb = mix(0.6, 1.0, pow(max(dot(n, normalize(vView)), 0.0), 0.5));
@@ -591,7 +617,14 @@ export function createPlanet({
   const surfaceQuaternion = new THREE.Quaternion()
 
   const surfaceGeometry = new THREE.SphereGeometry(RADIUS, segments, Math.round(segments * 0.62))
+  /* Com fotografia, todo o gerador procedural (cinco oitavas de ruído por
+     tipo de mundo) é código morto — mas o driver compila do mesmo jeito, e
+     em ANGLE/D3D isso custa segundos na primeira pintura. O define tira o
+     bloco do código-fonte. */
+  const photoOnly = Boolean(maps?.map)
+  const defines = photoOnly ? { PHOTO_ONLY: '' } : {}
   const surfaceMaterial = new THREE.ShaderMaterial({
+    defines: { ...defines },
     vertexShader: SURFACE_VERTEX,
     fragmentShader: SURFACE_FRAGMENT,
     transparent: true,
@@ -673,6 +706,7 @@ export function createPlanet({
   if (KIND_CLOUDS[kind]) {
     const cloudsGeometry = new THREE.SphereGeometry(CLOUDS, segments, Math.round(segments * 0.62))
     cloudsMaterial = new THREE.ShaderMaterial({
+      defines: maps?.clouds ? { PHOTO_ONLY: '' } : {},
       vertexShader: CLOUDS_VERTEX,
       fragmentShader: CLOUDS_FRAGMENT,
       transparent: true,
