@@ -127,10 +127,10 @@ export function mobileKeyframes(
     /* Teto de escala do celular: medido, o brilho do Sol cobria 94% da
        largura da tela e engolia o título. A 0,62 ele ocupa uns dois
        terços, que é o que deixa o astro grande sem virar fundo. */
-    [0.24, 0.05, x, 0.0, scale * 0.62, 0.85, 0],
+    [0.24, 0.05, x, 0.0, scale * 0.8, 0.85, 0],
     /* ...e fica inteiro até a Missão (0.268 a 0.307 nesta largura). */
-    [0.268, 0.05, x, 0.0, scale * 0.62, 0.85, 0],
-    [0.278, 0.05, x, 0.0, scale * 0.62, 0.85, 0],
+    [0.268, 0.05, x, 0.0, scale * 0.8, 0.85, 0],
+    [0.278, 0.05, x, 0.0, scale * 0.8, 0.85, 0],
     /* A supernova na Missão, à vista; o remanescente apaga com a
        opacidade antes da seção acabar. */
     /* Mais larga que antes: a explosão é a cena mais complexa da página
@@ -155,7 +155,7 @@ export function mobileKeyframes(
     [0.875, 0.95, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 2],
     /* A poeira condensa: uma estrela nasce durante o contato... */
     [0.9, 0.07, 0.0, 0.15, scale * 0.58, 0.55, 2],
-    [0.925, 0.05, 0.0, 0.05, scale * 0.62, 0.72, 2],
+    [0.925, 0.05, 0.0, 0.05, scale * 0.8, 0.72, 2],
     /* ...e explode à vista quando "A sua operação tem a resposta" entra
        (0.935): o morph 2 para 3 agrupado É a detonação. */
     [0.935, 0.08, 0.0, -0.1, scale * 0.82, 1.0, 3],
