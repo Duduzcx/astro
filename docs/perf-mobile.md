@@ -84,3 +84,19 @@ composição pura e quase não custa quadro. As animações que doem de verdade 
 pelo passo 1, porque seção pulada não pinta. O hook fica pelo que economiza
 de bateria e porque acima de 480px, onde o `content-visibility` não vale, ele
 é a única defesa.
+
+## Resultado acumulado
+
+Harness original (`scripts/mobile-perf.mjs`), fração 0.4, três corridas de cada:
+
+| | Média | Longos |
+| - | ----- | ------ |
+| Antes (d7e8e8b) | 60,4ms | 99,1% |
+| Depois | 49,0ms | 83,2% |
+
+Percorrendo a página inteira a queda é maior, de 54,6ms para 37,0ms, porque
+os primeiros 40% são justamente o hero e os serviços, que ficam visíveis de
+qualquer jeito e não têm o que pular.
+
+A supernova continua contida na última seção e o Sol continua na Missão, que
+é a prova de que a altura do documento não se mexeu.
