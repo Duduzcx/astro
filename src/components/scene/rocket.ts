@@ -835,20 +835,45 @@ export function createRocket({
       const y = state.yPad + state.lift * state.travel
       lean.position.set(state.x, y, 0)
       lean.visible = state.visible
-      /* Na plataforma o veículo só balança devagar mostrando os três
-         corpos de frente; na subida gira inteiro para mostrar o volume.
-         O eixo segue a inclinação que a cena manda (o rumo) mais um
-         balanço leve no tempo. */
-      const flying = cruise ? 0.6 : state.lift
-      object.rotation.y = Math.sin(time * 0.15) * 0.35 * (1 - flying) + time * 0.3 * flying
+      /* O voo, em camadas.
+         Um foguete de verdade nunca está parado: na plataforma ele balança
+         no vento preso às garras, na subida executa o programa de rolagem
+         (gira em torno do próprio eixo enquanto inclina para o rumo),
+         sacode na pressão dinâmica máxima e corrige o tempo todo com o
+         bocal. Aqui cada uma dessas coisas é um seno; juntas, o movimento
+         deixa de ser uma peça rígida deslizando pela tela. */
+      const lift = state.lift
+      const flying = cruise ? 0.6 : lift
+      /* Programa de rolagem: parado na plataforma (só um bamboleio lento
+         que mostra os flaps), acelerando conforme sobe. */
+      const rollRate = cruise ? 0.22 : 0.18 + lift * 0.55
+      object.rotation.y =
+        Math.sin(time * 0.15) * 0.35 * (1 - flying) + time * rollRate * flying
+      /* Max-Q: entre um quinto e a metade da subida o ar ainda é denso e a
+         velocidade já é alta. É onde o veículo mais treme. */
+      const maxQ = Math.max(0, Math.sin(Math.min(Math.max((lift - 0.12) / 0.45, 0), 1) * Math.PI))
+      const buffet = maxQ * 0.012
+      const shiver =
+        (Math.sin(time * 17.3) * 0.5 + Math.sin(time * 29.7) * 0.3 + Math.sin(time * 41.1) * 0.2) *
+        buffet
+      /* Na plataforma o vento também mexe com ele, devagar e pouco. */
+      const wind = (1 - Math.min(lift * 4, 1)) * (cruise ? 0 : 1)
+      const sway = Math.sin(time * 0.7) * 0.012 + Math.sin(time * 1.13) * 0.006
       const tilt = state.tilt ?? 0
       lean.rotation.z = cruise
-        ? tilt + Math.sin(time * 1.3) * 0.02
-        : tilt + Math.sin(time * 1.7) * 0.02 * state.lift
-      /* Gimbal: o bocal corrige o rumo o tempo todo, e a chama vai junto. */
+        ? tilt + Math.sin(time * 1.3) * 0.02 + Math.sin(time * 0.37) * 0.05
+        : tilt + Math.sin(time * 1.7) * 0.02 * lift + shiver + sway * wind
+      /* Arfagem: em cruzeiro o bico sobe e desce devagar, como quem ajusta
+         atitude; na subida é a vibração e um empinar leve no fim. */
+      lean.rotation.x = cruise
+        ? Math.sin(time * 0.53) * 0.06 + Math.cos(time * 0.91) * 0.03
+        : shiver * 0.7 + sway * 0.6 * wind + Math.sin(time * 0.9) * 0.02 * lift
+      /* Gimbal: o bocal corrige o rumo o tempo todo, e a chama vai junto.
+         Na tremida ele corrige mais, contra o movimento. */
       const gimbal = state.thrust * (cruise ? 0.6 : 1)
-      nozzle.rotation.z = (Math.sin(time * 2.1) * 0.03 + Math.sin(time * 3.7) * 0.02) * gimbal
-      nozzle.rotation.x = Math.cos(time * 2.6) * 0.025 * gimbal
+      nozzle.rotation.z =
+        (Math.sin(time * 2.1) * 0.03 + Math.sin(time * 3.7) * 0.02) * gimbal - shiver * 1.6
+      nozzle.rotation.x = Math.cos(time * 2.6) * 0.025 * gimbal - shiver * 0.9
 
       for (const material of flameMaterials) {
         material.uniforms.uTime.value = time

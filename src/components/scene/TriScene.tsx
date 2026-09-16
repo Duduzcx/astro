@@ -115,6 +115,8 @@ export function TriScene() {
     renderer.domElement.style.display = 'block'
     mount.appendChild(renderer.domElement)
 
+    /* Desmontou: as filas de aquecimento param onde estiverem. */
+    let disposed = false
     const scene = new THREE.Scene()
     /* Mapa de ambiente gerado uma vez: é o que faz metal parecer metal. Sem
        reflexo, metalness alto é só preto.
@@ -125,10 +127,19 @@ export function TriScene() {
        testado e recusado: metal só reflete o que existe em volta, e no
        vácuo isso deixa o casco quase preto. A sala mente, mas é ela que faz
        o aço parecer aço. */
-    const pmrem = new THREE.PMREMGenerator(renderer)
-    const environmentTarget = pmrem.fromScene(new RoomEnvironment(), 0.04, 0.1, 100, { size: 32 })
-    scene.environment = environmentTarget.texture
-    pmrem.dispose()
+    /* E o mapa é gerado DEPOIS da primeira pintura: o custo não está na
+       resolução (a 32 ou a 256 dá quase no mesmo), está em compilar os
+       shaders do próprio prefiltro, e eram dois segundos travados antes de
+       qualquer coisa aparecer. O foguete, único objeto que depende do
+       reflexo, só chega depois disso de qualquer forma. */
+    let environmentTarget: THREE.WebGLRenderTarget | null = null
+    const buildEnvironment = () => {
+      if (disposed || environmentTarget) return
+      const pmrem = new THREE.PMREMGenerator(renderer)
+      environmentTarget = pmrem.fromScene(new RoomEnvironment(), 0.04, 0.1, 100, { size: 32 })
+      scene.environment = environmentTarget.texture
+      pmrem.dispose()
+    }
     /* Luz de verdade para o foguete: uma direcional vinda de cima à
        esquerda, a mesma direção da luz dos planetas, e uma hemisférica azul
        para o lado da sombra não virar breu. */
@@ -206,7 +217,7 @@ export function TriScene() {
     /* No celular só a Terra do hero passa de 1k: cada upload de textura
        trava o thread principal por dezenas de milissegundos, e isso vira
        tranco no scroll. */
-    const tier = (name: string, ext = 'jpg', desktopHigh = '2k') => ({
+    const tier = (name: string, ext = 'webp', desktopHigh = '2k') => ({
       low: `/space/${name}-1k.${ext}`,
       high: `/space/${name}-${lightweight ? '2k' : desktopHigh}.${ext}`,
     })
@@ -225,7 +236,7 @@ export function TriScene() {
 
     /* O espaço: panorama da Via Láctea atrás de tudo, com as nebulosas
        assadas numa textura (menor no celular) e as galáxias distantes. */
-    const space = createSpace(tier('milky-way', 'jpg', '4k'), lightweight || weakDevice ? 0.62 : 0.8, warm, {
+    const space = createSpace(tier('milky-way', 'webp', '2k'), lightweight || weakDevice ? 0.62 : 0.8, warm, {
       renderer,
       bakeSize: lightweight || weakDevice ? [768, 384] : [1536, 768],
       view: { halfWidth, halfHeight, cameraZ: camera.position.z },
@@ -347,15 +358,15 @@ export function TriScene() {
       kind: 'earth',
       spin: 0.012,
       maps: {
-        map: tier('earth-day', 'jpg', '4k'),
-        night: tier('earth-night', 'jpg', '2k'),
-        clouds: tier('earth-clouds', 'jpg', '4k'),
+        map: tier('earth-day', 'webp', '4k'),
+        night: tier('earth-night', 'webp', '2k'),
+        clouds: tier('earth-clouds', 'webp', '2k'),
         /* Relevo e máscara de água só no desktop: no celular são duas
            amostras a mais por pixel numa esfera que ocupa meia tela. */
-        normal: lightweight ? undefined : tier('earth-normal', 'jpg', '4k'),
+        normal: lightweight ? undefined : tier('earth-normal', 'webp', '2k'),
         specular: lightweight
           ? undefined
-          : { low: '/space/earth-specular-1k.jpg', high: '/space/earth-specular-2k.jpg' },
+          : { low: '/space/earth-specular-1k.webp', high: '/space/earth-specular-2k.webp' },
       },
     })
     /* De pé o que a tela mostra é a calota polar, toda branca. Deitada, o
@@ -385,8 +396,8 @@ export function TriScene() {
           spin: 0.03,
           ring: true,
           maps: {
-            map: tier('saturn'),
-            ring: { low: '/space/saturn-ring-2k.png', high: '/space/saturn-ring-4k.png' },
+            map: tier('saturn', 'webp'),
+            ring: { low: '/space/saturn-ring-2k.webp', high: '/space/saturn-ring-2k.webp' },
           },
           warm,
         }),
@@ -401,7 +412,7 @@ export function TriScene() {
           segments: lightweight ? 56 : 80,
           kind: 'rock',
           spin: 0.09,
-          maps: { map: tier('mars') },
+          maps: { map: tier('mars', 'webp') },
           warm,
         }),
         /* Maior e um pouco mais para dentro: pequeno demais o relevo não
@@ -417,7 +428,7 @@ export function TriScene() {
           segments: lightweight ? 72 : 112,
           kind: 'gas',
           spin: 0.035,
-          maps: { map: tier('jupiter') },
+          maps: { map: tier('jupiter', 'webp') },
           warm,
         }),
         x: 0.75,
@@ -431,7 +442,7 @@ export function TriScene() {
           segments: lightweight ? 56 : 80,
           kind: 'ice',
           spin: 0.05,
-          maps: { map: tier('moon') },
+          maps: { map: tier('moon', 'webp') },
           tint: '#c4d6f2',
           warm,
         }),
@@ -579,7 +590,6 @@ export function TriScene() {
     applyClear()
 
     let frame = 0
-    let disposed = false
     let previous = performance.now()
     let lastScrollY = window.scrollY
     let rush = 0
@@ -666,6 +676,11 @@ export function TriScene() {
       sphereMaterial.uniforms.uMix.value = Math.min(1, current.mix + rush * 0.05)
       sphereMaterial.uniforms.uScale.value = current.scale
       sphereMaterial.uniforms.uOpacity.value = 0.95 * current.opacity
+      /* Apagado, não desenha: no hero o campo está em opacidade zero, e
+         deixá-lo fora do primeiro frame adia a compilação do shader dele
+         para a fila de aquecimento — é menos trabalho antes da primeira
+         pintura, e menos preenchimento o resto do tempo. */
+      sphereField.visible = current.opacity > 0.004
       const centerX = current.x * halfWidth + pointer.x * 0.05 + shakeX
       const centerY = current.y + pointer.y * -0.04 + shakeY
       sphereMaterial.uniforms.uCenter.value.set(centerX, centerY)
@@ -960,6 +975,7 @@ export function TriScene() {
      * A ordem é a da narrativa: quem aparece antes compila antes.
      */
     const warmQueue: THREE.Object3D[] = [
+      sphereField,
       cruiser.object,
       ...worlds.map((world) => world.planet.object),
       trail.object,
@@ -976,6 +992,12 @@ export function TriScene() {
         : (callback) => window.setTimeout(callback, 60)
     let warming = false
     const warmNext = () => {
+      if (!environmentTarget && !disposed) {
+        /* Primeiro da fila: o reflexo do metal. */
+        buildEnvironment()
+        idle(warmNext)
+        return
+      }
       if (disposed || warming) return
       const next = warmQueue.shift()
       if (!next) return
@@ -1033,7 +1055,7 @@ export function TriScene() {
       blackHole.dispose()
       nova.dispose()
       document.documentElement.style.removeProperty('--nova')
-      environmentTarget.dispose()
+      environmentTarget?.dispose()
       postfx?.dispose()
       glareTexture.dispose()
       glareMaterial.dispose()
