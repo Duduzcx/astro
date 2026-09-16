@@ -276,7 +276,7 @@ export function TriScene() {
       opacity: 0,
     })
     const glare = new THREE.Sprite(glareMaterial)
-    glare.scale.setScalar(3.2)
+    glare.scale.setScalar(lightweight ? 2.1 : 3.2)
     glare.renderOrder = -5
     scene.add(glare)
     /* Estria anamórfica: a linha horizontal de luz que toda lente de cinema
@@ -305,16 +305,18 @@ export function TriScene() {
 
     /* Estrelas ao fundo, a página inteira. No celular são menos pontos: a
        camada densa assada na nebulosa (space.ts) já dá a profundidade. */
-    const stars = createStars(lightweight ? 2000 : 3600, renderer.getPixelRatio())
+    /* Menos estrelas no celular: numa tela de mão o mesmo número vira
+       chuvisco, e o que precisa aparecer é o astro da vez. */
+    const stars = createStars(lightweight ? 900 : 3600, renderer.getPixelRatio())
     scene.add(stars.object)
     /* Umas poucas brilhantes de verdade, com halo e espículas. */
-    const brightStars = createBrightStars(lightweight ? 7 : 8, {
+    const brightStars = createBrightStars(lightweight ? 3 : 8, {
       rightBias: !lightweight,
       view: { halfWidth, cameraZ: camera.position.z },
     })
     scene.add(brightStars.object)
     /* Meteoros de vez em quando: o detalhe que faz o céu parecer vivo. */
-    const meteors = createMeteors(lightweight ? 2 : 3, renderer.getPixelRatio())
+    const meteors = createMeteors(lightweight ? 1 : 3, renderer.getPixelRatio())
     scene.add(meteors.object)
 
     /* Foguete: altura em mundo pela largura da tela. No celular ele é menor e
@@ -483,7 +485,10 @@ export function TriScene() {
     const cruiseTrail = createTrail({ segments: lightweight ? 14 : 32, seed: 5 })
     scene.add(cruiseTrail.object)
     const nozzlePoint = new THREE.Vector3()
-    const cruiseWindow = () => (narrow ? { from: 0.035, to: 0.215 } : { from: 0.045, to: 0.26 })
+    /* A nave em cruzeiro entra logo que o lançamento sai de cena e cruza
+       o desfile inteiro: antes havia um vão entre o foguete sumir e ela
+       aparecer, e a página ficava sem assunto bem na virada. */
+    const cruiseWindow = () => (narrow ? { from: 0.02, to: 0.24 } : { from: 0.03, to: 0.28 })
 
     const earthApparent = () => ({
       radius: narrow ? 2.0 : Math.max(2.4, halfWidth * 1.1),
@@ -616,8 +621,13 @@ export function TriScene() {
     const considerDowngrade = (delta: number) => {
       if (downgraded || sampled > 150) return
       sampled += 1
-      if (delta > 0.028) slowFrames += 1
-      if (sampled >= 90 && slowFrames > 30) {
+      /* Só conta como lento o que é lento de verdade. No celular a régua
+         é outra: 33ms é a cadência normal de um aparelho mediano, e com
+         o limiar de desktop o rebaixamento disparava sempre — era ele
+         que jogava fora o bloom e deixava o Sol e o buraco negro sem
+         brilho nenhum. */
+      if (delta > (lightweight ? 0.055 : 0.028)) slowFrames += 1
+      if (sampled >= 120 && slowFrames > (lightweight ? 80 : 30)) {
         downgraded = true
         renderer.setPixelRatio(1)
         renderer.setSize(window.innerWidth, stageHeight, false)
@@ -810,7 +820,7 @@ export function TriScene() {
         const { from, to } = cruiseWindow()
         const t = (progress - from) / (to - from)
         const inside = t > 0 && t < 1
-        const fade = inside ? Math.min(t / 0.12, 1) * Math.min((1 - t) / 0.12, 1) : 0
+        const fade = inside ? Math.min(t / 0.2, 1) * Math.min((1 - t) / 0.2, 1) : 0
         /* Em cruzeiro ele sobe pela tela numa curva suave, no vão entre o
            painel e o texto dos Serviços, tombando para o lado do rumo, e
            balança devagar no tempo, para nunca estar parado. */
@@ -870,7 +880,14 @@ export function TriScene() {
 
       /* O foguete sai do horizonte: a plataforma acompanha a curva da Terra
          na coluna onde ele está. */
-      const rocketX = (narrow ? 0.46 : 0.52) * halfWidth
+      /* No celular a tela é estreita e o foguete encostado na borda
+         aparecia cortado; quase no meio ele cabe inteiro. */
+      /* No celular o foguete fica no eixo da cena. O modelo tem um desvio
+         constante para a direita dentro do próprio grupo (medido: cerca de
+         um quarto da largura da tela), então com x = 0 ele cai no terço
+         direito, inteiro, sem encostar na borda. Empurrar mais para a
+         esquerda o jogaria por cima do texto. */
+      const rocketX = (narrow ? 0 : 0.52) * halfWidth
       const horizonTop = -visibleHalfHeight + reveal
       const horizonDrop = earthRadius - Math.sqrt(Math.max(earthRadius * earthRadius - rocketX * rocketX, 0))
       const rocketPadY = horizonTop - horizonDrop + rocketHeight * 0.52
@@ -933,7 +950,9 @@ export function TriScene() {
         visibleHalfHeight * (narrow ? -0.18 : 0.62),
         -1,
       )
-      glareMaterial.opacity = 0.85 * Math.max(0, 1 - current.lift * 1.6)
+      /* No celular o clarão ocupa proporcionalmente muito mais tela, e
+         com bloom por cima ele lavava o título. */
+      glareMaterial.opacity = (narrow ? 0.4 : 0.85) * Math.max(0, 1 - current.lift * 1.6)
       streak.position.copy(glare.position)
       streakMaterial.opacity = 0.32 * Math.max(0, 1 - current.lift * 1.6)
       sunRays.update(glare.position, Math.max(0, 1 - current.lift * 1.6), time)

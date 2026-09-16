@@ -124,27 +124,27 @@ export function mobileKeyframes(
     /* Serviços e Integrações são o desfile de mundos; o alvo chega no
        Manifesto, vindo de baixo... */
     [0.215, 0.05, x, -0.8, scale * 1.1, 0.0, 0],
-    [0.24, 0.05, x, 0.0, scale * 1.15, 0.85, 0],
+    [0.24, 0.05, x, 0.0, scale * 0.95, 0.85, 0],
     /* ...e fica inteiro até a Missão (0.268 a 0.307 nesta largura). */
-    [0.268, 0.05, x, 0.0, scale * 1.15, 0.85, 0],
-    [0.278, 0.05, x, 0.0, scale * 1.15, 0.85, 0],
+    [0.268, 0.05, x, 0.0, scale * 0.95, 0.85, 0],
+    [0.278, 0.05, x, 0.0, scale * 0.95, 0.85, 0],
     /* A supernova na Missão, à vista; o remanescente apaga com a
        opacidade antes da seção acabar. */
     /* Mais larga que antes: a explosão é a cena mais complexa da página
        e num trecho curto ela passava em dois ou três frames de scroll, o
        que lê como corte, não como explosão. */
-    [0.312, 0.95, 0.0, 0.08, scale * 1.4, 0.7, 0],
-    [0.33, 0.95, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 0],
+    [0.312, 0.95, 0.0, 0.08, scale * 1.15, 0.7, 0],
+    [0.33, 0.95, 0.0, 0.0, scale * 1.25, FIELD_OPACITY, 0],
     /* Troca de astro com o campo quase invisível, ninguém vê a costura. */
-    [0.334, 0.95, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
+    [0.334, 0.95, 0.0, 0.0, scale * 1.25, FIELD_OPACITY, 1],
     /* Buraco negro: nasce nos Resultados e cresce, mas o auge fica na
        chamada (0.473 a 0.496) e no começo do Processo, que é onde a tela
        do celular está aberta — em Resultados e Projetos os cards ocupam
        a largura inteira e o disco ficava escondido atrás deles. */
     [0.34, 0.6, 0.0, -0.1, scale * 0.55, 0.4, 1],
     [0.36, 0.1, 0.0, -0.05, scale * 0.9, 0.45, 1],
-    [0.46, 0.08, 0.0, 0.08, scale * 1.15, 0.6, 1],
-    [0.52, 0.08, 0.0, 0.08, scale * 1.3, 0.7, 1],
+    [0.46, 0.08, 0.0, 0.04, scale * 0.95, 0.6, 1],
+    [0.52, 0.08, 0.0, 0.04, scale * 1.05, 0.7, 1],
     [0.55, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     [0.6, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     /* Disperso e quase invisível, o campo vira poeira dourada de estrela. */
@@ -155,7 +155,7 @@ export function mobileKeyframes(
     [0.925, 0.05, 0.0, 0.05, scale * 0.62, 0.72, 2],
     /* ...e explode à vista quando "A sua operação tem a resposta" entra
        (0.935): o morph 2 para 3 agrupado É a detonação. */
-    [0.935, 0.08, 0.0, -0.2, scale * 0.95, 1.0, 3],
+    [0.935, 0.08, 0.0, -0.1, scale * 0.82, 1.0, 3],
     /* Daqui até o fim tudo é idêntico. No pé da página o scroll treme, e com
        a cauda plana a tremida não vira mudança de tamanho. */
     /* Apaga antes do rodapé (o Contato acaba em 0.958 nesta largura). */

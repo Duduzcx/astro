@@ -830,6 +830,17 @@ export function createRocket({
       const scale = h / Math.max(size.y, 0.0001)
       model.scale.setScalar(scale)
       model.position.set(-center.x * scale, -box.min.y * scale + bottom * h, -center.z * scale)
+      /* Centragem medida, não calculada: o grupo gira em torno do próprio
+         eixo y, e bastava o eixo do modelo não passar pelo centro dele para
+         o foguete descrever um círculo e sair pela borda da tela a cada
+         volta. Aqui a caixa é medida DEPOIS de posicionar e o resto do
+         desvio em x e z é descontado. */
+      model.updateMatrixWorld(true)
+      const placed = new THREE.Box3().setFromObject(model)
+      const placedCenter = new THREE.Vector3()
+      placed.getCenter(placedCenter)
+      model.position.x -= placedCenter.x
+      model.position.z -= placedCenter.z
       /* O aquecimento (compilar programas e subir geometria) evita um
          tranco quando o foguete entra, mas num aparelho lento ele leva
          mais de dez segundos, e um hero vazio esse tempo todo é pior
@@ -875,7 +886,9 @@ export function createRocket({
       const flying = cruise ? 0.6 : lift
       /* Programa de rolagem: parado na plataforma (só um bamboleio lento
          que mostra os flaps), acelerando conforme sobe. */
-      const rollRate = cruise ? 0.22 : 0.18 + lift * 0.55
+      /* Gira mais: parado na plataforma o veículo precisa mostrar que
+         está vivo, e na subida o rolamento é o que dá a sensação de voo. */
+      const rollRate = cruise ? 0.34 : 0.3 + lift * 0.8
       object.rotation.y =
         Math.sin(time * 0.15) * 0.35 * (1 - flying) + time * rollRate * flying
       /* Max-Q: entre um quinto e a metade da subida o ar ainda é denso e a
@@ -887,16 +900,16 @@ export function createRocket({
         buffet
       /* Na plataforma o vento também mexe com ele, devagar e pouco. */
       const wind = (1 - Math.min(lift * 4, 1)) * (cruise ? 0 : 1)
-      const sway = Math.sin(time * 0.7) * 0.012 + Math.sin(time * 1.13) * 0.006
+      const sway = Math.sin(time * 0.7) * 0.03 + Math.sin(time * 1.13) * 0.016
       const tilt = state.tilt ?? 0
       lean.rotation.z = cruise
         ? tilt + Math.sin(time * 1.3) * 0.02 + Math.sin(time * 0.37) * 0.05
-        : tilt + Math.sin(time * 1.7) * 0.02 * lift + shiver + sway * wind
+        : tilt + Math.sin(time * 1.7) * 0.05 * lift + shiver + sway * wind
       /* Arfagem: em cruzeiro o bico sobe e desce devagar, como quem ajusta
          atitude; na subida é a vibração e um empinar leve no fim. */
       lean.rotation.x = cruise
-        ? Math.sin(time * 0.53) * 0.06 + Math.cos(time * 0.91) * 0.03
-        : shiver * 0.7 + sway * 0.6 * wind + Math.sin(time * 0.9) * 0.02 * lift
+        ? Math.sin(time * 0.53) * 0.12 + Math.cos(time * 0.91) * 0.06
+        : shiver * 0.7 + sway * 0.6 * wind + Math.sin(time * 0.9) * 0.05 * lift
       /* Gimbal: o bocal corrige o rumo o tempo todo, e a chama vai junto.
          Na tremida ele corrige mais, contra o movimento. */
       const gimbal = state.thrust * (cruise ? 0.6 : 1)
