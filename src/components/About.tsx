@@ -53,9 +53,8 @@ export function About() {
           >
             <video
               ref={videoRef}
-              src="/media/office.mp4"
-              autoPlay
-              muted
+              data-src="/media/office.mp4"
+                    muted
               loop
               playsInline
               preload="none"

@@ -211,15 +211,43 @@ export function createSpace(
       depthWrite: false,
       uniforms: { uSeed: { value: 3.7 } },
     })
+    const bakeGeometry = new THREE.PlaneGeometry(2, 2)
     const bakeScene = new THREE.Scene()
-    bakeScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), bakeMaterial))
+    bakeScene.add(new THREE.Mesh(bakeGeometry, bakeMaterial))
     const bakeCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
     const renderer = options.renderer
-    const previous = renderer.getRenderTarget()
-    renderer.setRenderTarget(bakeTarget)
-    renderer.render(bakeScene, bakeCamera)
-    renderer.setRenderTarget(previous)
-    bakeMaterial.dispose()
+    /* Assar em tiras, uma por frame.
+       São dezenas de amostras de ruído por pixel em mais de um milhão de
+       pixels: num desenho só a GPU some por vários segundos e a página fica
+       branca esperando — era boa parte da demora que o cliente via ao
+       entrar. Cada tira é uma tesoura no mesmo alvo, e entre elas o
+       navegador pinta. A nebulosa aparece por partes no primeiro segundo,
+       de cima para baixo, e ninguém percebe porque o céu ainda está
+       entrando. */
+    const strips = 8
+    let strip = 0
+    const bakeStrip = () => {
+      if (!bakeTarget) return
+      const y = Math.floor((h * strip) / strips)
+      const nextY = Math.floor((h * (strip + 1)) / strips)
+      const previous = renderer.getRenderTarget()
+      renderer.setRenderTarget(bakeTarget)
+      renderer.setScissorTest(true)
+      renderer.setScissor(0, y, w, nextY - y)
+      renderer.setViewport(0, 0, w, h)
+      renderer.render(bakeScene, bakeCamera)
+      renderer.setScissorTest(false)
+      renderer.setRenderTarget(previous)
+      renderer.setViewport(0, 0, renderer.domElement.width, renderer.domElement.height)
+      strip += 1
+      if (strip < strips) {
+        requestAnimationFrame(bakeStrip)
+      } else {
+        bakeMaterial.dispose()
+        bakeGeometry.dispose()
+      }
+    }
+    requestAnimationFrame(bakeStrip)
     material.uniforms.uNebulaMap.value = bakeTarget.texture
     material.uniforms.uNebula.value = nebula
   }

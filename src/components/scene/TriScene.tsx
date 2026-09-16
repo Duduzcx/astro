@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import {
   KEYFRAMES,
   MOBILE_BREAKPOINT,
@@ -28,6 +27,7 @@ import { createMeteors } from './meteors'
 import { createBrightStars } from './brightstars'
 import { createSunRays } from './sunrays'
 import { createCameraMotion } from './cameraMotion'
+import { createSpaceEnvironment } from './environment'
 
 /**
  * Núcleo orbital: uma bola densa de triângulos vazados com três anéis
@@ -117,11 +117,10 @@ export function TriScene() {
 
     const scene = new THREE.Scene()
     /* Mapa de ambiente gerado uma vez: é o que faz metal parecer metal. Sem
-       reflexo, metalness alto é só preto. */
-    const pmrem = new THREE.PMREMGenerator(renderer)
-    const environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
-    scene.environment = environment
-    pmrem.dispose()
+       reflexo, metalness alto é só preto. O ambiente é o espaço (sol, Terra
+       por baixo, contorno frio), não uma sala de estúdio. */
+    const environmentTarget = createSpaceEnvironment(renderer)
+    scene.environment = environmentTarget.texture
     /* Luz de verdade para o foguete: uma direcional vinda de cima à
        esquerda, a mesma direção da luz dos planetas, e uma hemisférica azul
        para o lado da sombra não virar breu. */
@@ -199,20 +198,26 @@ export function TriScene() {
     /* No celular só a Terra do hero passa de 1k: cada upload de textura
        trava o thread principal por dezenas de milissegundos, e isso vira
        tranco no scroll. */
-    const tier = (name: string, ext = 'jpg', mobileHigh = '2k') => ({
+    const tier = (name: string, ext = 'jpg', desktopHigh = '2k') => ({
       low: `/space/${name}-1k.${ext}`,
-      high: `/space/${name}-${lightweight ? mobileHigh : '4k'}.${ext}`,
+      high: `/space/${name}-${lightweight ? '2k' : desktopHigh}.${ext}`,
     })
-    /* Um degrau a mais para a Terra no desktop com memória: 8k, o teto das
-       fontes livres. Com mipmaps são ~180 MB de GPU, então só com folga. */
-    const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8
-    const ultra = !lightweight && !weakDevice && memory >= 8
+    /* Sem degrau de 8k: subir uma textura dessas para a GPU (8192×4096 com
+       mipmaps, ~180 MB) trava o thread principal por quase dois segundos, e
+       num planeta que ocupa 600px de tela não há um texel a mais para ver.
+       4k é o teto útil aqui. */
     /* Sobe a textura para a GPU assim que chega, fora do caminho do scroll. */
-    const warm = (texture: THREE.Texture) => renderer.initTexture(texture)
+    /* Subir textura para a GPU é síncrono e caro (uma de 4k com mipmaps
+       são 45 MB e dezenas de milissegundos). Chegando várias juntas, o
+       thread principal sumia por segundos e a página ficava parada — era a
+       demora que o cliente via ao entrar. Aqui elas entram numa fila e sobem
+       uma por frame, entre um desenho e outro. */
+    const warmQueueTextures: THREE.Texture[] = []
+    const warm = (texture: THREE.Texture) => warmQueueTextures.push(texture)
 
     /* O espaço: panorama da Via Láctea atrás de tudo, com as nebulosas
        assadas numa textura (menor no celular) e as galáxias distantes. */
-    const space = createSpace(tier('milky-way'), lightweight || weakDevice ? 0.62 : 0.8, warm, {
+    const space = createSpace(tier('milky-way', 'jpg', '4k'), lightweight || weakDevice ? 0.62 : 0.8, warm, {
       renderer,
       bakeSize: lightweight || weakDevice ? [768, 384] : [1536, 768],
       view: { halfWidth, halfHeight, cameraZ: camera.position.z },
@@ -292,11 +297,20 @@ export function TriScene() {
     const warmTarget = new THREE.WebGLRenderTarget(2, 2)
     const warmRocket = async (object: THREE.Object3D) => {
       await renderer.compileAsync(object, camera, scene)
+      /* Só o foguete é desenhado neste frame de aquecimento: com a cena
+         inteira visível, este render forçava a compilação de todos os
+         outros astros de uma vez e travava a carga por segundos. */
+      const wasVisible = scene.children.map((child) => child.visible)
+      for (const child of scene.children) child.visible = false
       scene.add(object)
+      object.visible = true
       renderer.setRenderTarget(warmTarget)
       renderer.render(scene, camera)
       renderer.setRenderTarget(null)
       scene.remove(object)
+      scene.children.forEach((child, index) => {
+        child.visible = wasVisible[index] ?? child.visible
+      })
     }
     const rocket = createRocket({ height: rocketHeight, lightweight, warm: warmRocket })
     rocket.setPixelRatio(renderer.getPixelRatio())
@@ -325,12 +339,12 @@ export function TriScene() {
       kind: 'earth',
       spin: 0.012,
       maps: {
-        map: { ...tier('earth-day', 'jpg', '2k'), ultra: ultra ? '/space/earth-day-8k.jpg' : undefined },
-        night: tier('earth-night'),
-        clouds: tier('earth-clouds', 'jpg', '2k'),
+        map: tier('earth-day', 'jpg', '4k'),
+        night: tier('earth-night', 'jpg', '2k'),
+        clouds: tier('earth-clouds', 'jpg', '4k'),
         /* Relevo e máscara de água só no desktop: no celular são duas
            amostras a mais por pixel numa esfera que ocupa meia tela. */
-        normal: lightweight ? undefined : tier('earth-normal'),
+        normal: lightweight ? undefined : tier('earth-normal', 'jpg', '4k'),
         specular: lightweight
           ? undefined
           : { low: '/space/earth-specular-1k.jpg', high: '/space/earth-specular-2k.jpg' },
@@ -363,7 +377,7 @@ export function TriScene() {
           spin: 0.03,
           ring: true,
           maps: {
-            map: { ...tier('saturn'), ultra: ultra ? '/space/saturn-8k.jpg' : undefined },
+            map: tier('saturn'),
             ring: { low: '/space/saturn-ring-2k.png', high: '/space/saturn-ring-4k.png' },
           },
           warm,
@@ -382,9 +396,11 @@ export function TriScene() {
           maps: { map: tier('mars') },
           warm,
         }),
-        x: 0.95,
-        z: -0.8,
-        size: 0.42,
+        /* Maior e um pouco mais para dentro: pequeno demais o relevo não
+           lia e o planeta virava uma bolinha de maquete. */
+        x: 0.88,
+        z: -0.5,
+        size: 0.72,
         from: 0.095,
         to: 0.185,
       },
@@ -393,7 +409,7 @@ export function TriScene() {
           segments: lightweight ? 72 : 112,
           kind: 'gas',
           spin: 0.035,
-          maps: { map: { ...tier('jupiter'), ultra: ultra ? '/space/jupiter-8k.jpg' : undefined } },
+          maps: { map: tier('jupiter') },
           warm,
         }),
         x: 0.75,
@@ -555,6 +571,7 @@ export function TriScene() {
     applyClear()
 
     let frame = 0
+    let disposed = false
     let previous = performance.now()
     let lastScrollY = window.scrollY
     let rush = 0
@@ -882,6 +899,10 @@ export function TriScene() {
          quieta: campo só textura, ou apagado. No celular a cena desenha a
          30fps sempre: metade do trabalho por frame no thread principal, e o
          scroll nativo por cima fica liso. */
+      /* Uma textura por frame sobe para a GPU. */
+      const pending = warmQueueTextures.shift()
+      if (pending) renderer.initTexture(pending)
+
       frameCount += 1
       const restful =
         downgraded &&
@@ -908,22 +929,54 @@ export function TriScene() {
         mount.style.opacity = '1'
       }
     }
-    /* Compila todos os shaders na carga, em paralelo onde o driver deixa
-       (KHR_parallel_shader_compile). Sem isso cada astro compilava o seu
-       programa no primeiro frame em que aparecia: um tranco de 100 a 300ms
-       no meio do scroll, pior no celular. A coleta dos materiais é síncrona
-       e olha só o que está visível, daí ligar tudo por um instante. */
-    {
-      const hidden: THREE.Object3D[] = []
-      scene.traverse((node) => {
-        if (!node.visible) {
-          hidden.push(node)
-          node.visible = true
-        }
-      })
-      renderer.compileAsync(scene, camera).catch(() => undefined)
-      for (const node of hidden) node.visible = false
+    /**
+     * Compilação progressiva dos shaders.
+     *
+     * Cada astro compila o seu programa no primeiro frame em que aparece, e
+     * isso é um tranco no meio do scroll. Compilar tudo de uma vez na carga
+     * troca o tranco por uma travada de vários segundos antes da primeira
+     * pintura — foi o que aconteceu, e é a demora que o cliente via.
+     *
+     * Aqui a fila anda um astro por vez, em `requestIdleCallback` (ou um
+     * frame ocioso), e só depois que o hero já está desenhando. O
+     * `compileAsync` usa KHR_parallel_shader_compile onde existe, então o
+     * driver trabalha em outra thread e o que sobra para o thread principal
+     * é a ligação final de um programa só.
+     *
+     * A ordem é a da narrativa: quem aparece antes compila antes.
+     */
+    const warmQueue: THREE.Object3D[] = [
+      cruiser.object,
+      ...worlds.map((world) => world.planet.object),
+      trail.object,
+      cruiseTrail.object,
+      star.object,
+      explosion.object,
+      blackHole.object,
+      nova.object,
+      meteors.object,
+    ]
+    const idle: (callback: () => void) => void =
+      'requestIdleCallback' in window
+        ? (callback) => window.requestIdleCallback(callback, { timeout: 900 })
+        : (callback) => window.setTimeout(callback, 60)
+    let warming = false
+    const warmNext = () => {
+      if (disposed || warming) return
+      const next = warmQueue.shift()
+      if (!next) return
+      warming = true
+      renderer
+        .compileAsync(next, camera, scene)
+        .catch(() => undefined)
+        .finally(() => {
+          warming = false
+          if (!disposed) idle(warmNext)
+        })
     }
+    /* Depois do primeiro frame: o hero aparece primeiro, o resto aquece
+       enquanto o visitante lê a primeira dobra. */
+    window.setTimeout(() => idle(warmNext), 400)
     frame = requestAnimationFrame(tick)
 
     /* Sem sentido queimar GPU com a aba escondida. */
@@ -938,6 +991,7 @@ export function TriScene() {
     document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
+      disposed = true
       cancelAnimationFrame(frame)
       pageObserver.disconnect()
       document.removeEventListener('visibilitychange', onVisibility)
@@ -965,7 +1019,7 @@ export function TriScene() {
       blackHole.dispose()
       nova.dispose()
       document.documentElement.style.removeProperty('--nova')
-      environment.dispose()
+      environmentTarget.dispose()
       postfx?.dispose()
       glareTexture.dispose()
       glareMaterial.dispose()

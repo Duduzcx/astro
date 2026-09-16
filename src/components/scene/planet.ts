@@ -41,6 +41,15 @@ const KIND_ATMOSPHERE: Record<PlanetKind, string> = {
 const KIND_CLOUDS: Record<PlanetKind, boolean> = { target: true, earth: true, gas: false, rock: false, ice: false }
 /** Névoa da atmosfera sobre a superfície, perto da borda. */
 const KIND_HAZE: Record<PlanetKind, number> = { target: 0.35, earth: 0.42, gas: 0.22, rock: 0.1, ice: 0.2 }
+/**
+ * Relevo tirado da própria fotografia: num mundo rochoso o claro e o escuro
+ * do mapa são, em boa parte, altura (cume claro, vale escuro, borda de
+ * cratera acesa de um lado). Um Sobel na luminância vira gradiente, o
+ * gradiente vira normal, e a luz da cena passa a bater nas montanhas em vez
+ * de num adesivo. Zero no gigante gasoso (nuvem não tem relevo) e na Terra,
+ * que tem mapa normal de verdade.
+ */
+const KIND_PHOTO_RELIEF: Record<PlanetKind, number> = { target: 0, earth: 0, gas: 0, rock: 1, ice: 0.7 }
 
 /* Raio casado com a casca do corpo dos triângulos (0,6 a 0,66). */
 const RADIUS = 0.62
@@ -103,6 +112,8 @@ const SURFACE_FRAGMENT = /* glsl */ `
   uniform float uHasNight;
   uniform sampler2D uNormal;
   uniform float uHasNormal;
+  uniform vec2 uMapTexel;
+  uniform float uPhotoRelief;
   uniform sampler2D uSpecular;
   uniform float uHasSpecular;
   uniform sampler2D uClouds;
@@ -240,6 +251,28 @@ const SURFACE_FRAGMENT = /* glsl */ `
 
     vec3 geomN = normalize(vNormalV);
     vec3 n = perturb(vViewPos, geomN, height, relief * uDetail);
+    if (uPhotoRelief > 0.0 && uHasMap > 0.5) {
+      /* Sobel na luminância do mapa, em passos de dois texels: menor que
+         isso pega o ruído da compressão, maior borra a cratera. O eixo x
+         corre com a longitude, o y com a latitude — o mesmo quadro
+         tangente do mapa normal. */
+      vec2 e = uMapTexel * 2.0;
+      float l01 = dot(texture2D(uMap, vUv + vec2(-e.x, 0.0)).rgb, vec3(0.299, 0.587, 0.114));
+      float l21 = dot(texture2D(uMap, vUv + vec2(e.x, 0.0)).rgb, vec3(0.299, 0.587, 0.114));
+      float l10 = dot(texture2D(uMap, vUv + vec2(0.0, -e.y)).rgb, vec3(0.299, 0.587, 0.114));
+      float l12 = dot(texture2D(uMap, vUv + vec2(0.0, e.y)).rgb, vec3(0.299, 0.587, 0.114));
+      vec2 grad = vec2(l21 - l01, l12 - l10);
+      /* Perto dos polos o mapa equirretangular espreme a longitude: sem
+         isso o relevo vira um redemoinho nas calotas. */
+      float squeeze = max(sqrt(max(1.0 - vObj.y * vObj.y / ${(RADIUS * RADIUS).toFixed(4)}, 0.0)), 0.25);
+      grad.x *= squeeze;
+      vec3 t = normalize(vTangentV);
+      vec3 b = normalize(vBitangentV);
+      n = normalize(geomN - (t * grad.x + b * grad.y) * uPhotoRelief * 26.0);
+      /* Oclusão de vale: onde o gradiente é forte, a luz indireta não
+         chega tanto. É o que dá fundo às crateras. */
+      albedo *= 1.0 - min(length(grad) * uPhotoRelief * 2.2, 0.45);
+    }
     if (uHasNormal > 0.5) {
       /* Relevo fotografado: o mapa normal, em espaço tangente, com o verde
          apontando para o sul (convenção DirectX), daí o sinal em y. */
@@ -263,7 +296,11 @@ const SURFACE_FRAGMENT = /* glsl */ `
     color += spec;
 
     /* Escurecimento nas bordas: uma esfera de verdade não é chapada. */
-    float limb = mix(0.45, 1.0, pow(max(dot(geomN, v), 0.0), 0.55));
+    /* Escurecimento nas bordas por tipo: forte no rochoso (poeira seca
+       some no ângulo rasante), fraco no gigante, onde a atmosfera espessa
+       espalha luz de volta e a borda continua legível. */
+    float limbFloor = (uKind > 1.5 && uKind < 2.5) ? 0.68 : 0.45;
+    float limb = mix(limbFloor, 1.0, pow(max(dot(geomN, v), 0.0), 0.55));
     color *= limb;
 
     if (uHasClouds > 0.5) {
@@ -456,7 +493,7 @@ const RING_FRAGMENT = /* glsl */ `
  * Uma textura em degraus: a leve chega primeiro e a pesada substitui quando
  * carrega. Uma string só é um degrau só.
  */
-export type MapTiers = string | { low: string; high: string; ultra?: string }
+export type MapTiers = string | { low: string; high: string }
 
 export type PlanetMaps = {
   /** Mapa de cor equirretangular. */
@@ -497,21 +534,6 @@ function loadMap(tiers: MapTiers, onLoad: (texture: THREE.Texture) => void): THR
         textureLoader.load(tiers.high, (high) => {
           onLoad(prepare(high))
           low.dispose()
-          /* Um terceiro degrau, opcional e pesado (8k): só quando o
-             anterior já está na tela. */
-          if (tiers.ultra) {
-            const ultra = tiers.ultra
-            /* Só depois de a cena assentar: os 8k competiam pela banda com
-               os degraus leves e atrasavam a primeira aparição dos astros. */
-            window.setTimeout(() => {
-              loaded.push(
-                textureLoader.load(ultra, (texture) => {
-                  onLoad(prepare(texture))
-                  high.dispose()
-                }),
-              )
-            }, 6000)
-          }
         }),
       )
     }),
@@ -525,6 +547,7 @@ export function createPlanet({
   spin = 0.04,
   ring = false,
   detail = 1,
+  relief = 1,
   maps,
   tint = '#ffffff',
   warm,
@@ -535,8 +558,10 @@ export function createPlanet({
   spin?: number
   /** Anel inclinado, para o gigante gasoso. */
   ring?: boolean
-  /** Força do relevo; 0 desliga. */
+  /** Força do relevo por derivadas de tela (procedural); 0 desliga. */
   detail?: number
+  /** Força do relevo tirado da fotografia; 0 desliga. */
+  relief?: number
   /** Texturas fotográficas; enquanto carregam, vale o procedural. */
   maps?: PlanetMaps
   /** Multiplica a cor do mapa (a lua vira gelo com um azul leve). */
@@ -584,6 +609,8 @@ export function createPlanet({
       uHasNight: { value: 0 },
       uNormal: { value: null },
       uHasNormal: { value: 0 },
+      uMapTexel: { value: new THREE.Vector2(1 / 2048, 1 / 1024) },
+      uPhotoRelief: { value: KIND_PHOTO_RELIEF[kind] * relief },
       uSpecular: { value: null },
       uHasSpecular: { value: 0 },
       uClouds: { value: null },
@@ -616,6 +643,12 @@ export function createPlanet({
       ...load(maps.map, (texture) => {
         surfaceMaterial.uniforms.uMap.value = texture
         surfaceMaterial.uniforms.uHasMap.value = 1
+        /* O passo do Sobel é em texels, e o degrau que chega muda o
+           tamanho deles: 1k, 2k, 4k ou 8k. */
+        const image = texture.image as { width?: number; height?: number } | undefined
+        if (image?.width && image?.height) {
+          surfaceMaterial.uniforms.uMapTexel.value.set(1 / image.width, 1 / image.height)
+        }
       }),
     )
   }

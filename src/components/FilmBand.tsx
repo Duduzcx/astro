@@ -27,8 +27,7 @@ export function FilmBand() {
         ref={videoRef}
         style={{ y: videoY, scale: videoScale }}
         className="absolute inset-0 hidden h-full w-full object-cover opacity-45 [mask-image:radial-gradient(130%_105%_at_50%_50%,black_55%,transparent_98%)] md:block"
-        src="/media/plexus.mp4"
-        autoPlay
+        data-src="/media/plexus.mp4"
         muted
         loop
         playsInline
