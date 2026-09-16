@@ -151,8 +151,10 @@ export function skyRotation(progress: number, time = 0, target = new THREE.Euler
      estrela de um pixel andava uma fração de pixel por frame e acendia e
      apagava — mil pontos fazendo isso ao mesmo tempo é a tela piscando. O
      que dá vida ao céu parado é a nebulosa deslizando, que é contínua. */
-  void time
-  return target.set(0.2 - progress * 0.3, -0.9 + progress * 1.2, 0)
+  /* Uma deriva mínima no tempo: a mil avos de radiano por segundo o céu
+     nunca está parado, e é lento demais para uma estrela andar meio pixel
+     entre dois quadros — que era o que fazia a tela piscar. */
+  return target.set(0.2 - progress * 0.3, -0.9 + progress * 1.2 + time * 0.001, 0)
 }
 
 export type SpaceOptions = {

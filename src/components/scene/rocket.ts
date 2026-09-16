@@ -830,17 +830,6 @@ export function createRocket({
       const scale = h / Math.max(size.y, 0.0001)
       model.scale.setScalar(scale)
       model.position.set(-center.x * scale, -box.min.y * scale + bottom * h, -center.z * scale)
-      /* Centragem medida, não calculada: o grupo gira em torno do próprio
-         eixo y, e bastava o eixo do modelo não passar pelo centro dele para
-         o foguete descrever um círculo e sair pela borda da tela a cada
-         volta. Aqui a caixa é medida DEPOIS de posicionar e o resto do
-         desvio em x e z é descontado. */
-      model.updateMatrixWorld(true)
-      const placed = new THREE.Box3().setFromObject(model)
-      const placedCenter = new THREE.Vector3()
-      placed.getCenter(placedCenter)
-      model.position.x -= placedCenter.x
-      model.position.z -= placedCenter.z
       /* O aquecimento (compilar programas e subir geometria) evita um
          tranco quando o foguete entra, mas num aparelho lento ele leva
          mais de dez segundos, e um hero vazio esse tempo todo é pior

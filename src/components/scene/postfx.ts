@@ -136,9 +136,12 @@ export function createPostFx(
   const divisor = light ? 8 : 4
   const bloom = new UnrealBloomPass(
     new THREE.Vector2(width / divisor, height / divisor),
-    light ? 0.42 : 0.36,
-    light ? 0.55 : 0.62,
-    0.92,
+    /* No celular a tela é pequena e o brilho ocupa proporcionalmente mais
+       espaço: força menor e limiar mais alto, senão o clarão do hero lava o
+       título e some com o texto. */
+    light ? 0.3 : 0.36,
+    light ? 0.5 : 0.62,
+    light ? 0.96 : 0.92,
   )
   composer.addPass(bloom)
   const film = light ? null : new ShaderPass(FILM)

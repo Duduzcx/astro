@@ -669,7 +669,9 @@ export function TriScene() {
 
       /* Constante de tempo maior no celular: o scroll por toque chega em
          saltos, e amortecer mais tira o solavanco de cada salto. */
-      const damping = reducedMotion ? 1 : 1 - Math.exp(-delta * (narrow ? 3.2 : 4.5))
+      /* No celular o scroll por toque chega em saltos grandes; amortecer
+         mais transforma cada salto em movimento contínuo. */
+      const damping = reducedMotion ? 1 : 1 - Math.exp(-delta * (narrow ? 2.4 : 4.5))
       current.mix += (target.mix - current.mix) * damping
       current.x += (target.x - current.x) * damping
       current.y += (target.y - current.y) * damping
