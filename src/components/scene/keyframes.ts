@@ -124,16 +124,19 @@ export function mobileKeyframes(
     /* Serviços e Integrações são o desfile de mundos; o alvo chega no
        Manifesto, vindo de baixo... */
     [0.215, 0.05, x, -0.8, scale * 1.1, 0.0, 0],
-    [0.24, 0.05, x, 0.0, scale * 0.95, 0.85, 0],
+    /* Teto de escala do celular: medido, o brilho do Sol cobria 94% da
+       largura da tela e engolia o título. A 0,62 ele ocupa uns dois
+       terços, que é o que deixa o astro grande sem virar fundo. */
+    [0.24, 0.05, x, 0.0, scale * 0.62, 0.85, 0],
     /* ...e fica inteiro até a Missão (0.268 a 0.307 nesta largura). */
-    [0.268, 0.05, x, 0.0, scale * 0.95, 0.85, 0],
-    [0.278, 0.05, x, 0.0, scale * 0.95, 0.85, 0],
+    [0.268, 0.05, x, 0.0, scale * 0.62, 0.85, 0],
+    [0.278, 0.05, x, 0.0, scale * 0.62, 0.85, 0],
     /* A supernova na Missão, à vista; o remanescente apaga com a
        opacidade antes da seção acabar. */
     /* Mais larga que antes: a explosão é a cena mais complexa da página
        e num trecho curto ela passava em dois ou três frames de scroll, o
        que lê como corte, não como explosão. */
-    [0.312, 0.95, 0.0, 0.08, scale * 1.15, 0.7, 0],
+    [0.312, 0.95, 0.0, 0.08, scale * 0.8, 0.7, 0],
     [0.33, 0.95, 0.0, 0.0, scale * 1.25, FIELD_OPACITY, 0],
     /* Troca de astro com o campo quase invisível, ninguém vê a costura. */
     [0.334, 0.95, 0.0, 0.0, scale * 1.25, FIELD_OPACITY, 1],
