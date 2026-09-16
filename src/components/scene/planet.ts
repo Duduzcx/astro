@@ -427,8 +427,30 @@ const CLOUDS_FRAGMENT = /* glsl */ `
     vec3 n = normalize(vNormalV);
     float day = smoothstep(-0.2, 0.35, dot(n, uLight));
     float limb = mix(0.6, 1.0, pow(max(dot(n, normalize(vView)), 0.0), 0.5));
+#ifdef PHOTO_ONLY
+    /* Volume nas nuvens. Uma casca de opacidade só lê como decalque; o que
+       faz nuvem parecer nuvem é o topo receber sol e a base ficar cinza.
+       O gradiente da própria cobertura (diferença entre dois texels no
+       sentido da luz) diz qual lado da massa está virado para o sol: onde
+       ela cresce na direção da luz, é encosta iluminada. */
+    vec2 e = vec2(0.0018, 0.0009);
+    float up = smoothstep(0.08, 0.7, texture2D(uMap, vUv + e * uLight.xy * 2.0).r);
+    float slope = clamp((up - cover) * 6.0, -1.0, 1.0);
+    vec3 lit = vec3(1.0, 0.99, 0.97);
+    vec3 shade = vec3(0.52, 0.58, 0.72);
+    vec3 body = mix(shade, lit, clamp(0.55 + slope * 0.45, 0.0, 1.0));
+    /* Massa densa fica mais branca; véu fino deixa passar o azul do mar. */
+    body = mix(body, lit, smoothstep(0.35, 0.95, cover) * 0.6);
+    /* Terminador quente: no pôr do sol visto de cima a nuvem fica dourada. */
+    float dusk = smoothstep(0.42, 0.0, abs(dot(n, uLight))) * day;
+    body = mix(body, vec3(1.0, 0.76, 0.5), dusk * 0.5);
+    vec3 color = body * (0.1 + 0.9 * day) * limb;
+    /* Véu fino some, massa fecha: mais contraste entre nuvem e céu limpo. */
+    float alpha = smoothstep(0.02, 0.55, cover) * 0.95 * uOpacity * (1.0 - uBreak);
+#else
     vec3 color = vec3(1.0, 0.99, 0.98) * (0.12 + 0.88 * day) * limb;
     float alpha = cover * 0.9 * uOpacity * (1.0 - uBreak);
+#endif
     gl_FragColor = vec4(color, alpha);
   }
 `
