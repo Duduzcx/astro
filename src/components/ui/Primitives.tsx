@@ -103,7 +103,11 @@ export function DecodeText({ text }: { text: string }) {
 export function GiantWord({ word, className = '' }: { word: string; className?: string }) {
   const ref = useRef<HTMLDivElement>(null)
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] })
-  const y = useTransform(scrollYProgress, [0, 1], ['14%', '-14%'])
+  /* Curso menor no celular: a mesma fração de 14% percorre proporcionalmente
+     muito mais de uma tela estreita, e cada quadro repinta o contorno de um
+     glifo de 19rem. */
+  const span = wide() ? 14 : 6
+  const y = useTransform(scrollYProgress, [0, 1], [`${span}%`, `${-span}%`])
 
   return (
     <div
@@ -111,8 +115,14 @@ export function GiantWord({ word, className = '' }: { word: string; className?: 
       aria-hidden="true"
       className={`pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden ${className}`}
     >
+      {/* `will-change` aqui e não nos reveals: transform movido por JS não
+          promove camada sozinho, e este é um texto enorme com contorno, então
+          sem a promoção o navegador repinta o glifo inteiro a cada quadro.
+          São cinco na página, cada um numa seção diferente — espalhar isso
+          pelos reveals criaria dezenas de camadas e estrangularia a memória
+          de vídeo do aparelho, que é o efeito contrário. */}
       <motion.span
-        style={{ y }}
+        style={{ y, willChange: 'transform' }}
         className="giant-outline text-[clamp(6rem,21vw,19rem)] leading-none whitespace-nowrap"
       >
         {word}

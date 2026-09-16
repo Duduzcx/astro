@@ -63,3 +63,10 @@ Limite de 480px: a tabela calibrada a 390px erra 309px num iPhone 15 Pro Max
 A média cai 1,5ms, que é ruído. O número que conta é o outro: nove pontos a
 menos de quadros acima de 24ms. Faz sentido para um repaint que acontecia a
 cada quadro e não some quando a frase sai da tela.
+
+## Passo 3 — GiantWord promovido e com curso menor
+
+| Versão | Média | Longos |
+| ------ | ----- | ------ |
+| Depois do passo 2 | 39,5ms | 70,1% |
+| `will-change` e curso de 6% no celular | 37,5ms | 65,7% |
