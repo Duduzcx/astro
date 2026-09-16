@@ -22,6 +22,13 @@ const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 /**
+ * Tela larga. Animar `filter` obriga o navegador a repintar o bloco inteiro
+ * a cada frame; num celular isso disputa o thread principal com a cena 3D,
+ * e o desfoque de entrada vale menos que o brilho dos astros.
+ */
+const wide = () => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
+
+/**
  * A curva de todo reveal do site: expo-out. Sai rápido e gasta a segunda
  * metade do tempo assentando, então nada "chega" — o elemento já está quase
  * no lugar quando o olho o encontra, e o resto é só ganhar nitidez.
@@ -180,8 +187,8 @@ export function BlurReveal({
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, y: 26, filter: 'blur(10px)' }}
-      whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+      initial={{ opacity: 0, y: 26, filter: wide() ? 'blur(10px)' : 'none' }}
+      whileInView={{ opacity: 1, y: 0, filter: wide() ? 'blur(0px)' : 'none' }}
       viewport={{ once: true, margin: '-90px' }}
       transition={{ duration: 1.0, delay, ease: REVEAL_EASE }}
     >
@@ -280,7 +287,7 @@ export function Reveal({
   const [entered, setEntered] = useState(false)
   /* Chega desfocado e assenta nítido, só em tela larga: animar `filter`
      repinta o bloco a cada frame, e no celular isso pesa. */
-  const soft = typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
+  const soft = wide()
 
   return (
     <motion.div
@@ -426,9 +433,9 @@ export function RotatingWord({ words, className = '' }: { words: readonly string
       <AnimatePresence mode="popLayout" initial={false}>
         <motion.span
           key={words[index]}
-          initial={{ y: '85%', opacity: 0, filter: 'blur(6px)' }}
-          animate={{ y: '0%', opacity: 1, filter: 'blur(0px)' }}
-          exit={{ y: '-85%', opacity: 0, filter: 'blur(6px)' }}
+          initial={{ y: '85%', opacity: 0, filter: wide() ? 'blur(6px)' : 'none' }}
+          animate={{ y: '0%', opacity: 1, filter: wide() ? 'blur(0px)' : 'none' }}
+          exit={{ y: '-85%', opacity: 0, filter: wide() ? 'blur(6px)' : 'none' }}
           transition={{ duration: 0.55, ease: REVEAL_EASE }}
           className="text-spectrum-animated inline-block font-[480]"
         >

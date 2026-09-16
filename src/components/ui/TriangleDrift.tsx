@@ -36,6 +36,12 @@ export function TriangleDrift({ className = '' }: { className?: string }) {
 
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const mobile = window.innerWidth < 768
+    /* No celular a costura entre seções não desenha. Cada instância é um
+       canvas 2D com o seu próprio laço de animação, e medindo um iPhone com
+       processador de aparelho mediano o tempo do thread principal estava
+       quase todo no DOM animado, não na cena 3D — esse tempo vale mais
+       gasto em brilho, relevo e textura nos astros. */
+    if (window.innerWidth < 1024) return
     const dpr = Math.min(window.devicePixelRatio || 1, mobile ? 1.5 : 2)
 
     let width = 0

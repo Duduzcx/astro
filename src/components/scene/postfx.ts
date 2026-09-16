@@ -114,6 +114,11 @@ export function createPostFx(
   camera: THREE.Camera,
   width: number,
   height: number,
+  /* No celular entra só o bloom: é ele que faz o Sol, o motor e o disco de
+     acreção brilharem de verdade. O passe de filme (vinheta, grão, desfoque
+     de borda, aberração) é uma leitura de textura por pixel e mais oito no
+     anel — luxo de desktop. */
+  light = false,
 ) {
   const target = new THREE.WebGLRenderTarget(width, height, { type: THREE.HalfFloatType })
   const composer = new EffectComposer(renderer, target)
@@ -125,11 +130,22 @@ export function createPostFx(
      engrossar o branco em volta da fonte. */
   /* Um quarto da resolução: o halo é macio por natureza, e a pirâmide de
      cinco níveis a meia resolução era o passe mais caro da lente. */
-  const bloom = new UnrealBloomPass(new THREE.Vector2(width / 4, height / 4), 0.36, 0.62, 0.92)
+  /* No celular o bloom trabalha num oitavo da resolução: o halo é macio
+     por natureza e ninguém vê a diferença, mas são cinco desfoques numa
+     pirâmide, e cada nível custa preenchimento. */
+  const divisor = light ? 8 : 4
+  const bloom = new UnrealBloomPass(
+    new THREE.Vector2(width / divisor, height / divisor),
+    light ? 0.42 : 0.36,
+    light ? 0.55 : 0.62,
+    0.92,
+  )
   composer.addPass(bloom)
-  const film = new ShaderPass(FILM)
-  film.uniforms.uResolution.value.set(width, height)
-  composer.addPass(film)
+  const film = light ? null : new ShaderPass(FILM)
+  if (film) {
+    film.uniforms.uResolution.value.set(width, height)
+    composer.addPass(film)
+  }
   return {
     /**
      * `edgeBlur` é o raio do anel nos cantos, em fração da tela. `rush`
@@ -137,17 +153,19 @@ export function createPostFx(
      * até 2px de franja nos cantos.
      */
     render(time: number, edgeBlur = 0, rush = 0) {
-      const k = Math.min(rush * 1.6, 1)
-      film.uniforms.uTime.value = time
-      film.uniforms.uEdgeBlur.value = edgeBlur
-      film.uniforms.uZoom.value = 1 + 0.03 * k
-      film.uniforms.uAberration.value = 2.0 * k
+      if (film) {
+        const k = Math.min(rush * 1.6, 1)
+        film.uniforms.uTime.value = time
+        film.uniforms.uEdgeBlur.value = edgeBlur
+        film.uniforms.uZoom.value = 1 + 0.03 * k
+        film.uniforms.uAberration.value = 2.0 * k
+      }
       composer.render()
     },
     setSize(w: number, h: number) {
       composer.setSize(w, h)
-      bloom.resolution.set(w / 4, h / 4)
-      film.uniforms.uResolution.value.set(w, h)
+      bloom.resolution.set(w / divisor, h / divisor)
+      film?.uniforms.uResolution.value.set(w, h)
     },
     setStrength(value: number) {
       bloom.strength = value

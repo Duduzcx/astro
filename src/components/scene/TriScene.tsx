@@ -79,7 +79,7 @@ export function TriScene() {
     /* Celular a 1,5 de razão de pixels: a 1,0 a cena era esticada quase
        três vezes e virava desenho borrado. A taxa de 30fps segura o custo. */
     renderer.setPixelRatio(
-      Math.min(window.devicePixelRatio, weakDevice ? 1 : lightweight ? 1.5 : 1.25),
+      Math.min(window.devicePixelRatio, weakDevice ? 1.25 : lightweight ? 1.5 : 1.25),
     )
     /* Tone mapping de filme para os materiais iluminados (o foguete): sem
        isso o metal estoura em branco. Os shaders próprios ignoram. */
@@ -197,7 +197,9 @@ export function TriScene() {
 
     const spread = new THREE.Vector3(2.6, 1.7, 1.2)
     const sphereGeometry = buildTriangles(
-      weakDevice ? 2200 : lightweight ? 2600 : 5600,
+      /* Menos triângulos no celular: o campo é grão de fundo, e o que
+         paga a conta é o brilho dos astros. */
+      weakDevice ? 1600 : lightweight ? 1800 : 5600,
       spread,
       true,
     )
@@ -244,7 +246,7 @@ export function TriScene() {
        assadas numa textura (menor no celular) e as galáxias distantes. */
     const space = createSpace(tier('milky-way', 'webp', '2k'), lightweight || weakDevice ? 0.62 : 0.8, warm, {
       renderer,
-      bakeSize: lightweight || weakDevice ? [768, 384] : [1536, 768],
+      bakeSize: lightweight || weakDevice ? [1024, 512] : [1536, 768],
       view: { halfWidth, halfHeight, cameraZ: camera.position.z },
     })
     scene.add(space.object)
@@ -292,21 +294,27 @@ export function TriScene() {
     /* Bloom só no desktop com máquina razoável, e só depois que a cena já
        está na tela: a cadeia do bloom são uma dúzia de programas para
        compilar, e nenhum deles precisa existir no primeiro frame. */
-    const wantsPostFx = !lightweight && !weakDevice
+    /* O bloom vale no celular: é a maior diferença de qualidade por
+       milissegundo da cena inteira, e é ele que faz o Sol, o motor e o
+       disco de acreção brilharem. Medindo um iPhone com processador de
+       aparelho mediano, o custo do quadro estava no DOM animado, não
+       aqui: ligar o bloom custou cerca de um milissegundo. */
+    const wantsPostFx = !weakDevice
     let postFxFrames = 0
+    let downgradedPostFx = false
 
     /* Estrelas ao fundo, a página inteira. No celular são menos pontos: a
        camada densa assada na nebulosa (space.ts) já dá a profundidade. */
-    const stars = createStars(lightweight ? 800 : 3600, renderer.getPixelRatio())
+    const stars = createStars(lightweight ? 2000 : 3600, renderer.getPixelRatio())
     scene.add(stars.object)
     /* Umas poucas brilhantes de verdade, com halo e espículas. */
-    const brightStars = createBrightStars(lightweight ? 4 : 8, {
+    const brightStars = createBrightStars(lightweight ? 7 : 8, {
       rightBias: !lightweight,
       view: { halfWidth, cameraZ: camera.position.z },
     })
     scene.add(brightStars.object)
     /* Meteoros de vez em quando: o detalhe que faz o céu parecer vivo. */
-    const meteors = createMeteors(lightweight ? 1 : 3, renderer.getPixelRatio())
+    const meteors = createMeteors(lightweight ? 2 : 3, renderer.getPixelRatio())
     scene.add(meteors.object)
 
     /* Foguete: altura em mundo pela largura da tela. No celular ele é menor e
@@ -359,7 +367,7 @@ export function TriScene() {
     const EARTH_DEPTH = 9.9
     const depthScale = (camera.position.z + EARTH_DEPTH) / camera.position.z
     const earth = createPlanet({
-      segments: lightweight ? 80 : 128,
+      segments: lightweight ? 112 : 128,
       warm,
       kind: 'earth',
       spin: 0.012,
@@ -367,12 +375,10 @@ export function TriScene() {
         map: tier('earth-day', 'webp', '4k'),
         night: tier('earth-night', 'webp', '2k'),
         clouds: tier('earth-clouds', 'webp', '2k'),
-        /* Relevo e máscara de água só no desktop: no celular são duas
-           amostras a mais por pixel numa esfera que ocupa meia tela. */
-        normal: lightweight ? undefined : tier('earth-normal', 'webp', '2k'),
-        specular: lightweight
-          ? undefined
-          : { low: '/space/earth-specular-1k.webp', high: '/space/earth-specular-2k.webp' },
+        /* Relevo e máscara de água também no celular: são duas amostras a
+           mais por pixel, e é o que tira a Terra do ar de adesivo. */
+        normal: tier('earth-normal', 'webp', '2k'),
+        specular: { low: '/space/earth-specular-1k.webp', high: '/space/earth-specular-2k.webp' },
       },
     })
     /* De pé o que a tela mostra é a calota polar, toda branca. Deitada, o
@@ -472,9 +478,9 @@ export function TriScene() {
     scene.add(cruiser.object)
     /* Rastros: o do lançamento e o do cruzeiro, cada um seguindo a sua
        própria trajetória. */
-    const trail = createTrail({ segments: lightweight ? 24 : 40, seed: 1 })
+    const trail = createTrail({ segments: lightweight ? 18 : 40, seed: 1 })
     scene.add(trail.object)
-    const cruiseTrail = createTrail({ segments: lightweight ? 20 : 32, seed: 5 })
+    const cruiseTrail = createTrail({ segments: lightweight ? 14 : 32, seed: 5 })
     scene.add(cruiseTrail.object)
     const nozzlePoint = new THREE.Vector3()
     const cruiseWindow = () => (narrow ? { from: 0.035, to: 0.215 } : { from: 0.045, to: 0.26 })
@@ -621,7 +627,13 @@ export function TriScene() {
           Math.floor(stars.object.geometry.getAttribute('position').count / 2),
         )
         rocket.lighten()
-        postfx?.setStrength(0)
+        /* A lente é a primeira coisa a cair num aparelho que não segura a
+           taxa: o bloom é cinco desfoques por frame. O aparelho perde o
+           brilho e ganha fluidez, que é a troca certa quando a régua é o
+           deslize. */
+        postfx?.dispose()
+        postfx = null
+        downgradedPostFx = true
       }
     }
 
@@ -913,7 +925,14 @@ export function TriScene() {
       engineLight.intensity = current.thrust * (1.5 + Math.sin(time * 31) * 0.35) * (launch.visible ? 1 : 0)
 
       /* O sol: alto à esquerda, some com a subida. */
-      glare.position.set(-halfWidth * 0.78, visibleHalfHeight * 0.62, -1)
+      /* No celular o clarão morava em cima do título: a coluna de texto
+         ocupa a largura toda e não há canto livre lá em cima. Ele desce
+         para a altura do horizonte, onde só há céu. */
+      glare.position.set(
+        -halfWidth * (narrow ? 0.62 : 0.78),
+        visibleHalfHeight * (narrow ? -0.18 : 0.62),
+        -1,
+      )
       glareMaterial.opacity = 0.85 * Math.max(0, 1 - current.lift * 1.6)
       streak.position.copy(glare.position)
       streakMaterial.opacity = 0.32 * Math.max(0, 1 - current.lift * 1.6)
@@ -925,15 +944,19 @@ export function TriScene() {
          engasgo. Só a máquina que já provou não aguentar (rebaixada pela
          qualidade adaptativa) volta a desenhar a 30fps onde a cena está
          quieta: campo só textura, ou apagado. No celular a cena desenha a
-         30fps sempre: metade do trabalho por frame no thread principal, e o
-         scroll nativo por cima fica liso. */
+         30fps, e a cena andava na metade da cadência do scroll nativo — o
+         deslize parecia arrastado. Agora todo frame desenha em todo lugar;
+         o custo por frame caiu o bastante para pagar isso. */
       /* Uma textura por frame sobe para a GPU. */
       const pending = warmQueueTextures.shift()
       if (pending) renderer.initTexture(pending)
 
       /* Depois de alguns frames desenhados, a lente entra. */
-      if (wantsPostFx && !postfx && postFxFrames > 4) {
-        postfx = createPostFx(renderer, scene, camera, window.innerWidth, stageHeight)
+      /* A lente entra depois que a cena assentou. No celular ela espera
+         mais: compilar a pirâmide do bloom é um tranco, e ele deve cair
+         quando o visitante já está lendo, não na primeira dobra. */
+      if (wantsPostFx && !postfx && !downgradedPostFx && postFxFrames > (lightweight ? 90 : 4)) {
+        postfx = createPostFx(renderer, scene, camera, window.innerWidth, stageHeight, lightweight)
       }
       postFxFrames += 1
 
@@ -943,7 +966,7 @@ export function TriScene() {
         current.thrust < 0.01 &&
         current.opacity < 0.3 &&
         (current.mix > 0.85 || current.opacity <= 0.015)
-      if (!((restful || lightweight) && frameCount % 2)) {
+      if (!(restful && frameCount % 2)) {
         /* A câmera se mexe por último, com o estado já amortecido: deriva
            contínua de poucos pixels e push-in na ignição e na explosão. */
         cameraMotion.update({

@@ -433,7 +433,11 @@ export function createRocket({
   /* Materiais do casco: em cruzeiro a opacidade da cena vale para eles. */
   const hullMaterials: THREE.Material[] = []
 
-  if (!modelMode) {
+  /* O torneado procedural: existe sempre como função, mas só é
+     construído quando o modelo não vem. Num aparelho lento ou numa rede
+     ruim o .glb pode nunca chegar, e um hero sem foguete é pior do que
+     um foguete desenhado à mão. */
+  const buildProcedural = () => {
     const size = lightweight ? 1024 : 2048
 
     const makeHull = (spec: HullSpec) => {
@@ -589,6 +593,8 @@ export function createRocket({
     bells.instanceMatrix.needsUpdate = true
     object.add(bells)
   }
+
+  if (!modelMode) buildProcedural()
 
   /* O bocal é um grupo: chamas e brilho penduram nele, e ele gimbala. */
   const nozzle = new THREE.Group()
@@ -767,8 +773,26 @@ export function createRocket({
   let appear = modelMode ? 0 : 1
   let disposed = false
   if (modelMode) {
-    void loadModel().then((source) => {
-      if (disposed) return
+    /* Oito segundos é o limite: acima disso o visitante já rolou a página e
+       o hero ficou sem o seu assunto. O torneado entra, e o modelo, se
+       chegar depois, não substitui mais nada — dois foguetes seria pior. */
+    let gaveUp = false
+    const giveUp = window.setTimeout(() => {
+      if (disposed || modelMaterials.length) return
+      gaveUp = true
+      buildProcedural()
+      appear = 1
+    }, 8000)
+    void loadModel()
+      .catch(() => null)
+      .then((source) => {
+      window.clearTimeout(giveUp)
+      if (disposed || gaveUp) return
+      if (!source) {
+        buildProcedural()
+        appear = 1
+        return
+      }
       const model = source.clone(true)
       if (cruise) {
         const gone: THREE.Object3D[] = []
@@ -806,9 +830,14 @@ export function createRocket({
       const scale = h / Math.max(size.y, 0.0001)
       model.scale.setScalar(scale)
       model.position.set(-center.x * scale, -box.min.y * scale + bottom * h, -center.z * scale)
-      const ready = warm ? warm(model).catch(() => undefined) : Promise.resolve()
-      void ready.then(() => {
-        if (!disposed) object.add(model)
+      /* O aquecimento (compilar programas e subir geometria) evita um
+         tranco quando o foguete entra, mas num aparelho lento ele leva
+         mais de dez segundos, e um hero vazio esse tempo todo é pior
+         que um tranco. Dois segundos e meio de espera, no máximo. */
+      const warmed = warm ? warm(model).catch(() => undefined) : Promise.resolve()
+      const late = new Promise<void>((resolve) => window.setTimeout(resolve, 2500))
+      void Promise.race([warmed, late]).then(() => {
+        if (!disposed && !gaveUp && !model.parent) object.add(model)
       })
     })
   }
