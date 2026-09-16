@@ -270,7 +270,13 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: astro-spectrum 7s linear infinite;
+  /* O gradiente só desliza em tela larga. Animar `background-position` num
+     fundo recortado no texto não é composição: repinta o glifo a cada quadro,
+     para sempre, mesmo com a frase fora da tela — o navegador não desliga
+     isso sozinho. No celular ele estava disputando o quadro com a cena. */
+  @media (min-width: 1024px) {
+    animation: astro-spectrum 7s linear infinite;
+  }
 }
 
 @keyframes astro-spectrum {

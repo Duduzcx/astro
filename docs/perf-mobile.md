@@ -52,3 +52,14 @@ seção ganhava o padding duas vezes e a página nascia 1856px mais alta.
 
 Limite de 480px: a tabela calibrada a 390px erra 309px num iPhone 15 Pro Max
 (tolerável) e 3856px num iPad Mini (não). Acima de 480px a regra não vale.
+
+## Passo 2 — gradiente animado só em tela larga
+
+| Versão | Média | Longos |
+| ------ | ----- | ------ |
+| Depois do passo 1 | 41,0ms | 79,4% |
+| `text-spectrum-animated` travado acima de 1024px | 39,5ms | 70,1% |
+
+A média cai 1,5ms, que é ruído. O número que conta é o outro: nove pontos a
+menos de quadros acima de 24ms. Faz sentido para um repaint que acontecia a
+cada quadro e não some quando a frase sai da tela.
