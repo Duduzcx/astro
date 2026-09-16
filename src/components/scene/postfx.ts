@@ -28,7 +28,7 @@ const FILM = {
     uVignette: { value: 0.3 },
     /* Grão quase invisível: acima disso, sobre fundo escuro, o ruído por
        frame lê como chuvisco de TV, não como filme. */
-    uGrain: { value: 0.009 },
+    uGrain: { value: 0.004 },
     uEdgeBlur: { value: 0.0 },
     uZoom: { value: 1.0 },
     uAberration: { value: 0.0 },

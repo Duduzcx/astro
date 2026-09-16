@@ -36,9 +36,12 @@ const VERTEX = /* glsl */ `
     /* Cintila devagar, cada uma no seu tempo. Só o brilho respira: o
        tamanho do sprite fica fixo, porque uma estrela de 1–2px mudando de
        tamanho a cada frame vira um pisca-pisca de subpixel. */
-    vTwinkle = 0.78 + 0.22 * sin(uTime * (0.35 + aSeed * 0.55) + aSeed * 40.0);
+    vTwinkle = 0.84 + 0.16 * sin(uTime * (0.22 + aSeed * 0.35) + aSeed * 40.0);
     /* As grandes ganham espículas e por isso o sprite é maior. */
-    gl_PointSize = aSize * uPixelRatio * (3.0 / -view.z) * (1.0 + vSpike * 4.0);
+    /* Piso de dois pixels e meio: abaixo disso o sprite cobre quase um
+       pixel só, e qualquer movimento de subpixel faz a estrela piscar. Com
+       uma borda macia de dois pixels ela apenas desliza. */
+    gl_PointSize = max(aSize * uPixelRatio * (3.0 / -view.z) * (1.0 + vSpike * 4.0), 2.5 * uPixelRatio);
     vTint = aTint;
   }
 `
@@ -52,7 +55,7 @@ const FRAGMENT = /* glsl */ `
   void main() {
     vec2 q = gl_PointCoord - 0.5;
     float d = length(q);
-    float alpha = smoothstep(0.5, 0.12, d);
+    float alpha = smoothstep(0.5, 0.05, d) * smoothstep(0.5, 0.42, d) * 4.0;
     if (vSpike > 0.5) {
       /* Cruz de difração: dois traços finos que somem para as pontas. */
       float cross = max(smoothstep(0.02, 0.0, abs(q.x)), smoothstep(0.02, 0.0, abs(q.y))) * smoothstep(0.5, 0.05, d);

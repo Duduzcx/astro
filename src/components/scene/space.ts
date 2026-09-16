@@ -147,7 +147,12 @@ const BAKE_FRAGMENT = /* glsl */ `
 export function skyRotation(progress: number, time = 0, target = new THREE.Euler()) {
   /* 1,2 radianos ao longo da página: o céu passa de verdade enquanto a
      nave viaja, e as galáxias distantes entram e saem de cena. */
-  return target.set(0.2 - progress * 0.3, -0.9 + progress * 1.2 + time * 0.002, 0)
+  /* Sem termo de tempo: o céu gira SÓ com a página. Girando sozinho, cada
+     estrela de um pixel andava uma fração de pixel por frame e acendia e
+     apagava — mil pontos fazendo isso ao mesmo tempo é a tela piscando. O
+     que dá vida ao céu parado é a nebulosa deslizando, que é contínua. */
+  void time
+  return target.set(0.2 - progress * 0.3, -0.9 + progress * 1.2, 0)
 }
 
 export type SpaceOptions = {

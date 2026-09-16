@@ -59,8 +59,11 @@ export function createCameraMotion(camera: THREE.PerspectiveCamera) {
 
       /* Deriva: dois senos por eixo em frequências que não batem, para o
          caminho não se repetir. Amplitude total de ~4px no plano do foguete. */
-      camera.position.x = (Math.sin(time * 0.21) * 2.6 + Math.sin(time * 0.53) * 1.1) * pixel
-      camera.position.y = (Math.cos(time * 0.17) * 2.2 + Math.sin(time * 0.41) * 0.9) * pixel
+      /* Lento e pequeno: a deriva é para dar vida, não para ser notada. Num
+         quadro com grão e desfoque de borda, translação rápida vira
+         cintilação de subpixel e lê como tela piscando. */
+      camera.position.x = (Math.sin(time * 0.11) * 1.6 + Math.sin(time * 0.27) * 0.6) * pixel
+      camera.position.y = (Math.cos(time * 0.09) * 1.3 + Math.sin(time * 0.21) * 0.5) * pixel
 
       /* Ignição: fecha com o empuxo e reabre conforme o foguete sobe. */
       const launchPush = thrust * (1 - clamp01(lift * 1.4))

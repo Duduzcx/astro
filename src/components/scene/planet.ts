@@ -166,6 +166,12 @@ const SURFACE_FRAGMENT = /* glsl */ `
           sin(vUv.y * 7.0 + vUv.x * 2.0 - uTime * 0.09) * 0.2;
         photo *= 1.0 + 0.05 * shimmer;
       }
+      /* Curva de contraste suave: a fotografia crua da NASA é plana de
+         propósito (é dado, não imagem), e sobre um fundo escuro isso lê
+         como lavado. Um S leve nos meios-tons devolve o oceano fundo e as
+         nuvens brancas sem estourar nem escurecer os polos. */
+      photo = clamp(photo * 1.06, 0.0, 1.0);
+      photo = photo * photo * (3.0 - 2.0 * photo) * 0.55 + photo * 0.45;
       albedo = photo;
       relief = 0.0;
       if (uHasSpecular > 0.5) {
@@ -309,7 +315,9 @@ const SURFACE_FRAGMENT = /* glsl */ `
     /* Especular só na água e no gelo: um clarão apertado do sol e um
        lustro largo e fraco em volta. */
     float rv = max(dot(reflect(-uLight, n), v), 0.0);
-    float spec = (pow(rv, 60.0) * 0.5 + pow(rv, 8.0) * 0.07) * water * dayGeom;
+    /* Brilho do sol na água: um ponto apertado e muito claro, como o glint
+       que aparece em foto de órbita, mais um lustro largo em volta. */
+    float spec = (pow(rv, 190.0) * 1.5 + pow(rv, 42.0) * 0.35 + pow(rv, 7.0) * 0.06) * water * dayGeom;
     color += spec;
 
     /* Escurecimento nas bordas: uma esfera de verdade não é chapada. */
@@ -457,6 +465,10 @@ const ATMOSPHERE_FRAGMENT = /* glsl */ `
     float t = clamp(1.0 - abs(dot(n, v)) / cosLimb, 0.0, 1.0);
     float rim = (pow(1.0 - t, 2.4) * 0.9 + smoothstep(0.14, 0.0, t) * 0.5) * uRim;
     float day = 0.15 + 0.85 * smoothstep(-0.4, 0.45, dot(n, uLight));
+    /* Espalhamento para a frente: onde a visada quase encontra o sol, o ar
+       acende muito mais. É o que faz o arco azul do lado iluminado ser bem
+       mais vivo que o do lado da sombra. */
+    day *= 1.0 + 1.1 * pow(max(dot(normalize(vView), uLight), 0.0), 3.0);
     float heat = sin(clamp(uBreak, 0.0, 1.0) * 3.14159);
     vec3 color = mix(uColor, vec3(1.0, 0.75, 0.45), heat);
     float alpha = rim * day * uOpacity * (1.0 - uBreak) + pow(1.0 - t, 1.5) * heat * heat * 2.0 * uOpacity * uRim;

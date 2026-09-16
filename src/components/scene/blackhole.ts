@@ -134,7 +134,9 @@ const DISC_FRAGMENT = /* glsl */ `
        exponencial mantém as estrias no corpo do disco e deixa só a borda
        quente e o lado que vem passarem do limiar do bloom. */
     float energy = radial * bands * grain * beam * edge * lip * hotLip * vFade;
-    float alpha = 1.15 * (1.0 - exp(-energy * 0.9));
+    /* Mais corpo: o disco precisa ler como luz contínua, não como uma
+       nuvem de faíscas soltas — os triângulos do campo já dão o grão. */
+    float alpha = 1.55 * (1.0 - exp(-energy * 1.35));
     gl_FragColor = vec4(color, alpha * uOpacity * uGain);
   }
 `

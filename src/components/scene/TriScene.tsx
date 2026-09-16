@@ -150,7 +150,13 @@ export function TriScene() {
     const rimLight = new THREE.DirectionalLight(0x6fa8ff, 0.7)
     rimLight.position.set(2.5, 0.5, -2)
     scene.add(rimLight)
-    scene.add(new THREE.HemisphereLight(0x8db4f5, 0x1a2340, 0.35))
+    scene.add(new THREE.HemisphereLight(0x8db4f5, 0x1a2340, 0.5))
+    /* Luz de recorte só para o veículo: no hero ele é o assunto, e contra
+       uma nebulosa clara o casco de aço sumia. Vem de frente e um pouco de
+       cima, na direção da câmera, para acender a face que olha para nós. */
+    const key = new THREE.DirectionalLight(0xfff6e8, 1.1)
+    key.position.set(0.6, 1.2, 4)
+    scene.add(key)
     /* A luz do motor: laranja, presa ao bocal, acende com o empuxo e bate
        na saia e nas aletas. */
     const engineLight = new THREE.PointLight(0xff9a3c, 0, 3.5, 1.6)
@@ -308,7 +314,7 @@ export function TriScene() {
        botões ele confundia a leitura. */
     /* Esbelto (o modelo tem quase catorze diâmetros de altura), então pode
        ser mais alto sem ocupar largura. */
-    const rocketHeight = lightweight ? Math.min(1.1, halfWidth * 1.4) : Math.min(2.0, halfWidth * 0.95)
+    const rocketHeight = lightweight ? Math.min(1.35, halfWidth * 1.7) : Math.min(2.6, halfWidth * 1.3)
     /* O modelo do foguete compila os programas e sobe geometria e texturas
        antes de entrar na cena: o primeiro frame dele não pode ser um
        tranco. O desenho num alvo de 2×2, com as luzes da cena (mesmo
@@ -676,11 +682,10 @@ export function TriScene() {
       sphereMaterial.uniforms.uMix.value = Math.min(1, current.mix + rush * 0.05)
       sphereMaterial.uniforms.uScale.value = current.scale
       sphereMaterial.uniforms.uOpacity.value = 0.95 * current.opacity
-      /* Apagado, não desenha: no hero o campo está em opacidade zero, e
-         deixá-lo fora do primeiro frame adia a compilação do shader dele
-         para a fila de aquecimento — é menos trabalho antes da primeira
-         pintura, e menos preenchimento o resto do tempo. */
-      sphereField.visible = current.opacity > 0.004
+      /* Apagado, não desenha. O limiar tem histerese: sem ela, a opacidade
+         amortecida oscilava em volta do corte e o campo acendia e apagava
+         de um frame para o outro — era isso que lia como tela piscando. */
+      sphereField.visible = current.opacity > (sphereField.visible ? 0.002 : 0.01)
       const centerX = current.x * halfWidth + pointer.x * 0.05 + shakeX
       const centerY = current.y + pointer.y * -0.04 + shakeY
       sphereMaterial.uniforms.uCenter.value.set(centerX, centerY)
@@ -853,7 +858,7 @@ export function TriScene() {
 
       /* O foguete sai do horizonte: a plataforma acompanha a curva da Terra
          na coluna onde ele está. */
-      const rocketX = (narrow ? 0.5 : 0.58) * halfWidth
+      const rocketX = (narrow ? 0.46 : 0.52) * halfWidth
       const horizonTop = -visibleHalfHeight + reveal
       const horizonDrop = earthRadius - Math.sqrt(Math.max(earthRadius * earthRadius - rocketX * rocketX, 0))
       const rocketPadY = horizonTop - horizonDrop + rocketHeight * 0.52
