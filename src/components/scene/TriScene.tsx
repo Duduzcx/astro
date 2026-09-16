@@ -104,6 +104,10 @@ export function TriScene() {
     probe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:100lvh;pointer-events:none;visibility:hidden'
     document.body.appendChild(probe)
     const large = probe.offsetHeight
+    /* E a menor: com a barra de URL à vista. A diferença entre as duas é
+       exatamente o quanto o palco passa da tela no celular. */
+    probe.style.height = '100svh'
+    const small = probe.offsetHeight || large
     probe.remove()
     let stageHeight = Math.max(window.innerHeight, large || 0)
     renderer.setSize(window.innerWidth, stageHeight, false)
@@ -183,6 +187,9 @@ export function TriScene() {
      */
     /* Declarado antes do sizeStage, que o usa e roda já na montagem. */
     let postfx: ReturnType<typeof createPostFx> | null = null
+    /* Quanto os astros sobem para ficarem no meio da TELA, em unidades de
+       mundo. Zero quando o palco tem a altura da tela. */
+    let astroShiftY = 0
     const sizeStage = () => {
       stageHeight = Math.max(stageHeight, window.innerHeight)
       mount.style.height = `${stageHeight}px`
@@ -191,6 +198,16 @@ export function TriScene() {
       camera.fov = (2 * Math.atan(halfWidth / (camera.position.z * camera.aspect)) * 180) / Math.PI
       camera.updateProjectionMatrix()
       cameraMotion.setBaseFov(camera.fov)
+      /* O palco é mais alto que a tela no celular (100lvh contra 100svh),
+         e ele é ancorado no topo: um objeto em y = 0 cai no meio do PALCO,
+         que fica abaixo do meio da TELA. Quem precisa estar centrado para
+         o visitante (Sol, buraco negro, supernova) sobe essa diferença.
+         Medido em espaço de tela, não movendo a câmera: a câmera é a régua
+         de todo o resto da cena, e mexer nela desenquadraria o horizonte da
+         Terra e a plataforma do foguete, que foram ajustados contra ela.
+         Onde palco e tela têm a mesma altura (desktop), isto é zero. */
+      const visible = Math.min(small, stageHeight)
+      astroShiftY = ((stageHeight - visible) / stageHeight) * (halfWidth / camera.aspect)
       postfx?.setSize(window.innerWidth, stageHeight)
     }
     sizeStage()
@@ -723,8 +740,10 @@ export function TriScene() {
          precisa ler como corpo, não como fantasma. */
       const targetBreak = planetBreak(current.mix, current.form)
       const targetOpacity = Math.min(1, current.opacity * 1.4)
+      /* Os astros do centro da narrativa sobem para o meio da tela. */
+      const astroY = centerY + astroShiftY
       star.update(
-        { x: centerX, y: centerY, scale: current.scale, opacity: targetOpacity, break: targetBreak },
+        { x: centerX, y: astroY, scale: current.scale, opacity: targetOpacity, break: targetBreak },
         time,
       )
       /* Os destroços só existem enquanto a forma ainda é o Sol: com o
@@ -732,7 +751,7 @@ export function TriScene() {
       explosion.update(
         {
           x: centerX,
-          y: centerY,
+          y: astroY,
           scale: current.scale,
           opacity: targetOpacity * (1 - clamp01(current.form * 2)),
           break: targetBreak,
@@ -743,7 +762,7 @@ export function TriScene() {
       blackHole.update(
         {
           x: centerX,
-          y: centerY,
+          y: astroY,
           scale: current.scale,
           opacity: current.opacity,
           presence: holePresence(current.form),
@@ -755,7 +774,7 @@ export function TriScene() {
       nova.update(
         {
           x: centerX,
-          y: centerY,
+          y: astroY,
           scale: current.scale,
           opacity: current.opacity,
           presence: novaPresence(current.form),
