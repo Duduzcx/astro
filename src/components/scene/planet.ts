@@ -273,6 +273,13 @@ const SURFACE_FRAGMENT = /* glsl */ `
 #endif
 
     vec3 geomN = normalize(vNormalV);
+#ifdef STYLIZED
+    /* Ilustração: a normal é a da esfera, e ponto. O relevo tirado da
+       fotografia por Sobel custa quatro amostras e, numa textura de 1k
+       vista num celular, o que ele entrega é papa — é parte do que fazia a
+       cena ler como maquete, não como desenho. */
+    vec3 n = geomN;
+#else
     vec3 n = perturb(vViewPos, geomN, height, relief * uDetail);
     if (uPhotoRelief > 0.0 && uHasMap > 0.5) {
       /* Sobel na luminância do mapa, em passos de dois texels: menor que
@@ -303,10 +310,46 @@ const SURFACE_FRAGMENT = /* glsl */ `
       nm.xy *= vec2(2.4, -2.4);
       n = normalize(normalize(vTangentV) * nm.x + normalize(vBitangentV) * nm.y + geomN * max(nm.z, 0.2));
     }
+#endif
     vec3 v = normalize(-vViewPos);
     float facing = dot(n, uLight);
-    float day = smoothstep(-0.18, 0.4, facing);
     float dayGeom = smoothstep(-0.18, 0.4, dot(geomN, uLight));
+#ifdef STYLIZED
+    /* Luz em degraus. Um desenho não usa mil tons entre o dia e a noite:
+       escolhe uns poucos e mantém limpa a borda entre eles. O fwidth dá a
+       largura de um pixel na tela, então o degrau sai macio o bastante para
+       não serrilhar e duro o bastante para ler como traço. */
+    float ramp = clamp(facing * 0.5 + 0.5, 0.0, 1.0);
+    float scaled = ramp * 4.0;
+    float soft = max(fwidth(scaled) * 1.1, 0.02);
+    float band = floor(scaled) + smoothstep(0.5 - soft, 0.5 + soft, fract(scaled));
+    float day = smoothstep(0.06, 0.94, clamp(band / 4.0, 0.0, 1.0));
+
+    /* A fotografia da NASA é plana de propósito, porque é dado. Ilustração
+       pede cor decidida: satura, e depois reduz a paleta a poucos tons.
+
+       A posterização é o que separa desenho de foto com filtro. Sem ela a
+       faixa de luz não lê, porque a variação da própria textura é maior que
+       o degrau da luz. A borda de cada tom acompanha um pixel de tela
+       (fwidth), então o resultado é chapado sem serrilhar. */
+    float lum = dot(albedo, vec3(0.299, 0.587, 0.114));
+    albedo = clamp(mix(vec3(lum), albedo, 1.55), 0.0, 1.0);
+    vec3 tone = albedo * 6.0;
+    vec3 toneSoft = max(fwidth(tone), vec3(0.03));
+    vec3 posterized =
+      floor(tone) + smoothstep(vec3(0.5) - toneSoft, vec3(0.5) + toneSoft, fract(tone));
+    albedo = mix(albedo, posterized / 6.0, 0.72);
+
+    vec3 color = albedo * (0.14 + 0.86 * day);
+    /* A sombra vai para o azul, não para o cinza. É o que separa desenho
+       de foto subexposta. */
+    color = mix(color, color * vec3(0.40, 0.52, 0.88), (1.0 - day) * 0.85);
+    /* Um só clarão na água, e mesmo assim em degrau: três potências e um
+       ponto minúsculo não sobrevivem a uma tela de mão. */
+    float glint = smoothstep(0.86, 0.94, max(dot(reflect(-uLight, n), v), 0.0));
+    color += vec3(1.0, 0.97, 0.9) * glint * water * dayGeom * 0.5;
+#else
+    float day = smoothstep(-0.18, 0.4, facing);
     vec3 color = albedo * (0.05 + 0.95 * day);
     /* O lado da noite não é breu: a luz das estrelas e do céu enche de um
        azul frio e fraco, e a esfera continua lendo como esfera. */
@@ -319,6 +362,7 @@ const SURFACE_FRAGMENT = /* glsl */ `
        que aparece em foto de órbita, mais um lustro largo em volta. */
     float spec = (pow(rv, 190.0) * 1.5 + pow(rv, 42.0) * 0.35 + pow(rv, 7.0) * 0.06) * water * dayGeom;
     color += spec;
+#endif
 
     /* Escurecimento nas bordas: uma esfera de verdade não é chapada. */
     /* Escurecimento nas bordas por tipo: forte no rochoso (poeira seca
@@ -328,6 +372,7 @@ const SURFACE_FRAGMENT = /* glsl */ `
     float limb = mix(limbFloor, 1.0, pow(max(dot(geomN, v), 0.0), 0.55));
     color *= limb;
 
+#ifndef STYLIZED
     if (uHasClouds > 0.5) {
       /* Sombra das nuvens no chão: de cada ponto da superfície, sobe na
          direção da luz até a casca das nuvens e pergunta se há nuvem lá.
@@ -349,6 +394,7 @@ const SURFACE_FRAGMENT = /* glsl */ `
       float shadow = smoothstep(0.1, 0.7, textureLod(uClouds, cuv, 2.0).r);
       color *= 1.0 - shadow * 0.45 * dayGeom;
     }
+#endif
 
     /* Névoa: perto da borda, o ar entre nós e o chão espalha luz do dia. */
     float haze = pow(1.0 - max(dot(geomN, v), 0.0), 2.4) * uHazeStrength * (0.1 + 0.9 * dayGeom);
@@ -357,6 +403,14 @@ const SURFACE_FRAGMENT = /* glsl */ `
        fina e clara, a assinatura de esfera com atmosfera vista do espaço. */
     float rimScatter = pow(1.0 - max(dot(geomN, v), 0.0), 7.0) * smoothstep(-0.1, 0.5, dot(geomN, uLight));
     color += mix(uHaze, vec3(1.0), 0.5) * rimScatter * uHazeStrength * 1.6;
+
+#ifdef STYLIZED
+    /* Contorno de luz no lado iluminado: a linha fina e clara que todo
+       desenho bom usa para separar o objeto do fundo. Estreita e forte,
+       porque é ela que dá a silhueta. */
+    float ink = pow(1.0 - max(dot(geomN, v), 0.0), 4.0) * smoothstep(-0.25, 0.45, dot(geomN, uLight));
+    color += mix(uHaze, vec3(1.0), 0.65) * ink * 0.9;
+#endif
 
     /* Terminador quente: a luz rasante esquenta a linha entre dia e noite. */
     float twilight = smoothstep(0.25, 0.0, abs(dot(geomN, uLight))) * dayGeom;
@@ -610,6 +664,7 @@ export function createPlanet({
   relief = 1,
   maps,
   tint = '#ffffff',
+  stylized = false,
   warm,
 }: {
   segments: number
@@ -626,6 +681,11 @@ export function createPlanet({
   maps?: PlanetMaps
   /** Multiplica a cor do mapa (a lua vira gelo com um azul leve). */
   tint?: string
+  /** Acabamento de ilustração em vez de fotografia: luz em degraus, cor
+      saturada, contorno de luz, e fora o relevo por Sobel, o mapa normal, a
+      sombra volumétrica de nuvem e o especular de três potências. Vale no
+      celular, onde a textura é de 1k e o detalhe fotográfico vira papa. */
+  stylized?: boolean
   /** Chamado com cada textura assim que chega: sobe para a GPU na hora,
       em vez de travar o primeiro frame em que o planeta aparece. */
   warm?: (texture: THREE.Texture) => void
@@ -656,7 +716,9 @@ export function createPlanet({
      em ANGLE/D3D isso custa segundos na primeira pintura. O define tira o
      bloco do código-fonte. */
   const photoOnly = Boolean(maps?.map)
-  const defines = photoOnly ? { PHOTO_ONLY: '' } : {}
+  const defines: Record<string, string> = {}
+  if (photoOnly) defines.PHOTO_ONLY = ''
+  if (stylized) defines.STYLIZED = ''
   const surfaceMaterial = new THREE.ShaderMaterial({
     defines: { ...defines },
     vertexShader: SURFACE_VERTEX,

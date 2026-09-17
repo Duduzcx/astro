@@ -387,6 +387,7 @@ export function TriScene() {
     const depthScale = (camera.position.z + EARTH_DEPTH) / camera.position.z
     const earth = createPlanet({
       segments: lightweight ? 112 : 128,
+      stylized: lightweight,
       warm,
       kind: 'earth',
       spin: 0.012,
@@ -423,6 +424,7 @@ export function TriScene() {
       {
         planet: createPlanet({
           segments: lightweight ? 72 : 112,
+          stylized: lightweight,
           kind: 'gas',
           spin: 0.03,
           ring: true,
@@ -441,6 +443,7 @@ export function TriScene() {
       {
         planet: createPlanet({
           segments: lightweight ? 56 : 80,
+          stylized: lightweight,
           kind: 'rock',
           spin: 0.09,
           maps: { map: tier('mars', 'webp') },
@@ -457,6 +460,7 @@ export function TriScene() {
       {
         planet: createPlanet({
           segments: lightweight ? 72 : 112,
+          stylized: lightweight,
           kind: 'gas',
           spin: 0.035,
           maps: { map: tier('jupiter', 'webp') },
@@ -471,6 +475,7 @@ export function TriScene() {
       {
         planet: createPlanet({
           segments: lightweight ? 56 : 80,
+          stylized: lightweight,
           kind: 'ice',
           spin: 0.05,
           maps: { map: tier('moon', 'webp') },
