@@ -357,7 +357,7 @@ export function TriScene() {
        camada densa assada na nebulosa (space.ts) já dá a profundidade. */
     /* Menos estrelas no celular: numa tela de mão o mesmo número vira
        chuvisco, e o que precisa aparecer é o astro da vez. */
-    const stars = createStars(lightweight ? 520 : 3600, renderer.getPixelRatio())
+    const stars = createStars(lightweight ? 300 : 3600, renderer.getPixelRatio())
     scene.add(stars.object)
     /* Umas poucas brilhantes de verdade, com halo e espículas. */
     const brightStars = createBrightStars(lightweight ? 3 : 8, {
@@ -423,7 +423,7 @@ export function TriScene() {
     const depthScale = (camera.position.z + EARTH_DEPTH) / camera.position.z
     const earth = createPlanet({
       segments: lightweight ? 112 : 128,
-      stylized: lightweight,
+      stylized: false,
       warm,
       kind: 'earth',
       spin: 0.012,
@@ -460,7 +460,7 @@ export function TriScene() {
       {
         planet: createPlanet({
           segments: lightweight ? 72 : 112,
-          stylized: lightweight,
+          stylized: false,
           kind: 'gas',
           spin: 0.03,
           ring: true,
@@ -479,7 +479,7 @@ export function TriScene() {
       {
         planet: createPlanet({
           segments: lightweight ? 56 : 80,
-          stylized: lightweight,
+          stylized: false,
           kind: 'rock',
           spin: 0.09,
           maps: { map: tier('mars', 'webp') },
@@ -496,7 +496,7 @@ export function TriScene() {
       {
         planet: createPlanet({
           segments: lightweight ? 72 : 112,
-          stylized: lightweight,
+          stylized: false,
           kind: 'gas',
           spin: 0.035,
           maps: { map: tier('jupiter', 'webp') },
@@ -511,7 +511,7 @@ export function TriScene() {
       {
         planet: createPlanet({
           segments: lightweight ? 56 : 80,
-          stylized: lightweight,
+          stylized: false,
           kind: 'ice',
           spin: 0.05,
           maps: { map: tier('moon', 'webp') },

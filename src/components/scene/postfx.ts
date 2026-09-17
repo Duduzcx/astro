@@ -141,9 +141,9 @@ export function createPostFx(
        existe mais lá, e o que sobrou eram astros sem brilho: o Sol, o disco
        de acreção e a supernova não passavam do limiar e saíam chapados.
        Força maior e limiar mais baixo devolvem o halo a quem precisa dele. */
-    light ? 0.44 : 0.36,
+    light ? 0.4 : 0.36,
     light ? 0.58 : 0.62,
-    light ? 0.9 : 0.92,
+    light ? 0.94 : 0.92,
   )
   composer.addPass(bloom)
   const film = light ? null : new ShaderPass(FILM)

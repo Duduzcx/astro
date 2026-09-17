@@ -212,7 +212,26 @@ const CORONA_FRAGMENT = /* glsl */ `
     st += 0.35 * snoise(vec3(ring * 9.0, x * 3.0 + uTime * 0.08));
     #endif
     float streamers = pow(0.5 + 0.5 * st, 2.2);
+    /* Raios. Antes a coroa era só um halo macio, e o que se via era o bordo
+       do disco que a desenha: um círculo nítido em volta do Sol, anunciando
+       que ali havia um brilho colado. Um sol de verdade manda feixes para
+       fora, de comprimentos diferentes, e é isso que apaga a borda — cada
+       raio termina no seu próprio ponto, então não sobra circunferência
+       nenhuma para o olho seguir.
+       Três frequências primas em torno do ângulo, girando devagar e em
+       sentidos diferentes, para o padrão nunca fechar um ciclo visível. */
+    float rays =
+      0.5 + 0.5 * sin(a * 19.0 + uTime * 0.07) * 0.55
+          + 0.5 * sin(a * 31.0 - uTime * 0.045) * 0.3
+          + 0.5 * sin(a * 47.0 + uTime * 0.11) * 0.15;
+    rays = pow(clamp(rays, 0.0, 1.0), 2.6);
+    /* Os feixes nascem no limbo, não no centro, e vão mais longe que o halo. */
+    float beam = exp(-x * 3.2) * rays * smoothstep(0.0, 0.08, x);
     float glow = exp(-x * 14.0) * 0.9 + exp(-x * 6.0) * 1.1 + exp(-x * 2.0) * 0.9 * (0.3 + 1.6 * streamers);
+    glow += beam * 1.35;
+    /* Some por completo antes da borda da malha: sem isto o disco se corta
+       num anel duro, que é exatamente o que o cliente estava vendo. */
+    glow *= smoothstep(1.0, 0.62, d);
     /* Dentro do disco a coroa não aparece: o Sol cobre. Só no fim, com a
        superfície indo embora, um miolo claro segura o buraco. */
     float inside = 1.0 - smoothstep(uLimb - 0.06, uLimb, d);

@@ -808,6 +808,17 @@ export function createRocket({
            (as texturas continuam compartilhadas). */
         const material = original.clone()
         material.toneMapped = false
+        /* Filtragem anisotrópica nas texturas do modelo. O foguete é um
+           cilindro alto visto quase de perfil: nas laterais a textura chega
+           à tela muito comprimida, e com a filtragem padrão isso vira borrão
+           na beirada, que é metade da silhueta. Custa amostragem, não
+           preenchimento, então não aparece no orçamento de quadro. */
+        for (const slot of ['map', 'roughnessMap', 'metalnessMap', 'normalMap', 'aoMap'] as const) {
+          const texture = material[slot]
+          if (!texture || texture.anisotropy >= 8) continue
+          texture.anisotropy = 8
+          texture.needsUpdate = true
+        }
         /* Mais ambiente que antes: agora ele é um céu com sol e horizonte,
            não uma sala branca, então refletir mais dele desenha o casco em
            vez de lavá-lo. */
