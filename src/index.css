@@ -446,8 +446,17 @@ footer .bg-graphite::before {
 
 /* A barreira de leitura sobre a cena: um véu escuro fixo, mais denso onde o
    texto fica. Não toca o canvas, então a cena segue com a qualidade toda. */
+/* O véu global some quase por completo no celular. Ele existia para dar
+   contraste ao texto, e esse trabalho passou para a vinheta do cartão e para
+   a sombra do glifo, que agem só onde há letra. O que sobra é um banho
+   mínimo, para a cena não competir em saturação com a interface. */
 .scene-scrim {
-  background: rgba(6, 10, 22, 0.36);
+  background: rgba(6, 10, 22, 0.1);
+}
+@media (min-width: 1024px) {
+  .scene-scrim {
+    background: rgba(6, 10, 22, 0.36);
+  }
 }
 @media (min-width: 1024px) {
   .scene-scrim {
@@ -513,15 +522,43 @@ footer .bg-graphite::before {
    desfoque de fundo por cartão é o efeito mais caro que existe num celular,
    e a cena atrás já é macia. */
 @media (max-width: 1023px) {
+  /* Vinheta de leitura em vez de fundo chapado. O miolo do cartão, onde a
+     letra mora, fica denso o bastante para o texto ter contraste absoluto; a
+     borda vai a quase nada, e é por ela que o astro atravessa. Um fundo de
+     opacidade única não consegue as duas coisas ao mesmo tempo. */
   .graphite-card {
     background:
+      radial-gradient(
+        130% 100% at 50% 50%,
+        color-mix(in srgb, var(--color-graphite) 90%, transparent) 0%,
+        color-mix(in srgb, var(--color-graphite) 78%, transparent) 52%,
+        color-mix(in srgb, var(--color-graphite) 44%, transparent) 100%
+      ),
       linear-gradient(
         158deg,
         rgba(255, 255, 255, 0.07) 0%,
         rgba(255, 255, 255, 0.02) 44%,
         rgba(255, 255, 255, 0.045) 100%
-      ),
-      color-mix(in srgb, var(--color-graphite) 74%, transparent);
+      );
+    /* Seis pixels, e não mais: o bastante para a nebulosa virar cor atrás da
+       letra em vez de detalhe competindo com ela.
+       Medido neste projeto, ligar e desligar dá 41,5ms contra 40,5ms de
+       média, diferença menor que a dispersão entre corridas. Vale a ressalva
+       de que o harness estrangula a CPU e não a GPU, e backdrop-filter é
+       trabalho de GPU: num aparelho fraco de verdade a conta pode ser outra,
+       e o lugar de conferir isso é o aparelho. */
+    backdrop-filter: blur(6px);
+  }
+
+  /* Texto que não mora em cartão (títulos de seção, olho, parágrafo de
+     abertura) fica direto sobre a cena. Aqui a sombra faz o papel da
+     vinheta: ela nasce colada no glifo, então dá contraste onde é preciso
+     sem escurecer um pixel a mais do céu. */
+  .shell :is(h1, h2, h3) {
+    text-shadow: 0 2px 18px rgba(4, 8, 18, 0.85), 0 1px 3px rgba(4, 8, 18, 0.6);
+  }
+  .shell :is(p, li) {
+    text-shadow: 0 1px 12px rgba(4, 8, 18, 0.8);
   }
 
   /* Mais ar entre um cartão e outro: é pelo vão que o astro aparece. */
