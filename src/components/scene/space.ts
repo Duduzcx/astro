@@ -29,6 +29,7 @@ const FRAGMENT = /* glsl */ `
   uniform sampler2D uMap;
   uniform sampler2D uNebulaMap;
   uniform float uIntensity;
+  uniform float uSparkle;
   uniform vec3 uTint;
   uniform vec3 uBase;
   uniform float uNebula;
@@ -41,8 +42,15 @@ const FRAGMENT = /* glsl */ `
        onde o panorama já é claro). A cor vai um pouco para o azul da marca
        para não brigar com a paleta; o onyx da página é a base. */
     float lum = dot(sky, vec3(0.299, 0.587, 0.114));
-    vec3 lifted = sky * uIntensity + sky * sky * 2.8;
-    float lumLifted = lum * uIntensity + lum * lum * 2.8;
+    /* O termo quadrático é o que faz ponto brilhante saltar da fotografia:
+       ele só pesa onde o panorama já é claro, ou seja, exatamente em cima de
+       cada estrela. Ele é o verdadeiro controle de quantidade de estrelas
+       deste céu — não o gerador procedural, que no celular nem roda. Com
+       uSparkle baixo, as fracas afundam no fundo e sobram as poucas que
+       valem; a faixa densa da galáxia continua, porque ali a luminância é
+       alta por área e não por ponto. */
+    vec3 lifted = sky * uIntensity + sky * sky * uSparkle;
+    float lumLifted = lum * uIntensity + lum * lum * uSparkle;
     vec3 color = mix(lifted, uTint * lumLifted, 0.4);
     /* Nebulosa: desliza um pouco mais devagar que o panorama (uShift), o
        que dá paralaxe entre as duas camadas. A poeira no canal alfa
@@ -168,6 +176,10 @@ export type SpaceOptions = {
   bakeSize?: [number, number]
   /** Galáxias distantes presas ao céu; a vista posiciona cada uma. */
   view?: { halfWidth: number; halfHeight: number; cameraZ: number }
+  /** Quanto o termo quadrático realça os pontos claros da fotografia. É o
+      controle de quantidade de estrelas do céu: 2,8 é o padrão de tela
+      grande, valores baixos afundam as fracas e deixam só as fortes. */
+  sparkle?: number
 }
 
 export function createSpace(
@@ -186,7 +198,8 @@ export function createSpace(
     uniforms: {
       uMap: { value: null },
       uNebulaMap: { value: null },
-      uIntensity: { value: 1.2 },
+      uIntensity: { value: options.sparkle !== undefined && options.sparkle < 1 ? 0.8 : 1.2 },
+      uSparkle: { value: options.sparkle ?? 2.8 },
       uTint: { value: new THREE.Color('#8db4f5') },
       uBase: { value: new THREE.Color('#0a0f1e') },
       uNebula: { value: 0 },

@@ -320,6 +320,9 @@ export function TriScene() {
          faixas dimensionadas por pixel, então mais resolução vira mais
          faixas, não uma trava maior. */
       bakeSize: weakDevice ? [1024, 512] : lightweight ? [2048, 1024] : [1536, 768],
+      /* Celular com um terço do realce: é isto, e não o gerador procedural,
+         que controla quantas estrelas aparecem aqui. */
+      sparkle: lightweight ? 0.3 : 2.8,
       view: { halfWidth, halfHeight, cameraZ: camera.position.z },
     })
     scene.add(space.object)
@@ -380,7 +383,7 @@ export function TriScene() {
        camada densa assada na nebulosa (space.ts) já dá a profundidade. */
     /* Menos estrelas no celular: numa tela de mão o mesmo número vira
        chuvisco, e o que precisa aparecer é o astro da vez. */
-    const stars = createStars(lightweight ? 150 : 3600, renderer.getPixelRatio())
+    const stars = createStars(lightweight ? 55 : 3600, renderer.getPixelRatio())
     scene.add(stars.object)
     /* Umas poucas brilhantes de verdade, com halo e espículas. */
     const brightStars = createBrightStars(lightweight ? 3 : 8, {
