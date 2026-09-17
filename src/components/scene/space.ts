@@ -132,12 +132,12 @@ const BAKE_FRAGMENT = /* glsl */ `
        mil estrelas com metade delas acesa: cortar o campo de pontos de 900
        para 150 não mudava nada, porque a esmagadora maioria do que se via
        estava assada aqui, não nos pontos. */
-    vec2 cell = vUv * vec2(150.0, 112.0);
+    vec2 cell = vUv * vec2(96.0, 72.0);
     vec2 id = floor(cell);
     float h = hash21(id);
     vec2 center = vec2(hash21(id + 7.1), hash21(id + 3.3)) * 0.5 + 0.25;
     float dist = length(fract(cell) - center);
-    float bright = smoothstep(0.84, 1.0, h);
+    float bright = smoothstep(0.88, 1.0, h);
     float star = smoothstep(0.3, 0.02, dist) * bright * bright * 0.7;
     vec3 starTone = mix(vec3(0.72, 0.82, 1.0), vec3(1.0, 0.9, 0.72), step(0.7, hash21(id + 11.7)));
     col += starTone * star * (1.0 - dust * 0.7);
@@ -207,13 +207,17 @@ export function createSpace(
   if (options.renderer && nebula > 0) {
     const [w, h] = options.bakeSize ?? [1536, 768]
     bakeTarget = new THREE.WebGLRenderTarget(w, h, {
-      minFilter: THREE.LinearFilter,
+      /* Com mipmap. A textura assada é grande e quase sempre aparece
+         minificada na tela: sem níveis, cada pixel desenhado busca texels
+         espalhados e o cache de textura não aproveita nada. Os níveis também
+         tiram o chuvisco das estrelas assadas quando o céu gira devagar. */
+      minFilter: THREE.LinearMipmapLinearFilter,
       magFilter: THREE.LinearFilter,
       wrapS: THREE.RepeatWrapping,
       wrapT: THREE.ClampToEdgeWrapping,
+      generateMipmaps: true,
       depthBuffer: false,
       stencilBuffer: false,
-      generateMipmaps: false,
     })
     const bakeMaterial = new THREE.ShaderMaterial({
       vertexShader: VERTEX,

@@ -301,7 +301,14 @@ export function TriScene() {
        assadas numa textura (menor no celular) e as galáxias distantes. */
     const space = createSpace(tier('milky-way', 'webp', '2k'), lightweight || weakDevice ? 0.62 : 0.8, warm, {
       renderer,
-      bakeSize: lightweight || weakDevice ? [1024, 512] : [1536, 768],
+      /* A nebulosa assada é o fundo inteiro, esticada por toda a esfera do
+         céu. A 1024 por 512 a parte visível dela numa tela de 1170 pixels
+         reais era ampliada várias vezes, e as estrelas assadas dentro dela
+         ampliavam junto: era daí que vinha o aspecto pixelado do fundo no
+         celular. A 2048 por 1024 a ampliação some. A assadura é feita em
+         faixas dimensionadas por pixel, então mais resolução vira mais
+         faixas, não uma trava maior. */
+      bakeSize: weakDevice ? [1024, 512] : lightweight ? [2048, 1024] : [1536, 768],
       view: { halfWidth, halfHeight, cameraZ: camera.position.z },
     })
     scene.add(space.object)

@@ -41,7 +41,8 @@ const VERTEX = /* glsl */ `
     /* Deriva lenta e contínua, para o céu nunca ficar parado mesmo com a
        página parada. Amplitude de fração de pixel em mundo: percebe-se como
        vida, não como movimento. */
-    p.x += sin(uTime * (0.05 + aSeed * 0.08) + aSeed * 30.0) * 0.012;
+    p.x += sin(uTime * (0.05 + aSeed * 0.08) + aSeed * 30.0) * 0.035;
+    p.y += cos(uTime * (0.04 + aSeed * 0.06) + aSeed * 17.0) * 0.022;
     vec4 view = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * view;
     /* Cintila devagar, cada uma no seu tempo. Só o brilho respira: o
