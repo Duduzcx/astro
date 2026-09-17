@@ -146,11 +146,17 @@ export function mobileKeyframes(
        a largura inteira e o disco ficava escondido atrás deles. */
     /* Opacidade bem acima da anterior: a 0,4 o disco ficava translúcido e
        o buraco negro lia como mancha, não como objeto. */
+    /* A saída era um degrau: de opacidade cheia em 0,52 para o campo
+       disperso em 0,55, com a escala saltando junto. Em três centésimos de
+       página isso passa em poucos quadros de rolagem e lê como falha, não
+       como dissolução. Agora a dispersão começa antes e a opacidade desce
+       em dois tempos. */
     [0.34, 0.6, 0.0, -0.1, scale * 0.6, 0.55, 1],
     [0.36, 0.1, 0.0, -0.05, scale * 0.95, 0.75, 1],
     [0.46, 0.08, 0.0, 0.04, scale * 1.05, 0.95, 1],
-    [0.52, 0.08, 0.0, 0.04, scale * 1.15, 1.0, 1],
-    [0.55, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
+    [0.5, 0.08, 0.0, 0.04, scale * 1.15, 1.0, 1],
+    [0.53, 0.35, 0.0, 0.02, scale * 1.28, 0.8, 1],
+    [0.57, 0.7, 0.0, 0.0, scale * 1.4, 0.45, 1],
     [0.6, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     /* Disperso e quase invisível, o campo vira poeira dourada de estrela. */
     [0.65, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 2],

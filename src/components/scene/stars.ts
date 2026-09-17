@@ -32,7 +32,16 @@ const VERTEX = /* glsl */ `
     vec3 p = position;
     vSpike = step(5.4, aSize);
     /* Desce com o scroll e dá a volta: y sempre em [-3,5, 3,5]. */
-    p.y = mod(p.y - uOffset + ${SPREAD_Y.toFixed(1)}, ${WRAP.toFixed(1)}) - ${SPREAD_Y.toFixed(1)};
+    /* Cada estrela anda no seu próprio passo, além do passo comum do
+       scroll: as de trás quase não saem do lugar, as da frente descem quase
+       o dobro. Sem isto o campo inteiro desliza como uma folha só, e o que
+       o olho lê é metade do céu pregado e metade correndo. */
+    float depth = 0.55 + aSeed * 0.9;
+    p.y = mod(p.y - uOffset * depth + ${SPREAD_Y.toFixed(1)}, ${WRAP.toFixed(1)}) - ${SPREAD_Y.toFixed(1)};
+    /* Deriva lenta e contínua, para o céu nunca ficar parado mesmo com a
+       página parada. Amplitude de fração de pixel em mundo: percebe-se como
+       vida, não como movimento. */
+    p.x += sin(uTime * (0.05 + aSeed * 0.08) + aSeed * 30.0) * 0.012;
     vec4 view = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * view;
     /* Cintila devagar, cada uma no seu tempo. Só o brilho respira: o

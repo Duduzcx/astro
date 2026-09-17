@@ -357,7 +357,7 @@ export function TriScene() {
        camada densa assada na nebulosa (space.ts) já dá a profundidade. */
     /* Menos estrelas no celular: numa tela de mão o mesmo número vira
        chuvisco, e o que precisa aparecer é o astro da vez. */
-    const stars = createStars(lightweight ? 300 : 3600, renderer.getPixelRatio())
+    const stars = createStars(lightweight ? 150 : 3600, renderer.getPixelRatio())
     scene.add(stars.object)
     /* Umas poucas brilhantes de verdade, com halo e espículas. */
     const brightStars = createBrightStars(lightweight ? 3 : 8, {
@@ -954,7 +954,7 @@ export function TriScene() {
          devolvido em pixels de buffer (ver space.ts); corrigido aquilo, x = 0
          passou a ser o centro de verdade. Aqui ele sai um pouco para a
          direita de propósito, para não ficar atrás da coluna de texto. */
-      const rocketX = (narrow ? 0.3 : 0.52) * halfWidth
+      const rocketX = (narrow ? 0.46 : 0.52) * halfWidth
       const horizonTop = -visibleHalfHeight + reveal
       const horizonDrop = earthRadius - Math.sqrt(Math.max(earthRadius * earthRadius - rocketX * rocketX, 0))
       const rocketPadY = horizonTop - horizonDrop + rocketHeight * 0.52
