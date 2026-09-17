@@ -83,7 +83,11 @@ export function TriScene() {
     /* Celular a 1,5 de razão de pixels: a 1,0 a cena era esticada quase
        três vezes e virava desenho borrado. A taxa de 30fps segura o custo. */
     renderer.setPixelRatio(
-      Math.min(window.devicePixelRatio, weakDevice ? 1.25 : lightweight ? 1.5 : 1.25),
+      /* Sobe para 2 no celular. A 1,5 a cena era desenhada a metade da
+         densidade da tela, e era isso que o cliente lia como baixa
+         qualidade em tudo — planeta, foguete, borda de astro. Tirar o bloom
+         e a nebulosa assada abriu orçamento para pagar por isto. */
+      Math.min(window.devicePixelRatio, weakDevice ? 1.25 : lightweight ? 2 : 1.25),
     )
     /* Tone mapping de filme para os materiais iluminados (o foguete): sem
        isso o metal estoura em branco. Os shaders próprios ignoram. */
@@ -492,7 +496,7 @@ export function TriScene() {
     const worlds: World[] = [
       {
         planet: createPlanet({
-          segments: lightweight ? 72 : 112,
+          segments: lightweight ? 104 : 112,
           stylized: false,
           kind: 'gas',
           spin: 0.03,
@@ -512,7 +516,7 @@ export function TriScene() {
       },
       {
         planet: createPlanet({
-          segments: lightweight ? 56 : 80,
+          segments: lightweight ? 76 : 80,
           stylized: false,
           kind: 'rock',
           spin: 0.09,
@@ -530,7 +534,7 @@ export function TriScene() {
       },
       {
         planet: createPlanet({
-          segments: lightweight ? 72 : 112,
+          segments: lightweight ? 104 : 112,
           stylized: false,
           kind: 'gas',
           spin: 0.035,
@@ -546,7 +550,7 @@ export function TriScene() {
       },
       {
         planet: createPlanet({
-          segments: lightweight ? 56 : 80,
+          segments: lightweight ? 76 : 80,
           stylized: false,
           kind: 'ice',
           spin: 0.05,
@@ -591,7 +595,7 @@ export function TriScene() {
       reveal: narrow ? 0.34 : 0.5,
     })
 
-    const blackHole = createBlackHole({ segments: lightweight ? 72 : 112, lightweight })
+    const blackHole = createBlackHole({ segments: lightweight ? 104 : 112, lightweight })
     scene.add(blackHole.object)
 
     const nova = createNova()

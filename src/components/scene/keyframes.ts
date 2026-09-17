@@ -156,7 +156,11 @@ export function mobileKeyframes(
        página isso passa em poucos quadros de rolagem e lê como falha, não
        como dissolução. Agora a dispersão começa antes e a opacidade desce
        em dois tempos. */
-    [0.34, 0.6, 0.0, -0.1, scale * 0.6, 0.55, 1],
+    /* A dissolução era 0,6 aqui, e a presença do disco é multiplicada por
+       1 - (dissolução - 0,25) / 0,6: o anel nascia a 42% de força e só
+       chegava inteiro depois. Lia como demora e tranco. A 0,22 ele já entra
+       com presença cheia e cresce só em escala. */
+    [0.34, 0.22, 0.0, -0.1, scale * 0.6, 0.55, 1],
     [0.36, 0.1, 0.0, -0.05, scale * 0.95, 0.75, 1],
     [0.46, 0.08, 0.0, 0.04, scale * 1.05, 0.95, 1],
     [0.5, 0.08, 0.0, 0.04, scale * 1.15, 1.0, 1],
@@ -169,19 +173,19 @@ export function mobileKeyframes(
     /* A poeira condensa: uma estrela nasce durante o contato... */
     /* A estrela que precede a explosão nasce maior e mais acesa: antes ela
        mal aparecia, e sem ela a detonação chega sem preparo. */
-    [0.9, 0.07, 0.0, 0.15, scale * 0.75, 0.8, 2],
-    [0.925, 0.05, 0.0, 0.05, scale * 1.0, 0.95, 2],
+    [0.9, 0.07, 0.0, 0.15, scale * 0.9, 0.95, 2],
+    [0.925, 0.05, 0.0, 0.05, scale * 1.2, 1.0, 2],
     /* ...e explode à vista quando "A sua operação tem a resposta" entra
        (0.935): o morph 2 para 3 agrupado É a detonação. */
-    [0.935, 0.08, 0.0, -0.1, scale * 1.25, 1.0, 3],
+    [0.935, 0.08, 0.0, -0.1, scale * 1.55, 1.0, 3],
     /* Daqui até o fim tudo é idêntico. No pé da página o scroll treme, e com
        a cauda plana a tremida não vira mudança de tamanho. */
     /* Apaga antes do rodapé (o Contato acaba em 0.958 nesta largura). */
     /* Segura a cheia até quase o fim do Contato. A janela é curta por
        obrigação (a supernova não pode passar do rodapé), então o jeito de
        ela ser percebida é ficar grande e opaca dentro dela, não durar mais. */
-    [0.946, 0.08, 0.0, -0.3, scale * 1.35, 1.0, 3],
-    [0.958, 0.08, 0.0, -0.4, scale * 1.2, 0.0, 3],
+    [0.946, 0.08, 0.0, -0.3, scale * 1.7, 1.0, 3],
+    [0.958, 0.08, 0.0, -0.4, scale * 1.5, 0.0, 3],
     [1.0, 0.08, 0.0, -0.4, scale, 0.0, 3],
   ]
 }

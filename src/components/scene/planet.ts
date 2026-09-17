@@ -162,13 +162,26 @@ const SURFACE_FRAGMENT = /* glsl */ `
     float lat = vUv.y;
     float t;
     if (uToonBands > 0.5) {
-      float stripes = sin(lat * uToonBands * 3.14159265) * 0.5 + 0.5;
-      t = floor(stripes * 4.0) / 3.0;
+      /* Faixas com duas frequências: uma larga que dá a estrutura e uma fina
+         que quebra a regularidade, senão o planeta vira papel listrado. Seis
+         degraus em vez de quatro, e a borda de cada degrau acompanha um
+         pixel de tela, então o corte fica limpo em qualquer tamanho. */
+      float wide = sin(lat * uToonBands * 3.14159265);
+      float fine = sin(lat * uToonBands * 2.7 + 1.3) * 0.28;
+      float stripes = (wide + fine) * 0.5 + 0.5;
+      float scaled = stripes * 6.0;
+      float soft = max(fwidth(scaled) * 0.8, 0.015);
+      t = (floor(scaled) + smoothstep(0.5 - soft, 0.5 + soft, fract(scaled))) / 6.0;
     } else {
+      /* Mundo rochoso: manchas largas com uma borda macia, mais um veio fino
+         cruzando, para não ficar um ovo de duas cores. */
       float blob = sin(vUv.x * 9.0 + lat * 5.0) * 0.5 + sin(lat * 7.0 - vUv.x * 3.0) * 0.5;
-      t = step(0.0, blob) * 0.65 + 0.18;
+      float vein = sin(vUv.x * 23.0 + lat * 11.0) * 0.12;
+      t = smoothstep(-0.08, 0.08, blob + vein) * 0.62 + 0.2;
     }
     albedo = mix(uToonA, uToonB, clamp(t, 0.0, 1.0));
+    /* Um leve gradiente dentro da faixa: chapado total lê como adesivo. */
+    albedo *= 0.92 + 0.16 * (1.0 - abs(lat * 2.0 - 1.0));
     /* Calota clara nos polos: num disco chapado é ela que devolve a leitura
        de esfera, no lugar do sombreado que a foto trazia. */
     float cap = smoothstep(0.84, 0.98, abs(lat * 2.0 - 1.0));
@@ -963,7 +976,10 @@ export function createPlanet({
       object.position.set(state.x, state.y, state.z ?? 0)
       object.scale.setScalar(state.scale)
       surface.rotation.y = time * spin
-      if (clouds) clouds.rotation.y = time * spin * 1.35
+      /* As nuvens correm bem mais que o chão e ainda ondulam de leve num
+         período próprio: a diferença entre as duas velocidades é o que faz
+         o planeta parecer vivo em vez de um globo girando. */
+      if (clouds) clouds.rotation.y = time * spin * 2.1 + Math.sin(time * 0.07) * 0.06
       surfaceMaterial.uniforms.uCloudShift.value = clouds ? clouds.rotation.y - surface.rotation.y : 0
       surface.getWorldQuaternion(surfaceQuaternion).invert()
       surfaceLightLocal.copy(light).applyQuaternion(surfaceQuaternion)
