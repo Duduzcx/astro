@@ -962,21 +962,26 @@ export function TriScene() {
       engineLight.position.set(nozzlePoint.x, nozzlePoint.y, 0.25)
       engineLight.intensity = current.thrust * (1.5 + Math.sin(time * 31) * 0.35) * (launch.visible ? 1 : 0)
 
-      /* O sol: alto à esquerda, some com a subida. */
-      /* No celular o clarão morava em cima do título: a coluna de texto
-         ocupa a largura toda e não há canto livre lá em cima. Ele desce
-         para a altura do horizonte, onde só há céu. */
-      glare.position.set(
-        -halfWidth * (narrow ? 0.62 : 0.78),
-        visibleHalfHeight * (narrow ? -0.18 : 0.62),
-        -1,
-      )
-      /* No celular o clarão ocupa proporcionalmente muito mais tela, e
-         com bloom por cima ele lavava o título. */
-      glareMaterial.opacity = (narrow ? 0.4 : 0.85) * Math.max(0, 1 - current.lift * 1.6)
-      streak.position.copy(glare.position)
-      streakMaterial.opacity = 0.32 * Math.max(0, 1 - current.lift * 1.6)
-      sunRays.update(glare.position, Math.max(0, 1 - current.lift * 1.6), time)
+      /* O sol: alto à esquerda, some com a subida. Só no desktop.
+
+         No celular ele saiu de cena inteiro — o sprite, a estria anamórfica
+         e os raios. Numa tela de mão o mesmo clarão ocupa proporcionalmente
+         muito mais área, e com o bloom por cima virava uma mancha que lavava
+         o título. Já foi tentado mudá-lo de canto e baixar a opacidade para
+         quase metade; não bastou. Menos três draw calls na primeira dobra,
+         de quebra. */
+      const glareOn = !narrow
+      glare.visible = glareOn
+      streak.visible = glareOn
+      sunRays.object.visible = glareOn
+      if (glareOn) {
+        const fade = Math.max(0, 1 - current.lift * 1.6)
+        glare.position.set(-halfWidth * 0.78, visibleHalfHeight * 0.62, -1)
+        glareMaterial.opacity = 0.85 * fade
+        streak.position.copy(glare.position)
+        streakMaterial.opacity = 0.32 * fade
+        sunRays.update(glare.position, fade, time)
+      }
 
       /* No desktop todo frame desenha: com grão e cintilação no passe de
          filme, pular frames virava um piscar a 30Hz nas partes "paradas" da
