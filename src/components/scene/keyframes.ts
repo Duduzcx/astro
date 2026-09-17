@@ -104,7 +104,12 @@ export function mobileKeyframes(
 ): Keyframes {
   /* Encosta nas laterais sem sangrar muito, com teto de altura para não virar
      uma faixa gorda demais em tela comprida. */
-  const radius = Math.min(1.12 * halfWidth, 0.62 * halfHeight)
+  /* Cobertura, não tamanho aparente. A 1,12 da meia largura o astro era mais
+     largo que a própria tela: boa parte do disco, do halo e da coroa era
+     rasterizada fora do quadro, pixel pago e jogado fora. A 0,9 ele continua
+     enchendo a tela nas linhas de auge (várias passam de 1,15 de escala) e o
+     motor deixa de pintar o que ninguém vê. */
+  const radius = Math.min(0.9 * halfWidth, 0.54 * halfHeight)
   const scale = radius / OBJECT_RADIUS
   /* O disco é inclinado, então a caixa dele nasce torta; um empurrão pequeno
      recentraliza. Menor que antes porque o objeto encolheu: a mesma correção
