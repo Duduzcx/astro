@@ -808,7 +808,10 @@ export function createRocket({
            (as texturas continuam compartilhadas). */
         const material = original.clone()
         material.toneMapped = false
-        material.envMapIntensity = 0.55
+        /* Mais ambiente que antes: agora ele é um céu com sol e horizonte,
+           não uma sala branca, então refletir mais dele desenha o casco em
+           vez de lavá-lo. */
+        material.envMapIntensity = 0.85
         material.transparent = true
         material.opacity = 0
         material.depthWrite = true
@@ -822,14 +825,36 @@ export function createRocket({
          volta lenta da subida. */
       model.rotation.y = -Math.PI / 2
       model.updateMatrixWorld(true)
+      /* A altura vem da caixa de tudo, porque tudo tem que caber. O eixo
+         horizontal, não: a caixa do conjunto inclui nós que ficam longe do
+         corpo, e centralizar por ela empurrava o veículo para o lado — era
+         o desvio de cerca de um quarto da largura da tela que antes se
+         contornava deixando rocketX em zero no celular. Aqui o eixo sai da
+         malha de maior volume, que é o corpo, então o foguete fica onde a
+         cena pede. */
       const box = new THREE.Box3().setFromObject(model)
       const size = new THREE.Vector3()
-      const center = new THREE.Vector3()
       box.getSize(size)
-      box.getCenter(center)
+      const axis = new THREE.Vector3()
+      let biggest = -1
+      const meshBox = new THREE.Box3()
+      const meshSize = new THREE.Vector3()
+      const meshCenter = new THREE.Vector3()
+      model.traverse((node) => {
+        if (!(node instanceof THREE.Mesh) || !node.geometry) return
+        meshBox.setFromObject(node)
+        if (meshBox.isEmpty()) return
+        meshBox.getSize(meshSize)
+        const volume = meshSize.x * meshSize.y * meshSize.z
+        if (volume <= biggest) return
+        biggest = volume
+        meshBox.getCenter(meshCenter)
+        axis.copy(meshCenter)
+      })
+      if (biggest < 0) box.getCenter(axis)
       const scale = h / Math.max(size.y, 0.0001)
       model.scale.setScalar(scale)
-      model.position.set(-center.x * scale, -box.min.y * scale + bottom * h, -center.z * scale)
+      model.position.set(-axis.x * scale, -box.min.y * scale + bottom * h, -axis.z * scale)
       /* O aquecimento (compilar programas e subir geometria) evita um
          tranco quando o foguete entra, mas num aparelho lento ele leva
          mais de dez segundos, e um hero vazio esse tempo todo é pior

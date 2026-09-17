@@ -27,7 +27,6 @@ import { createMeteors } from './meteors'
 import { createBrightStars } from './brightstars'
 import { createSunRays } from './sunrays'
 import { createCameraMotion } from './cameraMotion'
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
 /**
  * Núcleo orbital: uma bola densa de triângulos vazados com três anéis
@@ -139,10 +138,44 @@ export function TriScene() {
     let environmentTarget: THREE.WebGLRenderTarget | null = null
     const buildEnvironment = () => {
       if (disposed || environmentTarget) return
+      /* O que o aço reflete.
+         Era o RoomEnvironment do three: uma sala branca de estúdio. Um
+         cilindro de metal refletindo cinza uniforme em toda a volta não tem
+         como parecer outra coisa senão um cano — era essa a queixa do
+         cliente sobre o foguete.
+         No lugar dele, um céu: sol quente em cima à esquerda, de onde vem a
+         luz principal da cena, escuridão no meio e o azul da Terra subindo
+         de baixo. O casco ganha um degradê vertical e uma quina clara, que
+         é o que faz metal parecer metal. Custa uma textura de 64 por 32. */
+      const skyCanvas = document.createElement('canvas')
+      skyCanvas.width = 64
+      skyCanvas.height = 32
+      const skyCtx = skyCanvas.getContext('2d')
+      if (skyCtx) {
+        const vertical = skyCtx.createLinearGradient(0, 0, 0, 32)
+        vertical.addColorStop(0, '#d6e4ff')
+        vertical.addColorStop(0.4, '#3b4a6b')
+        vertical.addColorStop(0.68, '#35618f')
+        vertical.addColorStop(1, '#7fa9d9')
+        skyCtx.fillStyle = vertical
+        skyCtx.fillRect(0, 0, 64, 32)
+        /* O sol: um borrão quente no alto à esquerda, na mesma direção da
+           luz principal, para o brilho no casco cair onde a sombra manda. */
+        const sunGlow = skyCtx.createRadialGradient(13, 6, 0, 13, 6, 22)
+        sunGlow.addColorStop(0, 'rgba(255, 252, 244, 1)')
+        sunGlow.addColorStop(0.35, 'rgba(255, 226, 180, 0.8)')
+        sunGlow.addColorStop(1, 'rgba(255, 205, 150, 0)')
+        skyCtx.fillStyle = sunGlow
+        skyCtx.fillRect(0, 0, 64, 32)
+      }
+      const skyTexture = new THREE.CanvasTexture(skyCanvas)
+      skyTexture.mapping = THREE.EquirectangularReflectionMapping
+      skyTexture.colorSpace = THREE.SRGBColorSpace
       const pmrem = new THREE.PMREMGenerator(renderer)
-      environmentTarget = pmrem.fromScene(new RoomEnvironment(), 0.04, 0.1, 100, { size: 32 })
+      environmentTarget = pmrem.fromEquirectangular(skyTexture)
       scene.environment = environmentTarget.texture
       pmrem.dispose()
+      skyTexture.dispose()
     }
     /* Luz de verdade para o foguete: uma direcional vinda de cima à
        esquerda, a mesma direção da luz dos planetas, e uma hemisférica azul
