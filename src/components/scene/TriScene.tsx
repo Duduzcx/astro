@@ -299,7 +299,18 @@ export function TriScene() {
 
     /* O espaço: panorama da Via Láctea atrás de tudo, com as nebulosas
        assadas numa textura (menor no celular) e as galáxias distantes. */
-    const space = createSpace(tier('milky-way', 'webp', '2k'), lightweight || weakDevice ? 0.62 : 0.8, warm, {
+    /* Sem nebulosa procedural no celular.
+       Ela era assada depois da carga e sobreposta ao céu fotográfico, e era
+       exatamente isso que o cliente descrevia: o site abre bonito e, alguns
+       segundos depois, o fundo fica borrado e estourado. Comparando capturas
+       do mesmo quadro a 1,5s e a 14s, a diferença é gritante — o céu limpo e
+       profundo do começo vira nuvens lavadas com blocos visíveis das faixas
+       da assadura.
+       Em tela grande ela continua: lá a textura assada cobre uma área
+       proporcionalmente menor e a sobreposição lê como profundidade.
+       De quebra somem a trava da assadura na abertura e a textura de
+       2048 por 1024 na memória do aparelho. */
+    const space = createSpace(tier('milky-way', 'webp', '2k'), lightweight || weakDevice ? 0 : 0.8, warm, {
       renderer,
       /* A nebulosa assada é o fundo inteiro, esticada por toda a esfera do
          céu. A 1024 por 512 a parte visível dela numa tela de 1170 pixels
