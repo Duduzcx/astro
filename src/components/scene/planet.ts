@@ -127,6 +127,10 @@ const SURFACE_FRAGMENT = /* glsl */ `
   uniform vec3 uHaze;
   uniform float uHazeStrength;
   uniform vec3 uTint;
+  uniform vec3 uToonA;
+  uniform vec3 uToonB;
+  uniform vec3 uToonC;
+  uniform float uToonBands;
   varying vec3 vNormalV;
   varying vec3 vTangentV;
   varying vec3 vBitangentV;
@@ -149,6 +153,28 @@ const SURFACE_FRAGMENT = /* glsl */ `
     float water = 0.0;
     float land = 1.0;
 
+#ifdef TOON
+    /* Rampa chapada, sem textura nenhuma.
+       As faixas vêm da latitude em degraus duros; as manchas, de dois senos
+       de baixa frequência. É o oposto de posterizar uma fotografia: aqui não
+       há detalhe fotográfico para brigar com o traço, então o chapado lê como
+       decisão de arte e não como imagem estragada. */
+    float lat = vUv.y;
+    float t;
+    if (uToonBands > 0.5) {
+      float stripes = sin(lat * uToonBands * 3.14159265) * 0.5 + 0.5;
+      t = floor(stripes * 4.0) / 3.0;
+    } else {
+      float blob = sin(vUv.x * 9.0 + lat * 5.0) * 0.5 + sin(lat * 7.0 - vUv.x * 3.0) * 0.5;
+      t = step(0.0, blob) * 0.65 + 0.18;
+    }
+    albedo = mix(uToonA, uToonB, clamp(t, 0.0, 1.0));
+    /* Calota clara nos polos: num disco chapado é ela que devolve a leitura
+       de esfera, no lugar do sombreado que a foto trazia. */
+    float cap = smoothstep(0.84, 0.98, abs(lat * 2.0 - 1.0));
+    albedo = mix(albedo, uToonC, cap);
+    relief = 0.0;
+#else
     if (uHasMap > 0.5) {
       /* Fotografia: a cor vem do mapa, um pouco mais clara para compensar
          o escurecimento de borda. Sem relevo: a foto já traz o sombreado, e
@@ -190,6 +216,7 @@ const SURFACE_FRAGMENT = /* glsl */ `
         water = 0.35;
       }
     }
+#endif
 #ifndef PHOTO_ONLY
     else if (uKind < 0.5) {
       /* O alvo: mundo de gelo e oceano, montanhas claras. */
@@ -685,6 +712,7 @@ export function createPlanet({
   maps,
   tint = '#ffffff',
   stylized = false,
+  toon,
   warm,
 }: {
   segments: number
@@ -706,6 +734,10 @@ export function createPlanet({
       sombra volumétrica de nuvem e o especular de três potências. Vale no
       celular, onde a textura é de 1k e o detalhe fotográfico vira papa. */
   stylized?: boolean
+  /** Acabamento de ilustração sem fotografia: rampa de duas cores, faixas em
+      degrau e calota clara. `bands` acima de zero dá o listrado de gigante
+      gasoso; zero dá manchas largas de mundo rochoso. */
+  toon?: { a: string; b: string; c: string; bands: number }
   /** Chamado com cada textura assim que chega: sobe para a GPU na hora,
       em vez de travar o primeiro frame em que o planeta aparece. */
   warm?: (texture: THREE.Texture) => void
@@ -737,8 +769,11 @@ export function createPlanet({
      bloco do código-fonte. */
   const photoOnly = Boolean(maps?.map)
   const defines: Record<string, string> = {}
-  if (photoOnly) defines.PHOTO_ONLY = ''
-  if (stylized) defines.STYLIZED = ''
+  if (photoOnly || toon) defines.PHOTO_ONLY = ''
+  /* TOON reaproveita os caminhos de luz do STYLIZED (degrau no terminador e
+     contorno na silhueta) e troca só a origem da cor. */
+  if (stylized || toon) defines.STYLIZED = ''
+  if (toon) defines.TOON = ''
   const surfaceMaterial = new THREE.ShaderMaterial({
     defines: { ...defines },
     vertexShader: SURFACE_VERTEX,
@@ -769,6 +804,10 @@ export function createPlanet({
       uHaze: { value: new THREE.Color(KIND_ATMOSPHERE[kind]) },
       uHazeStrength: { value: KIND_HAZE[kind] },
       uTint: { value: new THREE.Color(tint) },
+      uToonA: { value: new THREE.Color(toon?.a ?? '#ffffff') },
+      uToonB: { value: new THREE.Color(toon?.b ?? '#888888') },
+      uToonC: { value: new THREE.Color(toon?.c ?? '#ffffff') },
+      uToonBands: { value: toon?.bands ?? 0 },
     },
   })
   if (maps?.normal) {

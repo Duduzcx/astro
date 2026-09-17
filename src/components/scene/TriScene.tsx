@@ -487,8 +487,9 @@ export function TriScene() {
           kind: 'gas',
           spin: 0.03,
           ring: true,
+          /* Areia clara com faixas largas. */
+          toon: { a: '#f0dcae', b: '#a8874f', c: '#f7eeda', bands: 7 },
           maps: {
-            map: tier('saturn', 'webp'),
             ring: { low: '/space/saturn-ring-2k.webp', high: '/space/saturn-ring-2k.webp' },
           },
           warm,
@@ -505,7 +506,8 @@ export function TriScene() {
           stylized: false,
           kind: 'rock',
           spin: 0.09,
-          maps: { map: tier('mars', 'webp') },
+          /* Ferrugem com manchas largas e calota de gelo. */
+          toon: { a: '#d2673a', b: '#8e3a22', c: '#ecdfd2', bands: 0 },
           warm,
         }),
         /* Maior e um pouco mais para dentro: pequeno demais o relevo não
@@ -522,7 +524,8 @@ export function TriScene() {
           stylized: false,
           kind: 'gas',
           spin: 0.035,
-          maps: { map: tier('jupiter', 'webp') },
+          /* Creme e âmbar, faixas estreitas. */
+          toon: { a: '#e4c096', b: '#9c6238', c: '#f2e6d6', bands: 11 },
           warm,
         }),
         x: 0.75,
