@@ -485,19 +485,47 @@ footer .bg-graphite::before {
   main > section:not(:first-of-type) {
     content-visibility: auto;
   }
-  main > section:nth-of-type(2)  { contain-intrinsic-size: auto 3687px; }
+  main > section:nth-of-type(2)  { contain-intrinsic-size: auto 3699px; }
   main > section:nth-of-type(3)  { contain-intrinsic-size: auto 376px; }
   main > section:nth-of-type(4)  { contain-intrinsic-size: auto 362px; }
   main > section:nth-of-type(5)  { contain-intrinsic-size: auto 478px; }
-  main > section:nth-of-type(6)  { contain-intrinsic-size: auto 764px; }
-  main > section:nth-of-type(7)  { contain-intrinsic-size: auto 1660px; }
+  main > section:nth-of-type(6)  { contain-intrinsic-size: auto 752px; }
+  main > section:nth-of-type(7)  { contain-intrinsic-size: auto 1668px; }
   main > section:nth-of-type(8)  { contain-intrinsic-size: auto 1685px; }
   main > section:nth-of-type(9)  { contain-intrinsic-size: auto 545px; }
   main > section:nth-of-type(10) { contain-intrinsic-size: auto 1726px; }
-  main > section:nth-of-type(11) { contain-intrinsic-size: auto 1842px; }
-  main > section:nth-of-type(12) { contain-intrinsic-size: auto 1337px; }
+  main > section:nth-of-type(11) { contain-intrinsic-size: auto 1874px; }
+  main > section:nth-of-type(12) { contain-intrinsic-size: auto 1325px; }
   main > section:nth-of-type(13) { contain-intrinsic-size: auto 596px; }
-  main > section:nth-of-type(14) { contain-intrinsic-size: auto 1534px; }
-  main > section:nth-of-type(15) { contain-intrinsic-size: auto 881px; }
-  main > section:nth-of-type(16) { contain-intrinsic-size: auto 1088px; }
+  main > section:nth-of-type(14) { contain-intrinsic-size: auto 1542px; }
+  main > section:nth-of-type(15) { contain-intrinsic-size: auto 861px; }
+  main > section:nth-of-type(16) { contain-intrinsic-size: auto 1060px; }
+}
+
+/* Respiro: no celular o conteúdo ocupa a largura inteira e os cartões são
+   opacos, então a cena vira uma faixa estreita que aparece e some entre um
+   bloco e outro — era isso que fazia o buraco negro parecer falhar.
+
+   Aqui os cartões deixam a cena passar. O texto continua legível porque o
+   que segura o contraste é o véu fixo por baixo (.scene-scrim), que não
+   depende do cartão, e porque a transparência para bem antes do ponto em
+   que a nebulosa começaria a brigar com a letra. Sem `backdrop-filter`: um
+   desfoque de fundo por cartão é o efeito mais caro que existe num celular,
+   e a cena atrás já é macia. */
+@media (max-width: 1023px) {
+  .graphite-card {
+    background:
+      linear-gradient(
+        158deg,
+        rgba(255, 255, 255, 0.07) 0%,
+        rgba(255, 255, 255, 0.02) 44%,
+        rgba(255, 255, 255, 0.045) 100%
+      ),
+      color-mix(in srgb, var(--color-graphite) 74%, transparent);
+  }
+
+  /* Mais ar entre um cartão e outro: é pelo vão que o astro aparece. */
+  .shell .grid {
+    row-gap: clamp(1.25rem, 5vw, 2rem);
+  }
 }
