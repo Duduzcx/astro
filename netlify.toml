@@ -12,7 +12,12 @@
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
     # JSON-LD é type=application/ld+json, o navegador não executa: passa na CSP.
     # Ao self-hostar as fontes, tire os dois domínios do Google daqui.
-    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; media-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    # `blob:` em script-src, worker-src e connect-src existe pelo decodificador
+    # Draco: o three monta o worker dele a partir de uma blob URL e busca o
+    # wasm por ela. Sem isto o navegador recusa, o modelo do foguete nunca
+    # descomprime e a cena cai no foguete procedural depois de oito segundos —
+    # e isso só acontecia no ar, porque o servidor local não manda CSP nenhum.
+    Content-Security-Policy = "default-src 'self'; script-src 'self' blob:; worker-src 'self' blob:; child-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 
 [[headers]]
   for = "/assets/*"
