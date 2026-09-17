@@ -5,7 +5,7 @@ import * as THREE from 'three'
  * conforme a página rola. É o que dá sensação de viagem entre as seções
  * depois que o foguete some. Um draw call, sempre visível.
  */
-export type StarsState = { progress: number; opacity: number }
+export type StarsState = { progress: number; opacity: number; warp?: number }
 
 /* Meia largura e meia altura do campo em mundo. Os pontos ficam entre z -1,5
    e -4, e a essa distância a tela mostra bem mais mundo do que em z 0: ±5,5
@@ -22,9 +22,11 @@ const VERTEX = /* glsl */ `
   uniform float uOffset;
   uniform float uTime;
   uniform float uPixelRatio;
+  uniform float uWarp;
   varying float vTint;
   varying float vTwinkle;
   varying float vSpike;
+  varying float vStretch;
 
   void main() {
     vec3 p = position;
@@ -41,7 +43,15 @@ const VERTEX = /* glsl */ `
     /* Piso de dois pixels e meio: abaixo disso o sprite cobre quase um
        pixel só, e qualquer movimento de subpixel faz a estrela piscar. Com
        uma borda macia de dois pixels ela apenas desliza. */
-    gl_PointSize = max(aSize * uPixelRatio * (3.0 / -view.z) * (1.0 + vSpike * 4.0), 2.5 * uPixelRatio);
+    /* Rolagem rápida estica a estrela num risco, como a janela de uma nave
+       entrando em curvatura. O sprite precisa crescer junto, senão o risco
+       bate na borda do próprio quad e sai cortado. As mais próximas
+       esticam mais que as do fundo, que é o que dá a sensação de túnel. */
+    /* Teto do risco medido: com 2,5 mais 3,5 por estrela, um arrastão no
+       celular custava milissegundos de preenchimento que não compensavam a
+       diferença visual. */
+    vStretch = 1.0 + uWarp * (1.6 + aSeed * 2.0);
+    gl_PointSize = max(aSize * uPixelRatio * (3.0 / -view.z) * (1.0 + vSpike * 4.0), 2.5 * uPixelRatio) * vStretch;
     vTint = aTint;
   }
 `
@@ -51,9 +61,13 @@ const FRAGMENT = /* glsl */ `
   varying float vTint;
   varying float vTwinkle;
   varying float vSpike;
+  varying float vStretch;
 
   void main() {
     vec2 q = gl_PointCoord - 0.5;
+    /* Esticar em y é o mesmo que apertar em x na métrica da distância: o
+       ponto vira um risco vertical sem custar nenhuma geometria. */
+    q.x *= vStretch;
     float d = length(q);
     float alpha = smoothstep(0.5, 0.05, d) * smoothstep(0.5, 0.42, d) * 4.0;
     if (vSpike > 0.5) {
@@ -100,6 +114,7 @@ export function createStars(count: number, pixelRatio: number) {
     uniforms: {
       uOffset: { value: 0 },
       uTime: { value: 0 },
+      uWarp: { value: 0 },
       uPixelRatio: { value: pixelRatio },
       uOpacity: { value: 0.7 },
     },
@@ -115,6 +130,7 @@ export function createStars(count: number, pixelRatio: number) {
       material.uniforms.uOffset.value = state.progress * 3.0
       material.uniforms.uTime.value = time
       material.uniforms.uOpacity.value = state.opacity
+      material.uniforms.uWarp.value = state.warp ?? 0
     },
     dispose() {
       geometry.dispose()

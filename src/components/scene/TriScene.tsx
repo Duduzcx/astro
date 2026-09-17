@@ -357,12 +357,15 @@ export function TriScene() {
        camada densa assada na nebulosa (space.ts) já dá a profundidade. */
     /* Menos estrelas no celular: numa tela de mão o mesmo número vira
        chuvisco, e o que precisa aparecer é o astro da vez. */
-    const stars = createStars(lightweight ? 900 : 3600, renderer.getPixelRatio())
+    const stars = createStars(lightweight ? 520 : 3600, renderer.getPixelRatio())
     scene.add(stars.object)
     /* Umas poucas brilhantes de verdade, com halo e espículas. */
     const brightStars = createBrightStars(lightweight ? 3 : 8, {
       rightBias: !lightweight,
       view: { halfWidth, cameraZ: camera.position.z },
+      /* No celular elas nasciam altas demais, coladas no topo, disputando
+         espaço com o menu e com o título. */
+      yOffset: lightweight ? -1.1 : 0,
     })
     scene.add(brightStars.object)
     /* Meteoros de vez em quando: o detalhe que faz o céu parecer vivo. */
@@ -664,6 +667,7 @@ export function TriScene() {
     let frame = 0
     let previous = performance.now()
     let lastScrollY = window.scrollY
+    let warp = 0
     let rush = 0
     let frameCount = 0
 
@@ -770,7 +774,12 @@ export function TriScene() {
       sphereMaterial.uniforms.uCenter.value.set(centerX, centerY)
       ambientMaterial.uniforms.uTime.value = time * 0.6
       ambientMaterial.uniforms.uOpacity.value = narrow ? 0.06 : 0.14
-      stars.update({ progress, opacity: narrow ? 0.72 : 0.85 }, time)
+      /* Rolagem rápida vira curvatura: o risco cresce com a velocidade e
+         volta ao ponto quando a página para. O teto evita que um arrastão
+         no celular transforme o céu numa parede branca. */
+      const warpTarget = Math.min(speed / 2600, 1)
+      warp += (warpTarget - warp) * (1 - Math.exp(-delta * 6))
+      stars.update({ progress, opacity: narrow ? 0.72 : 0.85, warp }, time)
       brightStars.update({ progress, opacity: narrow ? 0.7 : 0.9 }, time)
       meteors.update(time, delta, halfWidth, visibleHalfHeightNow())
       space.update(progress, time)
@@ -941,12 +950,11 @@ export function TriScene() {
          na coluna onde ele está. */
       /* No celular a tela é estreita e o foguete encostado na borda
          aparecia cortado; quase no meio ele cabe inteiro. */
-      /* No celular o foguete fica no eixo da cena. O modelo tem um desvio
-         constante para a direita dentro do próprio grupo (medido: cerca de
-         um quarto da largura da tela), então com x = 0 ele cai no terço
-         direito, inteiro, sem encostar na borda. Empurrar mais para a
-         esquerda o jogaria por cima do texto. */
-      const rocketX = (narrow ? 0 : 0.52) * halfWidth
+      /* O desvio que antes punha o foguete no terço direito era o viewport
+         devolvido em pixels de buffer (ver space.ts); corrigido aquilo, x = 0
+         passou a ser o centro de verdade. Aqui ele sai um pouco para a
+         direita de propósito, para não ficar atrás da coluna de texto. */
+      const rocketX = (narrow ? 0.3 : 0.52) * halfWidth
       const horizonTop = -visibleHalfHeight + reveal
       const horizonDrop = earthRadius - Math.sqrt(Math.max(earthRadius * earthRadius - rocketX * rocketX, 0))
       const rocketPadY = horizonTop - horizonDrop + rocketHeight * 0.52
@@ -1088,13 +1096,17 @@ export function TriScene() {
     const warmQueue: THREE.Object3D[] = [
       sphereField,
       cruiser.object,
+      /* O buraco negro e a supernova subiram na fila. Eles são os shaders
+         mais pesados da página, e compilar no instante em que entram em
+         cena é um tranco de mais de um segundo — era isso que o cliente via
+         como o buraco negro "travando ao entrar". */
+      blackHole.object,
+      nova.object,
       ...worlds.map((world) => world.planet.object),
       trail.object,
       cruiseTrail.object,
       star.object,
       explosion.object,
-      blackHole.object,
-      nova.object,
       meteors.object,
     ]
     const idle: (callback: () => void) => void =

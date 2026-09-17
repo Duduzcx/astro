@@ -144,26 +144,33 @@ export function mobileKeyframes(
        chamada (0.473 a 0.496) e no começo do Processo, que é onde a tela
        do celular está aberta — em Resultados e Projetos os cards ocupam
        a largura inteira e o disco ficava escondido atrás deles. */
-    [0.34, 0.6, 0.0, -0.1, scale * 0.55, 0.4, 1],
-    [0.36, 0.1, 0.0, -0.05, scale * 0.9, 0.45, 1],
-    [0.46, 0.08, 0.0, 0.04, scale * 0.95, 0.6, 1],
-    [0.52, 0.08, 0.0, 0.04, scale * 1.05, 0.7, 1],
+    /* Opacidade bem acima da anterior: a 0,4 o disco ficava translúcido e
+       o buraco negro lia como mancha, não como objeto. */
+    [0.34, 0.6, 0.0, -0.1, scale * 0.6, 0.55, 1],
+    [0.36, 0.1, 0.0, -0.05, scale * 0.95, 0.75, 1],
+    [0.46, 0.08, 0.0, 0.04, scale * 1.05, 0.95, 1],
+    [0.52, 0.08, 0.0, 0.04, scale * 1.15, 1.0, 1],
     [0.55, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     [0.6, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 1],
     /* Disperso e quase invisível, o campo vira poeira dourada de estrela. */
     [0.65, 0.9, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 2],
     [0.875, 0.95, 0.0, 0.0, scale * 1.5, FIELD_OPACITY, 2],
     /* A poeira condensa: uma estrela nasce durante o contato... */
-    [0.9, 0.07, 0.0, 0.15, scale * 0.58, 0.55, 2],
-    [0.925, 0.05, 0.0, 0.05, scale * 0.8, 0.72, 2],
+    /* A estrela que precede a explosão nasce maior e mais acesa: antes ela
+       mal aparecia, e sem ela a detonação chega sem preparo. */
+    [0.9, 0.07, 0.0, 0.15, scale * 0.75, 0.8, 2],
+    [0.925, 0.05, 0.0, 0.05, scale * 1.0, 0.95, 2],
     /* ...e explode à vista quando "A sua operação tem a resposta" entra
        (0.935): o morph 2 para 3 agrupado É a detonação. */
-    [0.935, 0.08, 0.0, -0.1, scale * 0.82, 1.0, 3],
+    [0.935, 0.08, 0.0, -0.1, scale * 1.25, 1.0, 3],
     /* Daqui até o fim tudo é idêntico. No pé da página o scroll treme, e com
        a cauda plana a tremida não vira mudança de tamanho. */
     /* Apaga antes do rodapé (o Contato acaba em 0.958 nesta largura). */
-    [0.946, 0.08, 0.0, -0.3, scale, 0.9, 3],
-    [0.958, 0.08, 0.0, -0.4, scale, 0.0, 3],
+    /* Segura a cheia até quase o fim do Contato. A janela é curta por
+       obrigação (a supernova não pode passar do rodapé), então o jeito de
+       ela ser percebida é ficar grande e opaca dentro dela, não durar mais. */
+    [0.946, 0.08, 0.0, -0.3, scale * 1.35, 1.0, 3],
+    [0.958, 0.08, 0.0, -0.4, scale * 1.2, 0.0, 3],
     [1.0, 0.08, 0.0, -0.4, scale, 0.0, 3],
   ]
 }

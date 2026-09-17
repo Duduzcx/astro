@@ -84,6 +84,9 @@ export type BrightStarsOptions = {
   rightBias?: boolean
   /** A vista, para colocar cada estrela por fração da largura da tela. */
   view?: { halfWidth: number; cameraZ: number }
+  /** Empurra todas para baixo. No celular elas nasciam altas demais, coladas
+      no topo, onde disputam com o menu e com o título. */
+  yOffset?: number
 }
 
 export function createBrightStars(count: number, options: BrightStarsOptions = {}) {
@@ -130,7 +133,7 @@ export function createBrightStars(count: number, options: BrightStarsOptions = {
     stars.push({
       sprite,
       material,
-      y: (i + 0.2 + Math.random() * 0.6) * (WRAP / count) - SPREAD_Y,
+      y: (i + 0.2 + Math.random() * 0.6) * (WRAP / count) - SPREAD_Y + (options.yOffset ?? 0),
       size,
       seed: Math.random() * 10,
       weight: 0.7 + Math.random() * 0.3,

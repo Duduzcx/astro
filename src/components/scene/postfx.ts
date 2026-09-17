@@ -136,12 +136,14 @@ export function createPostFx(
   const divisor = light ? 8 : 4
   const bloom = new UnrealBloomPass(
     new THREE.Vector2(width / divisor, height / divisor),
-    /* No celular a tela é pequena e o brilho ocupa proporcionalmente mais
-       espaço: força menor e limiar mais alto, senão o clarão do hero lava o
-       título e some com o texto. */
-    light ? 0.3 : 0.36,
-    light ? 0.5 : 0.62,
-    light ? 0.96 : 0.92,
+    /* O limiar alto de antes existia para conter o clarão do hero, que
+       ocupava proporcionalmente muito mais tela no celular. Esse clarão não
+       existe mais lá, e o que sobrou eram astros sem brilho: o Sol, o disco
+       de acreção e a supernova não passavam do limiar e saíam chapados.
+       Força maior e limiar mais baixo devolvem o halo a quem precisa dele. */
+    light ? 0.44 : 0.36,
+    light ? 0.58 : 0.62,
+    light ? 0.9 : 0.92,
   )
   composer.addPass(bloom)
   const film = light ? null : new ShaderPass(FILM)
