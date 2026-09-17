@@ -450,24 +450,10 @@ footer .bg-graphite::before {
    contraste ao texto, e esse trabalho passou para a vinheta do cartão e para
    a sombra do glifo, que agem só onde há letra. O que sobra é um banho
    mínimo, para a cena não competir em saturação com a interface. */
-.scene-scrim {
-  background: rgba(6, 10, 22, 0.1);
-}
-@media (min-width: 1024px) {
-  .scene-scrim {
-    background: rgba(6, 10, 22, 0.36);
-  }
-}
-@media (min-width: 1024px) {
-  .scene-scrim {
-    background: linear-gradient(
-      90deg,
-      rgba(6, 10, 22, 0.58) 0%,
-      rgba(6, 10, 22, 0.3) 46%,
-      rgba(6, 10, 22, 0.1) 100%
-    );
-  }
-}
+/* O véu global não existe mais. Ele escurecia a tela inteira para dar
+   contraste a um texto que ocupa uma fração dela, e o preço era a cena
+   perder nitidez em todo lugar. O contraste passou a ser local: a vinheta
+   radial do cartão e a sombra que nasce colada no glifo. */
 
 /* Seção fora da tela sai do orçamento de layout e de pintura do navegador.
    Medido num iPhone 13 com a CPU quatro vezes mais lenta, rolando a página
@@ -521,7 +507,7 @@ footer .bg-graphite::before {
    que a nebulosa começaria a brigar com a letra. Sem `backdrop-filter`: um
    desfoque de fundo por cartão é o efeito mais caro que existe num celular,
    e a cena atrás já é macia. */
-@media (max-width: 1023px) {
+@media (max-width: 4000px) {
   /* Vinheta de leitura em vez de fundo chapado. O miolo do cartão, onde a
      letra mora, fica denso o bastante para o texto ter contraste absoluto; a
      borda vai a quase nada, e é por ela que o astro atravessa. Um fundo de
