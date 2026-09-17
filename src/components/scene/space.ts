@@ -231,7 +231,12 @@ export function createSpace(
        navegador pinta. A nebulosa aparece por partes no primeiro segundo,
        de cima para baixo, e ninguém percebe porque o céu ainda está
        entrando. */
-    const strips = 8
+    /* Faixas dimensionadas por pixel, não por número fixo. Com oito faixas,
+       cada uma assava um oitavo de 1024x512 no celular e custava mais de
+       cem milissegundos — um quadro perdido por faixa. Com um teto de
+       trinta mil pixels por vez, cada passo cabe num quadro e o céu vai
+       aparecendo de cima para baixo sem travar a rolagem. */
+    const strips = Math.min(40, Math.max(8, Math.round((w * h) / 30000)))
     let strip = 0
     const viewportSize = new THREE.Vector2()
     const bakeStrip = () => {
@@ -258,6 +263,7 @@ export function createSpace(
       strip += 1
       if (strip < strips) {
         requestAnimationFrame(bakeStrip)
+
       } else {
         bakeMaterial.dispose()
         bakeGeometry.dispose()
@@ -266,7 +272,21 @@ export function createSpace(
     /* Começa depois da primeira pintura: o programa da assadeira é o mais
        pesado de compilar de toda a cena, e compilá-lo antes do primeiro
        frame atrasa tudo o que o visitante vê. */
-    window.setTimeout(() => requestAnimationFrame(bakeStrip), 600)
+    /* A primeira faixa pagava, além do seu pedaço, a compilação do shader da
+       nebulosa: era ela sozinha que aparecia no perfil como um bloqueio de
+       mais de um segundo. Compilar antes, num quadro só para isso, separa as
+       duas contas e nenhuma delas trava sozinha. */
+    window.setTimeout(() => {
+      /* `compileAsync` e não `compile`: o síncrono faz a ligação do programa
+         no thread principal e vira ele mesmo o bloqueio — medido, a maior
+         travada subiu de 1,8s para 2,8s. O assíncrono usa
+         KHR_parallel_shader_compile onde existe, e o driver trabalha fora
+         daqui. */
+      void renderer
+        .compileAsync(bakeScene, bakeCamera)
+        .catch(() => undefined)
+        .then(() => requestAnimationFrame(bakeStrip))
+    }, 600)
     material.uniforms.uNebulaMap.value = bakeTarget.texture
     material.uniforms.uNebula.value = nebula
   }
