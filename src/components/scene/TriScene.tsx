@@ -685,24 +685,34 @@ export function TriScene() {
          o limiar de desktop o rebaixamento disparava sempre — era ele
          que jogava fora o bloom e deixava o Sol e o buraco negro sem
          brilho nenhum. */
-      if (delta > (lightweight ? 0.055 : 0.028)) slowFrames += 1
+      /* No celular a régua sobe para 75ms. A 55ms um aparelho mediano
+         cruzava o limiar em rolagem normal e o rebaixamento disparava
+         sempre. */
+      if (delta > (lightweight ? 0.075 : 0.028)) slowFrames += 1
       if (sampled >= 120 && slowFrames > (lightweight ? 80 : 30)) {
         downgraded = true
-        renderer.setPixelRatio(1)
-        renderer.setSize(window.innerWidth, stageHeight, false)
+        /* O que cai em qualquer aparelho: coisas que somem sem que se note. */
         ambientField.visible = false
         stars.object.geometry.setDrawRange(
           0,
           Math.floor(stars.object.geometry.getAttribute('position').count / 2),
         )
         rocket.lighten()
-        /* A lente é a primeira coisa a cair num aparelho que não segura a
-           taxa: o bloom é cinco desfoques por frame. O aparelho perde o
-           brilho e ganha fluidez, que é a troca certa quando a régua é o
-           deslize. */
-        postfx?.dispose()
-        postfx = null
-        downgradedPostFx = true
+        /* Razão de pixels e bloom só caem fora do celular.
+           Era aqui que a cena "começava bonita e ia ficando borrada": num
+           aparelho real o limiar era cruzado em rolagem normal, a razão de
+           pixels caía de 1,5 para 1,0 e o bloom sumia — de uma vez e para
+           sempre, porque o rebaixamento não tem volta. Numa tela de mão isso
+           não é troca de brilho por fluidez, é a cena inteira virando um
+           desenho borrado. Em tela grande a conta é outra: lá a razão de
+           pixels já é 1,25 e a perda é pequena perto do que se ganha. */
+        if (!lightweight) {
+          renderer.setPixelRatio(1)
+          renderer.setSize(window.innerWidth, stageHeight, false)
+          postfx?.dispose()
+          postfx = null
+          downgradedPostFx = true
+        }
       }
     }
 

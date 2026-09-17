@@ -399,7 +399,13 @@ export function createBlackHole({ segments, lightweight = false }: { segments: n
   const object = new THREE.Group()
   const geometries: THREE.BufferGeometry[] = []
   const materials: THREE.Material[] = []
-  const noise = makeNoiseTexture(256)
+  /* A textura de ruído é feita na CPU, pixel a pixel, com dez oitavas de
+     fbm somadas. A 256 são 65 mil pixels e uns dois milhões e meio de
+     operações, tudo síncrono no thread principal, no meio da montagem da
+     cena — era o congelamento que aparecia quando o buraco negro entrava.
+     A 128 é um quarto do trabalho, e como o shader ainda deforma e repete
+     esta textura no disco, a diferença não aparece na tela. */
+  const noise = makeNoiseTexture(lightweight ? 128 : 256)
 
   /* Orientação do disco: o quatérnio leva o plano XY local ao plano dos
      triângulos. A câmera olha ao longo de -Z sem girar, então "para a
