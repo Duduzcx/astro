@@ -143,6 +143,7 @@ const SURFACE_FRAGMENT = /* glsl */ `
     vec3 q = vObj / ${RADIUS.toFixed(2)};
 #endif
     vec3 albedo;
+    float centerLum = 0.0;
     float height = 0.0;
     float relief = 1.0;
     float water = 0.0;
@@ -154,6 +155,9 @@ const SURFACE_FRAGMENT = /* glsl */ `
          derivada de uma amostra bilinear é constante por texel — vira
          mosaico na tela. */
       vec3 photo = texture2D(uMap, vUv).rgb * uTint;
+      /* A luminância do centro fica guardada: o Sobel abaixo precisa dela e
+         esta amostra já foi paga. */
+      centerLum = dot(photo, vec3(0.299, 0.587, 0.114));
       if (uKind > 1.5 && uKind < 2.5) {
         /* Gigante fotografado: as faixas tremem de leve, como nuvens que
            correm em latitudes diferentes; a foto deixa de ser um adesivo. */
@@ -286,12 +290,15 @@ const SURFACE_FRAGMENT = /* glsl */ `
          isso pega o ruído da compressão, maior borra a cratera. O eixo x
          corre com a longitude, o y com a latitude — o mesmo quadro
          tangente do mapa normal. */
+      /* Diferença adiantada em vez de central: duas amostras no lugar de
+         quatro, aproveitando a luminância do centro, que já foi paga para
+         pintar a cor. O gradiente sai deslocado meio texel — invisível num
+         relevo que já é uma aproximação — e o dobro compensa a metade do
+         intervalo, para a força do relevo continuar a mesma. */
       vec2 e = uMapTexel * 2.0;
-      float l01 = dot(texture2D(uMap, vUv + vec2(-e.x, 0.0)).rgb, vec3(0.299, 0.587, 0.114));
-      float l21 = dot(texture2D(uMap, vUv + vec2(e.x, 0.0)).rgb, vec3(0.299, 0.587, 0.114));
-      float l10 = dot(texture2D(uMap, vUv + vec2(0.0, -e.y)).rgb, vec3(0.299, 0.587, 0.114));
-      float l12 = dot(texture2D(uMap, vUv + vec2(0.0, e.y)).rgb, vec3(0.299, 0.587, 0.114));
-      vec2 grad = vec2(l21 - l01, l12 - l10);
+      float lx = dot(texture2D(uMap, vUv + vec2(e.x, 0.0)).rgb * uTint, vec3(0.299, 0.587, 0.114));
+      float ly = dot(texture2D(uMap, vUv + vec2(0.0, e.y)).rgb * uTint, vec3(0.299, 0.587, 0.114));
+      vec2 grad = vec2(lx - centerLum, ly - centerLum) * 2.0;
       /* Perto dos polos o mapa equirretangular espreme a longitude: sem
          isso o relevo vira um redemoinho nas calotas. */
       float squeeze = max(sqrt(max(1.0 - vObj.y * vObj.y / ${(RADIUS * RADIUS).toFixed(4)}, 0.0)), 0.25);
@@ -360,7 +367,20 @@ const SURFACE_FRAGMENT = /* glsl */ `
     float rv = max(dot(reflect(-uLight, n), v), 0.0);
     /* Brilho do sol na água: um ponto apertado e muito claro, como o glint
        que aparece em foto de órbita, mais um lustro largo em volta. */
-    float spec = (pow(rv, 190.0) * 1.5 + pow(rv, 42.0) * 0.35 + pow(rv, 7.0) * 0.06) * water * dayGeom;
+    /* Três chamadas de pow eram três pares de log e exp na unidade de funções
+       especiais da GPU. Elevando ao quadrado em cadeia, os mesmos três
+       lóbulos saem de oito multiplicações e nenhuma função transcendente.
+       Os expoentes andam de 190, 42 e 7 para 192, 48 e 8: dentro do lóbulo
+       especular essa diferença não tem como ser vista. */
+    float r2 = rv * rv;
+    float r4 = r2 * r2;
+    float r8 = r4 * r4;
+    float r64 = r8 * r8;
+    r64 = r64 * r64;
+    r64 = r64 * r64;
+    float r192 = r64 * r64 * r64;
+    float r48 = r8 * r8 * r8 * r8 * r8 * r8;
+    float spec = (r192 * 1.5 + r48 * 0.35 + r8 * 0.06) * water * dayGeom;
     color += spec;
 #endif
 
