@@ -310,7 +310,14 @@ export function TriScene() {
        proporcionalmente menor e a sobreposição lê como profundidade.
        De quebra somem a trava da assadura na abertura e a textura de
        2048 por 1024 na memória do aparelho. */
-    const space = createSpace(tier('milky-way', 'webp', '2k'), lightweight || weakDevice ? 0 : 0.8, warm, {
+    /* O céu do celular fica no degrau leve e não sobe.
+       O degrau alto é o segundo passo da degradação que o cliente descreve:
+       a página abre com o panorama de 1k, que é liso e sem artefato, e
+       segundos depois troca pelo de 2k — que a 21 kB para 2048 por 1024 vem
+       comprimido o bastante para trazer blocagem no lugar de detalhe. Numa
+       esfera de céu, atrás de texto, o liso ganha do detalhado. */
+    const skyTier = tier('milky-way', 'webp', '2k')
+    const space = createSpace(lightweight ? { low: skyTier.low, high: skyTier.low } : skyTier, lightweight || weakDevice ? 0 : 0.8, warm, {
       renderer,
       /* A nebulosa assada é o fundo inteiro, esticada por toda a esfera do
          céu. A 1024 por 512 a parte visível dela numa tela de 1170 pixels
@@ -375,7 +382,7 @@ export function TriScene() {
        disco de acreção brilharem. Medindo um iPhone com processador de
        aparelho mediano, o custo do quadro estava no DOM animado, não
        aqui: ligar o bloom custou cerca de um milissegundo. */
-    const wantsPostFx = !weakDevice
+    const wantsPostFx = !weakDevice && !lightweight
     let postFxFrames = 0
     let downgradedPostFx = false
 
