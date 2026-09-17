@@ -233,6 +233,7 @@ export function createSpace(
        entrando. */
     const strips = 8
     let strip = 0
+    const viewportSize = new THREE.Vector2()
     const bakeStrip = () => {
       if (!bakeTarget) return
       const y = Math.floor((h * strip) / strips)
@@ -245,7 +246,15 @@ export function createSpace(
       renderer.render(bakeScene, bakeCamera)
       renderer.setScissorTest(false)
       renderer.setRenderTarget(previous)
-      renderer.setViewport(0, 0, renderer.domElement.width, renderer.domElement.height)
+      /* Devolver o viewport em unidades lógicas, não em pixels do buffer.
+         `domElement.width` já vem multiplicado pela razão de pixels, e o
+         `setViewport` multiplica de novo: num celular a 1,5 o viewport
+         voltava 1,5 vez maior que a tela, ancorado no canto. A cena inteira
+         era desenhada grande demais e empurrada para a direita — era isto
+         que punha o foguete, o Sol, o buraco negro e a supernova no terço
+         direito, e o que fazia o foguete parecer enorme e cortado. */
+      renderer.getSize(viewportSize)
+      renderer.setViewport(0, 0, viewportSize.x, viewportSize.y)
       strip += 1
       if (strip < strips) {
         requestAnimationFrame(bakeStrip)
