@@ -71,7 +71,12 @@ export function TriScene() {
     const lightweight = window.innerWidth < 1024
 
     const renderer = new THREE.WebGLRenderer({
-      antialias: !weakDevice,
+      /* Sem MSAA no celular. Lá o bloom está sempre ligado, e com um
+         composer a cena é desenhada num alvo próprio: o canvas recebe só um
+         quad de tela cheia já pronto. O antialias do canvas se aplica às
+         bordas desse quad, que não tem borda nenhuma — é custo de
+         preenchimento sem nada em troca. */
+      antialias: !weakDevice && !lightweight,
       alpha: true,
       powerPreference: 'high-performance',
     })
@@ -691,7 +696,16 @@ export function TriScene() {
       if (delta > (lightweight ? 0.075 : 0.028)) slowFrames += 1
       if (sampled >= 120 && slowFrames > (lightweight ? 80 : 30)) {
         downgraded = true
-        /* O que cai em qualquer aparelho: coisas que somem sem que se note. */
+        /* No celular o rebaixamento não acontece, ponto.
+           Ele é um caminho sem volta: uma vez disparado, a cena fica pior
+           até o visitante recarregar. Num aparelho de mão ele disparava
+           sempre, e o resultado era uma página que começa bonita e vai
+           ficando feia enquanto se olha — o oposto do que um site deve
+           fazer. Antes eu tinha poupado só a razão de pixels e o bloom, mas
+           cortar metade das estrelas e aliviar o foguete no meio da sessão
+           também aparece. Em tela grande ele continua, porque lá existe
+           mesmo a máquina velha que ele foi feito para socorrer. */
+        if (lightweight) return
         ambientField.visible = false
         stars.object.geometry.setDrawRange(
           0,
@@ -706,13 +720,11 @@ export function TriScene() {
            não é troca de brilho por fluidez, é a cena inteira virando um
            desenho borrado. Em tela grande a conta é outra: lá a razão de
            pixels já é 1,25 e a perda é pequena perto do que se ganha. */
-        if (!lightweight) {
-          renderer.setPixelRatio(1)
-          renderer.setSize(window.innerWidth, stageHeight, false)
-          postfx?.dispose()
-          postfx = null
-          downgradedPostFx = true
-        }
+        renderer.setPixelRatio(1)
+        renderer.setSize(window.innerWidth, stageHeight, false)
+        postfx?.dispose()
+        postfx = null
+        downgradedPostFx = true
       }
     }
 
@@ -1135,10 +1147,19 @@ export function TriScene() {
       const next = warmQueue.shift()
       if (!next) return
       warming = true
+      /* O `compile` do three percorre só o que está visível. Buraco negro,
+         supernova e explosão nascem invisíveis, então a fila passava por
+         eles sem compilar nada, e o programa acabava sendo montado no exato
+         instante em que o astro entra em cena — o congelamento que o cliente
+         descrevia como o buraco negro travando. Aqui cada um fica visível
+         pelo tempo da compilação e volta como estava. */
+      const wasVisible = next.visible
+      next.visible = true
       renderer
         .compileAsync(next, camera, scene)
         .catch(() => undefined)
         .finally(() => {
+          next.visible = wasVisible
           warming = false
           if (!disposed) idle(warmNext)
         })
