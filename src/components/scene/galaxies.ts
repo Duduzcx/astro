@@ -22,7 +22,11 @@ type Spec = {
 }
 
 const DISTANCE = 12
-const SIZE = 256
+/* 512 e não 256. A galáxia é um sprite e chega à tela ampliada: num
+   aparelho com razão de pixels alta ela ocupa mais pixels reais do que a
+   textura tem, e o que se vê é a interpolação, não o desenho. O custo é
+   pintar o canvas uma vez na carga e um megabyte de memória por galáxia. */
+const SIZE = 512
 
 const SPECS: Spec[] = [
   /* De frente, alto à direita, na chegada: é a que mais lê no hero. */
@@ -112,6 +116,7 @@ export function createGalaxies(view: View, rotationAt: (progress: number) => THR
   const textures: THREE.Texture[] = []
   const materials: THREE.SpriteMaterial[] = []
   const tilts: number[] = []
+  const baseOpacity: number[] = []
   const camera = new THREE.Vector3(0, 0, view.cameraZ)
   const world = new THREE.Vector3()
   const quaternion = new THREE.Quaternion()
@@ -119,6 +124,13 @@ export function createGalaxies(view: View, rotationAt: (progress: number) => THR
   for (const spec of SPECS) {
     const texture = new THREE.CanvasTexture(paint(spec.kind))
     texture.colorSpace = THREE.NoColorSpace
+    /* Com níveis e filtragem anisotrópica: a galáxia é vista inclinada e
+       encolhe muito ao longo da página, e sem isso a espiral vira chuvisco
+       quando ela fica pequena. */
+    texture.generateMipmaps = true
+    texture.minFilter = THREE.LinearMipmapLinearFilter
+    texture.magFilter = THREE.LinearFilter
+    texture.anisotropy = 4
     textures.push(texture)
     const material = new THREE.SpriteMaterial({
       map: texture,
@@ -131,6 +143,7 @@ export function createGalaxies(view: View, rotationAt: (progress: number) => THR
     })
     materials.push(material)
     tilts.push(spec.tilt)
+    baseOpacity.push(spec.opacity)
     const sprite = new THREE.Sprite(material)
     sprite.scale.setScalar(spec.size)
     sprite.renderOrder = -19
@@ -153,7 +166,10 @@ export function createGalaxies(view: View, rotationAt: (progress: number) => THR
       /* Giram devagar, cada uma para um lado: dois minutos por grau, o
          bastante para nunca estarem paradas quando a página para. */
       for (let i = 0; i < materials.length; i += 1) {
-        materials[i].rotation = tilts[i] + time * 0.003 * (i % 2 ? -1 : 1)
+        materials[i].rotation = tilts[i] + time * 0.009 * (i % 2 ? -1 : 1)
+        /* Respiração de brilho, cada uma no seu período: o céu deixa de ser
+           um cenário pintado e passa a ter algo acontecendo nele. */
+        materials[i].opacity = baseOpacity[i] * (0.86 + 0.14 * Math.sin(time * (0.11 + i * 0.037) + i))
       }
     },
     dispose() {

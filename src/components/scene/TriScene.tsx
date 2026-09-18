@@ -1172,10 +1172,24 @@ export function TriScene() {
       explosion.object,
       meteors.object,
     ]
-    const idle: (callback: () => void) => void =
-      'requestIdleCallback' in window
-        ? (callback) => window.requestIdleCallback(callback, { timeout: 900 })
-        : (callback) => window.setTimeout(callback, 60)
+    /* A fila corre bem mais rápido que antes.
+       Ela andava um objeto por callback ocioso com espera de até 900ms, e com
+       onze objetos isso levava vários segundos: quem rolasse antes chegava
+       nos planetas antes do aquecimento, e o programa era montado com o astro
+       já na tela. Era esse o engasgo quando os mundos entram. O limite cai
+       para 250ms e, assim que o visitante começa a rolar, a espera some de
+       vez — a partir dali cada compilação vai no próximo quadro. */
+    let hurry = false
+    window.addEventListener('scroll', () => { hurry = true }, { once: true, passive: true })
+    const idle: (callback: () => void) => void = (callback) => {
+      if (hurry) {
+        requestAnimationFrame(() => callback())
+        return
+      }
+      const schedule = window.requestIdleCallback
+      if (schedule) schedule.call(window, callback, { timeout: 250 })
+      else window.setTimeout(callback, 24)
+    }
     let warming = false
     const warmNext = () => {
       if (!environmentTarget && !disposed) {
@@ -1207,7 +1221,7 @@ export function TriScene() {
     }
     /* Depois do primeiro frame: o hero aparece primeiro, o resto aquece
        enquanto o visitante lê a primeira dobra. */
-    window.setTimeout(() => idle(warmNext), 400)
+    window.setTimeout(() => idle(warmNext), 150)
     frame = requestAnimationFrame(tick)
 
     /* Sem sentido queimar GPU com a aba escondida. */

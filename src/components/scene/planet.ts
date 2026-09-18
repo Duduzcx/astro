@@ -182,6 +182,14 @@ const SURFACE_FRAGMENT = /* glsl */ `
     albedo = mix(uToonA, uToonB, clamp(t, 0.0, 1.0));
     /* Um leve gradiente dentro da faixa: chapado total lê como adesivo. */
     albedo *= 0.92 + 0.16 * (1.0 - abs(lat * 2.0 - 1.0));
+    /* A mancha. Todo gigante gasoso de ilustração tem uma: é ela que dá
+       identidade ao planeta e prova que ele gira, porque entra e sai de
+       vista. Elipse achatada, borda macia, fora do equador. */
+    if (uToonBands > 0.5) {
+      vec2 spot = vec2((fract(vUv.x + 0.22) - 0.5) * 2.4, (lat - 0.63) * 7.0);
+      float mark = smoothstep(1.0, 0.25, length(spot));
+      albedo = mix(albedo, uToonB * 0.82 + vec3(0.12, 0.03, 0.0), mark * 0.75);
+    }
     /* Calota clara nos polos: num disco chapado é ela que devolve a leitura
        de esfera, no lugar do sombreado que a foto trazia. */
     float cap = smoothstep(0.84, 0.98, abs(lat * 2.0 - 1.0));
