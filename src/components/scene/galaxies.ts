@@ -137,6 +137,9 @@ export function createGalaxies(view: View, rotationAt: (progress: number) => THR
   const materials: THREE.SpriteMaterial[] = []
   const tilts: number[] = []
   const baseOpacity: number[] = []
+  const sprites: THREE.Sprite[] = []
+  const baseSize: number[] = []
+  const basePos: THREE.Vector3[] = []
   const camera = new THREE.Vector3(0, 0, view.cameraZ)
   const world = new THREE.Vector3()
   const quaternion = new THREE.Quaternion()
@@ -177,6 +180,9 @@ export function createGalaxies(view: View, rotationAt: (progress: number) => THR
       .add(camera)
     quaternion.setFromEuler(rotationAt(spec.at)).invert()
     sprite.position.copy(world.applyQuaternion(quaternion))
+    sprites.push(sprite)
+    baseSize.push(spec.size)
+    basePos.push(sprite.position.clone())
     object.add(sprite)
   }
 
@@ -190,6 +196,19 @@ export function createGalaxies(view: View, rotationAt: (progress: number) => THR
         /* Respiração de brilho, cada uma no seu período: o céu deixa de ser
            um cenário pintado e passa a ter algo acontecendo nele. */
         materials[i].opacity = baseOpacity[i] * (0.86 + 0.14 * Math.sin(time * (0.11 + i * 0.037) + i))
+        /* Respiração de tamanho junto com a de brilho, e uma deriva lenta na
+           posição. Uma galáxia parada num céu que se move denuncia que ela é
+           um adesivo colado; com os três movimentos em períodos primos entre
+           si, nenhum ciclo fecha à vista e ela passa a pertencer à cena.
+           São cinco sprites: o custo é aritmética, não desenho. */
+        const pulse = 1 + 0.045 * Math.sin(time * (0.07 + i * 0.023) + i * 2.1)
+        sprites[i].scale.setScalar(baseSize[i] * pulse)
+        const p0 = basePos[i]
+        sprites[i].position.set(
+          p0.x + Math.sin(time * (0.013 + i * 0.005) + i) * 0.06,
+          p0.y + Math.cos(time * (0.011 + i * 0.004) + i * 1.7) * 0.045,
+          p0.z,
+        )
       }
     },
     dispose() {

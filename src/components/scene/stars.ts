@@ -51,7 +51,14 @@ const VERTEX = /* glsl */ `
     /* Cintila devagar, cada uma no seu tempo. Só o brilho respira: o
        tamanho do sprite fica fixo, porque uma estrela de 1–2px mudando de
        tamanho a cada frame vira um pisca-pisca de subpixel. */
-    vTwinkle = 0.84 + 0.16 * sin(uTime * (0.22 + aSeed * 0.35) + aSeed * 40.0);
+    /* Cintilação com duas frequências e profundidade variável por estrela.
+       Com uma só, o campo inteiro respirava junto e lia como pulsação de
+       painel; aqui cada uma tem o seu compasso e algumas quase não piscam,
+       que é o que o céu de verdade faz. */
+    float beat = sin(uTime * (0.22 + aSeed * 0.35) + aSeed * 40.0) * 0.6
+               + sin(uTime * (0.51 + aSeed * 0.9) + aSeed * 13.0) * 0.4;
+    float amp = 0.08 + 0.26 * aSeed;
+    vTwinkle = (1.0 - amp) + amp * (beat * 0.5 + 0.5) * 1.6;
     /* As grandes ganham espículas e por isso o sprite é maior. */
     /* Piso de dois pixels e meio: abaixo disso o sprite cobre quase um
        pixel só, e qualquer movimento de subpixel faz a estrela piscar. Com

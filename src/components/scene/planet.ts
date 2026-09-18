@@ -595,7 +595,13 @@ const CLOUDS_FRAGMENT = /* glsl */ `
        eixos, com períodos diferentes, então a formação se desfaz e se refaz
        enquanto passa. */
     vec2 drift = vec2(uTime * 0.0032, sin(uTime * 0.043) * 0.0045);
-    vec2 cuv = vUv + drift;
+    /* Além de transladar, a massa gira em torno de si. O deslocamento em
+       longitude cresce com a latitude, como acontece num planeta em rotação
+       diferencial: o equador anda mais que os polos, e o resultado é a
+       formação se torcendo enquanto atravessa em vez de deslizar rígida. */
+    float shear = (0.5 - abs(vUv.y - 0.5)) * 2.0;
+    vec2 swirl = vec2(sin(uTime * 0.021 + vUv.y * 9.0) * 0.006 * shear, 0.0);
+    vec2 cuv = vUv + drift + swirl;
 #ifdef PHOTO_ONLY
     cover = smoothstep(0.08, 0.7, texture2D(uMap, cuv).r);
 #else
