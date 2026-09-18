@@ -36,13 +36,16 @@ const VERTEX = /* glsl */ `
        scroll: as de trás quase não saem do lugar, as da frente descem quase
        o dobro. Sem isto o campo inteiro desliza como uma folha só, e o que
        o olho lê é metade do céu pregado e metade correndo. */
-    float depth = 0.55 + aSeed * 0.9;
+    /* Faixa de profundidade bem mais larga: as do fundo quase não saem do
+       lugar, as da frente descem quase o dobro do scroll. É essa diferença
+       que faz o céu ler como espaço atravessado e não como parede pintada. */
+    float depth = 0.3 + aSeed * 1.7;
     p.y = mod(p.y - uOffset * depth + ${SPREAD_Y.toFixed(1)}, ${WRAP.toFixed(1)}) - ${SPREAD_Y.toFixed(1)};
     /* Deriva lenta e contínua, para o céu nunca ficar parado mesmo com a
        página parada. Amplitude de fração de pixel em mundo: percebe-se como
        vida, não como movimento. */
-    p.x += sin(uTime * (0.05 + aSeed * 0.08) + aSeed * 30.0) * 0.035;
-    p.y += cos(uTime * (0.04 + aSeed * 0.06) + aSeed * 17.0) * 0.022;
+    p.x += sin(uTime * (0.07 + aSeed * 0.11) + aSeed * 30.0) * 0.062;
+    p.y += cos(uTime * (0.055 + aSeed * 0.08) + aSeed * 17.0) * 0.041;
     vec4 view = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * view;
     /* Cintila devagar, cada uma no seu tempo. Só o brilho respira: o

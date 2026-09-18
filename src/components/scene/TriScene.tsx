@@ -510,9 +510,8 @@ export function TriScene() {
           ring: true,
           /* Areia clara com faixas largas. */
           toon: { a: '#f0dcae', b: '#a8874f', c: '#f7eeda', bands: 7 },
-          maps: {
-            ring: { low: '/space/saturn-ring-2k.webp', high: '/space/saturn-ring-2k.webp' },
-          },
+          /* Sem a fotografia do anel: ele passa a ser desenhado em aros
+             chapados, no mesmo vocabulário do globo. */
           warm,
         }),
         x: -0.95,

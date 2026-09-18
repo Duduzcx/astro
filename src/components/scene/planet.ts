@@ -486,6 +486,20 @@ const SURFACE_FRAGMENT = /* glsl */ `
     float ink = pow(1.0 - max(dot(geomN, v), 0.0), 4.0) * smoothstep(-0.25, 0.45, dot(geomN, uLight));
     color += mix(uHaze, vec3(1.0), 0.65) * ink * 0.9;
 #endif
+#ifdef TOON
+    /* Fresnel de borda, o acabamento que separa ilustração caprichada de
+       desenho chapado. São duas camadas: um fio muito apertado, quase
+       branco, exatamente na quina iluminada, e uma faixa larga e fria que
+       desce pelo lado escuro e desenha a curvatura contra o preto do espaço.
+       Sem a segunda, o planeta some no fundo do lado da sombra e o disco
+       perde volume. */
+    float fres = 1.0 - max(dot(geomN, v), 0.0);
+    float lit = smoothstep(-0.35, 0.35, dot(geomN, uLight));
+    float edge = pow(fres, 9.0) * lit;
+    float sweep = pow(fres, 2.6) * (0.25 + 0.75 * lit);
+    color += vec3(1.0, 0.96, 0.9) * edge * 1.35;
+    color += vec3(0.42, 0.62, 1.0) * sweep * 0.22;
+#endif
 
     /* Terminador quente: a luz rasante esquenta a linha entre dia e noite. */
     float twilight = smoothstep(0.25, 0.0, abs(dot(geomN, uLight))) * dayGeom;
@@ -657,13 +671,22 @@ const RING_FRAGMENT = /* glsl */ `
       bands = dot(ringTex.rgb, vec3(0.333));
       alpha = ringTex.a * 0.95;
     } else {
-      /* Faixas finas com ruído, uma divisão limpa e uma segunda mais fraca. */
-      bands = 0.5 + 0.5 * sin(t * 70.0 + snoise(vec3(t * 9.0, 0.0, 0.0)) * 4.0);
-      float coarse = 0.5 + 0.5 * sin(t * 14.0 + 1.0);
-      float gapA = smoothstep(0.6, 0.63, t) * smoothstep(0.7, 0.67, t);
-      float gapB = smoothstep(0.34, 0.355, t) * smoothstep(0.39, 0.375, t);
-      alpha = smoothstep(0.0, 0.06, t) * smoothstep(1.0, 0.88, t) * (0.25 + 0.4 * bands + 0.2 * coarse);
-      alpha *= 1.0 - gapA * 0.9 - gapB * 0.5;
+      /* Anel vetorial: aros concêntricos em degrau, não faixas com ruído.
+         O ruído dava textura de fotografia; aqui cada aro é um valor chapado
+         e a borda entre eles acompanha um pixel de tela, então a divisão sai
+         afiada em qualquer tamanho e nunca serrilha. A grande falha fica
+         aberta de verdade, como vazio, não como faixa mais fraca — é ela que
+         faz o anel parecer desenhado e não pintado. */
+      float rings = t * 9.0;
+      float soft = max(fwidth(rings) * 0.75, 0.02);
+      float step9 = floor(rings) + smoothstep(0.5 - soft, 0.5 + soft, fract(rings));
+      bands = fract(step9 * 0.5) > 0.25 ? 1.0 : 0.55;
+      float gapA = smoothstep(0.585, 0.605, t) * smoothstep(0.685, 0.665, t);
+      float gapB = smoothstep(0.335, 0.35, t) * smoothstep(0.392, 0.377, t);
+      float edgeIn = smoothstep(0.0, 0.03, t);
+      float edgeOut = smoothstep(1.0, 0.955, t);
+      alpha = edgeIn * edgeOut * bands * 0.92;
+      alpha *= 1.0 - gapA - gapB * 0.75;
     }
     /* Sombra do planeta: pontos atrás dele em relação à luz, dentro do
        cilindro de sombra, escurecem. */
