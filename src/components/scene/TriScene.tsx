@@ -1306,6 +1306,11 @@ export function TriScene() {
       ref={mountRef}
       aria-hidden="true"
       className="pointer-events-none fixed top-0 left-0 z-0 w-full opacity-0 transition-opacity duration-700"
+      /* Camada de composição própria para o canvas. Sem isto o navegador pode
+         agrupar a cena com o conteúdo que passa por cima dela, e cada rolagem
+         vira uma repintura de tudo junto em vez de dois planos deslizando. O
+         `contain` promete que nada aqui dentro afeta o layout de fora. */
+      style={{ transform: 'translateZ(0)', willChange: 'transform', contain: 'paint' }}
     />
   )
 }

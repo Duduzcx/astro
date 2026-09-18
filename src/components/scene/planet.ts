@@ -765,9 +765,13 @@ const RING_FRAGMENT = /* glsl */ `
       bands = slot < 0.34 ? 1.0 : (slot < 0.67 ? 0.62 : 0.34);
       float gapA = smoothstep(0.585, 0.605, t) * smoothstep(0.685, 0.665, t);
       float gapB = smoothstep(0.335, 0.35, t) * smoothstep(0.392, 0.377, t);
-      float edgeIn = smoothstep(0.0, 0.03, t);
-      float edgeOut = smoothstep(1.0, 0.955, t);
-      alpha = edgeIn * edgeOut * bands * 0.92;
+      /* Bordas mais macias e um aro tênue para fora do limite: um anel de
+         verdade não termina numa linha, ele rareia. Sem isso o disco tem
+         recorte de adesivo justo onde encontra o preto. */
+      float edgeIn = smoothstep(0.0, 0.075, t);
+      float edgeOut = smoothstep(1.06, 0.9, t);
+      float veil = smoothstep(0.86, 1.0, t) * smoothstep(1.12, 1.0, t) * 0.22;
+      alpha = edgeIn * edgeOut * bands * 0.92 + veil;
       alpha *= 1.0 - gapA - gapB * 0.75;
     }
     /* Sombra do planeta: pontos atrás dele em relação à luz, dentro do

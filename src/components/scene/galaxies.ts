@@ -192,7 +192,11 @@ export function createGalaxies(view: View, rotationAt: (progress: number) => THR
       /* Giram devagar, cada uma para um lado: dois minutos por grau, o
          bastante para nunca estarem paradas quando a página para. */
       for (let i = 0; i < materials.length; i += 1) {
-        materials[i].rotation = tilts[i] + time * 0.009 * (i % 2 ? -1 : 1)
+        /* Giro três vezes mais rápido que antes, e com uma oscilação por
+           cima: a 0,009 rad/s era preciso encarar a galáxia por meio minuto
+           para notar que ela se mexe. */
+        materials[i].rotation =
+          tilts[i] + time * 0.028 * (i % 2 ? -1 : 1) + Math.sin(time * 0.09 + i) * 0.05
         /* Respiração de brilho, cada uma no seu período: o céu deixa de ser
            um cenário pintado e passa a ter algo acontecendo nele. */
         materials[i].opacity = baseOpacity[i] * (0.86 + 0.14 * Math.sin(time * (0.11 + i * 0.037) + i))
@@ -201,7 +205,7 @@ export function createGalaxies(view: View, rotationAt: (progress: number) => THR
            um adesivo colado; com os três movimentos em períodos primos entre
            si, nenhum ciclo fecha à vista e ela passa a pertencer à cena.
            São cinco sprites: o custo é aritmética, não desenho. */
-        const pulse = 1 + 0.045 * Math.sin(time * (0.07 + i * 0.023) + i * 2.1)
+        const pulse = 1 + 0.085 * Math.sin(time * (0.12 + i * 0.031) + i * 2.1)
         sprites[i].scale.setScalar(baseSize[i] * pulse)
         const p0 = basePos[i]
         sprites[i].position.set(
