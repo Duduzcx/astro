@@ -529,9 +529,11 @@ export function TriScene() {
              chapados, no mesmo vocabulário do globo. */
           warm,
         }),
-        x: -0.95,
+        /* No celular ele entrava só como lasca no canto: a tela é estreita e
+           o anel é largo, então a maior parte caía fora do quadro. */
+        x: lightweight ? -0.45 : -0.95,
         z: -3.0,
-        size: 1.9,
+        size: lightweight ? 1.55 : 1.9,
         from: 0.05,
         to: 0.15,
       },
@@ -542,7 +544,10 @@ export function TriScene() {
           kind: 'rock',
           spin: 0.09,
           /* Ferrugem com manchas largas e calota de gelo. */
-          toon: { a: '#c8613b', b: '#76321f', c: '#e9e3dd', bands: 0 },
+          /* Faixa tonal larga: poeira clara de um lado, basalto quase marrom do
+             outro. Com os dois tons perto um do outro, os cinco degraus
+             caíam todos no mesmo vermelho e o planeta lia como bola. */
+          toon: { a: '#dda077', b: '#5f2616', c: '#f1ebe4', bands: 0 },
           warm,
         }),
         /* Maior e um pouco mais para dentro: pequeno demais o relevo não

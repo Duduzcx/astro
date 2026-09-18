@@ -190,11 +190,26 @@ const SURFACE_FRAGMENT = /* glsl */ `
       float soft = max(fwidth(scaled) * 0.8, 0.015);
       t = (floor(scaled) + smoothstep(0.5 - soft, 0.5 + soft, fract(scaled))) / 10.0;
     } else {
-      /* Mundo rochoso: manchas largas com uma borda macia, mais um veio fino
-         cruzando, para não ficar um ovo de duas cores. */
-      float blob = sin(vUv.x * 9.0 + lat * 5.0) * 0.5 + sin(lat * 7.0 - vUv.x * 3.0) * 0.5;
-      float vein = sin(vUv.x * 23.0 + lat * 11.0) * 0.12;
-      t = smoothstep(-0.08, 0.08, blob + vein) * 0.62 + 0.2;
+      /* Mundo rochoso em degraus.
+         Antes eram dois tons separados por uma fronteira macia, e o
+         resultado era uma bola de uma cor só: sem escalas diferentes de
+         mancha, não há superfície, só silhueta. Agora são duas escalas de
+         planície somadas, quantizadas em cinco tons — os mesmos degraus
+         limpos dos gigantes, com a borda acompanhando um pixel de tela. */
+      float m1 = sin(vUv.x * 6.2831853 * 3.0 + lat * 5.0) * 0.5
+               + sin(lat * 7.0 - vUv.x * 6.2831853 * 1.5) * 0.5;
+      float m2 = sin(vUv.x * 6.2831853 * 7.0 - lat * 13.0) * 0.3
+               + sin(lat * 17.0 + vUv.x * 6.2831853 * 4.0) * 0.22;
+      float rock = (m1 + m2) * 0.42 + 0.5;
+      float scaledR = clamp(rock, 0.0, 1.0) * 5.0;
+      float softR = max(fwidth(scaledR) * 0.8, 0.02);
+      t = (floor(scaledR) + smoothstep(0.5 - softR, 0.5 + softR, fract(scaledR))) / 5.0;
+      /* Crateras: o produto de dois senos de alta frequência dá uma grade de
+         manchas, e um anel em vez de um disco é o que lê como cratera e não
+         como pinta. O aro claro fica do lado da luz, o vale escuro do outro. */
+      float cr = sin(vUv.x * 6.2831853 * 9.0 + 1.7) * sin(lat * 27.0 + 0.4);
+      float ring = smoothstep(0.72, 0.84, cr) - smoothstep(0.9, 0.99, cr);
+      t = clamp(t - ring * 0.3, 0.0, 1.0);
     }
     albedo = mix(uToonA, uToonB, clamp(t, 0.0, 1.0));
     /* Um leve gradiente dentro da faixa: chapado total lê como adesivo. */
