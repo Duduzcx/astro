@@ -528,7 +528,14 @@ export function TriScene() {
           spin: 0.03,
           ring: true,
           /* Areia clara com faixas largas. */
-          toon: { a: '#f5e8c8', b: '#b39468', c: '#faf4e6', bands: 7 },
+          /* Mais faixas e paleta com mais alcance: a sete, cada faixa ficava
+             larga demais e a esfera lia como bola lisa ao lado de um anel
+             cheio de divisões. */
+          /* Faixas finas, paleta estreita. Doze faixas era o acerto — casa com
+             as divisões do anel — mas abrir o contraste entre os dois tons
+             transformou o planeta num Júpiter alaranjado. Saturno é pálido:
+             o desenho vem da quantidade de faixas, não da força delas. */
+          toon: { a: '#f8eed6', b: '#cdb083', c: '#fdf9ee', bands: 12 },
           /* Sem a fotografia do anel: ele passa a ser desenhado em aros
              chapados, no mesmo vocabulário do globo. */
           warm,
@@ -1212,13 +1219,17 @@ export function TriScene() {
          cena é um tranco de mais de um segundo — era isso que o cliente via
          como o buraco negro "travando ao entrar". */
       blackHole.object,
-      nova.object,
       ...worlds.map((world) => world.planet.object),
       trail.object,
       cruiseTrail.object,
       star.object,
       explosion.object,
       meteors.object,
+      /* A supernova é o último astro da página, a noventa por cento da
+         rolagem. Compilá-la junto com o resto é gastar thread principal na
+         abertura por algo que ninguém vê nos primeiros minutos. Ela fecha a
+         fila; quem chegar lá já passou por tudo o que vem antes. */
+      nova.object,
     ]
     /* A fila corre bem mais rápido que antes.
        Ela andava um objeto por callback ocioso com espera de até 900ms, e com

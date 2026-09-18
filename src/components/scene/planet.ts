@@ -425,7 +425,12 @@ const SURFACE_FRAGMENT = /* glsl */ `
        o degrau da luz. A borda de cada tom acompanha um pixel de tela
        (fwidth), então o resultado é chapado sem serrilhar. */
     float lum = dot(albedo, vec3(0.299, 0.587, 0.114));
-    albedo = clamp(mix(vec3(lum), albedo, 1.55), 0.0, 1.0);
+    /* Realce de saturação contido. A 1,55 ele empurrava qualquer dourado
+       claro para laranja, e a paleta escolhida para cada planeta deixava de
+       valer: Saturno saía com a cor de Júpiter por mais pálido que eu o
+       definisse. A 1,12 o realce ainda tira o cinza da fotografia sem
+       reescrever a decisão de cor. */
+    albedo = clamp(mix(vec3(lum), albedo, 1.12), 0.0, 1.0);
     vec3 tone = albedo * 6.0;
     vec3 toneSoft = max(fwidth(tone), vec3(0.03));
     vec3 posterized =

@@ -919,7 +919,13 @@ export function createRocket({
          que mostra os flaps), acelerando conforme sobe. */
       /* Gira mais: parado na plataforma o veículo precisa mostrar que
          está vivo, e na subida o rolamento é o que dá a sensação de voo. */
-      const rollRate = cruise ? 0.34 : 0.3 + lift * 0.8
+      /* Giro no próprio eixo. Em cruzeiro ele passa de 0,34 para 0,95 rad/s:
+         a 0,34 uma volta completa levava dezoito segundos, mais do que o
+         foguete fica em cena entre dois planetas, então o giro existia sem
+         ser visto. A velocidade não é constante — uma onda lenta acelera e
+         segura a rotação, e é isso que separa um barrel roll de um espeto
+         girando em rotisserie. */
+      const rollRate = cruise ? 0.95 + Math.sin(time * 0.23) * 0.45 : 0.3 + lift * 0.8
       object.rotation.y =
         Math.sin(time * 0.15) * 0.35 * (1 - flying) + time * rollRate * flying
       /* Max-Q: entre um quinto e a metade da subida o ar ainda é denso e a
