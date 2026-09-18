@@ -123,6 +123,8 @@ const SURFACE_FRAGMENT = /* glsl */ `
   uniform sampler2D uClouds;
   uniform float uHasClouds;
   uniform vec3 uLightLocal;
+  uniform vec3 uRingNormal;
+  uniform float uRingShadow;
   uniform float uCloudShift;
   uniform vec3 uHaze;
   uniform float uHazeStrength;
@@ -514,6 +516,33 @@ const SURFACE_FRAGMENT = /* glsl */ `
     float ink = pow(1.0 - max(dot(geomN, v), 0.0), 4.0) * smoothstep(-0.25, 0.45, dot(geomN, uLight));
     color += mix(uHaze, vec3(1.0), 0.65) * ink * 0.9;
 #endif
+    /* Sombra do anel sobre o planeta.
+       É o detalhe que falta num Saturno desenhado: sem ela o anel parece
+       flutuar recortado, e com ela o conjunto vira um objeto só. Do ponto da
+       superfície sobe um raio na direção da luz até o plano do anel; se ele
+       cruzar dentro da coroa, aquele ponto está na sombra.
+       O plano não é o equador — o anel tem inclinação própria — então a
+       normal dele chega já convertida para o referencial que gira com a
+       superfície, do mesmo jeito que a luz. Vem por uniform e não por
+       define, para não partir o programa em duas variantes: Marte e Júpiter
+       passam por aqui com uRingShadow em zero e o desvio é coerente. */
+    if (uRingShadow > 0.5) {
+      float denom = dot(uLightLocal, uRingNormal);
+      if (abs(denom) > 0.001) {
+        float tr = -dot(vObj, uRingNormal) / denom;
+        if (tr > 0.0) {
+          float rr = length(vObj + uLightLocal * tr);
+          float inner = ${(RADIUS * 1.45).toFixed(3)};
+          float outer = ${(RADIUS * 2.35).toFixed(3)};
+          float band = smoothstep(inner, inner + 0.03, rr) * smoothstep(outer, outer - 0.03, rr);
+          /* A grande falha deixa passar luz: a mesma que o anel desenha. */
+          float u = (rr - inner) / (outer - inner);
+          float gap = smoothstep(0.585, 0.605, u) * smoothstep(0.685, 0.665, u);
+          color *= 1.0 - band * (1.0 - gap) * 0.5;
+        }
+      }
+    }
+
 #ifdef TOON
     /* Fresnel de borda, o acabamento que separa ilustração caprichada de
        desenho chapado. São duas camadas: um fio muito apertado, quase
@@ -923,6 +952,8 @@ export function createPlanet({
       uHasClouds: { value: 0 },
       uLightLocal: { value: surfaceLightLocal },
       uCloudShift: { value: 0 },
+      uRingNormal: { value: new THREE.Vector3(0, 1, 0) },
+      uRingShadow: { value: ring ? 1 : 0 },
       uHaze: { value: new THREE.Color(KIND_ATMOSPHERE[kind]) },
       uHazeStrength: { value: KIND_HAZE[kind] },
       uTint: { value: new THREE.Color(tint) },
@@ -1040,6 +1071,8 @@ export function createPlanet({
   materials.push(atmosphereMaterial)
 
   let ringMesh: THREE.Mesh | null = null
+  const ringNormal = new THREE.Vector3()
+  const ringWorld = new THREE.Quaternion()
   let ringMaterial: THREE.ShaderMaterial | null = null
   const lightLocal = new THREE.Vector3()
   const ringQuaternion = new THREE.Quaternion()
@@ -1109,6 +1142,12 @@ export function createPlanet({
         /* A luz em espaço do anel, para a sombra do planeta cair certo. */
         ringMesh.getWorldQuaternion(ringQuaternion).invert()
         lightLocal.copy(light).applyQuaternion(ringQuaternion)
+        /* E a normal do anel no espaço da superfície, para a sombra do anel
+           cair certo no planeta. O anel não gira com a superfície, então
+           esta conversão muda a cada quadro. */
+        ringNormal.set(0, 0, 1).applyQuaternion(ringMesh.getWorldQuaternion(ringWorld))
+        ringNormal.applyQuaternion(surfaceQuaternion).normalize()
+        surfaceMaterial.uniforms.uRingNormal.value.copy(ringNormal)
       }
     },
     dispose() {
