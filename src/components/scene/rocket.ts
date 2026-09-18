@@ -871,7 +871,10 @@ export function createRocket({
          mais de dez segundos, e um hero vazio esse tempo todo é pior
          que um tranco. Dois segundos e meio de espera, no máximo. */
       const warmed = warm ? warm(model).catch(() => undefined) : Promise.resolve()
-      const late = new Promise<void>((resolve) => window.setTimeout(resolve, 2500))
+      /* Um segundo de espera pelo aquecimento, não dois e meio. O foguete é
+         o assunto do hero: melhor um tranco curto quando ele entra do que
+         uma plataforma vazia enquanto o visitante lê o título. */
+      const late = new Promise<void>((resolve) => window.setTimeout(resolve, 1000))
       void Promise.race([warmed, late]).then(() => {
         if (!disposed && !gaveUp && !model.parent) object.add(model)
       })

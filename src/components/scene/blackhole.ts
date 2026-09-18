@@ -183,6 +183,15 @@ const RING_FRAGMENT = /* glsl */ `
     /* Acima de 1 de propósito: é o fio que o bloom deve pegar. */
     vec3 color = vec3(1.0, 0.97, 0.92) * ring * side * flicker * 1.3 + vec3(0.55, 0.7, 1.0) * halo;
     float alpha = min(ring * side * 1.2, 1.0) + halo;
+    /* Espalhamento feito à mão, para onde não há bloom.
+       No celular o pós-processamento saiu — com a razão de pixels em 2 ele
+       custava mais do que a cena inteira — e sem ele o valor acima de 1 só
+       satura: o anel virava um fio duro, sem luz em volta, e o buraco negro
+       lia como recorte. Esta é a cauda que o bloom desenharia, por uma
+       exponencial, dentro do próprio shader. */
+    float spread = step(${HORIZON.toFixed(2)}, r) * exp(-(r - ${HORIZON.toFixed(2)}) * 6.5) * side;
+    color += vec3(1.0, 0.88, 0.7) * spread * 0.5;
+    alpha = min(alpha + spread * 0.45, 1.0);
     gl_FragColor = vec4(color, alpha * uOpacity);
   }
 `

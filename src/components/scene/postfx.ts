@@ -133,7 +133,9 @@ export function createPostFx(
   /* No celular o bloom trabalha num oitavo da resolução: o halo é macio
      por natureza e ninguém vê a diferença, mas são cinco desfoques numa
      pirâmide, e cada nível custa preenchimento. */
-  const divisor = light ? 16 : 4
+  /* Um oitavo, não um dezesseis avos: a 1/16 a pirâmide fica em 36 por 79
+     pixels num celular e o halo sobe esticado, grosseiro. */
+  const divisor = light ? 8 : 4
   const bloom = new UnrealBloomPass(
     new THREE.Vector2(width / divisor, height / divisor),
     /* O limiar alto de antes existia para conter o clarão do hero, que

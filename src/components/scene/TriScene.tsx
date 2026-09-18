@@ -87,7 +87,7 @@ export function TriScene() {
          densidade da tela, e era isso que o cliente lia como baixa
          qualidade em tudo — planeta, foguete, borda de astro. Tirar o bloom
          e a nebulosa assada abriu orçamento para pagar por isto. */
-      Math.min(window.devicePixelRatio, weakDevice ? 1.25 : lightweight ? 2 : 1.25),
+      Math.min(window.devicePixelRatio, weakDevice ? 1.25 : lightweight ? 1.75 : 1.25),
     )
     /* Tone mapping de filme para os materiais iluminados (o foguete): sem
        isso o metal estoura em branco. Os shaders próprios ignoram. */
@@ -386,6 +386,12 @@ export function TriScene() {
        disco de acreção brilharem. Medindo um iPhone com processador de
        aparelho mediano, o custo do quadro estava no DOM animado, não
        aqui: ligar o bloom custou cerca de um milissegundo. */
+/* Sem bloom no celular, e a medição fecha a questão: com a razão de
+       pixels em 2, o composer trabalha em 780 por 1688, e devolver o bloom
+       aí custou 182ms por quadro contra 33ms sem ele. Nitidez e bloom não
+       cabem juntos nesta tela, e a nitidez é o que o cliente aprovou. O
+       brilho que ele dava aos astros passa a ser feito dentro dos shaders
+       deles, que é mais barato e não borra o resto da cena. */
     const wantsPostFx = !weakDevice && !lightweight
     let postFxFrames = 0
     let downgradedPostFx = false
@@ -1103,7 +1109,7 @@ export function TriScene() {
       /* A lente entra depois que a cena assentou. No celular ela espera
          mais: compilar a pirâmide do bloom é um tranco, e ele deve cair
          quando o visitante já está lendo, não na primeira dobra. */
-      if (wantsPostFx && !postfx && !downgradedPostFx && postFxFrames > (lightweight ? 90 : 4)) {
+      if (wantsPostFx && !postfx && !downgradedPostFx && postFxFrames > 4) {
         postfx = createPostFx(renderer, scene, camera, window.innerWidth, stageHeight, lightweight)
       }
       postFxFrames += 1
