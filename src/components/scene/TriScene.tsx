@@ -1213,6 +1213,9 @@ export function TriScene() {
       if (!revealed) {
         revealed = true
         mount.style.opacity = '1'
+        /* O primeiro quadro desenhado é o sinal para a tela de entrada sair.
+           É o marco honesto: não "o script carregou", e sim "há imagem". */
+        document.documentElement.dataset.sceneReady = 'true'
       }
     }
     /**

@@ -178,6 +178,39 @@
     border-color 300ms ease,
     box-shadow 420ms ease;
 
+  /* Borda luminosa de um pixel.
+     Uma borda de cor única lê como caixa desenhada; esta é um gradiente que
+     acende no canto de cima à esquerda, de onde vem a luz da cena, e apaga
+     no canto oposto. O truque é pintar o gradiente no fundo e recortar só a
+     moldura com duas máscaras que se cancelam — assim o miolo continua
+     transparente e a cena atravessa. Não custa GPU: é uma pintura só,
+     estática, sem desfoque e sem filtro. */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    pointer-events: none;
+    background: linear-gradient(
+      145deg,
+      rgba(141, 180, 245, 0.55) 0%,
+      rgba(141, 180, 245, 0.12) 28%,
+      rgba(255, 255, 255, 0.04) 55%,
+      rgba(122, 179, 255, 0.28) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    opacity: 0.75;
+    transition: opacity 420ms ease;
+  }
+
   /* Faixa de brilho que desliza pelo vidro no hover. */
   &::after {
     content: '';
@@ -378,6 +411,13 @@
   }
 }
 
+/* Ao entrar na tela a borda acende por um instante e assenta: o cartão avisa
+   que chegou sem precisar de movimento. A classe mora no invólucro do reveal,
+   não no cartão, por isso o seletor é descendente. */
+.is-entered .graphite-card::before {
+  animation: astro-edge 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 .is-entered .graphite-card::after {
   animation: astro-sheen 1.3s cubic-bezier(0.22, 1, 0.36, 1) 0.35s 1 both;
 }
@@ -568,5 +608,88 @@ footer .bg-graphite::before {
   /* Mais ar entre um cartão e outro: é pelo vão que o astro aparece. */
   .shell .grid {
     row-gap: clamp(1.25rem, 5vw, 2rem);
+  }
+}
+
+
+/* Entrada: um anel fino que orbita e um núcleo que respira. Sem número, sem
+   barra, sem porcentagem — nada que peça leitura. O trabalho dele é ocupar o
+   tempo do download com algo que pareça um instrumento ligando, e sumir sem
+   ser notado. */
+#boot {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(120% 90% at 50% 45%, #0d1a33 0%, #060a16 62%, #04070f 100%);
+  opacity: 1;
+  transition: opacity 620ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#boot .boot-orbit {
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  /* Um aro de um pixel com um trecho aceso: girando, o trecho aceso vira um
+     cometa percorrendo a órbita. */
+  border: 1px solid rgba(141, 180, 245, 0.16);
+  border-top-color: rgba(141, 180, 245, 0.95);
+  border-right-color: rgba(122, 179, 255, 0.5);
+  animation: boot-spin 1.15s cubic-bezier(0.55, 0.15, 0.4, 0.9) infinite;
+}
+
+#boot .boot-core {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #cfe0ff;
+  box-shadow: 0 0 18px 6px rgba(141, 180, 245, 0.45);
+  animation: boot-pulse 1.9s ease-in-out infinite;
+}
+
+@keyframes boot-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes boot-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+/* A cena avisa que desenhou. Daí em diante a tela sai de cena e para de
+   receber toque, para não engolir o primeiro clique de quem chegou. */
+html[data-scene-ready] #boot {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #boot .boot-orbit,
+  #boot .boot-core {
+    animation: none;
+  }
+}
+
+
+@keyframes astro-edge {
+  0% {
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.75;
   }
 }
