@@ -284,6 +284,11 @@ export function TriScene() {
     /* No celular só a Terra do hero passa de 1k: cada upload de textura
        trava o thread principal por dezenas de milissegundos, e isso vira
        tranco no scroll. */
+    /* Trava a textura no degrau leve quando a tela é de mão. */
+    const pin = (name: string, ext = 'webp') => {
+      const t = tier(name, ext)
+      return lightweight ? { low: t.low, high: t.low } : t
+    }
     const tier = (name: string, ext = 'webp', desktopHigh = '2k') => ({
       low: `/space/${name}-1k.${ext}`,
       high: `/space/${name}-${lightweight ? '2k' : desktopHigh}.${ext}`,
@@ -478,10 +483,17 @@ export function TriScene() {
       spin: 0.012,
       maps: {
         map: tier('earth-day', 'webp', '4k'),
-        night: tier('earth-night', 'webp', '2k'),
-        clouds: tier('earth-clouds', 'webp', '2k'),
-        normal: tier('earth-normal', 'webp', '2k'),
-        specular: { low: '/space/earth-specular-1k.webp', high: '/space/earth-specular-2k.webp' },
+        /* No celular só o mapa de cor sobe de degrau. Noite, nuvens, relevo e
+           máscara de água são camadas de apoio: a diferença entre 1k e 2k
+           nelas não se vê num planeta que ocupa o terço de baixo da tela, e
+           são quatro downloads a menos disputando banda com a primeira
+           dobra. A última textura chegava aos 5,1s. */
+        night: pin('earth-night'),
+        clouds: pin('earth-clouds'),
+        normal: pin('earth-normal'),
+        specular: lightweight
+          ? { low: '/space/earth-specular-1k.webp', high: '/space/earth-specular-1k.webp' }
+          : { low: '/space/earth-specular-1k.webp', high: '/space/earth-specular-2k.webp' },
       },
     })
     /* De pé o que a tela mostra é a calota polar, toda branca. Deitada, o
