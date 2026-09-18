@@ -343,6 +343,12 @@ export function LineReveal({
      * está inteiramente cortada pelo `overflow: hidden` do pai, e o
      * IntersectionObserver conta o corte do ancestral: observar a própria linha
      * daria ratio 0 para sempre e o reveal nunca dispararia.
+     *
+     * O respiro de cima não é estético. A máscara tinha padding só embaixo,
+     * onde a cedilha desce, e nada em cima: o til de Ã e Õ e o circunflexo de
+     * Ê e Ô ficavam de fora do recorte. "OPERAÇÃO" aparecia como "OPERAÇAO" e
+     * "ROBÔS" como "ROBOS" em todos os títulos do site. A margem negativa
+     * devolve o espaço para o layout não se mexer.
      */
     <MotionTag
       className={className}
@@ -352,7 +358,7 @@ export function LineReveal({
         : { whileInView: 'show', viewport: { once: true, margin: '-12%' } })}
     >
       {lines.map((line, index) => (
-        <span key={line + index} className="block overflow-hidden pb-[0.08em]">
+        <span key={line + index} className="block overflow-hidden pt-[0.16em] -mt-[0.16em] pb-[0.08em]">
           <motion.span
             className="block"
             variants={{ hidden: { y: '110%' }, show: { y: '0%' } }}
@@ -405,7 +411,7 @@ export function WordReveal({
             wordIndex += 1
             return (
               <span key={`${word}-${wordNumber}`}>
-                <span className="inline-block overflow-hidden pb-[0.08em] align-top">
+                <span className="inline-block overflow-hidden pt-[0.16em] -mt-[0.16em] pb-[0.08em] align-top">
                   <motion.span
                     className="inline-block origin-bottom-left"
                     variants={{ hidden: { y: '112%', rotate: 6 }, show: { y: '0%', rotate: 0 } }}

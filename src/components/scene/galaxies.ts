@@ -35,6 +35,10 @@ const SPECS: Spec[] = [
   { kind: 'edge', at: 0.4, ndc: [0.55, -0.35], size: 2.8, tilt: -0.45, opacity: 0.9 },
   /* Elíptica pequena mais para o fim, alta e ao centro. */
   { kind: 'elliptical', at: 0.74, ndc: [0.15, 0.6], size: 1.7, tilt: 0.9, opacity: 0.8 },
+  /* Mais duas, pequenas e discretas, para o céu ter fundo em vez de três
+     objetos soltos. Ficam longe do miolo da tela, onde o texto mora. */
+  { kind: 'spiral', at: 0.22, ndc: [-0.72, -0.5], size: 1.25, tilt: -1.1, opacity: 0.55 },
+  { kind: 'elliptical', at: 0.58, ndc: [0.78, -0.62], size: 1.05, tilt: 0.3, opacity: 0.5 },
 ]
 
 function paint(kind: Spec['kind']) {
@@ -125,8 +129,26 @@ function paint(kind: Spec['kind']) {
     ctx.scale(1, 0.62)
     glow(0, 0, 110 * k, '190, 200, 255', 0.22)
     glow(0, 0, 60 * k, '235, 225, 240', 0.4)
+    /* Enxame de estrelas velhas em vez de um gradiente liso. Uma elíptica é
+       feita de bilhões de pontos e quase nada de gás: sem a granulação ela
+       lia como borrão, que é justamente o que a diferencia mal de uma
+       nebulosa. */
+    for (let i = 0; i < Math.round(90 * k); i += 1) {
+      const a = Math.random() * Math.PI * 2
+      const r = Math.pow(Math.random(), 0.55) * 96 * k
+      glow(Math.cos(a) * r, Math.sin(a) * r, (1.4 + Math.random() * 2.2) * k, '245, 238, 250', 0.3)
+    }
     ctx.restore()
-    glow(c, c, 14, '255, 244, 225', 0.9)
+    /* O 14 estava sem a escala: o núcleo saía pela metade na textura maior. */
+    glow(c, c, 14 * k, '255, 244, 225', 0.9)
+  }
+  /* Halo de estrelas soltas em volta de qualquer galáxia: o campo esparso
+     que existe entre o disco e o vazio, e que dá a ela um contorno difuso em
+     vez de uma borda. */
+  for (let i = 0; i < Math.round(60 * k); i += 1) {
+    const a = Math.random() * Math.PI * 2
+    const r = (70 + Math.pow(Math.random(), 0.7) * 55) * k
+    glow(c + Math.cos(a) * r, c + Math.sin(a) * r * 0.7, (1 + Math.random() * 1.8) * k, '225, 232, 255', 0.22)
   }
   return canvas
 }
