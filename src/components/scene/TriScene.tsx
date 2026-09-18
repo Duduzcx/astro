@@ -67,6 +67,9 @@ export function TriScene() {
     /* Mesma cena em todo lugar, dimensionada pelo hardware: celular e máquina
        fraca recebem menos triângulos e menos pixels para preencher. */
     const cores = navigator.hardwareConcurrency ?? 8
+    /* Aparelho de poucos núcleos costuma vir com GPU à altura. Ele nasce com
+       malha mais simples e razão de pixels menor, em vez de descobrir isso
+       depois de já ter travado na cara do visitante. */
     const weakDevice = cores <= 4
     const lightweight = window.innerWidth < 1024
 
@@ -476,7 +479,7 @@ export function TriScene() {
          de textura por pixel cujo resultado principal ia para o lixo. O que
          se perde é a oclusão de vale, que o mapa normal já insinua. */
       relief: 0,
-      segments: lightweight ? 112 : 128,
+      segments: weakDevice ? 72 : lightweight ? 112 : 128,
       stylized: false,
       warm,
       kind: 'earth',
@@ -522,7 +525,7 @@ export function TriScene() {
     const worlds: World[] = [
       {
         planet: createPlanet({
-          segments: lightweight ? 128 : 128,
+          segments: weakDevice ? 72 : 128,
           stylized: false,
           kind: 'gas',
           spin: 0.03,
@@ -550,7 +553,7 @@ export function TriScene() {
       },
       {
         planet: createPlanet({
-          segments: lightweight ? 76 : 80,
+          segments: weakDevice ? 44 : 76,
           stylized: false,
           kind: 'rock',
           spin: 0.09,
@@ -571,7 +574,7 @@ export function TriScene() {
       },
       {
         planet: createPlanet({
-          segments: lightweight ? 128 : 128,
+          segments: weakDevice ? 72 : 128,
           stylized: false,
           kind: 'gas',
           spin: 0.035,
@@ -587,7 +590,7 @@ export function TriScene() {
       },
       {
         planet: createPlanet({
-          segments: lightweight ? 76 : 80,
+          segments: weakDevice ? 44 : 76,
           stylized: false,
           kind: 'ice',
           spin: 0.05,
@@ -632,7 +635,7 @@ export function TriScene() {
       reveal: narrow ? 0.34 : 0.5,
     })
 
-    const blackHole = createBlackHole({ segments: lightweight ? 128 : 128, lightweight })
+    const blackHole = createBlackHole({ segments: weakDevice ? 72 : 128, lightweight })
     scene.add(blackHole.object)
 
     const nova = createNova()
@@ -758,51 +761,68 @@ export function TriScene() {
        máquina não segura a taxa, derruba resolução e camada ambiente uma vez
        só. Seguro barato para notebook velho, que não dá para detectar. */
     let sampled = 0
-    let slowFrames = 0
     let downgraded = false
-    const considerDowngrade = (delta: number) => {
-      if (downgraded || sampled > 150) return
-      sampled += 1
-      /* Só conta como lento o que é lento de verdade. No celular a régua
-         é outra: 33ms é a cadência normal de um aparelho mediano, e com
-         o limiar de desktop o rebaixamento disparava sempre — era ele
-         que jogava fora o bloom e deixava o Sol e o buraco negro sem
-         brilho nenhum. */
-      /* No celular a régua sobe para 75ms. A 55ms um aparelho mediano
-         cruzava o limiar em rolagem normal e o rebaixamento disparava
-         sempre. */
-      if (delta > (lightweight ? 0.075 : 0.028)) slowFrames += 1
-      if (sampled >= 120 && slowFrames > (lightweight ? 80 : 30)) {
-        downgraded = true
-        /* No celular o rebaixamento não acontece, ponto.
-           Ele é um caminho sem volta: uma vez disparado, a cena fica pior
-           até o visitante recarregar. Num aparelho de mão ele disparava
-           sempre, e o resultado era uma página que começa bonita e vai
-           ficando feia enquanto se olha — o oposto do que um site deve
-           fazer. Antes eu tinha poupado só a razão de pixels e o bloom, mas
-           cortar metade das estrelas e aliviar o foguete no meio da sessão
-           também aparece. Em tela grande ele continua, porque lá existe
-           mesmo a máquina velha que ele foi feito para socorrer. */
-        if (lightweight) return
+    /* Escada de sobrevivência, em vez de precipício.
+       A versão anterior era um degrau único e sem volta: ou a cena ficava
+       inteira, ou perdia tudo de uma vez. Num aparelho bom ele disparava por
+       um limiar apertado e estragava a imagem; desligado, um aparelho fraco
+       ficava sem socorro nenhum e travava. Agora são três patamares, cada um
+       tirando só o que é preciso, e o corte acontece na ordem do que menos
+       aparece: primeiro o campo ambiente, que é decoração; depois a metade
+       das estrelas e a resolução; e só no último caso a resolução plena.
+       O medidor usa a mediana e não a média, porque um único quadro de
+       compilação de shader não pode condenar um aparelho que vai bem. */
+    const janela: number[] = []
+    let patamar = 0
+    let proximaAvaliacao = 0
+    const rebaixar = (nivel: number) => {
+      if (nivel === 1) {
+        /* O campo ambiente é o que menos falta: triângulos fracos flutuando
+           longe, que ninguém procura e ninguém sente sumir. */
         ambientField.visible = false
+      }
+      if (nivel === 2) {
         stars.object.geometry.setDrawRange(
           0,
           Math.floor(stars.object.geometry.getAttribute('position').count / 2),
         )
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, lightweight ? 1.25 : 1))
+        renderer.setSize(window.innerWidth, stageHeight, false)
+        postfx?.setSize(window.innerWidth, stageHeight)
+      }
+      if (nivel === 3) {
         rocket.lighten()
-        /* Razão de pixels e bloom só caem fora do celular.
-           Era aqui que a cena "começava bonita e ia ficando borrada": num
-           aparelho real o limiar era cruzado em rolagem normal, a razão de
-           pixels caía de 1,5 para 1,0 e o bloom sumia — de uma vez e para
-           sempre, porque o rebaixamento não tem volta. Numa tela de mão isso
-           não é troca de brilho por fluidez, é a cena inteira virando um
-           desenho borrado. Em tela grande a conta é outra: lá a razão de
-           pixels já é 1,25 e a perda é pequena perto do que se ganha. */
         renderer.setPixelRatio(1)
         renderer.setSize(window.innerWidth, stageHeight, false)
+        /* A lente é a última a cair, e cai junto com a resolução: a essa
+           altura o aparelho já provou que não segura, e brilho custa cinco
+           desfoques por quadro. */
         postfx?.dispose()
         postfx = null
         downgradedPostFx = true
+      }
+    }
+    const considerDowngrade = (delta: number) => {
+      if (patamar >= 3) return
+      /* Os primeiros quadros são carga, não desempenho: texturas subindo,
+         programas ligando. Medir ali condena qualquer aparelho. */
+      sampled += 1
+      if (sampled < 90) return
+      janela.push(delta)
+      if (janela.length < 60) return
+      const ordenada = [...janela].sort((a, b) => a - b)
+      const mediana = ordenada[Math.floor(ordenada.length / 2)]
+      janela.length = 0
+      if (sampled < proximaAvaliacao) return
+      /* Quarenta e cinco milissegundos é o ponto em que a rolagem deixa de
+         parecer contínua. Acima disso, alguma coisa sai. */
+      if (mediana > 0.045) {
+        patamar += 1
+        downgraded = true
+        rebaixar(patamar)
+        /* Uma pausa antes de julgar de novo: o patamar anterior precisa de
+           tempo para aparecer na medida, senão os três caem juntos. */
+        proximaAvaliacao = sampled + 120
       }
     }
 
