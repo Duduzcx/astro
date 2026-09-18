@@ -739,7 +739,13 @@ const RING_FRAGMENT = /* glsl */ `
     float off = length(p - uLightLocal * along);
     float shadow = smoothstep(${(RADIUS * 1.02).toFixed(3)}, ${(RADIUS * 0.94).toFixed(3)}, off) * step(along, 0.0);
     float lit = 0.4 + 0.6 * abs(dot(normalize(vNormalV), uLight));
-    vec3 color = mix(vec3(0.78, 0.7, 0.58), vec3(0.96, 0.92, 0.84), bands) * lit * (1.0 - shadow * 0.85);
+    /* Cor variando ao longo do raio: os aros de dentro são mais quentes e
+       densos, os de fora esfriam e ficam acinzentados. Com uma cor só, o
+       anel inteiro lia como uma peça de plástico; é o degradê radial que faz
+       o olho ler gelo e poeira em distâncias diferentes. */
+    vec3 warm = mix(vec3(0.84, 0.73, 0.55), vec3(0.99, 0.95, 0.86), bands);
+    vec3 cool = mix(vec3(0.62, 0.66, 0.72), vec3(0.86, 0.89, 0.94), bands);
+    vec3 color = mix(warm, cool, smoothstep(0.25, 0.95, t)) * lit * (1.0 - shadow * 0.85);
     if (uHasMap > 0.5) color = texture2D(uMap, vec2(clamp(t, 0.0, 1.0), 0.5)).rgb * lit * (1.0 - shadow * 0.85);
     gl_FragColor = vec4(color, alpha * uOpacity);
   }

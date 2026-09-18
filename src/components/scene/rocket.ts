@@ -874,7 +874,10 @@ export function createRocket({
       /* Um segundo de espera pelo aquecimento, não dois e meio. O foguete é
          o assunto do hero: melhor um tranco curto quando ele entra do que
          uma plataforma vazia enquanto o visitante lê o título. */
-      const late = new Promise<void>((resolve) => window.setTimeout(resolve, 1000))
+      /* 350ms de espera pelo aquecimento, não mil. O modelo baixa em menos
+         de cem; o que sobrava era espera por compilação, e um tranco curto
+         de uma vez é melhor que o hero sem o seu assunto. */
+      const late = new Promise<void>((resolve) => window.setTimeout(resolve, 350))
       void Promise.race([warmed, late]).then(() => {
         if (!disposed && !gaveUp && !model.parent) object.add(model)
       })
@@ -890,7 +893,7 @@ export function createRocket({
       if (!root.visible) return
       if (cruise) for (const material of hullMaterials) material.opacity = state.opacity
       if (modelMaterials.length) {
-        if (appear < 1) appear = Math.min(1, appear + delta * 2)
+        if (appear < 1) appear = Math.min(1, appear + delta * 4)
         const opacity = appear * (cruise ? state.opacity : 1)
         for (const material of modelMaterials) {
           material.opacity = opacity

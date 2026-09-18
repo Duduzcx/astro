@@ -200,8 +200,10 @@ export function createSpace(
       uNebulaMap: { value: null },
       uIntensity: { value: options.sparkle !== undefined && options.sparkle < 1 ? 0.8 : 1.2 },
       uSparkle: { value: options.sparkle ?? 2.8 },
-      uTint: { value: new THREE.Color('#8db4f5') },
-      uBase: { value: new THREE.Color('#0a0f1e') },
+      uTint: { value: new THREE.Color('#7ea8f0') },
+      /* Base um pouco mais azul e mais funda: o céu vinha quase neutro e
+         puxava para o cinza nas áreas vazias. */
+      uBase: { value: new THREE.Color('#081227') },
       uNebula: { value: 0 },
       uShift: { value: 0 },
     },
