@@ -589,12 +589,19 @@ const CLOUDS_FRAGMENT = /* glsl */ `
 #endif
   void main() {
     float cover;
+    /* Deriva própria da massa de nuvem. A casca já gira mais rápido que o
+       chão, mas girar é transladar: o desenho continua o mesmo e o olho
+       percebe um adesivo passando. Aqui a amostra anda devagar nos dois
+       eixos, com períodos diferentes, então a formação se desfaz e se refaz
+       enquanto passa. */
+    vec2 drift = vec2(uTime * 0.0032, sin(uTime * 0.043) * 0.0045);
+    vec2 cuv = vUv + drift;
 #ifdef PHOTO_ONLY
-    cover = smoothstep(0.08, 0.7, texture2D(uMap, vUv).r);
+    cover = smoothstep(0.08, 0.7, texture2D(uMap, cuv).r);
 #else
     vec3 q = vObj / ${CLOUDS.toFixed(3)};
     if (uHasMap > 0.5) {
-      cover = smoothstep(0.08, 0.7, texture2D(uMap, vUv).r);
+      cover = smoothstep(0.08, 0.7, texture2D(uMap, cuv).r);
     } else {
       float c = fbm(q * 2.8 + vec3(uTime * 0.01, 0.0, 0.0)) + 0.15 * fbm3(q * 5.5);
       cover = smoothstep(0.08, 0.5, c);
@@ -610,7 +617,7 @@ const CLOUDS_FRAGMENT = /* glsl */ `
        sentido da luz) diz qual lado da massa está virado para o sol: onde
        ela cresce na direção da luz, é encosta iluminada. */
     vec2 e = vec2(0.0018, 0.0009);
-    float up = smoothstep(0.08, 0.7, texture2D(uMap, vUv + e * uLight.xy * 2.0).r);
+    float up = smoothstep(0.08, 0.7, texture2D(uMap, cuv + e * uLight.xy * 2.0).r);
     float slope = clamp((up - cover) * 6.0, -1.0, 1.0);
     vec3 lit = vec3(1.0, 0.99, 0.97);
     vec3 shade = vec3(0.52, 0.58, 0.72);
@@ -710,10 +717,14 @@ const RING_FRAGMENT = /* glsl */ `
          afiada em qualquer tamanho e nunca serrilha. A grande falha fica
          aberta de verdade, como vazio, não como faixa mais fraca — é ela que
          faz o anel parecer desenhado e não pintado. */
-      float rings = t * 9.0;
+      float rings = t * 15.0;
       float soft = max(fwidth(rings) * 0.75, 0.02);
       float step9 = floor(rings) + smoothstep(0.5 - soft, 0.5 + soft, fract(rings));
-      bands = fract(step9 * 0.5) > 0.25 ? 1.0 : 0.55;
+      /* Três larguras de aro em vez de duas alternadas: o anel deixa de ter
+         ritmo de código de barras e passa a ter aros largos, finos e vazios,
+         que é como ele se parece de verdade. */
+      float slot = fract(step9 / 3.0);
+      bands = slot < 0.34 ? 1.0 : (slot < 0.67 ? 0.62 : 0.34);
       float gapA = smoothstep(0.585, 0.605, t) * smoothstep(0.685, 0.665, t);
       float gapB = smoothstep(0.335, 0.35, t) * smoothstep(0.392, 0.377, t);
       float edgeIn = smoothstep(0.0, 0.03, t);

@@ -489,7 +489,11 @@ export function TriScene() {
            são quatro downloads a menos disputando banda com a primeira
            dobra. A última textura chegava aos 5,1s. */
         night: pin('earth-night'),
-        clouds: pin('earth-clouds'),
+        /* As nuvens voltam ao degrau alto. Travá-las no leve foi um corte
+           errado: elas ocupam a frente do hero e a 1k viram borrões. As
+           outras camadas de apoio continuam no leve, que é onde a economia
+           de banda não custa nada de imagem. */
+        clouds: tier('earth-clouds', 'webp', '2k'),
         normal: pin('earth-normal'),
         specular: lightweight
           ? { low: '/space/earth-specular-1k.webp', high: '/space/earth-specular-1k.webp' }
@@ -813,7 +817,10 @@ export function TriScene() {
          saltos, e amortecer mais tira o solavanco de cada salto. */
       /* No celular o scroll por toque chega em saltos grandes; amortecer
          mais transforma cada salto em movimento contínuo. */
-      const damping = reducedMotion ? 1 : 1 - Math.exp(-delta * (narrow ? 2.4 : 4.5))
+      /* Amortecimento mais firme no celular. A 2,4 a cena ficava para trás do
+       dedo numa rolagem rápida, e o fundo andando fora de compasso com o
+       conteúdo lê como travamento mesmo quando o quadro está no prazo. */
+    const damping = reducedMotion ? 1 : 1 - Math.exp(-delta * (narrow ? 3.8 : 4.5))
       current.mix += (target.mix - current.mix) * damping
       current.x += (target.x - current.x) * damping
       current.y += (target.y - current.y) * damping
