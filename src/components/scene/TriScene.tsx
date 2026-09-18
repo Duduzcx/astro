@@ -466,6 +466,11 @@ export function TriScene() {
     const depthScale = (camera.position.z + EARTH_DEPTH) / camera.position.z
     const earth = createPlanet({
       lightClouds: lightweight,
+      /* Sem o relevo por Sobel: a Terra tem mapa normal, e o bloco do mapa
+         normal sobrescreve a normal que o Sobel calcula. Eram duas amostras
+         de textura por pixel cujo resultado principal ia para o lixo. O que
+         se perde é a oclusão de vale, que o mapa normal já insinua. */
+      relief: 0,
       segments: lightweight ? 112 : 128,
       stylized: false,
       warm,
@@ -475,8 +480,6 @@ export function TriScene() {
         map: tier('earth-day', 'webp', '4k'),
         night: tier('earth-night', 'webp', '2k'),
         clouds: tier('earth-clouds', 'webp', '2k'),
-        /* Relevo e máscara de água também no celular: são duas amostras a
-           mais por pixel, e é o que tira a Terra do ar de adesivo. */
         normal: tier('earth-normal', 'webp', '2k'),
         specular: { low: '/space/earth-specular-1k.webp', high: '/space/earth-specular-2k.webp' },
       },
@@ -509,7 +512,7 @@ export function TriScene() {
           spin: 0.03,
           ring: true,
           /* Areia clara com faixas largas. */
-          toon: { a: '#f0dcae', b: '#a8874f', c: '#f7eeda', bands: 7 },
+          toon: { a: '#eedcb4', b: '#9a7d53', c: '#f6efe0', bands: 7 },
           /* Sem a fotografia do anel: ele passa a ser desenhado em aros
              chapados, no mesmo vocabulário do globo. */
           warm,
@@ -527,7 +530,7 @@ export function TriScene() {
           kind: 'rock',
           spin: 0.09,
           /* Ferrugem com manchas largas e calota de gelo. */
-          toon: { a: '#d2673a', b: '#8e3a22', c: '#ecdfd2', bands: 0 },
+          toon: { a: '#c8613b', b: '#76321f', c: '#e9e3dd', bands: 0 },
           warm,
         }),
         /* Maior e um pouco mais para dentro: pequeno demais o relevo não
@@ -545,7 +548,7 @@ export function TriScene() {
           kind: 'gas',
           spin: 0.035,
           /* Creme e âmbar, faixas estreitas. */
-          toon: { a: '#e4c096', b: '#9c6238', c: '#f2e6d6', bands: 11 },
+          toon: { a: '#e7caa4', b: '#874d2d', c: '#f2e8da', bands: 11 },
           warm,
         }),
         x: 0.75,
