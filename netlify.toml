@@ -12,12 +12,18 @@
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
     # JSON-LD é type=application/ld+json, o navegador não executa: passa na CSP.
     # Ao self-hostar as fontes, tire os dois domínios do Google daqui.
+    # `wasm-unsafe-eval` existe porque o decodificador Draco é WebAssembly, e
+    # instanciar um módulo wasm é bloqueado sem ele. Era esta a razão de o
+    # foguete cair no modelo procedural só no ar: o blob já estava liberado,
+    # mas o wasm abortava antes de descomprimir o GLB. É a diretiva estreita,
+    # que permite wasm sem permitir eval de texto em JavaScript.
+    # O hash cobre o bloco JSON-LD embutido, que o CSP recusava executar.
     # `blob:` em script-src, worker-src e connect-src existe pelo decodificador
     # Draco: o three monta o worker dele a partir de uma blob URL e busca o
     # wasm por ela. Sem isto o navegador recusa, o modelo do foguete nunca
     # descomprime e a cena cai no foguete procedural depois de oito segundos —
     # e isso só acontecia no ar, porque o servidor local não manda CSP nenhum.
-    Content-Security-Policy = "default-src 'self'; script-src 'self' blob:; worker-src 'self' blob:; child-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval' 'sha256-a78q6y+hvDh2bwhTTROVMpUrvcwFKMrPm7mVYcHCQic='; worker-src 'self' blob:; child-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 
 [[headers]]
   for = "/assets/*"

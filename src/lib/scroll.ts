@@ -9,18 +9,23 @@ import Lenis from 'lenis'
  */
 let lenis: Lenis | null = null
 
-/** Onde o scroll suave vale: tela larga com ponteiro fino, sem reduced-motion. */
+/** Em qualquer tela, menos para quem pede menos movimento. */
 const wantsSmoothScroll = () =>
-  !window.matchMedia('(prefers-reduced-motion: reduce)').matches &&
-  !window.matchMedia('(pointer: coarse)').matches &&
-  window.matchMedia('(min-width: 1024px)').matches
+  !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+const isTouch = () => window.matchMedia('(pointer: coarse)').matches
 
 /**
- * O Lenis fica só no desktop. Em tela de toque ele intercepta o gesto e
- * roda o scroll por JS, então um arrastão rápido acaba com a página andando
- * atrás do dedo — parece travamento. O scroll nativo do celular já tem inércia
- * própria e é o mais suave que existe ali. Abaixo de 1024px, mesmo com mouse,
- * a cena roda no modo leve e não ganha nada com a inércia.
+ * Scroll suave também no toque.
+ *
+ * A versão anterior deixava o Lenis só no desktop, com o argumento de que em
+ * tela de toque ele intercepta o gesto e a página anda atrás do dedo. Isso
+ * vale para o modo padrão, que roda a rolagem inteira por JavaScript. Com
+ * `syncTouch` o dedo continua mandando na posição — o Lenis só suaviza a
+ * inércia depois que o gesto termina, e é aí que a cena 3D ganha: sem os
+ * saltos bruscos do scroll nativo, o astro não engasga entre um quadro e
+ * outro. O `touchInertiaMultiplier` baixo evita que um arrastão longo
+ * dispare meia página de deslizamento.
  */
 export function initSmoothScroll() {
   if (lenis) return
@@ -28,11 +33,19 @@ export function initSmoothScroll() {
 
   /* lerp baixo e curva expo: a página segue a roda com peso, como um dolly
      de cinema, e assenta sem quicar. O easing só vale para scrollTo. */
+  const touch = isTouch()
   lenis = new Lenis({
-    lerp: 0.09,
+    /* No toque o amortecimento é mais firme: o dedo manda, e o que sobra é
+       só o assentamento. No desktop a roda continua com o peso de dolly.
+       `touchMultiplier` em 1,6 dá ao dedo um pouco mais de alcance por
+       gesto, que é o que faz a página parecer leve em vez de pesada. */
+    lerp: touch ? 0.14 : 0.09,
     wheelMultiplier: 1,
     duration: 1.4,
     easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+    syncTouch: touch,
+    syncTouchLerp: 0.085,
+    touchMultiplier: touch ? 1.6 : 1,
   })
   const raf = (time: number) => {
     lenis?.raf(time)
