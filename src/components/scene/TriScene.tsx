@@ -675,7 +675,13 @@ export function TriScene() {
       pointer.x = (event.clientX / window.innerWidth) * 2 - 1
       pointer.y = (event.clientY / window.innerHeight) * 2 - 1
     }
-    window.addEventListener('pointermove', onPointerMove, { passive: true })
+    /* Só com ponteiro fino. Num aparelho de toque o dedo que rola a página
+       também dispara pointermove, e a cena respondia ao gesto: o visitante
+       tinha a impressão de estar arrastando os astros. O espaço é cenário,
+       não brinquedo. */
+    if (!window.matchMedia('(pointer: coarse)').matches) {
+      window.addEventListener('pointermove', onPointerMove, { passive: true })
+    }
 
     /**
      * Browser de celular dispara resize quando a barra de URL recolhe no meio
@@ -1014,11 +1020,26 @@ export function TriScene() {
             visible: inside,
             lift: 0,
             thrust,
-            x: here.x / scaleNow,
-            yPad: here.y / scaleNow,
+            /* Voo, não trilho. O foguete seguia a curva exata do caminho, e
+               curva exata lê como peça correndo num trilho. Três senos de
+               períodos diferentes tiram ele da linha: uma onda longa que o
+               faz subir e descer, uma curta que responde mais rápido, e uma
+               deriva lateral que o desencosta do traçado. Nada disso é
+               grande — some tudo em menos de um décimo de unidade — mas é a
+               diferença entre flutuar e deslizar. */
+            x: here.x / scaleNow + (Math.sin(time * 0.53) * 0.035 + Math.sin(time * 1.27) * 0.012),
+            yPad: here.y / scaleNow + (Math.sin(time * 0.71) * 0.05 + Math.sin(time * 1.9) * 0.015),
             travel: 0,
             opacity: fade,
-            tilt: cruiseTilt(tNow) + Math.sin(time * 1.1) * 0.03,
+            /* Inclinação de curva: ele rola para dentro do movimento, como
+               uma asa que banca. A defasagem de um quarto de período contra
+               a onda lateral é o que faz a inclinação parecer consequência
+               do desvio, e não um balanço solto. */
+            tilt:
+              cruiseTilt(tNow) +
+              Math.sin(time * 1.1) * 0.03 +
+              Math.cos(time * 0.53) * 0.085 +
+              Math.sin(time * 0.29) * 0.04,
           },
           time,
           delta,

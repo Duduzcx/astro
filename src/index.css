@@ -263,7 +263,13 @@
   color: transparent;
 }
 
-/* O mesmo gradiente, vivo: a cor desliza pelas letras num loop lento. */
+/* O mesmo gradiente, vivo: a cor desliza pelas letras num loop lento.
+
+   Abaixo de 1024px ele vira cor sólida. Num número curto como "24h" ou "1x"
+   o gradiente atravessa duas ou três letras, e o resultado é um algarismo de
+   uma cor e o resto de outra — lê como defeito de renderização, não como
+   ênfase. Em frase longa, que é o outro uso, a transição tem espaço para
+   acontecer. */
 @utility text-spectrum-animated {
   background: linear-gradient(92deg, #4d84e0, #5a8fe8, #8db4f5, #6d9df0, #4d84e0);
   background-size: 300% 100%;
@@ -276,6 +282,13 @@
      isso sozinho. No celular ele estava disputando o quadro com a cena. */
   @media (min-width: 1024px) {
     animation: astro-spectrum 7s linear infinite;
+  }
+
+  @media (max-width: 1023px) {
+    background: none;
+    -webkit-background-clip: border-box;
+    background-clip: border-box;
+    color: #8db4f5;
   }
 }
 

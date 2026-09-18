@@ -538,7 +538,7 @@ const SURFACE_FRAGMENT = /* glsl */ `
           /* A grande falha deixa passar luz: a mesma que o anel desenha. */
           float u = (rr - inner) / (outer - inner);
           float gap = smoothstep(0.585, 0.605, u) * smoothstep(0.685, 0.665, u);
-          color *= 1.0 - band * (1.0 - gap) * 0.5;
+          color *= 1.0 - band * (1.0 - gap) * 0.4;
         }
       }
     }
@@ -755,7 +755,10 @@ const RING_FRAGMENT = /* glsl */ `
          afiada em qualquer tamanho e nunca serrilha. A grande falha fica
          aberta de verdade, como vazio, não como faixa mais fraca — é ela que
          faz o anel parecer desenhado e não pintado. */
-      float rings = t * 15.0;
+      /* Vinte e seis divisões em vez de quinze. Aro largo demais lê como
+         listra pintada; o anel de verdade é feito de muitos fios finos, e é
+         a densidade deles que forma as faixas claras e escuras. */
+      float rings = t * 26.0;
       float soft = max(fwidth(rings) * 0.75, 0.02);
       float step9 = floor(rings) + smoothstep(0.5 - soft, 0.5 + soft, fract(rings));
       /* Três larguras de aro em vez de duas alternadas: o anel deixa de ter
@@ -785,11 +788,11 @@ const RING_FRAGMENT = /* glsl */ `
        densos, os de fora esfriam e ficam acinzentados. Com uma cor só, o
        anel inteiro lia como uma peça de plástico; é o degradê radial que faz
        o olho ler gelo e poeira em distâncias diferentes. */
-    vec3 warm = mix(vec3(0.84, 0.73, 0.55), vec3(0.99, 0.95, 0.86), bands);
-    /* O extremo frio era quase chumbo, e o anel lia como peça de outro
-       material colada num planeta dourado. Esfriar aqui é perder saturação,
-       não virar cinza azulado: os aros de fora ficam creme claro. */
-    vec3 cool = mix(vec3(0.72, 0.68, 0.6), vec3(0.95, 0.93, 0.88), bands);
+    vec3 warm = mix(vec3(0.72, 0.6, 0.42), vec3(1.0, 0.96, 0.85), bands);
+    /* O anel é dourado pálido de ponta a ponta: o que muda ao longo do raio
+       é a densidade, não o matiz. Com o extremo externo puxando para o
+       cinza, ele lia como concreto ao lado de um planeta de ouro. */
+    vec3 cool = mix(vec3(0.6, 0.55, 0.44), vec3(0.97, 0.94, 0.86), bands);
     vec3 color = mix(warm, cool, smoothstep(0.25, 0.95, t)) * lit * (1.0 - shadow * 0.85);
     if (uHasMap > 0.5) color = texture2D(uMap, vec2(clamp(t, 0.0, 1.0), 0.5)).rgb * lit * (1.0 - shadow * 0.85);
     gl_FragColor = vec4(color, alpha * uOpacity);
