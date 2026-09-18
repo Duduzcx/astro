@@ -528,7 +528,7 @@ export function TriScene() {
           spin: 0.03,
           ring: true,
           /* Areia clara com faixas largas. */
-          toon: { a: '#eedcb4', b: '#9a7d53', c: '#f6efe0', bands: 7 },
+          toon: { a: '#f5e8c8', b: '#b39468', c: '#faf4e6', bands: 7 },
           /* Sem a fotografia do anel: ele passa a ser desenhado em aros
              chapados, no mesmo vocabulário do globo. */
           warm,

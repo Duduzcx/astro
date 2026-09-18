@@ -217,7 +217,10 @@ const SURFACE_FRAGMENT = /* glsl */ `
     /* A mancha. Todo gigante gasoso de ilustração tem uma: é ela que dá
        identidade ao planeta e prova que ele gira, porque entra e sai de
        vista. Elipse achatada, borda macia, fora do equador. */
-    if (uToonBands > 0.5) {
+    /* Só o gigante de faixas estreitas leva a mancha. Ela é assinatura de um
+       planeta, não de uma categoria: em Saturno virava um borrão vermelho no
+       alto, que é o oposto do pálido que ele deveria ser. */
+    if (uToonBands > 9.5) {
       vec2 spot = vec2((fract(vUv.x + 0.22) - 0.5) * 2.4, (lat - 0.63) * 7.0);
       float mark = smoothstep(1.0, 0.25, length(spot));
       albedo = mix(albedo, uToonB * 0.82 + vec3(0.12, 0.03, 0.0), mark * 0.75);
@@ -750,7 +753,10 @@ const RING_FRAGMENT = /* glsl */ `
        anel inteiro lia como uma peça de plástico; é o degradê radial que faz
        o olho ler gelo e poeira em distâncias diferentes. */
     vec3 warm = mix(vec3(0.84, 0.73, 0.55), vec3(0.99, 0.95, 0.86), bands);
-    vec3 cool = mix(vec3(0.62, 0.66, 0.72), vec3(0.86, 0.89, 0.94), bands);
+    /* O extremo frio era quase chumbo, e o anel lia como peça de outro
+       material colada num planeta dourado. Esfriar aqui é perder saturação,
+       não virar cinza azulado: os aros de fora ficam creme claro. */
+    vec3 cool = mix(vec3(0.72, 0.68, 0.6), vec3(0.95, 0.93, 0.88), bands);
     vec3 color = mix(warm, cool, smoothstep(0.25, 0.95, t)) * lit * (1.0 - shadow * 0.85);
     if (uHasMap > 0.5) color = texture2D(uMap, vec2(clamp(t, 0.0, 1.0), 0.5)).rgb * lit * (1.0 - shadow * 0.85);
     gl_FragColor = vec4(color, alpha * uOpacity);
