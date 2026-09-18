@@ -166,12 +166,19 @@ const SURFACE_FRAGMENT = /* glsl */ `
          que quebra a regularidade, senão o planeta vira papel listrado. Seis
          degraus em vez de quatro, e a borda de cada degrau acompanha um
          pixel de tela, então o corte fica limpo em qualquer tamanho. */
-      float wide = sin(lat * uToonBands * 3.14159265);
-      float fine = sin(lat * uToonBands * 2.7 + 1.3) * 0.28;
-      float stripes = (wide + fine) * 0.5 + 0.5;
-      float scaled = stripes * 6.0;
+      /* Três frequências e uma ondulação em longitude. A terceira quebra a
+         repetição que duas ainda deixavam ver, e a ondulação faz a faixa
+         serpentear como jato atmosférico em vez de correr reta como listra
+         de papel. Dez degraus em vez de seis: a borda continua limpa porque
+         cada uma acompanha um pixel de tela. */
+      float wave = sin(vUv.x * 6.2831853 * 2.0 + lat * 9.0) * 0.045;
+      float wide = sin((lat + wave) * uToonBands * 3.14159265);
+      float fine = sin((lat + wave) * uToonBands * 2.7 + 1.3) * 0.28;
+      float micro = sin((lat + wave) * uToonBands * 6.3 + 2.1) * 0.12;
+      float stripes = (wide + fine + micro) * 0.5 + 0.5;
+      float scaled = stripes * 10.0;
       float soft = max(fwidth(scaled) * 0.8, 0.015);
-      t = (floor(scaled) + smoothstep(0.5 - soft, 0.5 + soft, fract(scaled))) / 6.0;
+      t = (floor(scaled) + smoothstep(0.5 - soft, 0.5 + soft, fract(scaled))) / 10.0;
     } else {
       /* Mundo rochoso: manchas largas com uma borda macia, mais um veio fino
          cruzando, para não ficar um ovo de duas cores. */
@@ -440,7 +447,7 @@ const SURFACE_FRAGMENT = /* glsl */ `
     float limb = mix(limbFloor, 1.0, pow(max(dot(geomN, v), 0.0), 0.55));
     color *= limb;
 
-#ifndef STYLIZED
+#ifndef NO_CLOUD_SHADOW
     if (uHasClouds > 0.5) {
       /* Sombra das nuvens no chão: de cada ponto da superfície, sobe na
          direção da luz até a casca das nuvens e pergunta se há nuvem lá.
@@ -734,6 +741,7 @@ export function createPlanet({
   tint = '#ffffff',
   stylized = false,
   toon,
+  lightClouds = false,
   warm,
 }: {
   segments: number
@@ -759,6 +767,8 @@ export function createPlanet({
       degrau e calota clara. `bands` acima de zero dá o listrado de gigante
       gasoso; zero dá manchas largas de mundo rochoso. */
   toon?: { a: string; b: string; c: string; bands: number }
+  /** Tira a sombra volumétrica de nuvem do código-fonte do shader. */
+  lightClouds?: boolean
   /** Chamado com cada textura assim que chega: sobe para a GPU na hora,
       em vez de travar o primeiro frame em que o planeta aparece. */
   warm?: (texture: THREE.Texture) => void
@@ -794,6 +804,12 @@ export function createPlanet({
   /* TOON reaproveita os caminhos de luz do STYLIZED (degrau no terminador e
      contorno na silhueta) e troca só a origem da cor. */
   if (stylized || toon) defines.STYLIZED = ''
+  /* A sombra volumétrica de nuvem é meia dúzia de linhas de trigonometria
+     mais uma amostra com LOD, e só a Terra a usa. Como ela já tem programa
+     próprio — os mundos de passagem são toon — tirar o bloco no celular
+     encolhe o shader mais pesado da página sem criar variante nova, que foi
+     o erro da tentativa anterior de separar por defines. */
+  if (lightClouds) defines.NO_CLOUD_SHADOW = ''
   if (toon) defines.TOON = ''
   const surfaceMaterial = new THREE.ShaderMaterial({
     defines: { ...defines },

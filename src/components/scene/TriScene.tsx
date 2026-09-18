@@ -465,6 +465,7 @@ export function TriScene() {
     const EARTH_DEPTH = 9.9
     const depthScale = (camera.position.z + EARTH_DEPTH) / camera.position.z
     const earth = createPlanet({
+      lightClouds: lightweight,
       segments: lightweight ? 112 : 128,
       stylized: false,
       warm,
@@ -502,7 +503,7 @@ export function TriScene() {
     const worlds: World[] = [
       {
         planet: createPlanet({
-          segments: lightweight ? 104 : 112,
+          segments: lightweight ? 128 : 128,
           stylized: false,
           kind: 'gas',
           spin: 0.03,
@@ -540,7 +541,7 @@ export function TriScene() {
       },
       {
         planet: createPlanet({
-          segments: lightweight ? 104 : 112,
+          segments: lightweight ? 128 : 128,
           stylized: false,
           kind: 'gas',
           spin: 0.035,
@@ -601,7 +602,7 @@ export function TriScene() {
       reveal: narrow ? 0.34 : 0.5,
     })
 
-    const blackHole = createBlackHole({ segments: lightweight ? 104 : 112, lightweight })
+    const blackHole = createBlackHole({ segments: lightweight ? 128 : 128, lightweight })
     scene.add(blackHole.object)
 
     const nova = createNova()

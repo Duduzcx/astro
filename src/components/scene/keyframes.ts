@@ -144,6 +144,12 @@ export function mobileKeyframes(
     [0.312, 0.95, 0.0, 0.08, scale * 0.8, 0.7, 0],
     [0.33, 0.95, 0.0, 0.0, scale * 1.25, FIELD_OPACITY, 0],
     /* Troca de astro com o campo quase invisível, ninguém vê a costura. */
+    /* Troca de astro antecipada. O morph é amortecido como todo o resto, e
+       levava perto de um segundo de rolagem para convergir de 0 para 1: a
+       presença do disco depende dele, então o buraco negro entrava fraco e
+       só ficava inteiro depois. Trocando aqui, com o campo disperso em 0,95,
+       a costura não aparece e ele chega em 0,34 já convergido. */
+    [0.318, 0.95, 0.0, 0.04, scale * 1.1, FIELD_OPACITY, 1],
     [0.334, 0.95, 0.0, 0.0, scale * 1.25, FIELD_OPACITY, 1],
     /* Buraco negro: nasce nos Resultados e cresce, mas o auge fica na
        chamada (0.473 a 0.496) e no começo do Processo, que é onde a tela
@@ -224,7 +230,10 @@ export function sampleKeyframes(table: Keyframes, progress: number): Sample {
  * máximo, o mesmo número que a tabela do celular usa.
  */
 export function takeoffSpan(screen: number) {
-  return Math.min(screen * 0.9, 0.12)
+  /* Dois terços de tela em vez de nove décimos: a subida acontece em menos
+     rolagem, então lê como foguete que sai, e não como foguete que sobe
+     devagar enquanto o visitante trabalha para empurrá-lo. */
+  return Math.min(screen * 0.62, 0.12)
 }
 
 export type RocketWindow = { visible: boolean; lift: number; thrust: number }
@@ -241,8 +250,12 @@ const smooth = (edge0: number, edge1: number, x: number) => {
  */
 export function rocketWindow(progress: number, takeoff: number): RocketWindow {
   const t = Math.min(Math.max(progress / takeoff, 0), 1)
-  const lift = t * t
-  const thrust = smooth(0, 0.12, t) * (1 - smooth(0.85, 1, t))
+  /* A curva era t ao quadrado puro: o foguete saía do repouso com derivada
+     zero e o primeiro terço da rolagem quase não o movia — lia como preso.
+     Agora um pouco de impulso inicial somado à mesma aceleração, e um
+     amaciamento no fim para ele não bater no topo. */
+  const lift = t * t * (0.82 + 0.18 * (2.0 - t)) * smooth(0, 0.06, t) + t * 0.12 * (1 - t)
+  const thrust = smooth(0, 0.08, t) * (1 - smooth(0.88, 1, t))
   return { visible: t < 1, lift, thrust: t >= 1 ? 0 : thrust }
 }
 
