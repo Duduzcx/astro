@@ -142,14 +142,14 @@ export function mobileKeyframes(
        e num trecho curto ela passava em dois ou três frames de scroll, o
        que lê como corte, não como explosão. */
     [0.312, 0.95, 0.0, 0.08, scale * 0.8, 0.7, 0],
-    [0.33, 0.95, 0.0, 0.0, scale * 1.25, FIELD_OPACITY, 0],
+    [0.318, 0.95, 0.0, 0.04, scale * 1.05, FIELD_OPACITY, 1],
+    [0.33, 0.95, 0.0, 0.0, scale * 1.25, FIELD_OPACITY, 1],
     /* Troca de astro com o campo quase invisível, ninguém vê a costura. */
     /* Troca de astro antecipada. O morph é amortecido como todo o resto, e
        levava perto de um segundo de rolagem para convergir de 0 para 1: a
        presença do disco depende dele, então o buraco negro entrava fraco e
        só ficava inteiro depois. Trocando aqui, com o campo disperso em 0,95,
        a costura não aparece e ele chega em 0,34 já convergido. */
-    [0.318, 0.95, 0.0, 0.04, scale * 1.1, FIELD_OPACITY, 1],
     [0.334, 0.95, 0.0, 0.0, scale * 1.25, FIELD_OPACITY, 1],
     /* Buraco negro: nasce nos Resultados e cresce, mas o auge fica na
        chamada (0.473 a 0.496) e no começo do Processo, que é onde a tela

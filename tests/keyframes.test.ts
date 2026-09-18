@@ -51,8 +51,10 @@ test('mobileKeyframes gera uma tabela ordenada por progresso', () => {
   assert.equal(table[table.length - 1][0], 1)
 })
 
-test('takeoffSpan é ~uma tela de rolagem, com teto', () => {
-  assert.ok(Math.abs(takeoffSpan(0.04) - 0.036) < 1e-9)
+test('takeoffSpan é uma fração da tela de rolagem, com teto', () => {
+  /* Dois terços de tela: a decolagem acontece em menos rolagem do que uma
+     tela inteira, senão o foguete sobe devagar demais para quem rola. */
+  assert.ok(Math.abs(takeoffSpan(0.04) - 0.0248) < 1e-9)
   assert.equal(takeoffSpan(0.5), 0.12)
 })
 
