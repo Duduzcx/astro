@@ -44,6 +44,12 @@ function paint(kind: Spec['kind']) {
   const ctx = canvas.getContext('2d')
   if (!ctx) return canvas
   const c = SIZE / 2
+  /* O desenho foi escrito em unidades de uma tela de 256. Ao dobrar SIZE os
+     raios continuaram os mesmos e a galáxia passou a ocupar só o quarto
+     central do canvas: o dobro de memória sem um pixel a mais de detalhe.
+     Tudo abaixo é multiplicado por esta escala, e a contagem de bolhas do
+     braço acompanha, senão o desenho fica ralo na resolução maior. */
+  const k = SIZE / 256
   ctx.globalCompositeOperation = 'lighter'
   const glow = (x: number, y: number, r: number, rgb: string, a: number) => {
     const g = ctx.createRadialGradient(x, y, 0, x, y, r)
@@ -60,51 +66,65 @@ function paint(kind: Spec['kind']) {
     ctx.save()
     ctx.translate(c, c)
     ctx.scale(1, 0.72)
-    glow(0, 0, 96, '150, 180, 255', 0.16)
+    glow(0, 0, 96 * k, '150, 180, 255', 0.16)
+    const steps = Math.round(70 * k * 1.6)
     for (let arm = 0; arm < 2; arm += 1) {
-      for (let i = 0; i < 70; i += 1) {
-        const t = (i / 70) * Math.PI * 2.6
-        const r = 10 + 8 * Math.exp(0.32 * t)
-        if (r > 108) break
+      for (let i = 0; i < steps; i += 1) {
+        const t = (i / steps) * Math.PI * 2.6
+        const r = (10 + 8 * Math.exp(0.32 * t)) * k
+        if (r > 108 * k) break
         const a = t + arm * Math.PI
-        const x = Math.cos(a) * r + (Math.random() - 0.5) * 8
-        const y = Math.sin(a) * r + (Math.random() - 0.5) * 8
-        const fade = 1 - r / 118
-        glow(x, y, 7 + Math.random() * 9, '170, 200, 255', 0.07 * fade)
-        if (i % 9 === 4) glow(x, y, 4, '255, 180, 220', 0.16 * fade)
+        const x = Math.cos(a) * r + (Math.random() - 0.5) * 8 * k
+        const y = Math.sin(a) * r + (Math.random() - 0.5) * 8 * k
+        const fade = 1 - r / (118 * k)
+        glow(x, y, (5 + Math.random() * 8) * k, '170, 200, 255', 0.055 * fade)
+        /* Nós de formação estelar: agora em dois tamanhos, porque na
+           resolução maior um ponto só some. */
+        if (i % 11 === 4) glow(x, y, 4 * k, '255, 180, 220', 0.15 * fade)
+        if (i % 23 === 7) glow(x, y, 2 * k, '255, 245, 250', 0.5 * fade)
       }
     }
+    /* Faixa de poeira sobre um dos braços: é ela que dá o contraste que
+       fotografia de galáxia tem e desenho de galáxia costuma esquecer. */
+    ctx.globalCompositeOperation = 'destination-out'
+    for (let i = 0; i < Math.round(40 * k); i += 1) {
+      const t = (i / (40 * k)) * Math.PI * 2.4 + 0.5
+      const r = (12 + 8 * Math.exp(0.32 * t)) * k
+      if (r > 104 * k) break
+      glow(Math.cos(t) * r, Math.sin(t) * r, 6 * k, '0, 0, 0', 0.16)
+    }
+    ctx.globalCompositeOperation = 'lighter'
     ctx.restore()
-    glow(c, c, 30, '255, 236, 210', 0.55)
-    glow(c, c, 9, '255, 250, 240', 1)
+    glow(c, c, 30 * k, '255, 236, 210', 0.55)
+    glow(c, c, 9 * k, '255, 250, 240', 1)
   } else if (kind === 'edge') {
     /* Vista de perfil: um fuso largo com bojo, cortado por uma faixa de
        poeira levemente abaixo do eixo. */
     ctx.save()
     ctx.translate(c, c)
     ctx.scale(1, 0.17)
-    glow(0, 0, 118, '160, 190, 255', 0.5)
-    glow(0, 0, 70, '210, 220, 255', 0.5)
+    glow(0, 0, 118 * k, '160, 190, 255', 0.5)
+    glow(0, 0, 70 * k, '210, 220, 255', 0.5)
     ctx.restore()
     ctx.save()
     ctx.translate(c, c)
     ctx.scale(1, 0.55)
-    glow(0, 0, 40, '255, 232, 200', 0.6)
+    glow(0, 0, 40 * k, '255, 232, 200', 0.6)
     ctx.restore()
-    glow(c, c, 8, '255, 250, 240', 1)
+    glow(c, c, 8 * k, '255, 250, 240', 1)
     ctx.globalCompositeOperation = 'destination-out'
     ctx.save()
-    ctx.translate(c, c + 3)
+    ctx.translate(c, c + 3 * k)
     ctx.scale(1, 0.05)
-    glow(0, 0, 110, '0, 0, 0', 0.85)
+    glow(0, 0, 110 * k, '0, 0, 0', 0.85)
     ctx.restore()
   } else {
     /* Elíptica: só um gradiente alongado, mais quente no núcleo. */
     ctx.save()
     ctx.translate(c, c)
     ctx.scale(1, 0.62)
-    glow(0, 0, 110, '190, 200, 255', 0.22)
-    glow(0, 0, 60, '235, 225, 240', 0.4)
+    glow(0, 0, 110 * k, '190, 200, 255', 0.22)
+    glow(0, 0, 60 * k, '235, 225, 240', 0.4)
     ctx.restore()
     glow(c, c, 14, '255, 244, 225', 0.9)
   }
