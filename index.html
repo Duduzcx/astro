@@ -79,22 +79,6 @@
     />
   </head>
   <body>
-    <!-- Tela de entrada. Mora no HTML e não no React porque precisa existir
-         antes de qualquer script rodar: é o primeiro pixel que o visitante
-         vê. Sai sozinha quando a cena desenha o primeiro quadro, e sai de
-         qualquer jeito depois de oito segundos, para um WebGL que falhou não
-         deixar o site preso atrás dela. -->
-    <div id="boot" aria-hidden="true">
-      <div class="boot-orbit"></div>
-      <div class="boot-core"></div>
-    </div>
-    <!-- Registro do formulário no Netlify: o build só enxerga HTML estático,
-         então o formulário React de Contact.tsx precisa deste espelho oculto
-         com os mesmos campos. -->
-    <form name="contato" netlify netlify-honeypot="bot-field" hidden>
-      <input name="bot-field" /><input name="nome" /><input name="email" /><input name="empresa" />
-      <textarea name="desafio"></textarea>
-    </form>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

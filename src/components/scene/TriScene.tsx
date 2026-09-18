@@ -735,6 +735,7 @@ export function TriScene() {
 
     /* O primeiro frame renderizado levanta a opacidade do container, para o canvas não aparecer de supetão. */
     let revealed = false
+    let contextLost = false
 
     /* A tabela do hero depende da altura do texto e da altura da página, que
        mudam quando as fontes carregam e quando o documento cresce. */
@@ -1215,7 +1216,6 @@ export function TriScene() {
         mount.style.opacity = '1'
         /* O primeiro quadro desenhado é o sinal para a tela de entrada sair.
            É o marco honesto: não "o script carregou", e sim "há imagem". */
-        document.documentElement.dataset.sceneReady = 'true'
       }
     }
     /**
@@ -1308,7 +1308,7 @@ export function TriScene() {
 
     /* Sem sentido queimar GPU com a aba escondida. */
     const onVisibility = () => {
-      if (document.hidden) {
+      if (document.hidden || contextLost) {
         cancelAnimationFrame(frame)
       } else {
         previous = performance.now()
@@ -1317,10 +1317,42 @@ export function TriScene() {
     }
     document.addEventListener('visibilitychange', onVisibility)
 
+    /* Contexto perdido.
+       Ao sair para um link externo e voltar, o navegador restaura a página do
+       cache de histórico, e no celular ele costuma ter recolhido o contexto
+       WebGL nesse meio tempo. O loop seguia desenhando contra um contexto
+       morto: a cena aparecia quebrada e o console enchia de erro. Agora o
+       loop para na hora, e o `preventDefault` diz ao navegador que queremos
+       a chance de restaurar. */
+    const onContextLost = (event: Event) => {
+      event.preventDefault()
+      cancelAnimationFrame(frame)
+      contextLost = true
+    }
+    const onContextRestored = () => {
+      if (disposed) return
+      contextLost = false
+      previous = performance.now()
+      frame = requestAnimationFrame(tick)
+    }
+    renderer.domElement.addEventListener('webglcontextlost', onContextLost)
+    renderer.domElement.addEventListener('webglcontextrestored', onContextRestored)
+
+    /* Volta pelo botão de voltar. Quando a página vem do cache de histórico,
+       recarregar é mais barato e mais seguro que tentar remontar a cena: o
+       estado do scroll, das texturas e dos programas já não é confiável. */
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted && contextLost) window.location.reload()
+    }
+    window.addEventListener('pageshow', onPageShow)
+
     return () => {
       disposed = true
       cancelAnimationFrame(frame)
       pageObserver.disconnect()
+      renderer.domElement.removeEventListener('webglcontextlost', onContextLost)
+      renderer.domElement.removeEventListener('webglcontextrestored', onContextRestored)
+      window.removeEventListener('pageshow', onPageShow)
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('resize', onResize)
       window.removeEventListener('pointermove', onPointerMove)
