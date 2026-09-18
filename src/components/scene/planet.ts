@@ -172,9 +172,19 @@ const SURFACE_FRAGMENT = /* glsl */ `
          de papel. Dez degraus em vez de seis: a borda continua limpa porque
          cada uma acompanha um pixel de tela. */
       float wave = sin(vUv.x * 6.2831853 * 2.0 + lat * 9.0) * 0.045;
-      float wide = sin((lat + wave) * uToonBands * 3.14159265);
-      float fine = sin((lat + wave) * uToonBands * 2.7 + 1.3) * 0.28;
-      float micro = sin((lat + wave) * uToonBands * 6.3 + 2.1) * 0.12;
+      /* Turbulência de fronteira. As faixas de um gigante de verdade não
+         correm retas: elas se enrolam onde uma encosta na outra, e o meio de
+         cada faixa fica liso. Aqui a longitude empurra a latitude com força
+         proporcional à proximidade da borda do degrau, então a costura
+         ondula e o miolo não. É o que separa listra de papel de atmosfera. */
+      float pre = sin((lat + wave) * uToonBands * 3.14159265) * 0.5 + 0.5;
+      float nearEdge = 1.0 - abs(fract(pre * 10.0) - 0.5) * 2.0;
+      float curl = sin(vUv.x * 6.2831853 * 5.0 - lat * 21.0 + uTime * 0.04) * 0.021
+                 + sin(vUv.x * 6.2831853 * 9.0 + lat * 33.0 - uTime * 0.02) * 0.009;
+      float lw = lat + wave + curl * nearEdge;
+      float wide = sin(lw * uToonBands * 3.14159265);
+      float fine = sin(lw * uToonBands * 2.7 + 1.3) * 0.28;
+      float micro = sin(lw * uToonBands * 6.3 + 2.1) * 0.07;
       float stripes = (wide + fine + micro) * 0.5 + 0.5;
       float scaled = stripes * 10.0;
       float soft = max(fwidth(scaled) * 0.8, 0.015);
@@ -496,9 +506,17 @@ const SURFACE_FRAGMENT = /* glsl */ `
     float fres = 1.0 - max(dot(geomN, v), 0.0);
     float lit = smoothstep(-0.35, 0.35, dot(geomN, uLight));
     float edge = pow(fres, 9.0) * lit;
-    float sweep = pow(fres, 2.6) * (0.25 + 0.75 * lit);
+    /* A faixa fria tem que morar na borda, não no disco inteiro. A 2,6 de
+       expoente ela cobria metade do planeta e lavava as faixas de cor. */
+    float sweep = pow(fres, 5.0) * (0.25 + 0.75 * lit);
     color += vec3(1.0, 0.96, 0.9) * edge * 1.35;
-    color += vec3(0.42, 0.62, 1.0) * sweep * 0.22;
+    color += vec3(0.42, 0.62, 1.0) * sweep * 0.3;
+    /* Segundo tom de sombra. Entre o dia e a noite entrava um degrau só, e o
+       lado escuro virava um bloco chapado sem volume. Esta faixa fria e um
+       pouco mais escura mora no meio do terminador e devolve a curvatura sem
+       acender nada. */
+    float shade = smoothstep(0.58, 0.14, day);
+    color = mix(color, color * vec3(0.74, 0.8, 0.97), shade * 0.28);
 #endif
 
     /* Terminador quente: a luz rasante esquenta a linha entre dia e noite. */
