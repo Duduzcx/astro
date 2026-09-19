@@ -178,7 +178,14 @@ const SURFACE_FRAGMENT = /* glsl */ `
          serpentear como jato atmosférico em vez de correr reta como listra
          de papel. Dez degraus em vez de seis: a borda continua limpa porque
          cada uma acompanha um pixel de tela. */
-      float wave = sin(vUv.x * 6.2831853 * 2.0 + lat * 9.0) * 0.045;
+      /* A ondulação em longitude é discreta, e a conta manda nisso. Com
+         uToonBands em 12 o período de uma faixa vale 1/6 em latitude, então
+         um deslocamento de 0,045 empurra a faixa em 27% da própria largura —
+         e a turbulência somava mais 18%. Perto de metade de uma faixa: a
+         estrutura de latitude se desmanchava e a bola lia como manchas
+         diagonais, tipo camuflagem, em vez de atmosfera. Em 0,012 a faixa
+         serpenteia e continua sendo faixa. */
+      float wave = sin(vUv.x * 6.2831853 * 2.0 + lat * 9.0) * 0.012;
       /* Turbulência de fronteira. As faixas de um gigante de verdade não
          correm retas: elas se enrolam onde uma encosta na outra, e o meio de
          cada faixa fica liso. Aqui a longitude empurra a latitude com força
@@ -186,12 +193,17 @@ const SURFACE_FRAGMENT = /* glsl */ `
          ondula e o miolo não. É o que separa listra de papel de atmosfera. */
       float pre = sin((lat + wave) * uToonBands * 3.14159265) * 0.5 + 0.5;
       float nearEdge = 1.0 - abs(fract(pre * 10.0) - 0.5) * 2.0;
-      float curl = sin(vUv.x * 6.2831853 * 5.0 - lat * 21.0 + uTime * 0.04) * 0.021
-                 + sin(vUv.x * 6.2831853 * 9.0 + lat * 33.0 - uTime * 0.02) * 0.009;
+      float curl = sin(vUv.x * 6.2831853 * 5.0 - lat * 21.0 + uTime * 0.04) * 0.006
+                 + sin(vUv.x * 6.2831853 * 9.0 + lat * 33.0 - uTime * 0.02) * 0.003;
       float lw = lat + wave + curl * nearEdge;
       float wide = sin(lw * uToonBands * 3.14159265);
-      float fine = sin(lw * uToonBands * 2.7 + 1.3) * 0.28;
-      float micro = sin(lw * uToonBands * 6.3 + 2.1) * 0.07;
+      float fine = sin(lw * uToonBands * 2.7 + 1.3) * 0.22;
+      /* O termo miúdo desceu de 6,3 para 1,9 vez a frequência da faixa. A
+         6,3 ele cruzava as fronteiras de degrau tantas vezes por pixel que
+         virava um emaranhado de fios finos espalhado pela bola — lia como
+         arranhão, não como nuvem. Na frequência baixa ele faz o que devia:
+         largura desigual entre uma faixa e a seguinte. */
+      float micro = sin(lw * uToonBands * 1.9 + 2.1) * 0.05;
       float stripes = (wide + fine + micro) * 0.5 + 0.5;
       /* Cinco degraus, não dez. Dez soa como mais qualidade e é o contrário:
          entre uToonA e uToonB há uma distância de (43, 62, 83) em 8 bits, e
@@ -462,6 +474,14 @@ const SURFACE_FRAGMENT = /* glsl */ `
        Sem o smoothstep(0.06, 0.94, ...) que havia aqui: ele devolvia à
        escada uma curva contínua e colava os dois degraus do topo e os dois
        do fundo, desfazendo justamente o que a contagem alta comprava. */
+    /* No gigante a luz é CONTÍNUA, com o degrau só insinuado por cima, e
+       isso é correção de um erro meu. As iso-linhas de N·L caem como colunas
+       quase verticais no disco; sobre as faixas horizontais do albedo, as
+       duas grades juntas leem como xadrez, e era esse o "a bola está feia".
+       Tentei consertar com mais degraus e borda mais macia: piorou, porque
+       fwidth numa esfera é minúsculo — multiplicar a borda não amacia nada e
+       mais degraus só multiplicam as colunas. Misturar com a rampa lisa é o
+       que resolve: a luz faz volume, as faixas fazem o desenho. */
     float passos = gigante ? 9.0 : 4.0;
     float ramp = gigante ? clamp(facing * 0.55 + 0.42, 0.0, 1.0)
                          : clamp(facing * 0.5 + 0.5, 0.0, 1.0);
@@ -469,7 +489,8 @@ const SURFACE_FRAGMENT = /* glsl */ `
     float soft = max(fwidth(scaled) * 1.1, 0.02);
     float band = floor(scaled) + smoothstep(0.5 - soft, 0.5 + soft, fract(scaled));
     float bruto = clamp(band / passos, 0.0, 1.0);
-    float day = gigante ? bruto : smoothstep(0.06, 0.94, bruto);
+    float day = gigante ? mix(clamp(ramp, 0.0, 1.0), bruto, 0.3)
+                        : smoothstep(0.06, 0.94, bruto);
 
     /* A fotografia da NASA é plana de propósito, porque é dado. Ilustração
        pede cor decidida: satura, e depois reduz a paleta a poucos tons.

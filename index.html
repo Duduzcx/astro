@@ -12,6 +12,13 @@
     <link rel="mask-icon" href="/logo/astro-mark-navy.svg" color="#12294e" />
     <!-- A cena 3D: os degraus leves das texturas e o foguete começam a baixar
          com o HTML, em vez de esperar o bundle descobrir que precisa deles. -->
+    <!-- O roteiro da tela de entrada é arquivo próprio, e não inline, porque
+         o CSP de produção só libera inline por hash sha256. Cada edição num
+         script inline muda o hash, e o navegador passa a recusá-lo em
+         silêncio — foi exatamente assim que a tela ficou carregando para
+         sempre no ar enquanto funcionava no local, onde não há CSP.
+         Por arquivo ele entra pelo 'self' e não há hash a manter. -->
+    <link rel="preload" as="script" href="/entrada.js" fetchpriority="high" />
     <link rel="preload" as="image" href="/space/earth-day-1k.webp" fetchpriority="high" />
     <link rel="preload" as="image" href="/space/earth-clouds-1k.webp" />
     <link rel="preload" as="image" href="/space/milky-way-1k.webp" />
@@ -152,6 +159,26 @@
       @keyframes entradaBarraFim {
         to { width: 100%; }
       }
+      /* O botão aparece por animação de CSS, com atraso, pelo mesmo motivo do
+         resto: a thread principal está presa compilando shaders e não pode ser
+         quem conta o tempo. `pointer-events` é propriedade discreta e vira no
+         meio do caminho, então ele só fica clicável depois de visível — sem
+         depender de JavaScript para isso. */
+      @keyframes entradaBotao {
+        from { opacity: 0; transform: translateY(9px); pointer-events: none; }
+        to { opacity: 1; transform: translateY(0); pointer-events: auto; }
+      }
+      @keyframes entradaBotaoPulso {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(77, 132, 224, 0.34); }
+        60% { box-shadow: 0 0 0 11px rgba(77, 132, 224, 0); }
+      }
+      #entrada-botao:hover,
+      #entrada-botao:focus-visible {
+        background-color: rgba(77, 132, 224, 0.16);
+        border-color: rgba(126, 169, 245, 0.85);
+        color: #f5f7fb;
+      }
+      #entrada-botao:active { transform: scale(0.97); }
       @keyframes entradaCursor {
         0%, 48% { opacity: 1; }
         49%, 100% { opacity: 0; }
@@ -172,6 +199,7 @@
            sem transição e viraria ruído. */
         .entrada-linha { animation: none; opacity: 0; }
         .entrada-linha:nth-child(4) { opacity: 1; }
+        #entrada-botao { animation-name: entradaBotao; animation-duration: 1ms; }
         .entrada-pulso { opacity: 0.18; }
         #entrada-barra { animation: none; width: 96%; }
       }
@@ -271,91 +299,25 @@
             <span class="entrada-cursor" aria-hidden="true" style="margin-left:3px;color:#4d84e0;">_</span>
           </span>
         </div>
+
+        <!-- Espaço reservado com altura fixa: o botão entra sem empurrar nada
+             do que está acima. -->
+        <div style="height:70px;display:flex;align-items:flex-start;justify-content:center;padding-top:24px;">
+          <button
+            id="entrada-botao"
+            type="button"
+            style="opacity:0;pointer-events:none;transition:background-color 220ms ease,border-color 220ms ease,color 220ms ease,transform 120ms ease;display:inline-flex;align-items:center;gap:10px;padding:13px 28px;border-radius:999px;border:1px solid rgba(77,132,224,0.55);background-color:rgba(77,132,224,0.07);color:#e8edf5;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.26em;text-indent:0.26em;text-transform:uppercase;cursor:pointer;-webkit-tap-highlight-color:transparent;"
+          >
+            Entrar
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex:none;">
+              <path d="M5 12h13M12 5l7 7-7 7" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
     <div id="root"></div>
-    <script>
-      /* A tela de entrada. Duas regras governam a saída, e ela espera as duas:
-         um PISO de tempo, para a abertura ler como sistema subindo e não como
-         piscada, e o primeiro quadro que a cena realmente desenhou. Esperar só
-         o piso mostraria a cena crua; esperar só a cena traria de volta a
-         entrada abrupta em conexão rápida.
-
-         O sinal da cena é o evento astro:cena-pronta, disparado em TriScene no
-         primeiro quadro. É o marco honesto: não "o script carregou", e sim "há
-         imagem". Nada aqui toca no #root, no React ou na cena. */
-      (function () {
-        var tela = document.getElementById('entrada')
-        if (!tela) return
-        var miolo = document.getElementById('entrada-miolo')
-        var barra = document.getElementById('entrada-barra')
-
-        var PISO = 3500
-        /* Teto de segurança: uma cena que nunca sinalize — WebGL recusado,
-           aparelho sem contexto, erro no bundle — não pode deixar ninguém
-           preso olhando uma barra. Aos 9s a tela sai de qualquer jeito. */
-        var TETO = 9000
-
-        var nasceu = Date.now()
-        var saiu = false
-        var pronta = false
-        var raizEstilo = document.documentElement.style.overflow
-        /* A cena lê scrollY a cada quadro. Sem travar, quem rolasse às cegas
-           por baixo da tela veria o astro saltar no instante em que ela sai. */
-        document.documentElement.style.overflow = 'hidden'
-
-        var SAIDA = 900
-
-        /* Marca a saída para daqui a `espera` milissegundos. O fade é lento de
-           propósito, e o miolo se afasta um fio enquanto some: o olho lê isso
-           como a camada saindo de cena, não como um elemento sendo apagado.
-           Por baixo, o foguete já está desenhado e nítido. */
-        function sair(espera) {
-          if (saiu) return
-          saiu = true
-          espera = Math.max(0, espera || 0)
-          var curva = 'cubic-bezier(0.32, 0, 0.2, 1)'
-          if (barra) {
-            barra.style.animation =
-              'entradaBarra 3.4s cubic-bezier(0.22,0.85,0.3,1) forwards,' +
-              ' entradaBarraFim 300ms ease-out ' + Math.max(0, espera - 300) + 'ms forwards'
-          }
-          if (miolo) {
-            miolo.style.animation = 'entradaSaiMiolo ' + SAIDA + 'ms ' + curva + ' ' + espera + 'ms forwards'
-          }
-          tela.style.animation = 'entradaSai ' + SAIDA + 'ms ' + curva + ' ' + espera + 'ms forwards'
-
-          /* A limpeza pode chegar atrasada sem custo nenhum: a esta altura a
-             tela já está invisível pelo compositor. O que ela faz é devolver a
-             rolagem e tirar o elemento do caminho. */
-          setTimeout(function () {
-            tela.style.pointerEvents = 'none'
-            document.documentElement.style.overflow = raizEstilo
-            /* O Lenis mede a página uma vez; com a rolagem travada ele pode
-               ter medido zero. Um resize o faz recontar. */
-            window.dispatchEvent(new Event('resize'))
-            if (tela.parentNode) tela.parentNode.removeChild(tela)
-          }, espera + SAIDA + 60)
-        }
-
-        function avaliar() {
-          if (saiu || !pronta) return
-          sair(PISO - (Date.now() - nasceu))
-        }
-
-        window.addEventListener(
-          'astro:cena-pronta',
-          function () {
-            pronta = true
-            avaliar()
-          },
-          { once: true },
-        )
-        setTimeout(function () {
-          sair(0)
-        }, TETO)
-      })()
-    </script>
+    <script src="/entrada.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

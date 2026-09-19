@@ -239,6 +239,17 @@ rolagem trava enquanto ela está de pé (a cena lê `scrollY` a cada quadro;
 rolar às cegas por baixo faz o astro saltar quando ela sai). Ao sair,
 dispara um `resize` para o Lenis recontar.
 
+**O roteiro dela é `public/entrada.js`, e NUNCA pode voltar a ser inline.**
+O CSP de produção só libera inline por hash sha256 (o hash que está no
+`netlify.toml` cobre o bloco de dados estruturados). Qualquer edição num
+script inline muda o hash e o navegador passa a recusá-lo em silêncio: foi
+assim que a tela ficou carregando para sempre no ar enquanto funcionava no
+local, onde não há CSP. Por arquivo ela entra pelo `'self'`.
+
+**Quem fecha a tela é o visitante, num botão**, e o botão aparece de
+qualquer jeito — se a cena nunca sinalizar, o teto de 9s o traz. Se ninguém
+clicar, entra sozinho em 12s. Não existe caminho em que alguém fique preso.
+
 **Nada que precise de tempo certo aqui pode depender da thread principal.**
 Esta é a lição cara desta tela. Depois do primeiro quadro, a fila de
 aquecimento dos shaders prende a thread por mais de dois segundos, e nesse
