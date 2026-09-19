@@ -77,9 +77,121 @@
       href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@360;400;420;480;530&family=Anton&family=Allura&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
+    <!-- Animação da tela de entrada. Só o movimento mora aqui; tudo que PINTA
+         está em atributo style inline no próprio elemento, e isso é de
+         propósito: a tentativa anterior desta tela viveu em src/index.css e o
+         fundo nunca chegou a pintar, porque uma regra dentro de @layer perde
+         para as utilidades do Tailwind v4. Atributo inline não perde para
+         camada nenhuma. -->
+    <style>
+      /* A respiração é do conjunto, não de cada pétala. Animar as quatro em
+         tempos diferentes parecia boa ideia e não é: a 52px elas se
+         sobrepõem, então opacidades diferentes não leem como pétalas e sim
+         como cinza sujo por cima da marca. */
+      @keyframes entradaRespira {
+        0%, 100% { opacity: 0.86; transform: scale(1); }
+        50% { opacity: 1; transform: scale(1.045); }
+      }
+      @keyframes entradaBarra {
+        from { width: 0%; }
+        to { width: 88%; }
+      }
+      #entrada svg { animation: entradaRespira 2.8s ease-in-out infinite; }
+      #entrada-barra { animation: entradaBarra 2.6s cubic-bezier(0.16, 0.9, 0.3, 1) forwards; }
+      @media (prefers-reduced-motion: reduce) {
+        #entrada svg { animation: none; opacity: 1; }
+        #entrada-barra { animation: none; width: 88%; }
+      }
+    </style>
   </head>
   <body>
+    <!-- A tela de entrada vive no HTML, não no React: ela precisa estar na
+         tela antes de o bundle existir, que é justamente o trecho em que não
+         há nada para ver. Sai quando a cena desenha o primeiro quadro. -->
+    <div
+      id="entrada"
+      role="status"
+      aria-label="Carregando"
+      style="position:fixed;inset:0;z-index:2147483647;background-color:#0a0f1e;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;"
+    >
+      <div
+        aria-hidden="true"
+        style="position:absolute;inset:0;background:radial-gradient(58% 42% at 50% 46%, rgba(77,132,224,0.16), rgba(10,15,30,0) 70%);"
+      ></div>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="-8 -8 136 136"
+        aria-hidden="true"
+        style="position:relative;width:52px;height:52px;"
+      >
+        <path d="M 71.84 50.99 Q 79.31 57.61 91.00 60.00 Q 79.31 62.39 71.84 69.01 L 93.91 91.08 A 46 46 0 0 0 93.91 28.92 Z" fill="#f5f7fb" transform="rotate(-90 60 60)"/>
+        <path d="M 71.84 50.99 Q 79.31 57.61 91.00 60.00 Q 79.31 62.39 71.84 69.01 L 93.91 91.08 A 46 46 0 0 0 93.91 28.92 Z" fill="#f5f7fb" transform="rotate(0 60 60)"/>
+        <path d="M 71.84 50.99 Q 79.31 57.61 91.00 60.00 Q 79.31 62.39 71.84 69.01 L 93.91 91.08 A 46 46 0 0 0 93.91 28.92 Z" fill="#f5f7fb" transform="rotate(90 60 60)"/>
+        <path d="M 71.84 50.99 Q 79.31 57.61 91.00 60.00 Q 79.31 62.39 71.84 69.01 L 93.91 91.08 A 46 46 0 0 0 93.91 28.92 Z" fill="#f5f7fb" transform="rotate(180 60 60)"/>
+      </svg>
+      <div
+        style="position:relative;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;line-height:1;letter-spacing:0.42em;text-indent:0.42em;color:#7583a0;text-transform:uppercase;"
+      >
+        Astro Soluções
+      </div>
+      <div
+        style="position:relative;width:170px;height:2px;border-radius:2px;background-color:rgba(117,131,160,0.22);overflow:hidden;"
+      >
+        <div
+          id="entrada-barra"
+          style="height:100%;width:0;border-radius:2px;background-color:#4d84e0;box-shadow:0 0 10px rgba(77,132,224,0.85);"
+        ></div>
+      </div>
+    </div>
     <div id="root"></div>
+    <script>
+      /* Tira a tela de entrada. O sinal honesto é o primeiro quadro desenhado
+         pela cena, não "o script carregou": entre um e outro há quase dois
+         segundos de tela vazia, que é o problema que esta tela resolve.
+
+         Três garantias. Um piso de 900ms, senão em conexão rápida ela pisca e
+         vira sujeira. Um teto de 7s, para que uma cena que nunca sinalize não
+         deixe ninguém preso olhando uma barra. E a rolagem fica travada
+         enquanto ela está de pé, porque a cena lê scrollY a cada quadro e
+         rolar às cegas por baixo faz o astro saltar quando a tela sai. */
+      (function () {
+        var tela = document.getElementById('entrada')
+        if (!tela) return
+        var barra = document.getElementById('entrada-barra')
+        var nasceu = Date.now()
+        var saiu = false
+        var raizEstilo = document.documentElement.style.overflow
+        document.documentElement.style.overflow = 'hidden'
+
+        function sair() {
+          if (saiu) return
+          saiu = true
+          if (barra) {
+            barra.style.animation = 'none'
+            barra.style.transition = 'width 260ms ease-out'
+            barra.style.width = '100%'
+          }
+          tela.style.transition = 'opacity 480ms ease'
+          tela.style.opacity = '0'
+          tela.style.pointerEvents = 'none'
+          document.documentElement.style.overflow = raizEstilo
+          /* O Lenis mede a página uma vez; com a rolagem travada ele podia ter
+             medido zero. Um resize o faz recontar. */
+          window.dispatchEvent(new Event('resize'))
+          setTimeout(function () {
+            if (tela.parentNode) tela.parentNode.removeChild(tela)
+          }, 520)
+        }
+
+        function pedirSaida() {
+          var espera = Math.max(0, 900 - (Date.now() - nasceu))
+          setTimeout(sair, espera)
+        }
+
+        window.addEventListener('astro:cena-pronta', pedirSaida, { once: true })
+        setTimeout(sair, 7000)
+      })()
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

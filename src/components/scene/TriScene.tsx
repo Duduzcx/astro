@@ -562,7 +562,13 @@ export function TriScene() {
              as divisões do anel — mas abrir o contraste entre os dois tons
              transformou o planeta num Júpiter alaranjado. Saturno é pálido:
              o desenho vem da quantidade de faixas, não da força delas. */
-          toon: { a: '#f8eed6', b: '#cdb083', c: '#fdf9ee', bands: 12 },
+          /* O tom escuro desce em valor e SOBE em palidez. O anterior tinha
+             saturação 0,36 e, medido na tela, o disco saía entre 0,45 e
+             0,60: barro. Este tem 0,26, então mesmo depois do caminho de
+             luz ele fica dentro do pálido que Saturno deve ser, e ainda
+             abre distância de valor suficiente para os cinco degraus de
+             faixa aparecerem um a um. */
+          toon: { a: '#faf2e0', b: '#bda87f', c: '#fdf9ee', bands: 12 },
           /* Sem a fotografia do anel: ele passa a ser desenhado em aros
              chapados, no mesmo vocabulário do globo. */
           warm,
@@ -1260,6 +1266,7 @@ export function TriScene() {
         mount.style.opacity = '1'
         /* O primeiro quadro desenhado é o sinal para a tela de entrada sair.
            É o marco honesto: não "o script carregou", e sim "há imagem". */
+        window.dispatchEvent(new Event('astro:cena-pronta'))
       }
     }
     /**

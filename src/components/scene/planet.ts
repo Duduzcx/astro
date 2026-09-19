@@ -154,6 +154,11 @@ const SURFACE_FRAGMENT = /* glsl */ `
     float relief = 1.0;
     float water = 0.0;
     float land = 1.0;
+    /* Separa o gigante de faixas do mundo rochoso sem criar um segundo
+       programa: é uniforme, então todos os fragmentos do mesmo desenho
+       seguem o mesmo ramo e não há divergência. Marte volta por aqui ao que
+       era antes, enquanto Saturno e Júpiter ficam com o tratamento novo. */
+    bool gigante = uToonBands > 0.5;
 
 #ifdef TOON
     /* Rampa chapada, sem textura nenhuma.
@@ -188,9 +193,16 @@ const SURFACE_FRAGMENT = /* glsl */ `
       float fine = sin(lw * uToonBands * 2.7 + 1.3) * 0.28;
       float micro = sin(lw * uToonBands * 6.3 + 2.1) * 0.07;
       float stripes = (wide + fine + micro) * 0.5 + 0.5;
-      float scaled = stripes * 10.0;
+      /* Cinco degraus, não dez. Dez soa como mais qualidade e é o contrário:
+         entre uToonA e uToonB há uma distância de (43, 62, 83) em 8 bits, e
+         dividida por dez cada degrau muda uns 6 de 255 — abaixo do que o olho
+         separa numa tela de mão, então as faixas dissolvem num gradiente e é
+         isso que lê como borrão. Por cinco, cada degrau anda (9, 12, 17) e
+         a faixa volta a ser traço. A borda continua acompanhando um pixel de
+         tela pelo fwidth, então nada serrilha. */
+      float scaled = stripes * 5.0;
       float soft = max(fwidth(scaled) * 0.8, 0.015);
-      t = (floor(scaled) + smoothstep(0.5 - soft, 0.5 + soft, fract(scaled))) / 10.0;
+      t = (floor(scaled) + smoothstep(0.5 - soft, 0.5 + soft, fract(scaled))) / 5.0;
     } else {
       /* Mundo rochoso em degraus.
          Antes eram dois tons separados por uma fronteira macia, e o
@@ -223,14 +235,20 @@ const SURFACE_FRAGMENT = /* glsl */ `
        cinturão lavado bem onde deveria mostrar mais desenho. Note ainda que
        este gradiente é função de LATITUDE, não de visada: é uma pista
        cilíndrica, que briga com a redondeza. Esta vem do limbo. */
-    albedo *= 0.88 + 0.12 * (1.0 - abs(lat * 2.0 - 1.0));
+    albedo *= gigante ? 0.88 + 0.12 * (1.0 - abs(lat * 2.0 - 1.0))
+                      : 0.92 + 0.16 * (1.0 - abs(lat * 2.0 - 1.0));
     /* A mancha. Todo gigante gasoso de ilustração tem uma: é ela que dá
        identidade ao planeta e prova que ele gira, porque entra e sai de
        vista. Elipse achatada, borda macia, fora do equador. */
     /* Só o gigante de faixas estreitas leva a mancha. Ela é assinatura de um
        planeta, não de uma categoria: em Saturno virava um borrão vermelho no
        alto, que é o oposto do pálido que ele deveria ser. */
-    if (uToonBands > 9.5) {
+    /* O portão anterior era uToonBands > 9.5, e Saturno tem DOZE faixas:
+       ele nunca deixou de usar a mancha de Júpiter. Medindo o disco, o matiz
+       saía travado em 28 a 31 graus quando a paleta define 35 a 41 — a
+       mancha soma vec3(0.12, 0.03, 0.0), que é empurrão puro para o
+       vermelho, e era boa parte da cor de barro. Júpiter tem onze. */
+    if (uToonBands > 10.5 && uToonBands < 11.5) {
       vec2 spot = vec2((fract(vUv.x + 0.22) - 0.5) * 2.4, (lat - 0.63) * 7.0);
       float mark = smoothstep(1.0, 0.25, length(spot));
       albedo = mix(albedo, uToonB * 0.82 + vec3(0.12, 0.03, 0.0), mark * 0.75);
@@ -245,7 +263,8 @@ const SURFACE_FRAGMENT = /* glsl */ `
        que granula um anel no topo e na base do disco; a 0,74 a calota já
        vale 81% ali e atenua esse ruído em quatro vezes. Ela passa de 3% para
        8% da altura do disco: um capuz pálido em vez de um fio. */
-    float cap = smoothstep(0.74, 0.99, abs(lat * 2.0 - 1.0));
+    float cap = gigante ? smoothstep(0.74, 0.99, abs(lat * 2.0 - 1.0))
+                        : smoothstep(0.84, 0.98, abs(lat * 2.0 - 1.0));
     albedo = mix(albedo, uToonC, cap);
     relief = 0.0;
 #else
@@ -443,11 +462,14 @@ const SURFACE_FRAGMENT = /* glsl */ `
        Sem o smoothstep(0.06, 0.94, ...) que havia aqui: ele devolvia à
        escada uma curva contínua e colava os dois degraus do topo e os dois
        do fundo, desfazendo justamente o que a contagem alta comprava. */
-    float ramp = clamp(facing * 0.55 + 0.42, 0.0, 1.0);
-    float scaled = ramp * 9.0;
+    float passos = gigante ? 9.0 : 4.0;
+    float ramp = gigante ? clamp(facing * 0.55 + 0.42, 0.0, 1.0)
+                         : clamp(facing * 0.5 + 0.5, 0.0, 1.0);
+    float scaled = ramp * passos;
     float soft = max(fwidth(scaled) * 1.1, 0.02);
     float band = floor(scaled) + smoothstep(0.5 - soft, 0.5 + soft, fract(scaled));
-    float day = clamp(band / 9.0, 0.0, 1.0);
+    float bruto = clamp(band / passos, 0.0, 1.0);
+    float day = gigante ? bruto : smoothstep(0.06, 0.94, bruto);
 
     /* A fotografia da NASA é plana de propósito, porque é dado. Ilustração
        pede cor decidida: satura, e depois reduz a paleta a poucos tons.
@@ -462,14 +484,20 @@ const SURFACE_FRAGMENT = /* glsl */ `
        valer: Saturno saía com a cor de Júpiter por mais pálido que eu o
        definisse. A 1,12 o realce ainda tira o cinza da fotografia sem
        reescrever a decisão de cor. */
-    albedo = clamp(mix(vec3(lum), albedo, 1.12), 0.0, 1.0);
-#ifndef TOON
-    vec3 tone = albedo * 6.0;
-    vec3 toneSoft = max(fwidth(tone), vec3(0.03));
-    vec3 posterized =
-      floor(tone) + smoothstep(vec3(0.5) - toneSoft, vec3(0.5) + toneSoft, fract(tone));
-    albedo = mix(albedo, posterized / 6.0, 0.72);
-#endif
+    /* O gigante DESSATURA em vez de realçar. Medindo o disco de Saturno, a
+       cor saía com saturação de 0,45 a 0,60 quando a paleta dele define
+       0,14 a 0,36: o realce empilhava sobre uma paleta que já foi escolhida
+       pálida de propósito, e o resultado era barro. Abaixo de 1 ele puxa de
+       volta para o tom decidido. O rochoso continua em 1,12, que é onde
+       Marte estava. */
+    albedo = clamp(mix(vec3(lum), albedo, gigante ? 0.92 : 1.12), 0.0, 1.0);
+    if (!gigante) {
+      vec3 tone = albedo * 6.0;
+      vec3 toneSoft = max(fwidth(tone), vec3(0.03));
+      vec3 posterized =
+        floor(tone) + smoothstep(vec3(0.5) - toneSoft, vec3(0.5) + toneSoft, fract(tone));
+      albedo = mix(albedo, posterized / 6.0, 0.72);
+    }
     /* O posterizador acima fica de fora do TOON, e essa é a maior correção
        de Saturno. Ele existe para domar fotografia; no caminho ilustrado não
        há textura nenhuma, e a cor já sai quantizada em dez degraus lá em
@@ -503,7 +531,7 @@ const SURFACE_FRAGMENT = /* glsl */ `
        lóbulo largo e 6% no núcleo — mancha, não ponto. Fraco de propósito:
        um gigante gasoso não pode virar bola de plástico. */
     float gloss = max(dot(geomN, normalize(uLight + v)), 0.0);
-    color += vec3(1.0, 0.98, 0.94) *
+    color += vec3(1.0, 0.98, 0.94) * (gigante ? 1.0 : 0.0) *
       (smoothstep(0.88, 0.93, gloss) * 0.07 + smoothstep(0.955, 0.98, gloss) * 0.09);
 #endif
 #else
@@ -539,17 +567,15 @@ const SURFACE_FRAGMENT = /* glsl */ `
     /* Escurecimento nas bordas por tipo: forte no rochoso (poeira seca
        some no ângulo rasante), fraco no gigante, onde a atmosfera espessa
        espalha luz de volta e a borda continua legível. */
-#ifdef TOON
-    /* Piso 0,52 e expoente 1,25. Com os 0,68/0,55 do gigante fotográfico o
-       escurecimento somava 5,4% ao longo dos 70% centrais do disco: perto de
-       nada, e a esfera terminava numa borda dura contra o fundo em vez de
-       virar. O expoente acima de 1 concentra a queda onde ela lê, na beirada. */
-    float limbFloor = 0.52;
-    float limbPow = 1.25;
-#else
-    float limbFloor = (uKind > 1.5 && uKind < 2.5) ? 0.68 : 0.45;
-    float limbPow = 0.55;
-#endif
+    /* Piso 0,62 e expoente 1,15 no gigante. Os 0,68/0,55 do fotográfico
+       somavam 5,4% de escurecimento ao longo dos 70% centrais do disco, o
+       que é invisível, e a esfera terminava numa borda dura contra o fundo
+       em vez de virar. Mas 0,52 foi longe demais na direção oposta: medindo
+       Saturno, a luminância caía de 151 para 43 atravessando o disco, e um
+       corpo que perde 3,5 vezes o brilho lê como barro, não como volume.
+       O rochoso volta exatamente ao que era. */
+    float limbFloor = gigante ? 0.62 : ((uKind > 1.5 && uKind < 2.5) ? 0.68 : 0.45);
+    float limbPow = gigante ? 1.15 : 0.55;
     float limb = mix(limbFloor, 1.0, pow(max(dot(geomN, v), 0.0), limbPow));
     color *= limb;
 

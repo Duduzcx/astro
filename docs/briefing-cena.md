@@ -33,6 +33,28 @@ fotografia, e ali não há textura), o limbo tem piso e expoente próprios, e
 há um lustro fraco em dois degraus no vetor médio. **Não desfaça nenhum dos
 quatro procurando "mais faixas": as faixas nunca foram o problema.**
 
+Marte NÃO usa nada disso. Ele foi devolvido ao acabamento anterior a pedido
+do cliente, e a separação é feita por `bool gigante = uToonBands > 0.5` —
+uniforme, não `#define`. Isso importa: os três mundos ilustrados continuam
+num único programa, e a armadilha dos 150ms não é acionada, porque todos os
+fragmentos de um mesmo desenho seguem o mesmo ramo. A reversão foi
+conferida contra o commit `af1fa62` num worktree separado: saturação 0,833 e
+matiz 17,3 graus idênticos, luminância 51,2 contra 51,6.
+
+Duas medidas de Saturno que explicam a cor, para não se perderem:
+
+- A mancha vermelha de Júpiter estava em Saturno o tempo todo. O portão era
+  `uToonBands > 9.5` e Saturno tem DOZE faixas. Hoje é `> 10.5 && < 11.5`.
+  Ela somava `vec3(0.12, 0.03, 0.0)`, e era boa parte do "barro".
+- As faixas são **cinco** degraus, não dez. Entre `uToonA` e `uToonB` há
+  (43, 62, 83) em 8 bits; por dez, cada degrau muda uns 6 de 255 e o olho
+  não separa isso numa tela de mão — as faixas dissolvem e é isso que lê
+  como borrão. Mais degraus não é mais qualidade aqui.
+
+Medido no disco antes e depois: saturação 0,53 para 0,15 (a paleta define
+0,11 a 0,26 — antes a tela estava MAIS saturada que qualquer um dos tons),
+matiz 29 para 39 graus e luminância mediana 101 para 127.
+
 Os três mundos de passagem usam `toon: { a, b, c, bands }` em
 `createPlanet`. `bands` acima de zero dá o listrado de gigante gasoso; zero dá
 manchas largas de mundo rochoso. Cores atuais em `TriScene.tsx`, no array
@@ -59,6 +81,7 @@ Medidos num iPhone 13 emulado com a CPU quatro vezes mais lenta:
 | Cena visível | ~1870ms |
 | Razão de pixels no celular | 1,75 |
 | MSAA no celular | ligado (custa +0,4ms, medido) |
+| Rolagem no toque | `touchMultiplier` 1,25, `syncTouchLerp` 0,06, `touchInertiaExponent` 1,5 |
 | Céu do celular | 2k regravado do 4k, 29 kB |
 
 **Não regrida isso sem justificativa visual proporcional, medida.**
@@ -82,6 +105,12 @@ Servir com `npm run build && npm run preview`. **O preview sobe em
 bloqueio de `blob:` no `netlify.toml` impediu o worker do Draco de rodar e o
 foguete caía no procedural — só em produção, por semanas. Valide contra
 `https://astrosolucoes.netlify.app/` antes de dizer que algo funciona.
+
+**`syncTouchLerp` não atrasa o dedo.** Com `syncTouch`, o Lenis força
+`lerp: 1` enquanto o dedo está na tela e só usa `syncTouchLerp` no
+`touchend` (`lenis.mjs:633`). Baixá-lo alonga o deslize de saída; não
+reintroduz a queixa de "a cena fica atrás do dedo", que é governada por
+`touchMultiplier` e pelo amortecimento da cena.
 
 **Uma medição isolada não é medição.** A dispersão entre corridas chega a 7ms
 na média por quadro. Eu subi a razão de pixels de 1,5 para 2 com base numa
@@ -193,6 +222,27 @@ galáxias. Falta profundidade em camadas — hoje tudo está numa distância só
 deriva contínua nos dois eixos, giro e respiração das galáxias, nuvens da
 Terra a 2,1x o giro do chão. Não existe: paralaxe por inclinação do aparelho,
 poeira próxima cruzando o quadro, variação de matiz lenta no céu.
+
+## A tela de entrada
+
+Vive em `index.html`, não no React e não em `src/index.css`. As duas
+escolhas são cicatriz: a tentativa anterior morou na folha do Tailwind v4 e
+o fundo nunca chegou a pintar, porque regra dentro de `@layer` perde para as
+utilidades. **Tudo que pinta está em atributo `style` inline**, que não perde
+para camada nenhuma; o bloco `<style>` no `<head>` só carrega os keyframes.
+
+Ela sai no primeiro quadro desenhado pela cena, que dispara
+`astro:cena-pronta` em `TriScene.tsx`. É o marco honesto: não "o script
+carregou", e sim "há imagem". Piso de 900ms para não piscar, teto de 7s para
+ninguém ficar preso, e a rolagem fica travada enquanto ela está de pé
+(a cena lê `scrollY` a cada quadro; rolar às cegas por baixo faz o astro
+saltar quando ela sai). Ao sair, dispara um `resize` para o Lenis recontar.
+
+**Para medi-la, segure o bundle.** Uma captura do Playwright durante a
+abertura só retorna depois que a thread principal para de compilar shaders,
+e chega a sair 3,7s depois do pedido — com a tela já fora. Isso me fez
+concluir que ela nem existia. `p.route('**/assets/**.js', ...)` com atraso
+mostra o que o visitante vê.
 
 ## Regras invioláveis
 

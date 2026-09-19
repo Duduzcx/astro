@@ -35,17 +35,27 @@ export function initSmoothScroll() {
      de cinema, e assenta sem quicar. O easing só vale para scrollTo. */
   const touch = isTouch()
   lenis = new Lenis({
-    /* No toque o amortecimento é mais firme: o dedo manda, e o que sobra é
-       só o assentamento. No desktop a roda continua com o peso de dolly.
-       `touchMultiplier` em 1,6 dá ao dedo um pouco mais de alcance por
-       gesto, que é o que faz a página parecer leve em vez de pesada. */
-    lerp: touch ? 0.14 : 0.09,
+    /* No toque, mais devagar e mais macio, sem custo de atraso. Vale a pena
+       saber por que isso não briga com "a cena fica atrás do dedo": com
+       `syncTouch`, o Lenis força `lerp: 1` enquanto o dedo está na tela e só
+       usa `syncTouchLerp` no `touchend`. Ou seja, durante o arrasto a página
+       segue o dedo um para um, e estes números governam apenas o deslize que
+       vem depois que ele sai.
+
+       `touchMultiplier` de 1,6 para 1,25 é o que faz a página andar menos
+       por gesto — é o "mais devagar". `syncTouchLerp` de 0,085 para 0,06
+       alonga o assentamento em vez de cortá-lo. E `touchInertiaExponent`,
+       que estava no comentário mas nunca tinha sido passado de verdade,
+       desce do padrão 1,7 para 1,5: o impulso final vira um deslize e não
+       um arremesso. */
+    lerp: touch ? 0.11 : 0.09,
     wheelMultiplier: 1,
     duration: 1.4,
     easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
     syncTouch: touch,
-    syncTouchLerp: 0.085,
-    touchMultiplier: touch ? 1.6 : 1,
+    syncTouchLerp: 0.06,
+    touchInertiaExponent: 1.5,
+    touchMultiplier: touch ? 1.25 : 1,
   })
   const raf = (time: number) => {
     lenis?.raf(time)
