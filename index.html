@@ -127,6 +127,9 @@
         0% { opacity: 0; }
         9%, 100% { opacity: 1; }
       }
+      /* Três linhas, não quatro, e é consequência do piso mais curto: em 2s,
+         quatro linhas dariam 460ms cada, tempo em que ninguém lê
+         "Calibrando rotas de navegação". Com três sobram 560ms. */
       .entrada-linha {
         position: absolute;
         inset: 0;
@@ -135,13 +138,12 @@
         justify-content: center;
         white-space: nowrap;
         opacity: 0;
-        animation: entradaLinha 780ms ease-in-out both;
+        animation: entradaLinha 560ms ease-in-out both;
       }
-      .entrada-linha:nth-child(2) { animation-delay: 780ms; }
-      .entrada-linha:nth-child(3) { animation-delay: 1560ms; }
-      .entrada-linha:nth-child(4) {
+      .entrada-linha:nth-child(2) { animation-delay: 560ms; }
+      .entrada-linha:nth-child(3) {
         animation-name: entradaLinhaFinal;
-        animation-delay: 2340ms;
+        animation-delay: 1120ms;
         animation-fill-mode: forwards;
       }
       /* A saída também é do compositor, e pelo mesmo motivo das linhas: um
@@ -153,8 +155,19 @@
       @keyframes entradaSai {
         to { opacity: 0; }
       }
+      /* A saída do clique. O miolo ACELERA para fora — ease-in, não ease-out —
+         e cresce bem mais do que antes: o olho lê a câmera atravessando a
+         camada, não um elemento sendo apagado. O fundo sai logo atrás, com
+         atraso, para que o conteúdo vá embora primeiro. */
       @keyframes entradaSaiMiolo {
-        to { opacity: 0; transform: scale(1.06); }
+        from { opacity: 1; transform: scale(1); }
+        to { opacity: 0; transform: scale(1.22); }
+      }
+      /* A onda que parte do botão no clique: confirma o toque antes de a
+         tela começar a sair, que é o que faz o botão parecer responder. */
+      @keyframes entradaOnda {
+        from { opacity: 0.85; transform: scale(1); }
+        to { opacity: 0; transform: scale(2.4); }
       }
       @keyframes entradaBarraFim {
         to { width: 100%; }
@@ -183,10 +196,10 @@
         0%, 48% { opacity: 1; }
         49%, 100% { opacity: 0; }
       }
-      #entrada-radar { animation: entradaGira 2.4s linear infinite; }
-      .entrada-pulso { animation: entradaPulso 3.2s cubic-bezier(0.2, 0.6, 0.3, 1) infinite; }
-      #entrada-marca { animation: entradaRespira 2.8s ease-in-out infinite; }
-      #entrada-barra { animation: entradaBarra 3.4s cubic-bezier(0.22, 0.85, 0.3, 1) forwards; }
+      #entrada-radar { animation: entradaGira 1.7s linear infinite; }
+      .entrada-pulso { animation: entradaPulso 2.1s cubic-bezier(0.2, 0.6, 0.3, 1) infinite; }
+      #entrada-marca { animation: entradaRespira 2.0s ease-in-out infinite; }
+      #entrada-barra { animation: entradaBarra 1.9s cubic-bezier(0.22, 0.85, 0.3, 1) forwards; }
       .entrada-cursor { animation: entradaCursor 1.05s step-end infinite; }
       /* Quem pede menos movimento recebe a mesma tela, parada. O texto de
          boot continua trocando: é informação, não enfeite. */
@@ -198,7 +211,7 @@
         /* Sem movimento, só a última linha fica: as intermediárias piscariam
            sem transição e viraria ruído. */
         .entrada-linha { animation: none; opacity: 0; }
-        .entrada-linha:nth-child(4) { opacity: 1; }
+        .entrada-linha:nth-child(3) { opacity: 1; }
         #entrada-botao { animation-name: entradaBotao; animation-duration: 1ms; }
         .entrada-pulso { opacity: 0.18; }
         #entrada-barra { animation: none; width: 96%; }
@@ -233,7 +246,7 @@
           style="position:relative;width:136px;height:136px;display:flex;align-items:center;justify-content:center;"
         >
           <div class="entrada-pulso" style="position:absolute;inset:0;border-radius:50%;border:1px solid rgba(77,132,224,0.5);"></div>
-          <div class="entrada-pulso" style="position:absolute;inset:0;border-radius:50%;border:1px solid rgba(77,132,224,0.5);animation-delay:1.6s;"></div>
+          <div class="entrada-pulso" style="position:absolute;inset:0;border-radius:50%;border:1px solid rgba(77,132,224,0.5);animation-delay:1.05s;"></div>
           <div style="position:absolute;inset:0;border-radius:50%;border:1px solid rgba(117,131,160,0.2);"></div>
           <div style="position:absolute;inset:19px;border-radius:50%;border:1px solid rgba(117,131,160,0.11);"></div>
           <div
@@ -290,11 +303,6 @@
           </span>
           <span class="entrada-linha">
             <span aria-hidden="true" style="color:#4d84e0;margin-right:7px;">&gt;</span>
-            Sincronizando telemetria
-            <span class="entrada-cursor" aria-hidden="true" style="margin-left:3px;color:#4d84e0;">_</span>
-          </span>
-          <span class="entrada-linha">
-            <span aria-hidden="true" style="color:#4d84e0;margin-right:7px;">&gt;</span>
             Ambiente virtual pronto
             <span class="entrada-cursor" aria-hidden="true" style="margin-left:3px;color:#4d84e0;">_</span>
           </span>
@@ -306,8 +314,13 @@
           <button
             id="entrada-botao"
             type="button"
-            style="opacity:0;pointer-events:none;transition:background-color 220ms ease,border-color 220ms ease,color 220ms ease,transform 120ms ease;display:inline-flex;align-items:center;gap:10px;padding:13px 28px;border-radius:999px;border:1px solid rgba(77,132,224,0.55);background-color:rgba(77,132,224,0.07);color:#e8edf5;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.26em;text-indent:0.26em;text-transform:uppercase;cursor:pointer;-webkit-tap-highlight-color:transparent;"
+            style="opacity:0;pointer-events:none;transition:background-color 220ms ease,border-color 220ms ease,color 220ms ease,transform 120ms ease;display:inline-flex;align-items:center;gap:10px;padding:13px 28px;border-radius:999px;border:1px solid rgba(77,132,224,0.55);background-color:rgba(77,132,224,0.07);color:#e8edf5;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:0.26em;text-indent:0.26em;text-transform:uppercase;cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent;"
           >
+            <span
+              id="entrada-onda"
+              aria-hidden="true"
+              style="position:absolute;inset:0;border-radius:999px;border:1px solid rgba(126,169,245,0.9);opacity:0;pointer-events:none;"
+            ></span>
             Entrar
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="flex:none;">
               <path d="M5 12h13M12 5l7 7-7 7" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>

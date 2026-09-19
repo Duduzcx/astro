@@ -23,16 +23,21 @@
   var miolo = document.getElementById('entrada-miolo')
   var barra = document.getElementById('entrada-barra')
   var botao = document.getElementById('entrada-botao')
+  var onda = document.getElementById('entrada-onda')
 
-  var PISO = 3500
+  var PISO = 2000
   /* Teto: WebGL recusado, aparelho sem contexto, erro no bundle. Passado este
      tempo o botão aparece mesmo sem a cena ter dito nada. */
-  var TETO = 9000
+  var TETO = 6500
   /* Se ninguém clicar, entra sozinho. O botão é uma porta, não um pedágio:
      quem se distraiu ou não entendeu não pode ficar preso. */
-  var AUTO = 12000
-  var SAIDA = 900
-  var CURVA = 'cubic-bezier(0.32, 0, 0.2, 1)'
+  var AUTO = 9000
+  var SAIDA = 700
+  /* Duas curvas, e a diferença importa. O miolo sai em ease-IN: começa
+     devagar e acelera, que é como uma coisa se afasta. O fundo sai em
+     ease-out, atrás dele. */
+  var CURVA = 'cubic-bezier(0.55, 0, 0.85, 0.3)'
+  var CURVA_FUNDO = 'cubic-bezier(0.3, 0, 0.2, 1)'
 
   var nasceu = Date.now()
   var ofereceu = false
@@ -54,26 +59,45 @@
 
     if (barra) {
       barra.style.animation =
-        'entradaBarra 3.4s cubic-bezier(0.22,0.85,0.3,1) forwards,' +
-        ' entradaBarraFim 300ms ease-out ' + Math.max(0, espera - 300) + 'ms forwards'
+        'entradaBarra 1.9s cubic-bezier(0.22,0.85,0.3,1) forwards,' +
+        ' entradaBarraFim 260ms ease-out ' + Math.max(0, espera - 260) + 'ms forwards'
     }
     if (botao) {
       botao.style.animation =
-        'entradaBotao 520ms ' + CURVA + ' ' + espera + 'ms forwards,' +
-        ' entradaBotaoPulso 2.6s ease-out ' + (espera + 520) + 'ms infinite'
+        'entradaBotao 420ms ' + CURVA_FUNDO + ' ' + espera + 'ms forwards,' +
+        ' entradaBotaoPulso 2.2s ease-out ' + (espera + 420) + 'ms infinite'
     }
-    setTimeout(entrar, espera + AUTO)
+    setTimeout(function () {
+      entrar(false)
+    }, espera + AUTO)
   }
 
   /* A saída é lenta de propósito, e o miolo se afasta um fio enquanto some: o
      olho lê isso como a camada saindo de cena, não como um elemento sendo
      apagado. Por baixo, a cena já está desenhada e nítida. */
-  function entrar() {
+  function entrar(daOnda) {
     if (saiu) return
     saiu = true
-    if (miolo) miolo.style.animation = 'entradaSaiMiolo ' + SAIDA + 'ms ' + CURVA + ' forwards'
-    tela.style.animation = 'entradaSai ' + SAIDA + 'ms ' + CURVA + ' forwards'
     tela.style.pointerEvents = 'none'
+
+    /* A onda do clique parte do botão ANTES de a tela começar a sair. São
+       120ms de confirmação: sem eles o toque some junto com a camada e o
+       botão parece não ter respondido. Só no clique — na saída automática
+       não houve toque nenhum para confirmar. */
+    var atraso = 0
+    if (daOnda) {
+      atraso = 120
+      if (onda) onda.style.animation = 'entradaOnda 520ms ease-out forwards'
+      if (botao) botao.style.transform = 'scale(0.96)'
+    }
+
+    /* O miolo acelera para fora e o fundo sai atrás dele, com um atraso
+       curto: o conteúdo vai embora primeiro e a cena aparece por baixo. */
+    if (miolo) {
+      miolo.style.animation = 'entradaSaiMiolo ' + SAIDA + 'ms ' + CURVA + ' ' + atraso + 'ms forwards'
+    }
+    tela.style.animation =
+      'entradaSai ' + (SAIDA + 140) + 'ms ' + CURVA_FUNDO + ' ' + (atraso + 110) + 'ms forwards'
 
     /* A limpeza pode chegar atrasada sem custo: a esta altura a tela já está
        invisível pelo compositor. O que falta é devolver a rolagem e tirar o
@@ -84,14 +108,14 @@
          medido zero. Um resize o faz recontar. */
       window.dispatchEvent(new Event('resize'))
       if (tela.parentNode) tela.parentNode.removeChild(tela)
-    }, SAIDA + 60)
+    }, atraso + SAIDA + 260)
   }
 
   if (botao) {
     botao.addEventListener('click', function () {
       /* Só vale depois de oferecido. Um teclado pode alcançar o botão antes
          disso, e entrar aí mostraria a cena crua. */
-      if (ofereceu) entrar()
+      if (ofereceu) entrar(true)
     })
   }
 

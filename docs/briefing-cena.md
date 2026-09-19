@@ -265,10 +265,10 @@ o fundo nunca chegou a pintar, porque regra dentro de `@layer` perde para as
 utilidades. **Tudo que pinta está em atributo `style` inline**, que não perde
 para camada nenhuma; o bloco `<style>` no `<head>` só carrega os keyframes.
 
-Ela espera DUAS coisas: um piso de 3,5s, para a abertura ler como sistema
+Ela espera DUAS coisas: um piso de 2,0s, para a abertura ler como sistema
 subindo, e o primeiro quadro desenhado pela cena, que dispara
 `astro:cena-pronta` em `TriScene.tsx` — o marco honesto, não "o script
-carregou" e sim "há imagem". Teto de 9s para ninguém ficar preso, e a
+carregou" e sim "há imagem". Teto de 6,5s para ninguém ficar preso, e a
 rolagem trava enquanto ela está de pé (a cena lê `scrollY` a cada quadro;
 rolar às cegas por baixo faz o astro saltar quando ela sai). Ao sair,
 dispara um `resize` para o Lenis recontar.
