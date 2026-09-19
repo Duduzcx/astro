@@ -8,7 +8,7 @@ import * as THREE from 'three'
  * num trecho da página e sai no seguinte, e é isso que dá a sensação de
  * profundidade sem custo — três draw calls de um quad cada.
  */
-type View = { halfWidth: number; halfHeight: number; cameraZ: number }
+type View = { halfWidth: number; halfHeight: number; cameraZ: number; pixelHeight?: number }
 
 type Spec = {
   kind: 'spiral' | 'edge' | 'elliptical'
@@ -88,6 +88,27 @@ function paint(kind: Spec['kind']) {
         if (i % 23 === 7) glow(x, y, 2 * k, '255, 245, 250', 0.5 * fade)
       }
     }
+    /* Estrelas resolvidas. Uma galáxia de perto não é um borrão com braços:
+       é feita de pontos, e alguns deles o olho separa um a um. Sem esta
+       camada o desenho lê como fumaça colorida por mais braço que tenha.
+       A densidade cai com o raio e algumas saem quentes, como numa foto
+       de longa exposição. Custo: só pintura, uma vez, na criação. */
+    const pontos = Math.round(230 * k)
+    for (let i = 0; i < pontos; i += 1) {
+      /* Raiz quadrada do aleatório concentra no centro, que é onde as
+         estrelas de verdade se acumulam. */
+      const r = Math.sqrt(Math.random()) * 112 * k
+      const a = Math.random() * Math.PI * 2
+      const x = Math.cos(a) * r
+      const y = Math.sin(a) * r
+      const fade = (1 - r / (126 * k)) * (0.35 + Math.random() * 0.65)
+      const quente = Math.random() < 0.18
+      glow(x, y, (0.9 + Math.random() * 1.3) * k, quente ? '255, 226, 190' : '226, 238, 255', 0.62 * fade)
+    }
+    /* Halo largo e muito fraco: o disco não termina numa borda, ele rareia.
+       É o que tira o recorte de adesivo contra o preto. */
+    glow(0, 0, 132 * k, '150, 175, 235', 0.05)
+
     /* Faixa de poeira sobre um dos braços: é ela que dá o contraste que
        fotografia de galáxia tem e desenho de galáxia costuma esquecer. */
     ctx.globalCompositeOperation = 'destination-out'
@@ -166,14 +187,30 @@ export function createGalaxies(view: View, rotationAt: (progress: number) => THR
   const world = new THREE.Vector3()
   const quaternion = new THREE.Quaternion()
 
+  /* Quantos pixels reais cada sprite ocupa na tela. A altura do mundo à
+     distância da galáxia é 2 * halfHeight * (DISTANCE / cameraZ); a fração
+     que o sprite ocupa dela, vezes a altura em pixels, dá o tamanho
+     projetado. Serve para decidir a filtragem sprite a sprite. */
+  const alturaMundo = 2 * view.halfHeight * (DISTANCE / view.cameraZ)
+  const alturaPixel = view.pixelHeight ?? 0
+
   for (const spec of SPECS) {
     const texture = new THREE.CanvasTexture(paint(spec.kind))
     texture.colorSpace = THREE.NoColorSpace
-    /* Com níveis e filtragem anisotrópica: a galáxia é vista inclinada e
-       encolhe muito ao longo da página, e sem isso a espiral vira chuvisco
-       quando ela fica pequena. */
-    texture.generateMipmaps = true
-    texture.minFilter = THREE.LinearMipmapLinearFilter
+    /* A filtragem é decidida POR SPRITE, e isso é medida, não preferência.
+       Os dois maiores saem com cerca de 343 pixels reais no celular a partir
+       de um desenho de 512: o trilinear mistura mais da metade do nível de
+       256, ou seja, metade do desenho que já foi pago no canvas é jogada
+       fora por filtragem. Sem mipmap eles amostram o nível cheio.
+
+       Os três menores saem entre 138 e 224 pixels e PRECISAM dos níveis:
+       sem eles a espiral vira chuvisco quando encolhe. Por isso a regra é
+       por sprite e se ajusta sozinha ao aparelho — no desktop, onde tudo
+       aparece menor, os mesmos dois continuam com mipmap. */
+    const projetado = alturaPixel > 0 ? (spec.size / alturaMundo) * alturaPixel : 0
+    const cheio = projetado > 0 && SIZE / projetado < 1.6
+    texture.generateMipmaps = !cheio
+    texture.minFilter = cheio ? THREE.LinearFilter : THREE.LinearMipmapLinearFilter
     texture.magFilter = THREE.LinearFilter
     texture.anisotropy = 4
     textures.push(texture)

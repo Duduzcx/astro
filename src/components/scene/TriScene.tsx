@@ -366,7 +366,14 @@ export function TriScene() {
       /* Celular com um terço do realce: é isto, e não o gerador procedural,
          que controla quantas estrelas aparecem aqui. */
       sparkle: lightweight ? 0.3 : 2.8,
-      view: { halfWidth, halfHeight, cameraZ: camera.position.z },
+      /* A altura do alvo em pixels REAIS, não em CSS: é ela que diz quantos
+         pixels cada galáxia ocupa, e portanto se o mipmap ajuda ou atrapalha. */
+      view: {
+        halfWidth,
+        halfHeight,
+        cameraZ: camera.position.z,
+        pixelHeight: stageHeight * renderer.getPixelRatio(),
+      },
     })
     scene.add(space.object)
 

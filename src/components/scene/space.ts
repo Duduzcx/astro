@@ -175,7 +175,7 @@ export type SpaceOptions = {
   /** Tamanho da textura assada: menor no celular. */
   bakeSize?: [number, number]
   /** Galáxias distantes presas ao céu; a vista posiciona cada uma. */
-  view?: { halfWidth: number; halfHeight: number; cameraZ: number }
+  view?: { halfWidth: number; halfHeight: number; cameraZ: number; pixelHeight?: number }
   /** Quanto o termo quadrático realça os pontos claros da fotografia. É o
       controle de quantidade de estrelas do céu: 2,8 é o padrão de tela
       grande, valores baixos afundam as fracas e deixam só as fortes. */

@@ -89,7 +89,15 @@ const FRAGMENT = /* glsl */ `
        ponto vira um risco vertical sem custar nenhuma geometria. */
     q.x *= vStretch;
     float d = length(q);
-    float alpha = smoothstep(0.5, 0.05, d) * smoothstep(0.5, 0.42, d) * 4.0;
+    /* Núcleo apertado mais halo largo, e não um disco só. O perfil anterior
+       era um degrau macio multiplicado por quatro: saturava no meio inteiro e
+       a estrela lia como bolinha chapada. Uma estrela de verdade é um ponto
+       muito claro com uma auréola fraca em volta, e é a razão entre os dois
+       que o olho lê como brilho. O pico somado fica em 3,7 contra os 4,0 de
+       antes, então o campo não clareia — muda de forma, não de energia. */
+    float nucleo = smoothstep(0.34, 0.0, d);
+    float halo = smoothstep(0.5, 0.0, d);
+    float alpha = nucleo * 2.6 + halo * halo * halo * 1.1;
     if (vSpike > 0.5) {
       /* Cruz de difração: dois traços finos que somem para as pontas. */
       float cross = max(smoothstep(0.02, 0.0, abs(q.x)), smoothstep(0.02, 0.0, abs(q.y))) * smoothstep(0.5, 0.05, d);
