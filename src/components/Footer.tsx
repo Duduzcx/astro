@@ -58,7 +58,7 @@ export function Footer() {
                 <a
                   href={site.instagram.href}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 rounded-full border border-white/12 px-3.5 py-1.5 text-[13px] text-ash transition-colors hover:border-white/30 hover:text-ivory"
                 >
                   <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5">

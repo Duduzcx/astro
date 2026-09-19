@@ -93,7 +93,7 @@ export function Contact() {
                     <a
                       href={site.instagram.href}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="noopener noreferrer"
                       className="text-[15px] text-ivory transition-colors hover:text-[#8db4f5]"
                     >
                       {site.instagram.label}

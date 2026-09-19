@@ -134,7 +134,7 @@ export function Projects() {
                     <a
                       href={project.url}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 rounded-sm transition-colors after:absolute after:inset-0 after:content-[''] hover:text-[#8db4f5] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#8db4f5]"
                     >
                       {project.name}

@@ -211,7 +211,7 @@ export function Nav() {
               <a
                 href={site.instagram.href}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="mt-3 block text-center text-[14px] text-ash"
               >
                 Instagram {site.instagram.label}
