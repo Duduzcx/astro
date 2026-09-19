@@ -65,6 +65,25 @@ assinatura; terminador longuíssimo sem degrau; nenhum fio de contorno no
 limbo; e anéis de gelo quase brancos e densos, em trechos mais claros que o
 planeta.
 
+**Marte também tem referência fechada**: o modelo "Mars" do mesmo autor
+(`25b3f6f993de4f978de290b6e755ba87`). Ela é salmão quente indo a quase
+branco no ponto forte, terminador longo e AZUL-ARDÓSIA, manchas escuras
+largas e de contorno solto, e grão fino de cratera por toda a superfície.
+
+O achado que resolveu Marte vale para qualquer superfície procedural:
+**quantizar uma função lisa não produz manchas, produz CURVAS DE NÍVEL.**
+Em torno de cada extremo da soma de senos nascem anéis concêntricos, e era
+daí que vinha o aspecto de mapa topográfico e de rosquinha que sobreviveu a
+todas as mudanças de paleta. Subir de cinco para dez degraus PIOROU, porque
+só multiplicou os anéis. Marte hoje não é quantizado.
+
+O segundo: **produto de dois senos é uma treliça regular.** Com amplitude
+alta o grão deixou de ler como cratera e virou estampa de leopardo, com
+tongas escuras repetidas na diagonal. A fase dele é empurrada pela escala
+grande justamente para desalinhar a grade. Grão de verdade pediria ruído
+simplex, que o caminho PHOTO_ONLY não compila — e isso tem preço, então
+não entre nele sem medir.
+
 Por isso Saturno tem seu próprio ramo (`saturno = uToonBands > 11.5`) e
 Júpiter não o segue: piso de luz 0,30, degrau de luz em 10%, expoente 0,78
 na rampa, piso de limbo 0,74, contorno em 0,22 e oito degraus de faixa. É

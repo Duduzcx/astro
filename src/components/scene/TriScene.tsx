@@ -591,7 +591,11 @@ export function TriScene() {
           /* Faixa tonal larga: poeira clara de um lado, basalto quase marrom do
              outro. Com os dois tons perto um do outro, os cinco degraus
              caíam todos no mesmo vermelho e o planeta lia como bola. */
-          toon: { a: '#dda077', b: '#5f2616', c: '#f1ebe4', bands: 0 },
+          /* Salmão quente, não tijolo. A referência tem o lado iluminado indo
+             de coral claro a quase branco no ponto mais forte, e as manchas
+             escuras num marrom dessaturado — não naquele vermelho de óxido
+             que fazia Marte ler como bola de plástico. */
+          toon: { a: '#f0b295', b: '#7c4436', c: '#f6efe6', bands: 0 },
           warm,
         }),
         /* Maior e um pouco mais para dentro: pequeno demais o relevo não

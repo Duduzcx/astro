@@ -237,16 +237,43 @@ const SURFACE_FRAGMENT = /* glsl */ `
                + sin(lat * 7.0 - vUv.x * 6.2831853 * 1.5) * 0.5;
       float m2 = sin(vUv.x * 6.2831853 * 7.0 - lat * 13.0) * 0.3
                + sin(lat * 17.0 + vUv.x * 6.2831853 * 4.0) * 0.22;
-      float rock = (m1 + m2) * 0.42 + 0.5;
-      float scaledR = clamp(rock, 0.0, 1.0) * 5.0;
-      float softR = max(fwidth(scaledR) * 0.8, 0.02);
-      t = (floor(scaledR) + smoothstep(0.5 - softR, 0.5 + softR, fract(scaledR))) / 5.0;
-      /* Crateras: o produto de dois senos de alta frequência dá uma grade de
-         manchas, e um anel em vez de um disco é o que lê como cratera e não
-         como pinta. O aro claro fica do lado da luz, o vale escuro do outro. */
-      float cr = sin(vUv.x * 6.2831853 * 9.0 + 1.7) * sin(lat * 27.0 + 0.4);
-      float ring = smoothstep(0.72, 0.84, cr) - smoothstep(0.9, 0.99, cr);
-      t = clamp(t - ring * 0.3, 0.0, 1.0);
+      /* Uma terceira escala, larga e irregular: na referência as manchas
+         escuras são regiões grandes de contorno solto, não pintas do mesmo
+         tamanho espalhadas. É ela que dá o desenho continental. */
+      float m3 = sin(vUv.x * 6.2831853 * 1.7 - lat * 2.3 + 0.9) * 0.46
+               + sin(lat * 3.1 + vUv.x * 6.2831853 * 0.9 + 2.2) * 0.36;
+      float rock = (m1 + m2 + m3) * 0.34 + 0.5;
+      /* Marte NÃO é quantizado, e isto é o achado que resolve a bola dele.
+         Quantizar uma função lisa em degraus não produz manchas: produz
+         CURVAS DE NÍVEL. Em torno de cada extremo da soma de senos nascem
+         anéis concêntricos, e era isso o aspecto de mapa topográfico e de
+         rosquinha que sobrava por mais que eu mexesse na paleta. Subir de
+         cinco para dez degraus piorou, porque só multiplicou os anéis.
+         A referência é fotográfica: ali o que separa uma região da outra é
+         valor contínuo. Sem floor, os anéis somem de uma vez. */
+      float meio = sin(vUv.x * 6.2831853 * 13.0 + lat * 9.0) * 0.06
+                 + sin(lat * 19.0 - vUv.x * 6.2831853 * 6.0) * 0.045;
+      t = clamp(rock + meio, 0.0, 1.0);
+      /* Granulado no lugar das rosquinhas. O anel de cratera desenhado —
+         aro claro de um lado, vale escuro do outro — parecia boa ideia e
+         não era: na escala em que Marte aparece, ele virava uma grade de
+         donuts regulares, que é o oposto de superfície. A referência tem
+         crateras como GRÃO fino e denso, sem forma reconhecível uma a uma.
+         Frequências altas e primas entre si, amplitude pequena, sem
+         quantizar: some a forma e fica a textura. */
+      /* Frequências moderadas de propósito. A 61 e 97 em latitude o grão
+         ficava fino demais para o tamanho em que Marte aparece: some na
+         amostragem e ainda arrisca cintilar quando o planeta gira. Entre 19
+         e 43 ele lê como cratera e fica estável. */
+      /* A fase do grão é empurrada pela escala grande, e a amplitude é baixa.
+         Produto de dois senos é uma TRELIÇA regular: com amplitude alta ele
+         parou de ler como cratera e virou estampa de leopardo, tongas
+         escuras repetidas na diagonal. Deslocando a fase por m3, a grade
+         perde o alinhamento e volta a ser textura; a 0,08 ela dá superfície
+         sem disputar com as manchas largas, que são o desenho de verdade. */
+      float grao = sin(vUv.x * 6.2831853 * 19.0 + 1.7 + m3 * 3.0) * sin(lat * 43.0 + 0.4 - m3 * 2.0) * 0.55
+                 + sin(vUv.x * 6.2831853 * 31.0 - 2.1 - m3 * 4.0) * sin(lat * 27.0 - 1.3) * 0.45;
+      t = clamp(t + grao * 0.08, 0.0, 1.0);
     }
     albedo = mix(uToonA, uToonB, clamp(t, 0.0, 1.0));
     /* Um leve gradiente dentro da faixa: chapado total lê como adesivo. */
@@ -520,8 +547,12 @@ const SURFACE_FRAGMENT = /* glsl */ `
        quase branco. */
     float liso = clamp(ramp, 0.0, 1.0);
     if (saturno) liso = pow(liso, 0.78);
+    /* Marte também perde o degrau: a referência dele é fotográfica, com um
+       terminador longo e frio, e escada nenhuma cabe ali. Júpiter continua
+       sendo o único que ainda usa degrau de verdade, e é de propósito —
+       ele é o que sustenta a linguagem ilustrada da passagem. */
     float day = gigante ? mix(liso, bruto, saturno ? 0.10 : 0.3)
-                        : smoothstep(0.06, 0.94, bruto);
+                        : mix(smoothstep(-0.22, 0.62, facing), smoothstep(0.06, 0.94, bruto), 0.18);
 
     /* A fotografia da NASA é plana de propósito, porque é dado. Ilustração
        pede cor decidida: satura, e depois reduz a paleta a poucos tons.
@@ -548,7 +579,10 @@ const SURFACE_FRAGMENT = /* glsl */ `
       vec3 toneSoft = max(fwidth(tone), vec3(0.03));
       vec3 posterized =
         floor(tone) + smoothstep(vec3(0.5) - toneSoft, vec3(0.5) + toneSoft, fract(tone));
-      albedo = mix(albedo, posterized / 6.0, 0.72);
+      /* A 0,72 o posterizador chapava Marte em blocos de cor; a referência
+         não tem nenhuma fronteira dura. A 0,22 ele ainda tira o cinza e
+         mantém a decisão de cor, sem recortar a superfície. */
+      albedo = mix(albedo, posterized / 6.0, 0.22);
     }
     /* O posterizador acima fica de fora do TOON, e essa é a maior correção
        de Saturno. Ele existe para domar fotografia; no caminho ilustrado não
@@ -562,14 +596,20 @@ const SURFACE_FRAGMENT = /* glsl */ `
     /* Piso de luz alto em Saturno: na referência o lado escuro não é breu,
        é um cinza frio e macio, e o corpo inteiro vive na parte de cima da
        escala. Com 0,14 ele lia subexposto ao lado dela. */
-    vec3 color = albedo * (saturno ? 0.30 + 0.70 * day : 0.14 + 0.86 * day);
+    vec3 color = albedo * (saturno ? 0.30 + 0.70 * day
+                                   : (gigante ? 0.14 + 0.86 * day : 0.10 + 0.90 * day));
     /* A sombra vai para o azul, não para o cinza. É o que separa desenho
        de foto subexposta. */
     /* A sombra de Saturno é cinza-frio discreto, não azul forte: na
        referência ela desatura sem trocar de cor. */
     color = saturno
       ? mix(color, color * vec3(0.62, 0.66, 0.78), (1.0 - day) * 0.55)
-      : mix(color, color * vec3(0.40, 0.52, 0.88), (1.0 - day) * 0.85);
+      : (gigante
+          ? mix(color, color * vec3(0.40, 0.52, 0.88), (1.0 - day) * 0.85)
+          /* A sombra de Marte é ardósia azul-acinzentada, e forte: é o traço
+             mais marcante da referência, aquele terço esquerdo frio que faz
+             o lado iluminado parecer quente por contraste. */
+          : mix(color, color * vec3(0.30, 0.38, 0.62), (1.0 - day) * 0.92));
     /* Um só clarão na água, e mesmo assim em degrau: três potências e um
        ponto minúsculo não sobrevivem a uma tela de mão. */
     float glint = smoothstep(0.86, 0.94, max(dot(reflect(-uLight, n), v), 0.0));
