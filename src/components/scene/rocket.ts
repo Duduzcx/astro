@@ -813,10 +813,14 @@ export function createRocket({
            à tela muito comprimida, e com a filtragem padrão isso vira borrão
            na beirada, que é metade da silhueta. Custa amostragem, não
            preenchimento, então não aparece no orçamento de quadro. */
+        /* Dezesseis, que é o teto do hardware no aparelho alvo. O arquivo
+           traz três imagens e o sampler do glTF já pede trilinear; os slots
+           de normal e oclusão nunca casam porque o modelo não os tem. Custa
+           amostragem, não preenchimento. */
         for (const slot of ['map', 'roughnessMap', 'metalnessMap', 'normalMap', 'aoMap'] as const) {
           const texture = material[slot]
-          if (!texture || texture.anisotropy >= 8) continue
-          texture.anisotropy = 8
+          if (!texture || texture.anisotropy >= 16) continue
+          texture.anisotropy = 16
           texture.needsUpdate = true
         }
         /* Mais ambiente que antes: agora ele é um céu com sol e horizonte,

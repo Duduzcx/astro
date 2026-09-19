@@ -484,6 +484,13 @@
   pointer-events: none;
   background: radial-gradient(ellipse 90% 70% at 50% 100%, rgba(255, 158, 87, 0.22), transparent 72%);
   opacity: var(--nova);
+  /* A parte mais dura da supernova não estava no WebGL, estava aqui. A cena
+     só escreve --nova em degraus de 0,04 e no máximo a cada 80ms, o que dá
+     cerca de oito escritas ao longo da detonação: o gradiente quente que
+     cobre a seção inteira pulava em oito degraus visíveis. Com a transição o
+     compositor interpola entre as escritas e o brilho sobe contínuo, sem que
+     a JS escreva uma vez a mais e sem repintura nova. */
+  transition: opacity 140ms linear;
   will-change: opacity;
 }
 footer .bg-graphite::before {
@@ -494,6 +501,7 @@ footer .bg-graphite::before {
   pointer-events: none;
   background: #ff9e57;
   opacity: calc(var(--nova) * 0.1);
+  transition: opacity 140ms linear;
   will-change: opacity;
 }
 

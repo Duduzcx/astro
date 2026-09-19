@@ -21,18 +21,55 @@ test('sampleKeyframes devolve a primeira linha em progresso 0 e a última em 1',
   assert.equal(last.form, tail[6])
 })
 
-test('sampleKeyframes interpola suave no meio de um trecho', () => {
+test('sampleKeyframes passa pelas âncoras e não ultrapassa o trecho', () => {
+  /* Três linhas: com duas só, a curva monótona degenera em reta por falta de
+     vizinho para dar tangente, e não haveria o que medir. */
   const table = [
     [0, 0, 0, 0, 1, 0, 0],
-    [1, 1, 1, 1, 2, 1, 3],
+    [0.5, 1, 1, 1, 2, 1, 1],
+    [1, 0, 0, 0, 1, 0, 0],
   ] as unknown as Parameters<typeof sampleKeyframes>[0]
-  const mid = sampleKeyframes(table, 0.5)
-  assert.equal(mid.mix, 0.5)
-  assert.equal(mid.scale, 1.5)
-  assert.equal(mid.form, 1.5)
-  /* smoothstep: em 0,25 fica abaixo do linear. */
-  const quarter = sampleKeyframes(table, 0.25)
-  assert.ok(quarter.mix < 0.25)
+
+  /* Âncora ao pixel: a curva cruza cada linha da tabela exatamente no valor
+     escrito nela. É isto que separa Hermite monótono de um spline solto. */
+  for (const [t, esperado] of [
+    [0, 0],
+    [0.5, 1],
+    [1, 0],
+  ] as const) {
+    assert.equal(sampleKeyframes(table, t).mix, esperado)
+  }
+
+  /* Sem ultrapassagem: a linha do meio é um máximo, e nenhum ponto do trecho
+     pode passar dela nem descer abaixo do menor vizinho. Um Catmull-Rom
+     estouraria aqui, e estouraria de verdade na tabela real, onde a escala
+     da supernova sobe a 1,70 e volta. */
+  for (let i = 0; i <= 40; i += 1) {
+    const v = sampleKeyframes(table, i / 40)
+    assert.ok(v.mix >= -1e-9 && v.mix <= 1 + 1e-9, `mix fora do intervalo em ${i / 40}`)
+    assert.ok(v.scale >= 1 - 1e-9 && v.scale <= 2 + 1e-9, `escala fora do intervalo em ${i / 40}`)
+  }
+
+  /* Num extremo, parar é o certo: a linha do meio da tabela acima é um
+     máximo, e a inclinação ali tem de ser zero para a curva não ultrapassar. */
+  const h = 1e-4
+  const noPico = (sampleKeyframes(table, 0.5 + h).mix - sampleKeyframes(table, 0.5 - h).mix) / (2 * h)
+  assert.ok(Math.abs(noPico) < 0.05, 'a curva deveria virar no máximo, não atravessá-lo')
+
+  /* Velocidade contínua num nó de passagem: é a razão de existir desta troca.
+     A versão anterior aplicava smoothstep por trecho, e a derivada ia a zero
+     dos dois lados de TODA linha — inclusive das que a curva só atravessa —
+     fazendo o movimento parar e arrancar em cada uma. */
+  const subindo = [
+    [0, 0, 0, 0, 1, 0, 0],
+    [0.5, 1, 1, 1, 2, 1, 1],
+    [1, 2, 2, 2, 3, 2, 2],
+  ] as unknown as Parameters<typeof sampleKeyframes>[0]
+  const antes = (sampleKeyframes(subindo, 0.5).mix - sampleKeyframes(subindo, 0.5 - h).mix) / h
+  const depois = (sampleKeyframes(subindo, 0.5 + h).mix - sampleKeyframes(subindo, 0.5).mix) / h
+  assert.ok(antes > 0.5, 'a curva freou até parar antes de uma âncora de passagem')
+  assert.ok(depois > 0.5, 'a curva arrancou do zero depois de uma âncora de passagem')
+  assert.ok(Math.abs(antes - depois) < 0.05, 'a velocidade deu um salto na âncora')
 })
 
 test('sampleKeyframes prende o progresso em [0, 1]', () => {

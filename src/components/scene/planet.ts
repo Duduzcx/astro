@@ -215,7 +215,15 @@ const SURFACE_FRAGMENT = /* glsl */ `
     }
     albedo = mix(uToonA, uToonB, clamp(t, 0.0, 1.0));
     /* Um leve gradiente dentro da faixa: chapado total lê como adesivo. */
-    albedo *= 0.92 + 0.16 * (1.0 - abs(lat * 2.0 - 1.0));
+    /* Mesma amplitude de antes, mas escurecendo em vez de estourar. O
+       intervalo anterior ia de 0,92 no polo a 1,08 no equador, e passava de
+       1,0: com R = 0,973 em uToonA, Saturno saía em 1,051 no vermelho e o
+       clamp cortava os canais em (1,000; 1,000; 0,894). Na faixa central do
+       disco as listras claras fundiam todas em branco e a esfera ganhava um
+       cinturão lavado bem onde deveria mostrar mais desenho. Note ainda que
+       este gradiente é função de LATITUDE, não de visada: é uma pista
+       cilíndrica, que briga com a redondeza. Esta vem do limbo. */
+    albedo *= 0.88 + 0.12 * (1.0 - abs(lat * 2.0 - 1.0));
     /* A mancha. Todo gigante gasoso de ilustração tem uma: é ela que dá
        identidade ao planeta e prova que ele gira, porque entra e sai de
        vista. Elipse achatada, borda macia, fora do equador. */
@@ -229,7 +237,15 @@ const SURFACE_FRAGMENT = /* glsl */ `
     }
     /* Calota clara nos polos: num disco chapado é ela que devolve a leitura
        de esfera, no lugar do sombreado que a foto trazia. */
-    float cap = smoothstep(0.84, 0.98, abs(lat * 2.0 - 1.0));
+    /* A calota começa mais cedo e termina mais tarde, por dois motivos. O
+       gradiente acima é aplicado antes dela, então onde ele já escureceu o
+       máximo e a calota ainda não pegava nascia um anel escuro colado numa
+       calota quase branca — recorte de adesivo a 14 graus do polo. E perto
+       do polo os degraus de faixa cruzam até 3,6 vezes por pixel de tela, o
+       que granula um anel no topo e na base do disco; a 0,74 a calota já
+       vale 81% ali e atenua esse ruído em quatro vezes. Ela passa de 3% para
+       8% da altura do disco: um capuz pálido em vez de um fio. */
+    float cap = smoothstep(0.74, 0.99, abs(lat * 2.0 - 1.0));
     albedo = mix(albedo, uToonC, cap);
     relief = 0.0;
 #else
@@ -411,11 +427,27 @@ const SURFACE_FRAGMENT = /* glsl */ `
        escolhe uns poucos e mantém limpa a borda entre eles. O fwidth dá a
        largura de um pixel na tela, então o degrau sai macio o bastante para
        não serrilhar e duro o bastante para ler como traço. */
-    float ramp = clamp(facing * 0.5 + 0.5, 0.0, 1.0);
-    float scaled = ramp * 4.0;
+    /* A rampa é deslocada de propósito. Com facing * 0.5 + 0.5 ela gasta
+       metade dos degraus no hemisfério que ninguém vê: medindo a área do
+       disco por faixa, quatro subdivisões davam 0,1% / 9,8% / 25,8% / 38,8%
+       / 25,5%, ou seja dois terços da esfera pintados por duas faixas que
+       diferem 16% entre si. Era essa a causa de Saturno ler chapado, e a
+       razão pela qual subir a contagem de faixas sozinho nunca resolveu.
+       Com 0,55 e 0,42 a escada inteira cai sobre o lado iluminado.
+
+       Nove degraus, não quatro: o terminador vira uma escada fina o bastante
+       para descrever a curvatura e ainda grossa o bastante para não virar
+       gradiente contínuo — que é o que separaria ilustração de fotografia. A
+       borda de cada degrau acompanha um pixel de tela, então não serrilha.
+
+       Sem o smoothstep(0.06, 0.94, ...) que havia aqui: ele devolvia à
+       escada uma curva contínua e colava os dois degraus do topo e os dois
+       do fundo, desfazendo justamente o que a contagem alta comprava. */
+    float ramp = clamp(facing * 0.55 + 0.42, 0.0, 1.0);
+    float scaled = ramp * 9.0;
     float soft = max(fwidth(scaled) * 1.1, 0.02);
     float band = floor(scaled) + smoothstep(0.5 - soft, 0.5 + soft, fract(scaled));
-    float day = smoothstep(0.06, 0.94, clamp(band / 4.0, 0.0, 1.0));
+    float day = clamp(band / 9.0, 0.0, 1.0);
 
     /* A fotografia da NASA é plana de propósito, porque é dado. Ilustração
        pede cor decidida: satura, e depois reduz a paleta a poucos tons.
@@ -431,11 +463,21 @@ const SURFACE_FRAGMENT = /* glsl */ `
        definisse. A 1,12 o realce ainda tira o cinza da fotografia sem
        reescrever a decisão de cor. */
     albedo = clamp(mix(vec3(lum), albedo, 1.12), 0.0, 1.0);
+#ifndef TOON
     vec3 tone = albedo * 6.0;
     vec3 toneSoft = max(fwidth(tone), vec3(0.03));
     vec3 posterized =
       floor(tone) + smoothstep(vec3(0.5) - toneSoft, vec3(0.5) + toneSoft, fract(tone));
     albedo = mix(albedo, posterized / 6.0, 0.72);
+#endif
+    /* O posterizador acima fica de fora do TOON, e essa é a maior correção
+       de Saturno. Ele existe para domar fotografia; no caminho ilustrado não
+       há textura nenhuma, e a cor já sai quantizada em dez degraus lá em
+       cima. Reaplicar degraus aqui recortava a cor numa grade de seis níveis
+       POR CANAL, desalinhada da primeira: os canais cruzavam seus limites em
+       pontos diferentes e o TOM VIRAVA na fronteira, de 765 tons distintos
+       para 58. Era por isso que a esfera saía suja e que subir as faixas de
+       7 para 12 nunca apareceu — o posterizador esmagava todas de volta. */
 
     vec3 color = albedo * (0.14 + 0.86 * day);
     /* A sombra vai para o azul, não para o cinza. É o que separa desenho
@@ -445,6 +487,25 @@ const SURFACE_FRAGMENT = /* glsl */ `
        ponto minúsculo não sobrevivem a uma tela de mão. */
     float glint = smoothstep(0.86, 0.94, max(dot(reflect(-uLight, n), v), 0.0));
     color += vec3(1.0, 0.97, 0.9) * glint * water * dayGeom * 0.5;
+#ifdef TOON
+    /* O clarão acima morre no caminho ilustrado: water nunca é atribuído
+       fora do ramo fotográfico, então ele é multiplicado por zero. Sem
+       nenhum termo especular a esfera não tem para onde reflexão nenhuma
+       apontar, e é isso que o cliente lê como "sem polimento".
+
+       O que existe hoje é só quina: edge, sweep e ink são todos função de
+       1 menos N·V, e todos moram na borda. Um planeta polido precisa de um
+       realce AMPLO, MACIO e DESLOCADO DO CENTRO — é essa mancha clara fora
+       do eixo que o olho lê como verniz. Com a luz onde está, o vetor médio
+       normalizado cai a 46% do raio do disco, acima e à esquerda: a posição
+       canônica do realce numa esfera desenhada. Dois degraus para ficar no
+       mesmo vocabulário das faixas e do anel, cobrindo 20% do disco no
+       lóbulo largo e 6% no núcleo — mancha, não ponto. Fraco de propósito:
+       um gigante gasoso não pode virar bola de plástico. */
+    float gloss = max(dot(geomN, normalize(uLight + v)), 0.0);
+    color += vec3(1.0, 0.98, 0.94) *
+      (smoothstep(0.88, 0.93, gloss) * 0.07 + smoothstep(0.955, 0.98, gloss) * 0.09);
+#endif
 #else
     float day = smoothstep(-0.18, 0.4, facing);
     vec3 color = albedo * (0.05 + 0.95 * day);
@@ -478,8 +539,18 @@ const SURFACE_FRAGMENT = /* glsl */ `
     /* Escurecimento nas bordas por tipo: forte no rochoso (poeira seca
        some no ângulo rasante), fraco no gigante, onde a atmosfera espessa
        espalha luz de volta e a borda continua legível. */
+#ifdef TOON
+    /* Piso 0,52 e expoente 1,25. Com os 0,68/0,55 do gigante fotográfico o
+       escurecimento somava 5,4% ao longo dos 70% centrais do disco: perto de
+       nada, e a esfera terminava numa borda dura contra o fundo em vez de
+       virar. O expoente acima de 1 concentra a queda onde ela lê, na beirada. */
+    float limbFloor = 0.52;
+    float limbPow = 1.25;
+#else
     float limbFloor = (uKind > 1.5 && uKind < 2.5) ? 0.68 : 0.45;
-    float limb = mix(limbFloor, 1.0, pow(max(dot(geomN, v), 0.0), 0.55));
+    float limbPow = 0.55;
+#endif
+    float limb = mix(limbFloor, 1.0, pow(max(dot(geomN, v), 0.0), limbPow));
     color *= limb;
 
 #ifndef NO_CLOUD_SHADOW

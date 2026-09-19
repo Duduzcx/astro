@@ -747,12 +747,16 @@ export function createExplosion({
 
       /* Onda de choque: a casca cresce rápido e some; o anel plano vai mais
          longe e dura mais. */
-      const shellEase = 1 - Math.pow(1 - u, 2.4)
+      /* Expoentes mais macios, mesmos raios finais. A 2,4 a onda de choque
+         gastava 58% da expansão nos primeiros 30% do relógio: ela disparava
+         e parava. A 1,6 isso cai para 44% e a expansão se espalha pelos 765px
+         inteiros em que o cliente está olhando. É curva, não alcance. */
+      const shellEase = 1 - Math.pow(1 - u, 1.6)
       shellMaterial.uniforms.uRadius.value = (1.0 + 3.1 * shellEase) / SHELL_EXTENT
       shellMaterial.uniforms.uWidth.value = (0.05 + 0.16 * u) / SHELL_EXTENT
       shellMaterial.uniforms.uAlpha.value = smooth(0, 0.03, u) * Math.pow(1 - u, 1.5) * 0.7 * opacity
       shellMaterial.uniforms.uPhase.value = u
-      const planeEase = 1 - Math.pow(1 - u, 2.0)
+      const planeEase = 1 - Math.pow(1 - u, 1.4)
       planeMaterial.uniforms.uRadius.value = (1.0 + 4.3 * planeEase) / PLANE_EXTENT
       planeMaterial.uniforms.uWidth.value = (0.035 + 0.07 * u) / PLANE_EXTENT
       planeMaterial.uniforms.uAlpha.value = smooth(0, 0.04, u) * Math.pow(1 - u, 1.2) * 0.6 * opacity

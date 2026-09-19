@@ -328,11 +328,21 @@ export function createSpace(
     material.uniforms.uMap.value = loaded
     object.visible = true
   }
-  /* Em degraus: o leve aparece primeiro, o pesado substitui. */
+  /* Em degraus: o leve aparece primeiro, o pesado substitui. Quando os dois
+     degraus são o mesmo arquivo não há segundo passo — antes havia, e ele
+     custava um upload inteiro para trocar a textura por ela mesma. E quando
+     há, o degrau leve é descartado: ele já não está em uso, mas ficava
+     pendurado na GPU até o desmonte, 2,7 MB por nada. */
   textures.push(
     loader.load(urls.low, (low) => {
       apply(low)
-      textures.push(loader.load(urls.high, (high) => apply(high)))
+      if (urls.high === urls.low) return
+      textures.push(
+        loader.load(urls.high, (high) => {
+          apply(high)
+          low.dispose()
+        }),
+      )
     }),
   )
 

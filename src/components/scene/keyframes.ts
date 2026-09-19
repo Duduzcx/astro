@@ -142,7 +142,15 @@ export function mobileKeyframes(
        e num trecho curto ela passava em dois ou três frames de scroll, o
        que lê como corte, não como explosão. */
     [0.312, 0.95, 0.0, 0.08, scale * 0.8, 0.7, 0],
-    [0.318, 0.95, 0.0, 0.04, scale * 1.05, FIELD_OPACITY, 1],
+    /* A opacidade desta linha não é FIELD_OPACITY, e é de propósito. Com
+       0,05 aqui, as três linhas seguidas chapadas prendiam a tangente em
+       zero e a apagada do Sol caía de 0,70 para 0,05 em 83px de rolagem —
+       1,2 quadro renderizado num flique. Era literalmente um corte, e é a
+       dureza que o cliente descreve. Com 0,34 a apagada passa a ocupar de
+       0,312 a 0,33, três vezes mais. A linha NÃO se move: 0,318 é a troca de
+       astro e é regra. E quem esconde a costura da troca é o mix em 0,95,
+       não a opacidade — com ele a troca de forma é 5% visível. */
+    [0.318, 0.95, 0.0, 0.04, scale * 1.05, 0.34, 1],
     [0.33, 0.95, 0.0, 0.0, scale * 1.25, FIELD_OPACITY, 1],
     /* Troca de astro com o campo quase invisível, ninguém vê a costura. */
     /* Troca de astro antecipada. O morph é amortecido como todo o resto, e
@@ -205,22 +213,87 @@ export type Sample = {
   form: number
 }
 
+/**
+ * Inclinação de Fritsch e Carlson num nó interno.
+ *
+ * Ela escolhe a tangente que faz a curva passar pelas âncoras sem nunca
+ * ultrapassá-las: onde os dois trechos vizinhos sobem, a inclinação é uma
+ * média harmônica ponderada dos dois; onde eles mudam de sentido, ou onde um
+ * deles é plano, a inclinação é zero e o nó vira um extremo. É essa segunda
+ * regra que protege a tabela, que tem máximos locais de propósito — a escala
+ * da supernova chega a 1,70 em 0,946 e volta — e trechos deliberadamente
+ * chapados, onde um spline comum inventaria uma barriga.
+ */
+function inclinacao(pA: number, pB: number, pC: number, hA: number, hB: number) {
+  const dA = (pB - pA) / hA
+  const dB = (pC - pB) / hB
+  if (dA * dB <= 0) return 0
+  const wA = 2 * hB + hA
+  const wB = hB + 2 * hA
+  return (wA + wB) / (wA / dA + wB / dB)
+}
+
+/** Um canal interpolado entre duas linhas, com as vizinhas ditando as tangentes. */
+function canal(
+  table: Keyframes,
+  i: number,
+  campo: number,
+  h: number,
+  h00: number,
+  h10: number,
+  h01: number,
+  h11: number,
+) {
+  const pB = table[i][campo]
+  const pC = table[i + 1][campo]
+  /* Nas pontas a tangente é a do próprio trecho: a curva entra e sai reta, em
+     vez de inventar uma inclinação a partir de um vizinho que não existe. */
+  const hA = i > 0 ? table[i][0] - table[i - 1][0] || 1 : h
+  const hC = i + 2 < table.length ? table[i + 2][0] - table[i + 1][0] || 1 : h
+  const mB = i > 0 ? inclinacao(table[i - 1][campo], pB, pC, hA, h) : (pC - pB) / h
+  const mC =
+    i + 2 < table.length ? inclinacao(pB, pC, table[i + 2][campo], h, hC) : (pC - pB) / h
+  return h00 * pB + h10 * h * mB + h01 * pC + h11 * h * mC
+}
+
+/**
+ * Amostra a tabela no progresso dado.
+ *
+ * A versão anterior aplicava smoothstep DENTRO de cada trecho, com o tempo
+ * local reiniciando em zero a cada linha. O efeito é pior que um canto: a
+ * derivada fica exatamente zero dos DOIS lados de toda âncora, então o
+ * movimento freia até parar em cada linha da tabela e arranca de novo. Numa
+ * sequência de linhas próximas, como a explosão do Sol, isso lê como uma
+ * série de trancos — era essa a dureza.
+ *
+ * Aqui a curva é um Hermite cúbico com tangentes limitadas pelo critério de
+ * monotonicidade. A velocidade passa contínua de um trecho para o outro, as
+ * âncoras continuam sendo respeitadas ao pixel, e nenhum valor ultrapassa o
+ * intervalo entre duas linhas vizinhas — o que importa porque a opacidade e a
+ * escala têm mínimos e máximos que um spline solto estouraria.
+ */
 export function sampleKeyframes(table: Keyframes, progress: number): Sample {
   const clamped = Math.min(Math.max(progress, 0), 1)
   let index = 0
   while (index < table.length - 2 && table[index + 1][0] < clamped) index += 1
   const from = table[index]
   const to = table[index + 1]
-  const span = to[0] - from[0] || 1
-  const local = Math.min(Math.max((clamped - from[0]) / span, 0), 1)
-  const eased = local * local * (3 - 2 * local)
+  const h = to[0] - from[0] || 1
+  const s = Math.min(Math.max((clamped - from[0]) / h, 0), 1)
+  const s2 = s * s
+  const s3 = s2 * s
+  const h00 = 2 * s3 - 3 * s2 + 1
+  const h10 = s3 - 2 * s2 + s
+  const h01 = -2 * s3 + 3 * s2
+  const h11 = s3 - s2
+  const em = (campo: number) => canal(table, index, campo, h, h00, h10, h01, h11)
   return {
-    mix: from[1] + (to[1] - from[1]) * eased,
-    x: from[2] + (to[2] - from[2]) * eased,
-    y: from[3] + (to[3] - from[3]) * eased,
-    scale: from[4] + (to[4] - from[4]) * eased,
-    opacity: from[5] + (to[5] - from[5]) * eased,
-    form: from[6] + (to[6] - from[6]) * eased,
+    mix: em(1),
+    x: em(2),
+    y: em(3),
+    scale: em(4),
+    opacity: em(5),
+    form: em(6),
   }
 }
 

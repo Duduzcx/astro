@@ -74,12 +74,22 @@ export function TriScene() {
     const lightweight = window.innerWidth < 1024
 
     const renderer = new THREE.WebGLRenderer({
-      /* Sem MSAA no celular. Lá o bloom está sempre ligado, e com um
-         composer a cena é desenhada num alvo próprio: o canvas recebe só um
-         quad de tela cheia já pronto. O antialias do canvas se aplica às
-         bordas desse quad, que não tem borda nenhuma — é custo de
-         preenchimento sem nada em troca. */
-      antialias: !weakDevice && !lightweight,
+      /* MSAA volta ao celular. A justificativa de desligá-lo era que ali o
+         bloom estava sempre ligado e um composer desenhava a cena num alvo
+         próprio, deixando ao canvas só um quad de tela cheia sem bordas para
+         suavizar. Essa premissa caiu: wantsPostFx é !weakDevice &&
+         !lightweight, então no celular o composer não é criado e o laço cai
+         em renderer.render direto no framebuffer padrão — que é exatamente
+         onde esta flag atua.
+
+         E é geometria que precisa dela. O starship.glb tem 175.503
+         triângulos desenhados num objeto de cerca de 580 por 105 pixels
+         reais: perto de três triângulos por pixel na seção dos motores e
+         nas grelhas. Sem MSAA a cobertura de cada pixel é decidida por um
+         triângulo sorteado entre vários, e o compositor ainda amplia 3,0
+         sobre 1,75 depois — a serrilha vira borda suja. Vale também para o
+         limbo dos planetas, o anel de Saturno e os dois campos de linhas. */
+      antialias: !weakDevice,
       alpha: true,
       powerPreference: 'high-performance',
     })
@@ -290,7 +300,13 @@ export function TriScene() {
     /* Trava a textura no degrau leve quando a tela é de mão. */
     const pin = (name: string, ext = 'webp') => {
       const t = tier(name, ext)
-      return lightweight ? { low: t.low, high: t.low } : t
+      /* Devolve UMA url, não a mesma duas vezes. Com low igual a high o
+         carregador baixava, decodificava e subia o mesmo arquivo para a GPU
+         duas vezes — e cada upload de 1024x512 com mipmaps são 2,7 MB e
+         dezenas de milissegundos travados no thread principal, exatamente o
+         tranco que a fila do warm existe para evitar. MapTiers já aceita
+         string, e o ramo de string carrega uma vez só. */
+      return lightweight ? t.low : t
     }
     const tier = (name: string, ext = 'webp', desktopHigh = '2k') => ({
       low: `/space/${name}-1k.${ext}`,
@@ -323,13 +339,21 @@ export function TriScene() {
        De quebra somem a trava da assadura na abertura e a textura de
        2048 por 1024 na memória do aparelho. */
     /* O céu do celular fica no degrau leve e não sobe.
-       O degrau alto é o segundo passo da degradação que o cliente descreve:
-       a página abre com o panorama de 1k, que é liso e sem artefato, e
-       segundos depois troca pelo de 2k — que a 21 kB para 2048 por 1024 vem
-       comprimido o bastante para trazer blocagem no lugar de detalhe. Numa
-       esfera de céu, atrás de texto, o liso ganha do detalhado. */
+       O celular volta a subir para o 2k, e a trava anterior era uma leitura
+       errada da medida certa. O 2k de 21 kB realmente trazia blocagem, mas o
+       defeito era o encode, não o degrau: aquele arquivo tinha sido gerado
+       com perda demais. Regravado do 4k com lanczos3 a q82 ele vai a 29 kB e
+       mede razão de blocagem 1,57 contra 2,17 do anterior — menos blocado
+       até que o próprio 4k (1,87) — com 46% mais detalhe interior (0,260
+       contra 0,178). E o 1k que estava fixado é o pior dos três por texel
+       (7,09): ele só não parecia blocado porque aparece ampliado 9,9 vezes.
+
+       A conta da ampliação: com FOV 50 e tela de 390x844 a 1,75, o campo
+       horizontal é 24,3 graus; 1024 texels cobrem 360, então 69 texels são
+       esticados sobre 683 pixels reais. Com 2k a ampliação cai pela metade.
+       Esta é a textura mais visível da tela, porque é o fundo inteiro. */
     const skyTier = tier('milky-way', 'webp', '2k')
-    const space = createSpace(lightweight ? { low: skyTier.low, high: skyTier.low } : skyTier, lightweight || weakDevice ? 0 : 0.8, warm, {
+    const space = createSpace(skyTier, lightweight || weakDevice ? 0 : 0.8, warm, {
       renderer,
       /* A nebulosa assada é o fundo inteiro, esticada por toda a esfera do
          céu. A 1024 por 512 a parte visível dela numa tela de 1170 pixels
@@ -854,13 +878,28 @@ export function TriScene() {
       /* Amortecimento mais firme no celular. A 2,4 a cena ficava para trás do
        dedo numa rolagem rápida, e o fundo andando fora de compasso com o
        conteúdo lê como travamento mesmo quando o quadro está no prazo. */
-    const damping = reducedMotion ? 1 : 1 - Math.exp(-delta * (narrow ? 3.8 : 4.5))
+    /* Taxas separadas por canal. O amortecimento é hoje a única coisa que dá
+       duração à detonação, mas como escalar único ele fica preso ao valor que
+       a POSIÇÃO exige: baixá-lo faz o astro ficar para trás do dedo, e foi
+       por isso que o 2,4 foi rejeitado. Separando, a posição continua em 3,8
+       e só a opacidade e a forma desaceleram. Num flique de 2200px/s a
+       detonação passa de 788ms para cerca de 1485ms e o rabo da supernova de
+       788ms para 1333ms, sem que nenhuma linha da tabela se mexa.
+
+       A trava é o current.form > 1.6: a troca planeta para buraco negro
+       (forma 0 para 1) tem só 495px entre 0,318 e 0,34 e continua a 3,8, ou
+       o disco entra fraco — regressão já paga e registrada. A desaceleração
+       vale só da estrela para a supernova. */
+    const rate = (lambda: number) => (reducedMotion ? 1 : 1 - Math.exp(-delta * lambda))
+    const damping = rate(narrow ? 3.8 : 4.5)
+    const fadeDamping = rate(narrow ? 2.2 : 2.8)
+    const formDamping = current.form > 1.6 ? rate(narrow ? 2.0 : 2.4) : damping
       current.mix += (target.mix - current.mix) * damping
       current.x += (target.x - current.x) * damping
       current.y += (target.y - current.y) * damping
       current.scale += (target.scale - current.scale) * damping
-      current.opacity += (target.opacity - current.opacity) * damping
-      current.form += (target.form - current.form) * damping
+      current.opacity += (target.opacity - current.opacity) * fadeDamping
+      current.form += (target.form - current.form) * formDamping
       /* O foguete também amortece: o scroll por toque chega em saltos. */
       current.lift += (launch.lift - current.lift) * damping
       current.thrust += (launch.thrust - current.thrust) * damping
@@ -911,6 +950,7 @@ export function TriScene() {
          precisa ler como corpo, não como fantasma. */
       const targetBreak = planetBreak(current.mix, current.form)
       const targetOpacity = Math.min(1, current.opacity * 1.4)
+      const debrisFade = clamp01(current.form * 2)
       /* Os astros do centro da narrativa sobem para o meio da tela. */
       const astroY = centerY + astroShiftY
       star.update(
@@ -924,7 +964,11 @@ export function TriScene() {
           x: centerX,
           y: astroY,
           scale: current.scale,
-          opacity: targetOpacity * (1 - clamp01(current.form * 2)),
+          /* Em degrau macio, não em rampa reta. A rampa tinha canto nos dois
+             extremos e o brilho dos destroços parava seco em forma 0,5 —
+             exatamente no meio da entrega do Sol ao buraco negro, o instante
+             mais visível da sequência. Suporte e extremos idênticos. */
+          opacity: targetOpacity * (1 - debrisFade * debrisFade * (3 - 2 * debrisFade)),
           break: targetBreak,
           pixelsPerUnit: stageHeight / (2 * visibleHalfHeightNow()),
         },

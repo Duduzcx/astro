@@ -120,8 +120,19 @@ const VERTEX_SHADER = /* glsl */ `
        vista de propósito — a estrela explodindo em supernova. */
     float wPlanet = clamp(1.0 - uForm, 0.0, 1.0);
     float wHole = 1.0 - min(abs(uForm - 1.0), 1.0);
-    float wStar = 1.0 - min(abs(uForm - 2.0), 1.0);
-    float wNova = clamp(uForm - 2.0, 0.0, 1.0);
+    /* Os estilhaços partem escalonados, não todos no mesmo instante. O morph
+       de 2 para 3 era um lerp reto ponto a ponto com os dois pesos lineares
+       em uForm: todo mundo percorria a mesma fração do caminho ao mesmo
+       tempo, o que lê como fusão de duas imagens, não como detonação — e era
+       isso que deixava a supernova dura mesmo depois de esticada no tempo.
+       Com o atraso de 0,28 por aRand a explosão ganha frente e cauda.
+       Abaixo de uForm 2 a expressão é idêntica à anterior; dentro do
+       intervalo wStar + wNova continua exatamente 1; em uForm 3 todos
+       chegaram, para qualquer aRand. */
+    float up = min(max(uForm - 2.0, 0.0), 1.0);
+    float staggered = clamp((up - 0.28 * aRand) / 0.72, 0.0, 1.0);
+    float wStar = (1.0 - min(abs(uForm - 2.0), 1.0)) + up - staggered;
+    float wNova = staggered;
     core = core * wPlanet + coreHole * wHole + coreStar * wStar + coreNova * wNova;
     vColor = aColor * wPlanet + aHoleColor * wHole + aStarColor * wStar + aNovaColor * wNova;
 

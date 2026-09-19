@@ -24,6 +24,15 @@ Duas linguagens convivendo, de propósito:
 | Foguete | Modelo GLB real (Starship), Draco, intocado por pedido do cliente |
 | Marte, Júpiter, Saturno | Ilustração: sem nenhuma textura, rampa de cor em degrau |
 
+A rampa de luz dos três mundos ilustrados é **deslocada de propósito**
+(`facing * 0.55 + 0.42`, nove degraus): centrada em 0,5 ela gastava metade
+dos degraus no hemisfério invisível, e 64% do disco caía em duas faixas que
+diferiam 16% — era essa a causa de Saturno ler chapado. Junto com isso,
+o posterizador por canal está fora do caminho TOON (ele existe para domar
+fotografia, e ali não há textura), o limbo tem piso e expoente próprios, e
+há um lustro fraco em dois degraus no vetor médio. **Não desfaça nenhum dos
+quatro procurando "mais faixas": as faixas nunca foram o problema.**
+
 Os três mundos de passagem usam `toon: { a, b, c, bands }` em
 `createPlanet`. `bands` acima de zero dá o listrado de gigante gasoso; zero dá
 manchas largas de mundo rochoso. Cores atuais em `TriScene.tsx`, no array
@@ -44,11 +53,13 @@ Medidos num iPhone 13 emulado com a CPU quatro vezes mais lenta:
 
 | Métrica | Valor |
 | ------- | ----- |
-| Custo médio por quadro | 36,6ms |
-| Pior quadro da rolagem | 200ms |
+| Custo médio por quadro | 33,7ms (mediana de três corridas) |
+| Pior quadro da rolagem | 183 a 300ms, conforme a corrida |
 | Maior travada da abertura | 1126ms |
 | Cena visível | ~1870ms |
 | Razão de pixels no celular | 1,75 |
+| MSAA no celular | ligado (custa +0,4ms, medido) |
+| Céu do celular | 2k regravado do 4k, 29 kB |
 
 **Não regrida isso sem justificativa visual proporcional, medida.**
 
@@ -96,6 +107,14 @@ aplicava degraus sobre a foto da NASA; as fronteiras das faixas de cor andavam
 com a rotação e o resultado foi Júpiter piscando. O que funcionou foi tirar a
 textura inteira.
 
+**MSAA no celular foi desligado por uma premissa que caiu.** O comentário
+dizia que lá o bloom estava sempre ligado e um composer desenhava num alvo
+próprio, deixando ao canvas só um quad sem bordas. Mas `wantsPostFx` é
+`!weakDevice && !lightweight`: no celular o composer não existe e o laço cai
+em `renderer.render` direto no framebuffer padrão, que é onde a flag atua.
+Religado, custa +0,4ms sobre 33,2 — medido três vezes de cada lado. Antes de
+desligar de novo, confira se a premissa voltou a valer.
+
 **Bloom e nitidez não cabem juntos no celular.** Com razão de pixels 1,75 o
 composer trabalha num alvo grande; devolver o bloom deu 182ms por quadro. O
 brilho dos astros é feito dentro dos próprios shaders — ver o termo `spread`
@@ -118,8 +137,13 @@ causas distintas, todas corrigidas. Se ela voltar, procure aqui primeiro:
 2. Nebulosa procedural assada e sobreposta ao céu aos ~14s. Desligada no
    celular (`nebula = 0`).
 3. Bloom entrando aos 90 quadros. Fora do celular.
-4. Troca de degrau da textura do céu, de 1k para 2k comprimido. O céu do
-   celular fica no degrau leve e não sobe.
+4. ~~Troca de degrau da textura do céu, de 1k para 2k comprimido.~~
+   **Revertido, e a reversão é medida.** O 2k realmente trazia blocagem, mas
+   o defeito era o encode, não o degrau. Regravado do 4k com lanczos3 a q82
+   ele mede razão de blocagem 1,57 contra 2,17 do anterior — menos blocado
+   até que o próprio 4k — com 46% mais detalhe interior. O 1k que estava
+   fixado era o pior dos três por texel; ele só não parecia blocado porque
+   aparecia ampliado 9,9 vezes. O celular sobe para 2k.
 
 ## Onde mexer
 
@@ -141,6 +165,17 @@ O formato de cada linha de keyframe:
 A presença do buraco negro depende do `morph`, que é **amortecido**: trocar de
 astro tarde demais faz ele entrar fraco. A troca acontece em 0,318, dentro da
 explosão, onde o campo está disperso e a costura não aparece.
+
+A amostragem é **Hermite cúbica monótona** (Fritsch–Carlson), não smoothstep
+por trecho. A versão antiga zerava a derivada dos dois lados de toda linha, e
+o movimento freava até parar em cada uma. Monótona é obrigatório e não é
+gosto: a tabela tem máximos locais (escala 1,70 em 0,946) e mínimos chapados,
+e Catmull-Rom puro faria a opacidade passar de 1 e ficar negativa.
+
+O amortecimento é **separado por canal**: posição e escala em 3,8 porque
+abaixar isso deixa a cena para trás do dedo, opacidade em 2,2, e forma em 2,0
+**apenas quando `form > 1.6`** — a troca planeta para buraco negro tem só
+495px e precisa da taxa cheia para o disco não entrar fraco.
 
 ## Frentes abertas para esta sessão
 
