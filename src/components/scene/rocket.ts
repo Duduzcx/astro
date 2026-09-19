@@ -923,15 +923,32 @@ export function createRocket({
          que mostra os flaps), acelerando conforme sobe. */
       /* Gira mais: parado na plataforma o veículo precisa mostrar que
          está vivo, e na subida o rolamento é o que dá a sensação de voo. */
-      /* Giro no próprio eixo. Em cruzeiro ele passa de 0,34 para 0,95 rad/s:
-         a 0,34 uma volta completa levava dezoito segundos, mais do que o
-         foguete fica em cena entre dois planetas, então o giro existia sem
-         ser visto. A velocidade não é constante — uma onda lenta acelera e
-         segura a rotação, e é isso que separa um barrel roll de um espeto
-         girando em rotisserie. */
-      const rollRate = cruise ? 0.95 + Math.sin(time * 0.23) * 0.45 : 0.3 + lift * 0.8
-      object.rotation.y =
-        Math.sin(time * 0.15) * 0.35 * (1 - flying) + time * rollRate * flying
+      /* Giro no próprio eixo. Na subida continua sendo rotação contínua, que
+         é o que um lançamento faz de verdade.
+
+         Em cruzeiro, perto dos planetas, virou MANOBRA: uma volta inteira de
+         360 graus, com aceleração e frenagem, e uma pausa antes da seguinte.
+         Rotação contínua não servia — mesmo a 0,95 rad/s, com o fator de voo
+         de 0,6, uma volta levava onze segundos, mais tempo do que o foguete
+         passa perto de cada planeta. O giro existia e nunca era visto
+         fechar. Aqui o ângulo avança exatamente 2π por ciclo, então cada
+         passagem mostra uma volta completa começando e terminando.
+
+         A volta ocupa 64% do ciclo e o resto é pausa; a suavização cúbica
+         nas duas pontas é o que separa um barrel roll de um espeto girando
+         em rotisserie. Sem `%` no ângulo acumulado: ele é somado a partir do
+         número inteiro de voltas já dadas, então nunca salta. */
+      if (cruise) {
+        const CICLO = 5.2
+        const voltas = Math.floor(time / CICLO)
+        const fase = Math.min((time / CICLO - voltas) / 0.64, 1)
+        const suave = fase * fase * (3 - 2 * fase)
+        object.rotation.y = (voltas + suave) * Math.PI * 2
+      } else {
+        const rollRate = 0.3 + lift * 0.8
+        object.rotation.y =
+          Math.sin(time * 0.15) * 0.35 * (1 - flying) + time * rollRate * flying
+      }
       /* Max-Q: entre um quinto e a metade da subida o ar ainda é denso e a
          velocidade já é alta. É onde o veículo mais treme. */
       const maxQ = Math.max(0, Math.sin(Math.min(Math.max((lift - 0.12) / 0.45, 0), 1) * Math.PI))
