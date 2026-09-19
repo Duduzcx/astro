@@ -79,117 +79,281 @@
     />
     <!-- Animação da tela de entrada. Só o movimento mora aqui; tudo que PINTA
          está em atributo style inline no próprio elemento, e isso é de
-         propósito: a tentativa anterior desta tela viveu em src/index.css e o
-         fundo nunca chegou a pintar, porque uma regra dentro de @layer perde
-         para as utilidades do Tailwind v4. Atributo inline não perde para
-         camada nenhuma. -->
+         propósito: a primeira versão desta tela viveu em src/index.css e o
+         fundo nunca chegou a pintar, porque regra dentro de @layer perde para
+         as utilidades do Tailwind v4. Atributo inline não perde para camada
+         nenhuma. Aqui ficam só keyframes, que ninguém sobrescreve. -->
     <style>
+      @keyframes entradaGira {
+        to { transform: rotate(360deg); }
+      }
+      @keyframes entradaPulso {
+        0% { transform: scale(0.62); opacity: 0; }
+        18% { opacity: 0.5; }
+        100% { transform: scale(1.45); opacity: 0; }
+      }
       /* A respiração é do conjunto, não de cada pétala. Animar as quatro em
-         tempos diferentes parecia boa ideia e não é: a 52px elas se
-         sobrepõem, então opacidades diferentes não leem como pétalas e sim
-         como cinza sujo por cima da marca. */
+         tempos diferentes parecia boa ideia e não é: no tamanho em que a
+         marca aparece elas se sobrepõem, então opacidades diferentes não leem
+         como pétalas e sim como cinza sujo por cima do logotipo. */
       @keyframes entradaRespira {
-        0%, 100% { opacity: 0.86; transform: scale(1); }
-        50% { opacity: 1; transform: scale(1.045); }
+        0%, 100% { opacity: 0.88; transform: scale(1); }
+        50% { opacity: 1; transform: scale(1.04); }
       }
       @keyframes entradaBarra {
         from { width: 0%; }
-        to { width: 88%; }
+        to { width: 96%; }
       }
-      #entrada svg { animation: entradaRespira 2.8s ease-in-out infinite; }
-      #entrada-barra { animation: entradaBarra 2.6s cubic-bezier(0.16, 0.9, 0.3, 1) forwards; }
+      /* As linhas de boot são animadas por CSS, não por JavaScript, e a razão
+         é medida: enquanto a cena compila shaders a thread principal fica
+         presa por mais de dois segundos, e nesse intervalo nenhum temporizador
+         roda — o texto congelava justamente no trecho que ele existe para
+         preencher. Opacidade é propriedade de compositor, então estas seguem
+         andando mesmo com a thread travada, como o anel e a barra. */
+      @keyframes entradaLinha {
+        0% { opacity: 0; }
+        9% { opacity: 1; }
+        86% { opacity: 1; }
+        100% { opacity: 0; }
+      }
+      @keyframes entradaLinhaFinal {
+        0% { opacity: 0; }
+        9%, 100% { opacity: 1; }
+      }
+      .entrada-linha {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+        opacity: 0;
+        animation: entradaLinha 780ms ease-in-out both;
+      }
+      .entrada-linha:nth-child(2) { animation-delay: 780ms; }
+      .entrada-linha:nth-child(3) { animation-delay: 1560ms; }
+      .entrada-linha:nth-child(4) {
+        animation-name: entradaLinhaFinal;
+        animation-delay: 2340ms;
+        animation-fill-mode: forwards;
+      }
+      /* A saída também é do compositor, e pelo mesmo motivo das linhas: um
+         setTimeout para o fim do piso disparava 2,1s atrasado, porque a fila
+         de aquecimento dos shaders prende a thread principal DEPOIS do
+         primeiro quadro. A tela durava 5,6s em vez dos 3,5 pedidos. Marcando
+         a animação com atraso, quem conta o tempo é o compositor e a duração
+         passa a não depender de quanto a thread está ocupada. */
+      @keyframes entradaSai {
+        to { opacity: 0; }
+      }
+      @keyframes entradaSaiMiolo {
+        to { opacity: 0; transform: scale(1.06); }
+      }
+      @keyframes entradaBarraFim {
+        to { width: 100%; }
+      }
+      @keyframes entradaCursor {
+        0%, 48% { opacity: 1; }
+        49%, 100% { opacity: 0; }
+      }
+      #entrada-radar { animation: entradaGira 2.4s linear infinite; }
+      .entrada-pulso { animation: entradaPulso 3.2s cubic-bezier(0.2, 0.6, 0.3, 1) infinite; }
+      #entrada-marca { animation: entradaRespira 2.8s ease-in-out infinite; }
+      #entrada-barra { animation: entradaBarra 3.4s cubic-bezier(0.22, 0.85, 0.3, 1) forwards; }
+      .entrada-cursor { animation: entradaCursor 1.05s step-end infinite; }
+      /* Quem pede menos movimento recebe a mesma tela, parada. O texto de
+         boot continua trocando: é informação, não enfeite. */
       @media (prefers-reduced-motion: reduce) {
-        #entrada svg { animation: none; opacity: 1; }
-        #entrada-barra { animation: none; width: 88%; }
+        #entrada-radar,
+        .entrada-pulso,
+        #entrada-marca,
+        .entrada-cursor { animation: none; }
+        /* Sem movimento, só a última linha fica: as intermediárias piscariam
+           sem transição e viraria ruído. */
+        .entrada-linha { animation: none; opacity: 0; }
+        .entrada-linha:nth-child(4) { opacity: 1; }
+        .entrada-pulso { opacity: 0.18; }
+        #entrada-barra { animation: none; width: 96%; }
       }
     </style>
   </head>
   <body>
     <!-- A tela de entrada vive no HTML, não no React: ela precisa estar na
          tela antes de o bundle existir, que é justamente o trecho em que não
-         há nada para ver. Sai quando a cena desenha o primeiro quadro. -->
+         há nada para ver. Não encosta no #root nem na cena; é uma camada por
+         cima, e some sozinha. -->
     <div
       id="entrada"
       role="status"
-      aria-label="Carregando"
-      style="position:fixed;inset:0;z-index:2147483647;background-color:#0a0f1e;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;"
+      aria-label="Iniciando"
+      style="position:fixed;inset:0;z-index:2147483647;background-color:#0a0f1e;display:flex;align-items:center;justify-content:center;"
     >
       <div
         aria-hidden="true"
-        style="position:absolute;inset:0;background:radial-gradient(58% 42% at 50% 46%, rgba(77,132,224,0.16), rgba(10,15,30,0) 70%);"
+        style="position:absolute;inset:0;background:radial-gradient(56% 40% at 50% 47%, rgba(77,132,224,0.17), rgba(10,15,30,0) 72%);"
       ></div>
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="-8 -8 136 136"
-        aria-hidden="true"
-        style="position:relative;width:52px;height:52px;"
-      >
-        <path d="M 71.84 50.99 Q 79.31 57.61 91.00 60.00 Q 79.31 62.39 71.84 69.01 L 93.91 91.08 A 46 46 0 0 0 93.91 28.92 Z" fill="#f5f7fb" transform="rotate(-90 60 60)"/>
-        <path d="M 71.84 50.99 Q 79.31 57.61 91.00 60.00 Q 79.31 62.39 71.84 69.01 L 93.91 91.08 A 46 46 0 0 0 93.91 28.92 Z" fill="#f5f7fb" transform="rotate(0 60 60)"/>
-        <path d="M 71.84 50.99 Q 79.31 57.61 91.00 60.00 Q 79.31 62.39 71.84 69.01 L 93.91 91.08 A 46 46 0 0 0 93.91 28.92 Z" fill="#f5f7fb" transform="rotate(90 60 60)"/>
-        <path d="M 71.84 50.99 Q 79.31 57.61 91.00 60.00 Q 79.31 62.39 71.84 69.01 L 93.91 91.08 A 46 46 0 0 0 93.91 28.92 Z" fill="#f5f7fb" transform="rotate(180 60 60)"/>
-      </svg>
+
       <div
-        style="position:relative;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;line-height:1;letter-spacing:0.42em;text-indent:0.42em;color:#7583a0;text-transform:uppercase;"
+        id="entrada-miolo"
+        style="position:relative;display:flex;flex-direction:column;align-items:center;"
       >
-        Astro Soluções
-      </div>
-      <div
-        style="position:relative;width:170px;height:2px;border-radius:2px;background-color:rgba(117,131,160,0.22);overflow:hidden;"
-      >
+        <!-- Anel, varredura e pulso. A varredura é um gradiente cônico
+             recortado em aro por uma máscara radial: um elemento só, sem
+             canvas, sem imagem e sem nada que dispute GPU com a cena. -->
         <div
-          id="entrada-barra"
-          style="height:100%;width:0;border-radius:2px;background-color:#4d84e0;box-shadow:0 0 10px rgba(77,132,224,0.85);"
-        ></div>
+          aria-hidden="true"
+          style="position:relative;width:136px;height:136px;display:flex;align-items:center;justify-content:center;"
+        >
+          <div class="entrada-pulso" style="position:absolute;inset:0;border-radius:50%;border:1px solid rgba(77,132,224,0.5);"></div>
+          <div class="entrada-pulso" style="position:absolute;inset:0;border-radius:50%;border:1px solid rgba(77,132,224,0.5);animation-delay:1.6s;"></div>
+          <div style="position:absolute;inset:0;border-radius:50%;border:1px solid rgba(117,131,160,0.2);"></div>
+          <div style="position:absolute;inset:19px;border-radius:50%;border:1px solid rgba(117,131,160,0.11);"></div>
+          <div
+            id="entrada-radar"
+            style="position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg, rgba(77,132,224,0) 0deg, rgba(77,132,224,0) 232deg, rgba(77,132,224,0.42) 330deg, rgba(126,169,245,0.95) 359deg, rgba(77,132,224,0) 360deg);-webkit-mask:radial-gradient(circle at 50% 50%, transparent 0 63%, #000 65% 100%);mask:radial-gradient(circle at 50% 50%, transparent 0 63%, #000 65% 100%);"
+          ></div>
+          <svg
+            id="entrada-marca"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="-8 -8 136 136"
+            aria-hidden="true"
+            style="position:relative;width:46px;height:46px;"
+          >
+            <path d="M 71.84 50.99 Q 79.31 57.61 91.00 60.00 Q 79.31 62.39 71.84 69.01 L 93.91 91.08 A 46 46 0 0 0 93.91 28.92 Z" fill="#f5f7fb" transform="rotate(-90 60 60)"/>
+            <path d="M 71.84 50.99 Q 79.31 57.61 91.00 60.00 Q 79.31 62.39 71.84 69.01 L 93.91 91.08 A 46 46 0 0 0 93.91 28.92 Z" fill="#f5f7fb" transform="rotate(0 60 60)"/>
+            <path d="M 71.84 50.99 Q 79.31 57.61 91.00 60.00 Q 79.31 62.39 71.84 69.01 L 93.91 91.08 A 46 46 0 0 0 93.91 28.92 Z" fill="#f5f7fb" transform="rotate(90 60 60)"/>
+            <path d="M 71.84 50.99 Q 79.31 57.61 91.00 60.00 Q 79.31 62.39 71.84 69.01 L 93.91 91.08 A 46 46 0 0 0 93.91 28.92 Z" fill="#f5f7fb" transform="rotate(180 60 60)"/>
+          </svg>
+        </div>
+
+        <div
+          style="margin-top:30px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:10px;line-height:1;letter-spacing:0.42em;text-indent:0.42em;color:#7583a0;text-transform:uppercase;"
+        >
+          Astro Soluções
+        </div>
+
+        <div
+          aria-hidden="true"
+          style="margin-top:24px;width:186px;height:2px;border-radius:2px;background-color:rgba(117,131,160,0.2);overflow:hidden;"
+        >
+          <div
+            id="entrada-barra"
+            style="height:100%;width:0;border-radius:2px;background-color:#4d84e0;box-shadow:0 0 10px rgba(77,132,224,0.85);"
+          ></div>
+        </div>
+
+        <!-- Altura fixa: as linhas têm comprimentos diferentes, e sem isto a
+             barra acima dançaria a cada troca. -->
+        <!-- Altura e largura fixas: as linhas têm comprimentos diferentes e
+             ficam empilhadas uma sobre a outra, então nada acima se mexe
+             quando uma dá lugar à seguinte. -->
+        <div
+          style="position:relative;margin-top:18px;height:14px;width:280px;max-width:82vw;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;line-height:1;color:#7583a0;"
+        >
+          <span class="entrada-linha">
+            <span aria-hidden="true" style="color:#4d84e0;margin-right:7px;">&gt;</span>
+            Iniciando sistemas
+            <span class="entrada-cursor" aria-hidden="true" style="margin-left:3px;color:#4d84e0;">_</span>
+          </span>
+          <span class="entrada-linha">
+            <span aria-hidden="true" style="color:#4d84e0;margin-right:7px;">&gt;</span>
+            Calibrando rotas de navegação
+            <span class="entrada-cursor" aria-hidden="true" style="margin-left:3px;color:#4d84e0;">_</span>
+          </span>
+          <span class="entrada-linha">
+            <span aria-hidden="true" style="color:#4d84e0;margin-right:7px;">&gt;</span>
+            Sincronizando telemetria
+            <span class="entrada-cursor" aria-hidden="true" style="margin-left:3px;color:#4d84e0;">_</span>
+          </span>
+          <span class="entrada-linha">
+            <span aria-hidden="true" style="color:#4d84e0;margin-right:7px;">&gt;</span>
+            Ambiente virtual pronto
+            <span class="entrada-cursor" aria-hidden="true" style="margin-left:3px;color:#4d84e0;">_</span>
+          </span>
+        </div>
       </div>
     </div>
     <div id="root"></div>
     <script>
-      /* Tira a tela de entrada. O sinal honesto é o primeiro quadro desenhado
-         pela cena, não "o script carregou": entre um e outro há quase dois
-         segundos de tela vazia, que é o problema que esta tela resolve.
+      /* A tela de entrada. Duas regras governam a saída, e ela espera as duas:
+         um PISO de tempo, para a abertura ler como sistema subindo e não como
+         piscada, e o primeiro quadro que a cena realmente desenhou. Esperar só
+         o piso mostraria a cena crua; esperar só a cena traria de volta a
+         entrada abrupta em conexão rápida.
 
-         Três garantias. Um piso de 900ms, senão em conexão rápida ela pisca e
-         vira sujeira. Um teto de 7s, para que uma cena que nunca sinalize não
-         deixe ninguém preso olhando uma barra. E a rolagem fica travada
-         enquanto ela está de pé, porque a cena lê scrollY a cada quadro e
-         rolar às cegas por baixo faz o astro saltar quando a tela sai. */
+         O sinal da cena é o evento astro:cena-pronta, disparado em TriScene no
+         primeiro quadro. É o marco honesto: não "o script carregou", e sim "há
+         imagem". Nada aqui toca no #root, no React ou na cena. */
       (function () {
         var tela = document.getElementById('entrada')
         if (!tela) return
+        var miolo = document.getElementById('entrada-miolo')
         var barra = document.getElementById('entrada-barra')
+
+        var PISO = 3500
+        /* Teto de segurança: uma cena que nunca sinalize — WebGL recusado,
+           aparelho sem contexto, erro no bundle — não pode deixar ninguém
+           preso olhando uma barra. Aos 9s a tela sai de qualquer jeito. */
+        var TETO = 9000
+
         var nasceu = Date.now()
         var saiu = false
+        var pronta = false
         var raizEstilo = document.documentElement.style.overflow
+        /* A cena lê scrollY a cada quadro. Sem travar, quem rolasse às cegas
+           por baixo da tela veria o astro saltar no instante em que ela sai. */
         document.documentElement.style.overflow = 'hidden'
 
-        function sair() {
+        var SAIDA = 900
+
+        /* Marca a saída para daqui a `espera` milissegundos. O fade é lento de
+           propósito, e o miolo se afasta um fio enquanto some: o olho lê isso
+           como a camada saindo de cena, não como um elemento sendo apagado.
+           Por baixo, o foguete já está desenhado e nítido. */
+        function sair(espera) {
           if (saiu) return
           saiu = true
+          espera = Math.max(0, espera || 0)
+          var curva = 'cubic-bezier(0.32, 0, 0.2, 1)'
           if (barra) {
-            barra.style.animation = 'none'
-            barra.style.transition = 'width 260ms ease-out'
-            barra.style.width = '100%'
+            barra.style.animation =
+              'entradaBarra 3.4s cubic-bezier(0.22,0.85,0.3,1) forwards,' +
+              ' entradaBarraFim 300ms ease-out ' + Math.max(0, espera - 300) + 'ms forwards'
           }
-          tela.style.transition = 'opacity 480ms ease'
-          tela.style.opacity = '0'
-          tela.style.pointerEvents = 'none'
-          document.documentElement.style.overflow = raizEstilo
-          /* O Lenis mede a página uma vez; com a rolagem travada ele podia ter
-             medido zero. Um resize o faz recontar. */
-          window.dispatchEvent(new Event('resize'))
+          if (miolo) {
+            miolo.style.animation = 'entradaSaiMiolo ' + SAIDA + 'ms ' + curva + ' ' + espera + 'ms forwards'
+          }
+          tela.style.animation = 'entradaSai ' + SAIDA + 'ms ' + curva + ' ' + espera + 'ms forwards'
+
+          /* A limpeza pode chegar atrasada sem custo nenhum: a esta altura a
+             tela já está invisível pelo compositor. O que ela faz é devolver a
+             rolagem e tirar o elemento do caminho. */
           setTimeout(function () {
+            tela.style.pointerEvents = 'none'
+            document.documentElement.style.overflow = raizEstilo
+            /* O Lenis mede a página uma vez; com a rolagem travada ele pode
+               ter medido zero. Um resize o faz recontar. */
+            window.dispatchEvent(new Event('resize'))
             if (tela.parentNode) tela.parentNode.removeChild(tela)
-          }, 520)
+          }, espera + SAIDA + 60)
         }
 
-        function pedirSaida() {
-          var espera = Math.max(0, 900 - (Date.now() - nasceu))
-          setTimeout(sair, espera)
+        function avaliar() {
+          if (saiu || !pronta) return
+          sair(PISO - (Date.now() - nasceu))
         }
 
-        window.addEventListener('astro:cena-pronta', pedirSaida, { once: true })
-        setTimeout(sair, 7000)
+        window.addEventListener(
+          'astro:cena-pronta',
+          function () {
+            pronta = true
+            avaliar()
+          },
+          { once: true },
+        )
+        setTimeout(function () {
+          sair(0)
+        }, TETO)
       })()
     </script>
     <script type="module" src="/src/main.tsx"></script>

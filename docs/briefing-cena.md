@@ -231,12 +231,34 @@ o fundo nunca chegou a pintar, porque regra dentro de `@layer` perde para as
 utilidades. **Tudo que pinta está em atributo `style` inline**, que não perde
 para camada nenhuma; o bloco `<style>` no `<head>` só carrega os keyframes.
 
-Ela sai no primeiro quadro desenhado pela cena, que dispara
-`astro:cena-pronta` em `TriScene.tsx`. É o marco honesto: não "o script
-carregou", e sim "há imagem". Piso de 900ms para não piscar, teto de 7s para
-ninguém ficar preso, e a rolagem fica travada enquanto ela está de pé
-(a cena lê `scrollY` a cada quadro; rolar às cegas por baixo faz o astro
-saltar quando ela sai). Ao sair, dispara um `resize` para o Lenis recontar.
+Ela espera DUAS coisas: um piso de 3,5s, para a abertura ler como sistema
+subindo, e o primeiro quadro desenhado pela cena, que dispara
+`astro:cena-pronta` em `TriScene.tsx` — o marco honesto, não "o script
+carregou" e sim "há imagem". Teto de 9s para ninguém ficar preso, e a
+rolagem trava enquanto ela está de pé (a cena lê `scrollY` a cada quadro;
+rolar às cegas por baixo faz o astro saltar quando ela sai). Ao sair,
+dispara um `resize` para o Lenis recontar.
+
+**Nada que precise de tempo certo aqui pode depender da thread principal.**
+Esta é a lição cara desta tela. Depois do primeiro quadro, a fila de
+aquecimento dos shaders prende a thread por mais de dois segundos, e nesse
+intervalo nenhum temporizador roda. Medido: as linhas de boot por
+`setInterval` caíam em 3610ms quando deviam cair em 762ms, e o `setTimeout`
+do fim do piso disparava 2,1s atrasado — a tela durava 5,6s em vez de 3,5.
+
+A solução é pôr tudo que conta tempo no compositor. As quatro linhas trocam
+por `animation-delay` encadeado, e a saída é uma animação marcada com atraso
+igual ao que falta do piso, em vez de um `setTimeout`. Conferido pela Web
+Animations API, cujo `startTime` o compositor escreve: animação criada aos
+1977ms com 1531ms de atraso, fade visível começando em 3508ms. Só a limpeza
+(remover o nó, devolver a rolagem) continua em `setTimeout`, e pode chegar
+atrasada sem custo — a esta altura a tela já está invisível.
+
+**Para medi-la, não confie em sonda que rode na página nem em captura do
+Playwright.** As duas esperam a thread: a captura chega a sair 3,7s depois
+do pedido, com a tela já fora, e uma sonda com `setInterval` mede a própria
+blocagem. Use `getAnimations()[i].startTime` para tempo, e
+`p.route('**/assets/**.js', ...)` com atraso para ver a tela parada.
 
 **Para medi-la, segure o bundle.** Uma captura do Playwright durante a
 abertura só retorna depois que a thread principal para de compilar shaders,
