@@ -159,6 +159,9 @@ const SURFACE_FRAGMENT = /* glsl */ `
        seguem o mesmo ramo e não há divergência. Marte volta por aqui ao que
        era antes, enquanto Saturno e Júpiter ficam com o tratamento novo. */
     bool gigante = uToonBands > 0.5;
+    /* Saturno tem doze faixas, Júpiter onze. O tratamento de alta chave
+       abaixo é direção de arte pedida para Saturno; Júpiter fica como está. */
+    bool saturno = uToonBands > 11.5;
 
 #ifdef TOON
     /* Rampa chapada, sem textura nenhuma.
@@ -197,7 +200,10 @@ const SURFACE_FRAGMENT = /* glsl */ `
                  + sin(vUv.x * 6.2831853 * 9.0 + lat * 33.0 - uTime * 0.02) * 0.003;
       float lw = lat + wave + curl * nearEdge;
       float wide = sin(lw * uToonBands * 3.14159265);
-      float fine = sin(lw * uToonBands * 2.7 + 1.3) * 0.22;
+      /* Mais peso no termo de frequência quebrada em Saturno: na referência
+         as zonas têm larguras bem diferentes entre si, e faixa toda do mesmo
+         tamanho lê como papel listrado. */
+      float fine = sin(lw * uToonBands * 2.7 + 1.3) * (saturno ? 0.32 : 0.22);
       /* O termo miúdo desceu de 6,3 para 1,9 vez a frequência da faixa. A
          6,3 ele cruzava as fronteiras de degrau tantas vezes por pixel que
          virava um emaranhado de fios finos espalhado pela bola — lia como
@@ -212,9 +218,14 @@ const SURFACE_FRAGMENT = /* glsl */ `
          isso que lê como borrão. Por cinco, cada degrau anda (9, 12, 17) e
          a faixa volta a ser traço. A borda continua acompanhando um pixel de
          tela pelo fwidth, então nada serrilha. */
-      float scaled = stripes * 5.0;
+      /* Oito degraus em Saturno. Cinco existiam para tirar o borrão de quando
+         as faixas ainda se desmanchavam em manchas; resolvida a deformação,
+         a referência pede o contrário — faixa larga, macia e de baixo
+         contraste, sem borda marcada. Júpiter fica nos cinco. */
+      float degraus = saturno ? 8.0 : 5.0;
+      float scaled = stripes * degraus;
       float soft = max(fwidth(scaled) * 0.8, 0.015);
-      t = (floor(scaled) + smoothstep(0.5 - soft, 0.5 + soft, fract(scaled))) / 5.0;
+      t = (floor(scaled) + smoothstep(0.5 - soft, 0.5 + soft, fract(scaled))) / degraus;
     } else {
       /* Mundo rochoso em degraus.
          Antes eram dois tons separados por uma fronteira macia, e o
@@ -260,6 +271,20 @@ const SURFACE_FRAGMENT = /* glsl */ `
        saía travado em 28 a 31 graus quando a paleta define 35 a 41 — a
        mancha soma vec3(0.12, 0.03, 0.0), que é empurrão puro para o
        vermelho, e era boa parte da cor de barro. Júpiter tem onze. */
+    /* O cinturão malva. Na referência é ele que tira Saturno do "bola
+       dourada" e dá o ar caro: uma faixa larga de rosa-poeira acinzentado um
+       pouco abaixo do equador, entre os tons de creme. Custa um smoothstep
+       duplo e uma mistura. */
+    if (saturno) {
+      float faixa = smoothstep(0.40, 0.50, lat) * smoothstep(0.70, 0.58, lat);
+      albedo = mix(albedo, vec3(0.69, 0.585, 0.60), faixa * 0.62);
+      /* Uma segunda faixa, estreita e mais clara, logo abaixo: na referência
+         o malva não é um bloco só, são duas listras de larguras diferentes
+         com creme entre elas. É essa desigualdade que tira o ar de papel
+         listrado. */
+      float faixaB = smoothstep(0.70, 0.745, lat) * smoothstep(0.81, 0.775, lat);
+      albedo = mix(albedo, vec3(0.76, 0.685, 0.665), faixaB * 0.4);
+    }
     if (uToonBands > 10.5 && uToonBands < 11.5) {
       vec2 spot = vec2((fract(vUv.x + 0.22) - 0.5) * 2.4, (lat - 0.63) * 7.0);
       float mark = smoothstep(1.0, 0.25, length(spot));
@@ -489,7 +514,13 @@ const SURFACE_FRAGMENT = /* glsl */ `
     float soft = max(fwidth(scaled) * 1.1, 0.02);
     float band = floor(scaled) + smoothstep(0.5 - soft, 0.5 + soft, fract(scaled));
     float bruto = clamp(band / passos, 0.0, 1.0);
-    float day = gigante ? mix(clamp(ramp, 0.0, 1.0), bruto, 0.3)
+    /* Em Saturno o degrau quase some (0,10 contra 0,30) e a rampa ganha um
+       expoente abaixo de 1, que levanta os meios-tons: a referência tem um
+       terminador longuíssimo, sem nenhum degrau visível, e o lado iluminado
+       quase branco. */
+    float liso = clamp(ramp, 0.0, 1.0);
+    if (saturno) liso = pow(liso, 0.78);
+    float day = gigante ? mix(liso, bruto, saturno ? 0.10 : 0.3)
                         : smoothstep(0.06, 0.94, bruto);
 
     /* A fotografia da NASA é plana de propósito, porque é dado. Ilustração
@@ -528,10 +559,17 @@ const SURFACE_FRAGMENT = /* glsl */ `
        para 58. Era por isso que a esfera saía suja e que subir as faixas de
        7 para 12 nunca apareceu — o posterizador esmagava todas de volta. */
 
-    vec3 color = albedo * (0.14 + 0.86 * day);
+    /* Piso de luz alto em Saturno: na referência o lado escuro não é breu,
+       é um cinza frio e macio, e o corpo inteiro vive na parte de cima da
+       escala. Com 0,14 ele lia subexposto ao lado dela. */
+    vec3 color = albedo * (saturno ? 0.30 + 0.70 * day : 0.14 + 0.86 * day);
     /* A sombra vai para o azul, não para o cinza. É o que separa desenho
        de foto subexposta. */
-    color = mix(color, color * vec3(0.40, 0.52, 0.88), (1.0 - day) * 0.85);
+    /* A sombra de Saturno é cinza-frio discreto, não azul forte: na
+       referência ela desatura sem trocar de cor. */
+    color = saturno
+      ? mix(color, color * vec3(0.62, 0.66, 0.78), (1.0 - day) * 0.55)
+      : mix(color, color * vec3(0.40, 0.52, 0.88), (1.0 - day) * 0.85);
     /* Um só clarão na água, e mesmo assim em degrau: três potências e um
        ponto minúsculo não sobrevivem a uma tela de mão. */
     float glint = smoothstep(0.86, 0.94, max(dot(reflect(-uLight, n), v), 0.0));
@@ -595,8 +633,11 @@ const SURFACE_FRAGMENT = /* glsl */ `
        Saturno, a luminância caía de 151 para 43 atravessando o disco, e um
        corpo que perde 3,5 vezes o brilho lê como barro, não como volume.
        O rochoso volta exatamente ao que era. */
-    float limbFloor = gigante ? 0.62 : ((uKind > 1.5 && uKind < 2.5) ? 0.68 : 0.45);
-    float limbPow = gigante ? 1.15 : 0.55;
+    /* Saturno quase não escurece na borda: a referência perde luz para o
+       terminador, não para o limbo, e é isso que a deixa com ar de fotografia
+       bem exposta em vez de bola com vinheta. */
+    float limbFloor = saturno ? 0.74 : (gigante ? 0.62 : ((uKind > 1.5 && uKind < 2.5) ? 0.68 : 0.45));
+    float limbPow = saturno ? 0.9 : (gigante ? 1.15 : 0.55);
     float limb = mix(limbFloor, 1.0, pow(max(dot(geomN, v), 0.0), limbPow));
     color *= limb;
 
@@ -637,7 +678,11 @@ const SURFACE_FRAGMENT = /* glsl */ `
        desenho bom usa para separar o objeto do fundo. Estreita e forte,
        porque é ela que dá a silhueta. */
     float ink = pow(1.0 - max(dot(geomN, v), 0.0), 4.0) * smoothstep(-0.25, 0.45, dot(geomN, uLight));
-    color += mix(uHaze, vec3(1.0), 0.65) * ink * 0.9;
+    /* Em Saturno o contorno quase some. Ele é linguagem de desenho e serve
+       Marte e Júpiter, mas a referência não tem fio nenhum na borda: o que
+       separa o planeta do fundo lá é a própria massa clara. Com o fio, a
+       esfera ganhava um brilho de neon no limbo que denunciava o shader. */
+    color += mix(uHaze, vec3(1.0), 0.65) * ink * (saturno ? 0.22 : 0.9);
 #endif
     /* Sombra do anel sobre o planeta.
        É o detalhe que falta num Saturno desenhado: sem ela o anel parece
@@ -887,8 +932,12 @@ const RING_FRAGMENT = /* glsl */ `
       /* Três larguras de aro em vez de duas alternadas: o anel deixa de ter
          ritmo de código de barras e passa a ter aros largos, finos e vazios,
          que é como ele se parece de verdade. */
+      /* Aros mais densos: 1,00 / 0,78 / 0,52 em vez de 1,00 / 0,62 / 0,34. Na
+         referência o anel é uma faixa de gelo compacta, e em trechos ele é
+         MAIS claro que o planeta; o vazio fica por conta das divisões, não de
+         um aro fraco. */
       float slot = fract(step9 / 3.0);
-      bands = slot < 0.34 ? 1.0 : (slot < 0.67 ? 0.62 : 0.34);
+      bands = slot < 0.34 ? 1.0 : (slot < 0.67 ? 0.82 : 0.66);
       float gapA = smoothstep(0.585, 0.605, t) * smoothstep(0.685, 0.665, t);
       float gapB = smoothstep(0.335, 0.35, t) * smoothstep(0.392, 0.377, t);
       /* Bordas mais macias e um aro tênue para fora do limite: um anel de
@@ -896,9 +945,11 @@ const RING_FRAGMENT = /* glsl */ `
          recorte de adesivo justo onde encontra o preto. */
       float edgeIn = smoothstep(0.0, 0.075, t);
       float edgeOut = smoothstep(1.06, 0.9, t);
-      float veil = smoothstep(0.86, 1.0, t) * smoothstep(1.12, 1.0, t) * 0.22;
-      alpha = edgeIn * edgeOut * bands * 0.92 + veil;
-      alpha *= 1.0 - gapA - gapB * 0.75;
+      float veil = smoothstep(0.86, 1.0, t) * smoothstep(1.12, 1.0, t) * 0.3;
+      alpha = edgeIn * edgeOut * bands * 0.99 + veil;
+      /* As divisões continuam abrindo, mas menos: na referência a Cassini é
+         uma linha escura dentro de um anel cheio, não um rasgo. */
+      alpha *= 1.0 - gapA * 0.82 - gapB * 0.55;
     }
     /* Sombra do planeta: pontos atrás dele em relação à luz, dentro do
        cilindro de sombra, escurecem. */
@@ -906,16 +957,22 @@ const RING_FRAGMENT = /* glsl */ `
     float along = dot(p, uLightLocal);
     float off = length(p - uLightLocal * along);
     float shadow = smoothstep(${(RADIUS * 1.02).toFixed(3)}, ${(RADIUS * 0.94).toFixed(3)}, off) * step(along, 0.0);
-    float lit = 0.4 + 0.6 * abs(dot(normalize(vNormalV), uLight));
+    /* O anel de gelo espalha luz em qualquer ângulo: na referência ele não
+       escurece quando visto de raspão, continua brilhando. Por isso o piso
+       sobe de 0,40 para 0,62. */
+    float lit = 0.62 + 0.38 * abs(dot(normalize(vNormalV), uLight));
     /* Cor variando ao longo do raio: os aros de dentro são mais quentes e
        densos, os de fora esfriam e ficam acinzentados. Com uma cor só, o
        anel inteiro lia como uma peça de plástico; é o degradê radial que faz
        o olho ler gelo e poeira em distâncias diferentes. */
-    vec3 warm = mix(vec3(0.72, 0.6, 0.42), vec3(1.0, 0.96, 0.85), bands);
+    /* Prata pálido, não ouro. O anel da referência é gelo: quase branco, com
+       um resto de creme só nos aros de dentro. Era o dourado que o fazia ler
+       como aro de plástico ao lado do planeta. */
+    vec3 warm = mix(vec3(0.80, 0.755, 0.70), vec3(1.0, 0.985, 0.95), bands);
     /* O anel é dourado pálido de ponta a ponta: o que muda ao longo do raio
        é a densidade, não o matiz. Com o extremo externo puxando para o
        cinza, ele lia como concreto ao lado de um planeta de ouro. */
-    vec3 cool = mix(vec3(0.6, 0.55, 0.44), vec3(0.97, 0.94, 0.86), bands);
+    vec3 cool = mix(vec3(0.74, 0.735, 0.72), vec3(0.99, 0.99, 0.98), bands);
     vec3 color = mix(warm, cool, smoothstep(0.25, 0.95, t)) * lit * (1.0 - shadow * 0.85);
     if (uHasMap > 0.5) color = texture2D(uMap, vec2(clamp(t, 0.0, 1.0), 0.5)).rgb * lit * (1.0 - shadow * 0.85);
     gl_FragColor = vec4(color, alpha * uOpacity);

@@ -55,6 +55,21 @@ Medido no disco antes e depois: saturação 0,53 para 0,15 (a paleta define
 0,11 a 0,26 — antes a tela estava MAIS saturada que qualquer um dos tons),
 matiz 29 para 39 graus e luminância mediana 101 para 127.
 
+**Saturno tem referência fechada**, escolhida pelo cliente: o modelo "Saturn"
+de Nestaeric no Sketchfab (`c09a1970148c43ad99db134a9d6d00b5`). A miniatura
+sai pela API — `api.sketchfab.com/v3/models/<id>`, campo `thumbnails` — e
+vale baixá-la antes de discutir a cor. O que define aquele visual: corpo de
+alta chave, quase branco no topo; faixas largas e macias, de larguras
+DESIGUAIS e baixo contraste; um cinturão malva abaixo do equador, que é a
+assinatura; terminador longuíssimo sem degrau; nenhum fio de contorno no
+limbo; e anéis de gelo quase brancos e densos, em trechos mais claros que o
+planeta.
+
+Por isso Saturno tem seu próprio ramo (`saturno = uToonBands > 11.5`) e
+Júpiter não o segue: piso de luz 0,30, degrau de luz em 10%, expoente 0,78
+na rampa, piso de limbo 0,74, contorno em 0,22 e oito degraus de faixa. É
+direção de arte, não acaso — não "unifique" isso com Júpiter.
+
 Os três mundos de passagem usam `toon: { a, b, c, bands }` em
 `createPlanet`. `bands` acima de zero dá o listrado de gigante gasoso; zero dá
 manchas largas de mundo rochoso. Cores atuais em `TriScene.tsx`, no array
