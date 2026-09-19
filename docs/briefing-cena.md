@@ -70,6 +70,7 @@ node scripts/height-probe.mjs <url> <px> [device]   custo por quadro e altura
 node scripts/load-probe.mjs <url> [device]          carga e maior travada
 node scripts/section-heights.mjs <url>              alturas das seções
 node scripts/shot.mjs <url> <larg> <alt> <frações> <prefixo>
+node scripts/naked-shot.mjs <saída> <fração>       captura com o DOM escondido
 ```
 
 Servir com `npm run build && npm run preview`. **O preview sobe em
