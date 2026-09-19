@@ -35,7 +35,36 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+# Texturas, modelo do foguete e decodificador Draco. São megabytes e não têm
+# hash no nome, então sem cabeçalho o navegador revalidava TODOS a cada visita:
+# quem volta pagava uma ida e volta por arquivo antes de ver a cena. Uma hora
+# de cache firme mais uma semana servindo o antigo enquanto revalida: a visita
+# repetida fica instantânea e uma troca de textura chega em no máximo uma hora.
+# Curto de propósito — na semana do lançamento ainda se mexe nestes arquivos.
+[[headers]]
+  for = "/space/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600, stale-while-revalidate=604800"
+
+[[headers]]
+  for = "/models/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600, stale-while-revalidate=604800"
+
+[[headers]]
+  for = "/draco/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600, stale-while-revalidate=604800"
+
+[[headers]]
+  for = "/logo/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600, stale-while-revalidate=604800"
+
+# Sem captura geral para /index.html. Ela existe para aplicação com rotas no
+# cliente, e este site não tem nenhuma: é uma página só, navegada por âncoras.
+# Com ela, QUALQUER endereço errado respondia 200 com a home — o visitante com
+# um link torto via a página inicial sem saber que errou, e o buscador
+# indexava infinitas URLs duplicadas como se fossem páginas de verdade. O
+# public/404.html existia e nunca era servido. Sem a regra, o Netlify serve o
+# 404.html com status 404, que é o certo.

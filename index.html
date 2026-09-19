@@ -80,8 +80,11 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Três pesos, não cinco. 360 e 530 estavam sendo baixados e não são
+         referenciados em lugar nenhum do código: dois arquivos de fonte de
+         graça em toda primeira visita. -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@360;400;420;480;530&family=Anton&family=Allura&family=JetBrains+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;420;480&family=Anton&family=Allura&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
     <!-- Animação da tela de entrada. Só o movimento mora aqui; tudo que PINTA
@@ -330,6 +333,28 @@
       </div>
     </div>
     <div id="root"></div>
+
+    <!-- ESTE FORMULÁRIO NÃO É DECORAÇÃO, E NÃO PODE SER APAGADO.
+         O Netlify descobre formulários lendo o HTML ESTÁTICO do deploy, uma
+         vez, no build. O formulário de contato de verdade é montado pelo
+         React em tempo de execução, então o robô do Netlify nunca o via: o
+         formulário "contato" não existia do lado do servidor, e o POST que a
+         página fazia caía na regra de captura geral, que respondia 200 com o
+         index.html. A tela dizia "enviado", o visitante ia embora satisfeito
+         e a mensagem não era guardada em lugar nenhum.
+
+         Esta cópia oculta existe só para registrar o nome do formulário e os
+         campos. Os nomes têm de bater exatamente com os de Contact.tsx:
+         nome, email, empresa, desafio e o honeypot bot-field. Mexeu num,
+         mexa aqui também. Fica FORA do #root, senão o React a remove na
+         primeira renderização. -->
+    <form name="contato" data-netlify="true" netlify-honeypot="bot-field" hidden>
+      <input type="text" name="nome" />
+      <input type="email" name="email" />
+      <input type="text" name="empresa" />
+      <textarea name="desafio"></textarea>
+      <input type="text" name="bot-field" />
+    </form>
     <script src="/entrada.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
