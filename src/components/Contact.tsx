@@ -16,11 +16,27 @@ export function Contact() {
   /* Envio por AJAX: POST urlencoded para a própria página. Falhou (rede,
      deploy fora do Netlify, 4xx/5xx), a tela diz que falhou e aponta o
      WhatsApp — confirmar sem ter enviado era perder lead em silêncio. */
+  /* Quando o envio falha, o que a pessoa escreveu vai junto para o WhatsApp.
+     Sem isto ela teria de redigitar tudo, e quase ninguém redigita: o lead
+     simplesmente se perde. Guardar o texto transforma uma falha de envio num
+     contato concluído por outro caminho. */
+  const [resgate, setResgate] = useState('')
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setStatus('sending')
     const data = new FormData(event.currentTarget)
     const body = new URLSearchParams(data as unknown as Record<string, string>).toString()
+    const texto = [
+      'Olá! Tentei enviar pelo site e o formulário falhou.',
+      '',
+      `Nome: ${data.get('nome') || ''}`,
+      `E-mail: ${data.get('email') || ''}`,
+      `Empresa: ${data.get('empresa') || ''}`,
+      '',
+      String(data.get('desafio') || ''),
+    ].join('\n')
+    setResgate(`https://wa.me/5511921572675?text=${encodeURIComponent(texto)}`)
     try {
       const response = await fetch('/', {
         method: 'POST',
@@ -124,10 +140,13 @@ export function Contact() {
               >
                 <p className="text-[1.4rem] text-ivory">Não foi dessa vez.</p>
                 <p className="mt-3 max-w-sm text-ash">
-                  O envio falhou. Manda direto no WhatsApp que a gente responde na hora:
+                  O envio falhou, mas nada se perdeu: o botão abaixo abre o WhatsApp já com
+                  o que você escreveu. A gente responde na hora.
                 </p>
                 <a
-                  href={site.whatsapp.href}
+                  href={resgate || site.whatsapp.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="mt-5 inline-flex items-center gap-2.5 rounded-full bg-obsidian px-6 py-3.5 text-[15px] text-ivory transition-colors hover:bg-[#1e2c4c]"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-[#4ade80]" />
