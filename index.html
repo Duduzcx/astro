@@ -195,6 +195,39 @@
         color: #f5f7fb;
       }
       #entrada-botao:active { transform: scale(0.97); }
+      /* A CHEGADA do site, que é a outra metade da transição. Antes a tela de
+         entrada saía e a página já estava lá, pronta e parada: a saída tinha
+         movimento e a chegada não tinha nenhum, então a emenda aparecia.
+         Agora o conteúdo sobe e acende enquanto a camada se afasta, e as duas
+         coisas se sobrepõem no tempo — lê como um movimento só.
+
+         Anima `main`, `footer` e o cabeçalho, e NUNCA um ancestral deles.
+         Transform num ancestral cria bloco de contenção e prende o que é
+         `position: fixed` — e é fixo que são o canvas da cena, o cabeçalho e
+         o véu de leitura, todos filhos diretos de #root. Dentro de main e
+         footer não há nenhum fixo, por isso eles podem ser animados. */
+      @keyframes siteEntra {
+        from { opacity: 0; transform: translate3d(0, 18px, 0); }
+        to { opacity: 1; transform: translate3d(0, 0, 0); }
+      }
+      @keyframes siteEntraTopo {
+        from { opacity: 0; transform: translate3d(0, -12px, 0); }
+        to { opacity: 1; transform: translate3d(0, 0, 0); }
+      }
+      html.site-entrando main,
+      html.site-entrando footer {
+        animation: siteEntra 760ms cubic-bezier(0.16, 0.85, 0.3, 1) both;
+      }
+      /* O cabeçalho assenta por último e vindo de cima: é o que dá a
+         sensação de a interface montar em volta do conteúdo. */
+      html.site-entrando > body header {
+        animation: siteEntraTopo 620ms cubic-bezier(0.16, 0.85, 0.3, 1) 170ms both;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html.site-entrando main,
+        html.site-entrando footer,
+        html.site-entrando > body header { animation: none; }
+      }
       @keyframes entradaCursor {
         0%, 48% { opacity: 1; }
         49%, 100% { opacity: 0; }

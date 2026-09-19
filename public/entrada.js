@@ -93,6 +93,12 @@
 
     /* O miolo acelera para fora e o fundo sai atrás dele, com um atraso
        curto: o conteúdo vai embora primeiro e a cena aparece por baixo. */
+    /* O site entra ao mesmo tempo em que a camada sai. Sobrepor as duas é o
+       que faz a emenda desaparecer: se a página só aparecesse depois, a
+       saída teria movimento e a chegada não teria nenhum. */
+    var raiz = document.documentElement
+    raiz.classList.add('site-entrando')
+
     if (miolo) {
       miolo.style.animation = 'entradaSaiMiolo ' + SAIDA + 'ms ' + CURVA + ' ' + atraso + 'ms forwards'
     }
@@ -109,6 +115,13 @@
       window.dispatchEvent(new Event('resize'))
       if (tela.parentNode) tela.parentNode.removeChild(tela)
     }, atraso + SAIDA + 260)
+
+    /* A classe sai depois que a animação termina. Deixá-la pendurada manteria
+       um transform em main e footer para sempre, e um transform prende
+       qualquer `position: fixed` que venha a existir ali dentro. */
+    setTimeout(function () {
+      raiz.classList.remove('site-entrando')
+    }, atraso + 1100)
   }
 
   if (botao) {
