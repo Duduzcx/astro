@@ -159,53 +159,107 @@ export function TriScene() {
        testado e recusado: metal só reflete o que existe em volta, e no
        vácuo isso deixa o casco quase preto. A sala mente, mas é ela que faz
        o aço parecer aço. */
-    /* E o mapa é gerado DEPOIS da primeira pintura: o custo não está na
-       resolução (a 32 ou a 256 dá quase no mesmo), está em compilar os
-       shaders do próprio prefiltro, e eram dois segundos travados antes de
-       qualquer coisa aparecer. O foguete, único objeto que depende do
-       reflexo, só chega depois disso de qualquer forma. */
+    /* O custo do mapa não está na resolução (a 32 ou a 256 dá quase no
+       mesmo), está em compilar os shaders do próprio prefiltro. Ele já rodou
+       depois da primeira pintura, síncrono, e travava a thread no exato
+       instante em que o botão Entrar aparecia. Agora os shaders ligam em
+       paralelo com os do hero e a geração roda antes do primeiro quadro,
+       quando estão prontos: a tela de entrada cobre tudo e ninguém ainda
+       tem botão para clicar. */
     let environmentTarget: THREE.WebGLRenderTarget | null = null
+    /* O que o aço reflete.
+       Era o RoomEnvironment do three: uma sala branca de estúdio. Um
+       cilindro de metal refletindo cinza uniforme em toda a volta não tem
+       como parecer outra coisa senão um cano — era essa a queixa do
+       cliente sobre o foguete.
+       No lugar dele, um céu: sol quente em cima à esquerda, de onde vem a
+       luz principal da cena, escuridão no meio e o azul da Terra subindo
+       de baixo. O casco ganha um degradê vertical e uma quina clara, que
+       é o que faz metal parecer metal. Custa uma textura de 64 por 32. */
+    const skyCanvas = document.createElement('canvas')
+    skyCanvas.width = 64
+    skyCanvas.height = 32
+    const skyCtx = skyCanvas.getContext('2d')
+    if (skyCtx) {
+      const vertical = skyCtx.createLinearGradient(0, 0, 0, 32)
+      vertical.addColorStop(0, '#d6e4ff')
+      vertical.addColorStop(0.4, '#3b4a6b')
+      vertical.addColorStop(0.68, '#35618f')
+      vertical.addColorStop(1, '#7fa9d9')
+      skyCtx.fillStyle = vertical
+      skyCtx.fillRect(0, 0, 64, 32)
+      /* O sol: um borrão quente no alto à esquerda, na mesma direção da
+         luz principal, para o brilho no casco cair onde a sombra manda. */
+      const sunGlow = skyCtx.createRadialGradient(13, 6, 0, 13, 6, 22)
+      sunGlow.addColorStop(0, 'rgba(255, 252, 244, 1)')
+      sunGlow.addColorStop(0.35, 'rgba(255, 226, 180, 0.8)')
+      sunGlow.addColorStop(1, 'rgba(255, 205, 150, 0)')
+      skyCtx.fillStyle = sunGlow
+      skyCtx.fillRect(0, 0, 64, 32)
+    }
+    const skyTexture = new THREE.CanvasTexture(skyCanvas)
+    skyTexture.mapping = THREE.EquirectangularReflectionMapping
+    skyTexture.colorSpace = THREE.SRGBColorSpace
+    const pmrem = new THREE.PMREMGenerator(renderer)
+    /* Os shaders do prefiltro são emitidos antes, para ligarem em paralelo
+       no driver, e a geração só roda quando estão prontos. O PMREM do three
+       só expõe isso para o shader equiretangular; o do desfoque e o da
+       convolução GGX (1,9s presos no Windows, medidos em produção) nascem
+       dentro de _allocateTargets, que é privado. Daí o acesso pelos
+       bastidores, preso à versão do three do package.json: se a forma
+       mudar, o try engole e a geração compila de forma síncrona, como
+       sempre fez. O tamanho passado a _setSize é o mesmo que
+       fromEquirectangular calcula (largura / 4); com outro, os alvos e os
+       materiais seriam recriados e o aquecimento iria para o lixo. */
+    const emitirAmbiente = (alvo: THREE.WebGLRenderTarget) => {
+      const bastidores = pmrem as unknown as {
+        _setSize?: (n: number) => void
+        _allocateTargets?: () => THREE.WebGLRenderTarget
+        _equirectMaterial?: THREE.Material | null
+        _ggxMaterial?: THREE.Material | null
+        _lodMeshes?: THREE.Mesh[]
+      }
+      const plana = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
+      const materiais = new Set<THREE.Material>()
+      const anterior = renderer.getRenderTarget()
+      renderer.setRenderTarget(alvo)
+      try {
+        bastidores._setSize?.(skyCanvas.width / 4)
+        bastidores._allocateTargets?.()?.dispose()
+        /* compileEquirectangularShader é o único jeito de fazer nascer o
+           material equiretangular. A compilação que ele faz por dentro usa
+           uma geometria VAZIA, e no r185 a presença do atributo position
+           entra na chave do programa: o que ele liga nunca é reaproveitado
+           (medido: texto idêntico, chave diferente, link de novo na hora de
+           gerar). Por isso os dois programas são emitidos de novo abaixo com
+           a geometria de verdade, a do primeiro plano de LOD. O do three
+           fica no cache sem uso: um link a mais no driver, em paralelo. */
+        pmrem.compileEquirectangularShader()
+        const geometria = bastidores._lodMeshes?.[0]?.geometry
+        /* Só o equiretangular e a convolução GGX: o desfoque gaussiano não
+           entra no caminho de fromEquirectangular nesta versão. */
+        for (const material of [bastidores._equirectMaterial, bastidores._ggxMaterial]) {
+          if (!material || !geometria) continue
+          renderer.compile(new THREE.Mesh(geometria, material), plana)
+          materiais.add(material)
+        }
+      } catch {
+        /* Forma privada diferente: nada emitido, geração síncrona abaixo. */
+      }
+      renderer.setRenderTarget(anterior)
+      return materiais
+    }
     const buildEnvironment = () => {
       if (disposed || environmentTarget) return
-      /* O que o aço reflete.
-         Era o RoomEnvironment do three: uma sala branca de estúdio. Um
-         cilindro de metal refletindo cinza uniforme em toda a volta não tem
-         como parecer outra coisa senão um cano — era essa a queixa do
-         cliente sobre o foguete.
-         No lugar dele, um céu: sol quente em cima à esquerda, de onde vem a
-         luz principal da cena, escuridão no meio e o azul da Terra subindo
-         de baixo. O casco ganha um degradê vertical e uma quina clara, que
-         é o que faz metal parecer metal. Custa uma textura de 64 por 32. */
-      const skyCanvas = document.createElement('canvas')
-      skyCanvas.width = 64
-      skyCanvas.height = 32
-      const skyCtx = skyCanvas.getContext('2d')
-      if (skyCtx) {
-        const vertical = skyCtx.createLinearGradient(0, 0, 0, 32)
-        vertical.addColorStop(0, '#d6e4ff')
-        vertical.addColorStop(0.4, '#3b4a6b')
-        vertical.addColorStop(0.68, '#35618f')
-        vertical.addColorStop(1, '#7fa9d9')
-        skyCtx.fillStyle = vertical
-        skyCtx.fillRect(0, 0, 64, 32)
-        /* O sol: um borrão quente no alto à esquerda, na mesma direção da
-           luz principal, para o brilho no casco cair onde a sombra manda. */
-        const sunGlow = skyCtx.createRadialGradient(13, 6, 0, 13, 6, 22)
-        sunGlow.addColorStop(0, 'rgba(255, 252, 244, 1)')
-        sunGlow.addColorStop(0.35, 'rgba(255, 226, 180, 0.8)')
-        sunGlow.addColorStop(1, 'rgba(255, 205, 150, 0)')
-        skyCtx.fillStyle = sunGlow
-        skyCtx.fillRect(0, 0, 64, 32)
-      }
-      const skyTexture = new THREE.CanvasTexture(skyCanvas)
-      skyTexture.mapping = THREE.EquirectangularReflectionMapping
-      skyTexture.colorSpace = THREE.SRGBColorSpace
-      const pmrem = new THREE.PMREMGenerator(renderer)
       environmentTarget = pmrem.fromEquirectangular(skyTexture)
       scene.environment = environmentTarget.texture
       pmrem.dispose()
       skyTexture.dispose()
     }
+    /* Resolve com o mapa de reflexo gerado. Atribuída no fim da montagem;
+       quem depende do ambiente, como o foguete, espera por ela antes de
+       compilar. */
+    let ambientePronto: Promise<void> = Promise.resolve()
     /* Luz de verdade para o foguete: uma direcional vinda de cima à
        esquerda, a mesma direção da luz dos planetas, e uma hemisférica azul
        para o lado da sombra não virar breu. */
@@ -330,7 +384,17 @@ export function TriScene() {
        demora que o cliente via ao entrar. Aqui elas entram numa fila e sobem
        uma por frame, entre um desenho e outro. */
     const warmQueueTextures: THREE.Texture[] = []
-    const warm = (texture: THREE.Texture) => warmQueueTextures.push(texture)
+    /* decode() tira a decodificação da imagem da thread principal. Sem isso
+       o texSubImage2D decodificava um webp de 4k na hora de subir, e no
+       desktop eram quase dois segundos só disso, medidos em produção. */
+    const warm = (texture: THREE.Texture) => {
+      const image = texture.image as { decode?: () => Promise<void> } | undefined
+      const enfileirar = () => {
+        if (!disposed) warmQueueTextures.push(texture)
+      }
+      if (image && typeof image.decode === 'function') image.decode().then(enfileirar, enfileirar)
+      else enfileirar()
+    }
 
     /* O espaço: panorama da Via Láctea atrás de tudo, com as nebulosas
        assadas numa textura (menor no celular) e as galáxias distantes. */
@@ -444,7 +508,6 @@ export function TriScene() {
        brilho que ele dava aos astros passa a ser feito dentro dos shaders
        deles, que é mais barato e não borra o resto da cena. */
     const wantsPostFx = !weakDevice && !lightweight
-    let postFxFrames = 0
     let downgradedPostFx = false
 
     /* Estrelas ao fundo, a página inteira. No celular são menos pontos: a
@@ -480,23 +543,86 @@ export function TriScene() {
        tranco. O desenho num alvo de 2×2, com as luzes da cena (mesmo
        programa), é o que faz a GPU receber os buffers agora. */
     const warmTarget = new THREE.WebGLRenderTarget(2, 2)
+    /* Compilar sem prender a thread, em duas partes. O compile do three só
+       EMITE compileShader e linkProgram: com o KHR_parallel_shader_compile o
+       driver liga em paralelo e a chamada volta em milissegundos. A espera
+       pelo resultado é pelo COMPLETION_STATUS, que não bloqueia. O
+       compileAsync do three faz o mesmo por dentro, mas exige o objeto
+       visível durante a espera, e aí o laço principal desenhava o astro
+       escondido antes de o programa estar ligado: getUniforms travava a
+       thread pelo tempo inteiro da ligação (até 3s num programa só, no
+       Windows, medido em produção) e o astro piscava no hero.
+
+       E a VARIANTE importa. O three gera programas diferentes para desenhar
+       na tela e num render target (saída linear, sem tone mapping), e a
+       chave do cache inclui isso. No desktop a cena passa pela lente, isto
+       é, por um render target: compilar com a tela como alvo era compilar o
+       programa errado, e o certo era ligado de forma síncrona no primeiro
+       quadro em que o astro aparecia. Era por isso que a fila de aquecimento
+       não curava nada no desktop e curava no celular, que não tem lente. */
+    const emitir = (raiz: THREE.Object3D, alvo: THREE.WebGLRenderTarget | null) => {
+      const anterior = renderer.getRenderTarget()
+      renderer.setRenderTarget(alvo)
+      let materials: Set<THREE.Material>
+      try {
+        materials = renderer.compile(raiz, camera, scene)
+      } catch {
+        materials = new Set()
+      }
+      renderer.setRenderTarget(anterior)
+      return materials
+    }
+    const prontos = (materials: Set<THREE.Material>) =>
+      new Promise<void>((resolve) => {
+        const olhar = () => {
+          if (disposed) {
+            resolve()
+            return
+          }
+          for (const material of materials) {
+            const program = (renderer.properties.get(material) as { currentProgram?: { isReady(): boolean } })
+              .currentProgram
+            if (!program || program.isReady()) materials.delete(material)
+          }
+          if (materials.size === 0) {
+            resolve()
+            return
+          }
+          window.setTimeout(olhar, 16)
+        }
+        olhar()
+      })
+    /* O modelo do foguete liga os seus programas nas duas variantes (tela,
+       para os primeiros quadros; render target, para quando a lente entra)
+       e depois é desenhado uma vez num alvo de 2×2, para a GPU receber
+       geometria e texturas agora, e não no quadro em que ele aparece. */
     const warmRocket = async (object: THREE.Object3D) => {
-      await renderer.compileAsync(object, camera, scene)
+      /* O aço reflete o ambiente, e o programa muda com ele: compilar antes
+         de o mapa existir seria compilar duas vezes. */
+      await ambientePronto
+      if (disposed) return
+      buildEnvironment()
+      const materials = emitir(object, null)
+      for (const material of emitir(object, warmTarget)) materials.add(material)
+      await prontos(materials)
+      if (disposed) return
       /* Só o foguete é desenhado neste frame de aquecimento: com a cena
          inteira visível, este render forçava a compilação de todos os
-         outros astros de uma vez e travava a carga por segundos. */
-      /* O modelo pode já ter dono. Em rocket.ts há uma corrida de 350ms: se
-         o aquecimento demora mais que isso, o modelo é anexado ao foguete
-         antes de chegarmos aqui. E scene.add() no three REPARENTA — roubava o
-         modelo do foguete para a raiz, e o scene.remove() abaixo o deixava
-         órfão para sempre. Era exatamente isso que fazia o foguete de
-         lançamento sumir no desktop e não no celular: lá compileAsync vence
-         os 350ms e a ordem é a inversa; aqui, com bloom e programas maiores,
-         nunca vence. Guardar o pai e devolver o modelo a ele fecha a corrida
-         nos dois sentidos. A transformação local sobrevive à ida e volta. */
+         outros astros de uma vez e travava a carga por segundos. As LUZES
+         ficam visíveis: escondê-las mudava o programa (zero luzes é outra
+         variante) e o aquecimento ligava um programa que nunca seria usado. */
+      /* O modelo pode já ter dono. Em rocket.ts há uma corrida: se o
+         aquecimento demora mais que a espera de lá, o modelo é anexado ao
+         foguete antes de chegarmos aqui. E scene.add() no three REPARENTA:
+         roubava o modelo do foguete para a raiz, e o scene.remove() abaixo o
+         deixava órfão para sempre. Era exatamente isso que fazia o foguete
+         de lançamento sumir no desktop e não no celular. Guardar o pai e
+         devolver o modelo a ele fecha a corrida nos dois sentidos. */
       const dono = object.parent
       const wasVisible = scene.children.map((child) => child.visible)
-      for (const child of scene.children) child.visible = false
+      for (const child of scene.children) {
+        if (!(child as THREE.Light).isLight) child.visible = false
+      }
       scene.add(object)
       object.visible = true
       renderer.setRenderTarget(warmTarget)
@@ -1302,14 +1428,8 @@ export function TriScene() {
       const pending = warmQueueTextures.shift()
       if (pending) renderer.initTexture(pending)
 
-      /* Depois de alguns frames desenhados, a lente entra. */
-      /* A lente entra depois que a cena assentou. No celular ela espera
-         mais: compilar a pirâmide do bloom é um tranco, e ele deve cair
-         quando o visitante já está lendo, não na primeira dobra. */
-      if (wantsPostFx && !postfx && !downgradedPostFx && postFxFrames > 4) {
-        postfx = createPostFx(renderer, scene, camera, window.innerWidth, stageHeight, lightweight)
-      }
-      postFxFrames += 1
+      /* A lente entra por prepararLente(), quando os programas dela estão
+         ligados; até lá a cena desenha direto. */
 
       frameCount += 1
       const restful =
@@ -1338,6 +1458,10 @@ export function TriScene() {
         /* O primeiro quadro desenhado é o sinal para a tela de entrada sair.
            É o marco honesto: não "o script carregou", e sim "há imagem". */
         window.dispatchEvent(new Event('astro:cena-pronta'))
+        /* Com o hero na tela, a lente e a fila começam a ligar programas em
+           paralelo no driver, sem prender a thread. */
+        if (wantsPostFx) prepararLente()
+        window.setTimeout(() => idle(warmNext), 150)
       }
     }
     /**
@@ -1403,6 +1527,12 @@ export function TriScene() {
         return
       }
       if (disposed || warming) return
+      /* No desktop a fila espera a lente entrar: é ela que decide a variante
+         de programa (render target) que os astros vão usar. */
+      if (wantsPostFx && !postfx && !downgradedPostFx) {
+        window.setTimeout(warmNext, 60)
+        return
+      }
       const next = warmQueue.shift()
       if (!next) return
       warming = true
@@ -1414,19 +1544,68 @@ export function TriScene() {
          pelo tempo da compilação e volta como estava. */
       const wasVisible = next.visible
       next.visible = true
-      renderer
-        .compileAsync(next, camera, scene)
-        .catch(() => undefined)
-        .finally(() => {
-          next.visible = wasVisible
-          warming = false
-          if (!disposed) idle(warmNext)
-        })
+      /* Visível só pelo instante da emissão: o compile do three percorre só o
+         que está visível, e o astro volta a sumir antes do próximo quadro. */
+      const materials = emitir(next, postfx ? warmTarget : null)
+      next.visible = wasVisible
+      void prontos(materials).then(() => {
+        if (disposed) return
+        warming = false
+        idle(warmNext)
+      })
     }
-    /* Depois do primeiro frame: o hero aparece primeiro, o resto aquece
-       enquanto o visitante lê a primeira dobra. */
-    window.setTimeout(() => idle(warmNext), 150)
-    frame = requestAnimationFrame(tick)
+    /* A lente é criada logo, mas só entra quando os seus programas, e a
+       variante de render target de tudo o que está na tela, estiverem
+       ligados. Antes ela entrava no quinto quadro e o primeiro
+       composer.render() ligava tudo de forma síncrona: 2,8s presos, no
+       Windows, no instante em que a pessoa clicava em Entrar. */
+    const prepararLente = () => {
+      if (postfx || downgradedPostFx || disposed) return
+      const lente = createPostFx(renderer, scene, camera, window.innerWidth, stageHeight, lightweight)
+      const materials = emitir(scene, warmTarget)
+      for (const material of lente.aquecer(warmTarget)) materials.add(material)
+      void prontos(materials).then(() => {
+        if (disposed || downgradedPostFx || postfx) {
+          lente.dispose()
+          return
+        }
+        lente.setSize(window.innerWidth, stageHeight)
+        postfx = lente
+      })
+    }
+    /* Os programas do hero e os do prefiltro são emitidos agora e ligam em
+       paralelo no driver. São dois portões separados de propósito: a
+       convolução GGX do prefiltro leva 1,8s para ligar no Windows e só o
+       foguete precisa dela, então o ambiente é gerado quando os seus
+       programas ficam prontos, num tick próprio, e o hero não espera por
+       isso. O laço começa quando os programas do hero estão prontos OU
+       1,2s depois da emissão, o que vier antes: passado o limite, o que
+       faltar liga no primeiro quadro, ainda atrás da tela de entrada. Sem
+       a extensão tudo se diz pronto na hora e o primeiro quadro compila
+       como antes. O teto do ambiente é mais folgado, mas existe: um driver
+       que nunca responde não pode segurar o foguete para sempre. */
+    const limite = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms))
+    const heroMateriais = emitir(scene, null)
+    const ambienteMateriais = emitirAmbiente(warmTarget)
+    ambientePronto = Promise.race([prontos(ambienteMateriais), limite(4000)]).then(() => {
+      if (!disposed) buildEnvironment()
+    })
+    /* Enquanto os programas ligam, a thread está livre: as texturas que já
+       chegaram e já foram decodificadas sobem para a GPU agora, uma por vez,
+       em vez de todas juntas no primeiro quadro. Depois que o laço começa,
+       é o tick que continua a fila. */
+    let subindo = true
+    const subir = () => {
+      if (disposed || !subindo) return
+      const pending = warmQueueTextures.shift()
+      if (pending) renderer.initTexture(pending)
+      window.setTimeout(subir, 20)
+    }
+    subir()
+    void Promise.race([prontos(heroMateriais), limite(1200)]).then(() => {
+      subindo = false
+      if (!disposed && frame === 0) frame = requestAnimationFrame(tick)
+    })
 
     /* Sem sentido queimar GPU com a aba escondida. */
     const onVisibility = () => {

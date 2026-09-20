@@ -169,6 +169,48 @@ export function createPostFx(
       }
       composer.render()
     },
+    /**
+     * Emite a compilação dos programas da lente sem esperar por eles: com o
+     * KHR_parallel_shader_compile o driver liga em paralelo e a chamada volta
+     * em milissegundos. Sem isto, o primeiro composer.render() ligava a
+     * pirâmide inteira de forma síncrona: 2,8s presos num programa só, no
+     * Windows, no instante em que o visitante clicava em Entrar.
+     *
+     * A variante importa. Os passes internos desenham em render targets, e o
+     * three gera para isso um programa diferente do da tela (saída linear,
+     * sem tone mapping); só o último passe desenha na tela. Compilar a
+     * variante errada é gastar o driver à toa e travar do mesmo jeito.
+     */
+    aquecer(alvo: THREE.WebGLRenderTarget) {
+      const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
+      /* O mesmo triângulo do FullScreenQuad do three, e sem normal de
+         propósito: com PlaneGeometry o vértice ganhava um HAS_NORMAL, a chave
+         do programa mudava e a lente ligava tudo de novo, de forma síncrona,
+         no primeiro quadro. Medido: os oito programas voltavam ao perfil. */
+      const quad = new THREE.BufferGeometry()
+      quad.setAttribute('position', new THREE.Float32BufferAttribute([-1, 3, 0, -1, -1, 0, 3, -1, 0], 3))
+      quad.setAttribute('uv', new THREE.Float32BufferAttribute([0, 2, 0, 0, 2, 0], 2))
+      const cena = (materiais: THREE.Material[]) => {
+        const s = new THREE.Scene()
+        for (const m of materiais) s.add(new THREE.Mesh(quad, m))
+        return s
+      }
+      const internos: THREE.Material[] = [
+        bloom.materialHighPassFilter,
+        ...bloom.separableBlurMaterials,
+        bloom.compositeMaterial,
+      ]
+      if (film) internos.push(bloom.blendMaterial)
+      const ultimo = film ? film.material : bloom.blendMaterial
+      const anterior = renderer.getRenderTarget()
+      renderer.setRenderTarget(alvo)
+      const a = renderer.compile(cena(internos), cam)
+      renderer.setRenderTarget(null)
+      const b = renderer.compile(cena([ultimo]), cam)
+      renderer.setRenderTarget(anterior)
+      quad.dispose()
+      return new Set<THREE.Material>([...a, ...b])
+    },
     setSize(w: number, h: number) {
       composer.setSize(w, h)
       bloom.resolution.set(w / divisor, h / divisor)

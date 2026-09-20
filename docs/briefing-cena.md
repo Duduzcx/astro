@@ -120,6 +120,27 @@ Medidos num iPhone 13 emulado com a CPU quatro vezes mais lenta:
 
 **Não regrida isso sem justificativa visual proporcional, medida.**
 
+### Desktop (Chrome com GPU real, Windows, ANGLE sobre D3D11)
+
+Medidos com a janela na tela, contra o preview local, três corridas de cada
+lado intercaladas (o build anterior servido em outra porta):
+
+| Métrica | Antes | Depois |
+| ------- | ----- | ------ |
+| Link síncrono de shader nos primeiros 20s (soma dos bloqueios) | 9,3s | 0,25s |
+| Tarefas longas nos primeiros 24s (soma) | 7,9 a 9,8s | 4,3 a 5,3s |
+| Maior tarefa depois de o botão Entrar existir | 1,3 a 2,0s | 0,7 a 0,8s |
+| Primeiro quadro (astro:cena-pronta) | 2,3 a 2,5s | 3,5 a 3,9s |
+| Programas ligados de novo com texto idêntico | 11 | 1 (o do three, sem uso) |
+
+O primeiro quadro chega mais tarde de propósito: os programas do hero ligam
+em paralelo no driver antes de o laço começar, e a tela de entrada cobre esse
+tempo. O que ainda pesa ali são as texturas de 4k subindo (1,5s de
+`texSubImage2D` no perfil): o próximo passo é `ImageBitmapLoader` com
+`imageOrientation: 'flipY'` e `texture.flipY = false`, que tira a cópia com
+flip da thread principal. Não foi feito porque muda o caminho das texturas
+do celular também, e o celular está selado.
+
 ## Ferramentas
 
 ```
@@ -238,6 +259,58 @@ literals. Caí nisso três vezes.
 **Cheque a cadeia do comando.** Uma vez usei `;` em vez de `&&` depois de
 `npm test` e empurrei com dois testes falhando — a tabela de keyframes foi
 para o ar fora de ordem.
+
+**`compileAsync` do three deixa o astro visível enquanto espera.** Ele exige
+`visible = true` durante a espera pelo `COMPLETION_STATUS`; nesse meio-tempo o
+laço principal desenha o astro escondido, e `getUniforms` liga o programa de
+forma síncrona: a thread ficava presa pelo tempo inteiro do link (até 3s num
+programa só, no Windows) e o buraco negro piscava no hero. O certo é o par
+`emitir`/`prontos` de `TriScene.tsx`: `renderer.compile` só emite (visível
+por um instante) e a espera é pelo `isReady()` do programa, com o astro
+escondido.
+
+**O programa muda com o alvo.** O three gera programas diferentes para
+desenhar na tela e num render target (saída linear, sem tone mapping), e a
+chave do cache inclui isso. No desktop a cena passa pela lente, isto é, por
+um render target; a fila compilava com a tela como alvo e o programa certo
+era ligado de forma síncrona no primeiro quadro do astro. Era por isso que o
+aquecimento curava o celular (sem lente) e não o desktop. `emitir(obj, alvo)`
+recebe o alvo; a assadeira da nebulosa em `space.ts` e a lente em `postfx.ts`
+(`aquecer`) seguem a mesma regra.
+
+**A chave do programa inclui a geometria.** No r185 entram na chave
+`vertexNormals` (`#define HAS_NORMAL`) e `hasPositionAttribute`. Compilar um
+passe de tela com `PlaneGeometry` (tem normal) gera um programa que o
+`FullScreenQuad` do three (só position e uv) nunca reaproveita: a lente
+ligava os oito programas de novo. E `compileEquirectangularShader` do próprio
+three compila com uma geometria VAZIA, então o que ele liga nunca serve; o
+prefiltro é reemitido com a geometria do primeiro plano de LOD. Regra: compile
+com a MESMA geometria que vai desenhar.
+
+**Luzes escondidas são outro programa.** O aquecimento do foguete escondia a
+cena inteira, luzes incluídas, para desenhar só ele: zero luzes muda a chave,
+e o programa ligado ali nunca era usado. As luzes ficam visíveis.
+
+**Transparente e de dois lados são dois passes e três programas.** O casco
+do foguete entra com `transparent = true` para o fade; o three desenha
+material transparente `DoubleSide` em dois passes (`FLIP_SIDED` e frente) e,
+quando a transparência acaba, precisa de um terceiro (`DOUBLE_SIDED`), ligado
+na hora: 640ms presos. `forceSinglePass = true` no casco deixa um programa só.
+
+**O PMREM não expõe o shader que pesa.** A convolução GGX (1,9s de link no
+Windows) nasce em `_allocateTargets`, privado. `TriScene.tsx` entra pelos
+bastidores (`_setSize`, `_allocateTargets`, `_lodMeshes`), preso à versão do
+three do `package.json`, dentro de um `try`: se a forma mudar, a geração
+volta a ser síncrona, como sempre foi. Ao subir o three, confira isso.
+
+**A pilha de erro tem dez quadros.** Numa sonda que classifica um link como
+"compile" ou "render" olhando `new Error().stack`, o quadro `.compile` do
+three fica além dos dez e tudo vira "render". Suba `Error.stackTraceLimit` ou
+procure `traverseVisible`. Perdi uma rodada de medição nisso.
+
+**`getProgramParameter(ACTIVE_UNIFORMS)` é onde o link bloqueia.** No perfil
+de CPU aparece como a classe `WebGLUniforms` (minificada) com self time
+enorme. Se ela aparecer, é link síncrono de shader, não JavaScript.
 
 ## Coisas que degradam a cena depois da carga — todas já removidas
 

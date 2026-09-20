@@ -830,6 +830,15 @@ export function createRocket({
         material.transparent = true
         material.opacity = 0
         material.depthWrite = true
+        /* Um passe só, mesmo enquanto transparente. Sem isto o three desenha
+           um material transparente de dois lados em dois passes (costas e
+           frente) e compila DOIS programas para eles, que só servem durante
+           o fade de entrada; ao ficar opaco, o casco passa a um terceiro
+           programa (DOUBLE_SIDED), ligado de forma síncrona no quadro em que
+           a transparência acaba: 640ms presos no desktop, medidos. Com um
+           passe só, o programa do fade é o mesmo do casco pronto e o
+           aquecimento cobre os dois. */
+        material.forceSinglePass = true
         node.material = material
         modelMaterials.push(material)
         materials.push(material)
@@ -878,10 +887,14 @@ export function createRocket({
       /* Um segundo de espera pelo aquecimento, não dois e meio. O foguete é
          o assunto do hero: melhor um tranco curto quando ele entra do que
          uma plataforma vazia enquanto o visitante lê o título. */
-      /* 350ms de espera pelo aquecimento, não mil. O modelo baixa em menos
-         de cem; o que sobrava era espera por compilação, e um tranco curto
-         de uma vez é melhor que o hero sem o seu assunto. */
-      const late = new Promise<void>((resolve) => window.setTimeout(resolve, 350))
+      /* Já foram 350ms, e a conta mudou com a tela de entrada: ela cobre o
+         hero por dois segundos no mínimo, e o visitante ainda precisa clicar.
+         O tranco que a espera curta aceitava não era curto: no Windows, o
+         modelo entrando sem programa ligado prendia a thread por segundos,
+         no exato instante em que a pessoa clicava em Entrar, e o botão
+         parecia morto. Um segundo e meio dá tempo de o link terminar em
+         paralelo; passado isso, o foguete entra de qualquer jeito. */
+      const late = new Promise<void>((resolve) => window.setTimeout(resolve, 1500))
       void Promise.race([warmed, late]).then(() => {
         if (!disposed && !gaveUp && !model.parent) object.add(model)
       })

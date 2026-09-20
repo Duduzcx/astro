@@ -300,15 +300,40 @@ export function createSpace(
        mais de um segundo. Compilar antes, num quadro só para isso, separa as
        duas contas e nenhuma delas trava sozinha. */
     window.setTimeout(() => {
-      /* `compileAsync` e não `compile`: o síncrono faz a ligação do programa
-         no thread principal e vira ele mesmo o bloqueio — medido, a maior
-         travada subiu de 1,8s para 2,8s. O assíncrono usa
-         KHR_parallel_shader_compile onde existe, e o driver trabalha fora
-         daqui. */
-      void renderer
-        .compileAsync(bakeScene, bakeCamera)
-        .catch(() => undefined)
-        .then(() => requestAnimationFrame(bakeStrip))
+      /* Compilar com o alvo da assadeira ligado. O three gera um programa
+         diferente para desenhar em render target (saída linear, sem tone
+         mapping), e a chave do cache inclui isso: o compileAsync de antes
+         compilava com a tela como alvo, a variante errada, e a primeira
+         faixa ligava a certa de forma síncrona. Era ela sozinha que aparecia
+         no perfil como um bloqueio de um segundo no desktop.
+
+         O compile síncrono só EMITE a compilação: com
+         KHR_parallel_shader_compile o driver liga em paralelo e a chamada
+         volta em milissegundos. A espera é pelo COMPLETION_STATUS, que não
+         bloqueia. Sem a extensão o programa se diz pronto na hora e a
+         primeira faixa paga a ligação, como sempre pagou. */
+      const anterior = renderer.getRenderTarget()
+      renderer.setRenderTarget(bakeTarget)
+      let materiais: Set<THREE.Material>
+      try {
+        materiais = renderer.compile(bakeScene, bakeCamera)
+      } catch {
+        materiais = new Set()
+      }
+      renderer.setRenderTarget(anterior)
+      const esperar = () => {
+        if (!bakeTarget) return
+        for (const m of materiais) {
+          const program = (renderer.properties.get(m) as { currentProgram?: { isReady(): boolean } }).currentProgram
+          if (!program || program.isReady()) materiais.delete(m)
+        }
+        if (materiais.size > 0) {
+          window.setTimeout(esperar, 16)
+          return
+        }
+        requestAnimationFrame(bakeStrip)
+      }
+      esperar()
     }, 600)
     material.uniforms.uNebulaMap.value = bakeTarget.texture
     material.uniforms.uNebula.value = nebula
