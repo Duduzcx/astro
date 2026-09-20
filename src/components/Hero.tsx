@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
-import { ArrowGlyph, GhostButton, IrisButton, Label, RotatingWord, WordReveal } from './ui/Primitives'
+import { ArrowGlyph, GhostButton, IrisButton, Label, RotatingWord, ScrambleReveal } from './ui/Primitives'
 
 const rise = {
   hidden: { opacity: 0, y: 26 },
@@ -47,9 +47,7 @@ export function Hero() {
             aria-hidden="true"
             className="pointer-events-none absolute inset-x-0 -top-16 -bottom-12 -z-10 bg-[radial-gradient(120%_80%_at_30%_50%,color-mix(in_srgb,var(--color-onyx)_55%,transparent)_0%,color-mix(in_srgb,var(--color-onyx)_26%,transparent)_42%,transparent_60%)] lg:hidden"
           />
-          <WordReveal
-            as="h1"
-            trigger="mount"
+          <ScrambleReveal
             delay={0.35}
             text={'Destrave a\nsua operação.'}
             className="font-impact max-w-4xl text-[clamp(3.2rem,11vw,8.6rem)] leading-[0.95]"

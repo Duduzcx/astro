@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { ArrowGlyph, WordReveal, Reveal } from './ui/Primitives'
+import { ArrowGlyph, MagneticButton, WordReveal, Reveal } from './ui/Primitives'
 import { site } from '../lib/site'
 import { AstroMark } from './brand/AstroMark'
 
@@ -218,13 +218,13 @@ export function Contact() {
                   placeholder="Qual é o seu desafio atual? Ex.: fechamento do mês leva duas semanas…"
                   className={`${inputClasses} resize-none`}
                 />
-                <button
+                <MagneticButton
                   type="submit"
                   disabled={status === 'sending'}
                   className="mt-2 inline-flex items-center justify-center gap-2.5 rounded-full bg-cobalt px-7 py-3.5 text-[15px] font-[420] text-white transition-colors duration-300 hover:bg-[#5d92ea] disabled:opacity-60"
                 >
                   {status === 'sending' ? 'Enviando…' : 'Enviar desafio'} <ArrowGlyph />
-                </button>
+                </MagneticButton>
               </form>
             )}
           </Reveal>

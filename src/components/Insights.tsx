@@ -1,4 +1,5 @@
 import { WordReveal, Reveal } from './ui/Primitives'
+import { ScrollTrail } from './ui/ScrollTrail'
 
 /** Prateleira editorial. Posts de exemplo até o blog existir de verdade. */
 const posts = [
@@ -37,7 +38,8 @@ const posts = [
 export function Insights() {
   return (
     <section id="insights" aria-label="Tech insights" className="relative z-10 py-24 md:py-32">
-      <div className="shell">
+      <div className="shell relative">
+        <ScrollTrail />
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div>
             <WordReveal text="Tech insights" className="font-impact text-[clamp(2.4rem,5.2vw,4.2rem)]" />

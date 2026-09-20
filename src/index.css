@@ -27,6 +27,18 @@
   --radius-small: 4px;
 }
 
+/* Intensidade da lanterna nos cartões, de 0 a 1. Registrada para poder
+   transitar: sem @property uma variável muda de uma vez só, e a luz
+   acenderia num estalo em vez de crescer. */
+@property --luz {
+  syntax: '<number>';
+  /* Herda: quem lê a variável são os pseudo-elementos do cartão, e sem
+     herança eles veriam sempre o valor inicial (medido: a lanterna não
+     acendia). */
+  inherits: true;
+  initial-value: 0;
+}
+
 @layer base {
   * {
     border-color: color-mix(in srgb, var(--color-slate) 32%, transparent);
@@ -106,7 +118,11 @@
       inset: 0;
       z-index: 2;
       pointer-events: none;
-      opacity: 0.05;
+      /* Sete por cento: o bastante para o preto ter textura de filme sem
+         virar chuvisco sobre o texto. Só opacidade, sem mix-blend-mode: um
+         modo de mistura numa camada fixa do tamanho da tela obriga o
+         compositor a misturar a página inteira a cada quadro. */
+      opacity: 0.07;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
     }
   }
@@ -180,7 +196,8 @@
   transition:
     transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
     border-color 300ms ease,
-    box-shadow 420ms ease;
+    box-shadow 420ms ease,
+    --luz 520ms ease;
 
   /* Borda luminosa de um pixel.
      Uma borda de cor única lê como caixa desenhada; esta é um gradiente que
@@ -196,13 +213,26 @@
     border-radius: inherit;
     padding: 1px;
     pointer-events: none;
-    background: linear-gradient(
-      145deg,
-      rgba(141, 180, 245, 0.55) 0%,
-      rgba(141, 180, 245, 0.12) 28%,
-      rgba(255, 255, 255, 0.04) 55%,
-      rgba(122, 179, 255, 0.28) 100%
-    );
+    /* Lanterna: a primeira camada é um círculo de luz que segue o cursor
+       (--mx/--my, escritos por src/lib/spotlight.ts) e só existe onde há
+       mouse. --luz vai a 1 enquanto o cursor está sobre o cartão e volta a
+       0 quando sai, com transição, e é o RAIO do círculo que ela controla:
+       a 0 o círculo não existe, e ao entrar ele cresce a partir do cursor.
+       (Controlar a cor por color-mix com calc não funcionou no Chrome: o
+       valor computado saía transparente.) */
+    background:
+      radial-gradient(
+        calc(var(--luz, 0) * 240px) circle at var(--mx, 50%) var(--my, 50%),
+        rgba(207, 224, 255, 0.85),
+        transparent 72%
+      ),
+      linear-gradient(
+        145deg,
+        rgba(141, 180, 245, 0.55) 0%,
+        rgba(141, 180, 245, 0.12) 28%,
+        rgba(255, 255, 255, 0.04) 55%,
+        rgba(122, 179, 255, 0.28) 100%
+      );
     -webkit-mask:
       linear-gradient(#000 0 0) content-box,
       linear-gradient(#000 0 0);
@@ -579,7 +609,15 @@ footer .bg-graphite::before {
      borda vai a quase nada, e é por ela que o astro atravessa. Um fundo de
      opacidade única não consegue as duas coisas ao mesmo tempo. */
   .graphite-card {
+    /* A primeira camada é o halo da lanterna: um círculo de luz no fundo do
+       cartão que segue o cursor (--mx/--my, de src/lib/spotlight.ts) e cujo
+       raio é --luz vezes 420px: some a zero e cresce a partir do cursor. */
     background:
+      radial-gradient(
+        calc(var(--luz, 0) * 420px) circle at var(--mx, 50%) var(--my, 50%),
+        rgba(141, 180, 245, 0.14),
+        transparent 64%
+      ),
       radial-gradient(
         130% 100% at 50% 50%,
         color-mix(in srgb, var(--color-graphite) 97%, transparent) 0%,
@@ -611,6 +649,29 @@ footer .bg-graphite::before {
       0 2px 22px rgba(4, 8, 18, 0.95),
       0 0 8px rgba(4, 8, 18, 0.85),
       0 1px 3px rgba(4, 8, 18, 0.8);
+  }
+
+  /* Aura atrás dos títulos: uma névoa azul, mais densa à esquerda, de onde
+     a luz da cena vem. É um gradiente radial e não um blur: o degradê já
+     nasce macio, e filter: blur numa área desse tamanho é uma rasterização
+     cara que o navegador refaz quando a camada muda. Fica atrás do texto
+     (z-index -1 dentro do contexto do próprio título) e acima da cena. */
+  .shell :is(h1, h2) {
+    position: relative;
+    isolation: isolate;
+  }
+  .shell :is(h1, h2)::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: -38% -14%;
+    pointer-events: none;
+    background: radial-gradient(
+      56% 58% at 36% 52%,
+      rgba(77, 132, 224, 0.2),
+      rgba(77, 132, 224, 0.06) 46%,
+      transparent 72%
+    );
   }
   .shell :is(p, li) {
     text-shadow:

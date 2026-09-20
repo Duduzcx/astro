@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   type MouseEventHandler,
@@ -135,6 +136,43 @@ export function GiantWord({ word, className = '' }: { word: string; className?: 
  * A única ação preenchida da página: cobalto, pílula, nunca repetida na mesma
  * tela. Inclina alguns pixels na direção do cursor.
  */
+/**
+ * Ímã dos botões. Os handlers vão num invólucro com 16px de folga em volta
+ * do botão (padding com margem negativa, o que não muda o layout): o botão
+ * começa a inclinar para o cursor antes de ser tocado, e o clique na folga
+ * não dispara nada, porque o invólucro não é o link. O deslocamento é um
+ * transform por mola, com pouco amortecimento de propósito: ao sair, o
+ * botão volta ao centro com um pequeno sobressalto. Só com mouse; no toque
+ * e com reduced-motion o botão fica parado.
+ */
+function useMagnet<T extends HTMLElement>(forca = 16) {
+  const ref = useRef<T>(null)
+  const x = useMotionValue(0)
+  const y = useMotionValue(0)
+  const springX = useSpring(x, { stiffness: 300, damping: 16, mass: 0.6 })
+  const springY = useSpring(y, { stiffness: 300, damping: 16, mass: 0.6 })
+
+  const onPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
+    const alvo = ref.current
+    if (!alvo || event.pointerType !== 'mouse' || prefersReducedMotion()) return
+    const rect = alvo.getBoundingClientRect()
+    const dx = (event.clientX - (rect.left + rect.width / 2)) / (rect.width / 2)
+    const dy = (event.clientY - (rect.top + rect.height / 2)) / (rect.height / 2)
+    x.set(Math.max(-1, Math.min(1, dx)) * forca)
+    y.set(Math.max(-1, Math.min(1, dy)) * forca * 0.6)
+  }
+  const onPointerLeave = () => {
+    x.set(0)
+    y.set(0)
+  }
+
+  return { ref, style: { x: springX, y: springY }, campo: { onPointerMove, onPointerLeave } }
+}
+
+/** Invólucro do ímã: a folga em volta do botão, invisível e sem custo de layout. */
+const campoClasses = (className: string) =>
+  /\bw-full\b/.test(className) ? '-m-4 block p-4' : '-m-4 inline-block p-4 align-middle'
+
 export function IrisButton({
   href,
   children,
@@ -146,41 +184,28 @@ export function IrisButton({
   className?: string
   onClick?: MouseEventHandler<HTMLAnchorElement>
 }) {
-  const x = useMotionValue(0)
-  const y = useMotionValue(0)
-  const springX = useSpring(x, { stiffness: 320, damping: 22, mass: 0.5 })
-  const springY = useSpring(y, { stiffness: 320, damping: 22, mass: 0.5 })
-
-  const onPointerMove = (event: ReactPointerEvent<HTMLAnchorElement>) => {
-    if (prefersReducedMotion()) return
-    const rect = event.currentTarget.getBoundingClientRect()
-    x.set(((event.clientX - rect.left) / rect.width - 0.5) * 14)
-    y.set(((event.clientY - rect.top) / rect.height - 0.5) * 10)
-  }
-  const onPointerLeave = () => {
-    x.set(0)
-    y.set(0)
-  }
+  const ima = useMagnet<HTMLAnchorElement>(18)
 
   return (
-    <motion.a
-      href={href}
-      onClick={onClick}
-      onPointerMove={onPointerMove}
-      onPointerLeave={onPointerLeave}
-      style={{ x: springX, y: springY }}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.97 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 26 }}
-      className={`group relative inline-flex items-center justify-center gap-2.5 overflow-hidden rounded-full bg-cobalt px-7 py-3.5 text-[15px] font-[420] text-white transition-colors duration-300 hover:bg-[#5d92ea] ${className}`}
-    >
-      {children}
-      {/* Brilho passando por cima no hover. */}
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full"
-      />
-    </motion.a>
+    <span className={campoClasses(className)} {...ima.campo}>
+      <motion.a
+        ref={ima.ref}
+        href={href}
+        onClick={onClick}
+        style={ima.style}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.97 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 26 }}
+        className={`group relative inline-flex items-center justify-center gap-2.5 overflow-hidden rounded-full bg-cobalt px-7 py-3.5 text-[15px] font-[420] text-white transition-colors duration-300 hover:bg-[#5d92ea] ${className}`}
+      >
+        {children}
+        {/* Brilho passando por cima no hover. */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full"
+        />
+      </motion.a>
+    </span>
   )
 }
 
@@ -255,14 +280,54 @@ export function GhostButton({
   className?: string
   onClick?: MouseEventHandler<HTMLAnchorElement>
 }) {
+  const ima = useMagnet<HTMLAnchorElement>(14)
+
   return (
-    <a
-      href={href}
-      onClick={onClick}
-      className={`inline-flex items-center justify-center gap-2.5 rounded-full border border-ivory/80 px-7 py-3.5 text-[15px] font-[420] text-ivory transition-colors duration-300 hover:bg-ivory/10 ${className}`}
-    >
-      {children}
-    </a>
+    <span className={campoClasses(className)} {...ima.campo}>
+      <motion.a
+        ref={ima.ref}
+        href={href}
+        onClick={onClick}
+        style={ima.style}
+        whileTap={{ scale: 0.97 }}
+        className={`inline-flex items-center justify-center gap-2.5 rounded-full border border-ivory/80 px-7 py-3.5 text-[15px] font-[420] text-ivory transition-colors duration-300 hover:bg-ivory/10 ${className}`}
+      >
+        {children}
+      </motion.a>
+    </span>
+  )
+}
+
+/** Botão de formulário com o mesmo ímã dos links de ação. */
+export function MagneticButton({
+  children,
+  className = '',
+  type = 'button',
+  disabled,
+  onClick,
+}: {
+  children: ReactNode
+  className?: string
+  type?: 'button' | 'submit'
+  disabled?: boolean
+  onClick?: MouseEventHandler<HTMLButtonElement>
+}) {
+  const ima = useMagnet<HTMLButtonElement>(16)
+
+  return (
+    <span className={campoClasses(className)} {...ima.campo}>
+      <motion.button
+        ref={ima.ref}
+        type={type}
+        disabled={disabled}
+        onClick={onClick}
+        style={ima.style}
+        whileTap={{ scale: 0.97 }}
+        className={className}
+      >
+        {children}
+      </motion.button>
+    </span>
   )
 }
 
@@ -425,6 +490,137 @@ export function WordReveal({
                   </motion.span>
                 </span>
                 {wordNumber < words.length - 1 ? ' ' : null}
+              </span>
+            )
+          })}
+        </span>
+      ))}
+    </MotionTag>
+  )
+}
+
+const MAIUSCULAS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+const MINUSCULAS = 'abcdefghijklmnopqrstuvwxyz'
+/** Um glifo aleatório com a mesma caixa da letra, para a largura da palavra não pular. */
+const glifoComo = (c: string) => {
+  if (!/[\p{L}\p{N}]/u.test(c)) return c
+  const fonte = c === c.toLowerCase() ? MINUSCULAS : MAIUSCULAS
+  return fonte[Math.floor(Math.random() * fonte.length)]
+}
+
+/**
+ * Título que se decodifica ao entrar. Cada palavra sobe como no WordReveal
+ * e, durante meio segundo, as letras passam por glifos aleatórios e assentam
+ * da esquerda para a direita, palavra a palavra, no mesmo compasso da
+ * subida. A escrita é direta no nó, a ~20fps e sem setState: é um custo
+ * único de entrada, não um custo de rolagem. Com reduced-motion o texto
+ * entra pronto. O leitor de tela recebe o texto inteiro pelo aria-label; os
+ * glifos passageiros ficam escondidos dele.
+ */
+export function ScrambleReveal({
+  text,
+  className = '',
+  delay = 0,
+  as: Tag = 'h1',
+}: {
+  text: string
+  className?: string
+  delay?: number
+  as?: 'h1' | 'h2'
+}) {
+  const MotionTag = motion[Tag]
+  const nos = useRef<(HTMLSpanElement | null)[]>([])
+  const linhas = useMemo(() => text.split('\n').map((linha) => linha.split(' ')), [text])
+
+  useEffect(() => {
+    if (prefersReducedMotion()) return
+    const spans = nos.current.filter((no): no is HTMLSpanElement => no !== null)
+    const originais = spans.map((no) => no.textContent ?? '')
+    const DURACAO = 520
+    const PASSO = 55
+    let frame = 0
+    let ultimo = 0
+    let inicio = 0
+    const repor = () => {
+      spans.forEach((no, i) => {
+        no.textContent = originais[i]
+      })
+    }
+    const tick = (agora: number) => {
+      let pronto = true
+      if (agora - ultimo >= 50) {
+        ultimo = agora
+        spans.forEach((no, i) => {
+          const t = agora - (inicio + i * PASSO)
+          if (t < 0) {
+            pronto = false
+            return
+          }
+          const original = originais[i]
+          const p = Math.min(t / DURACAO, 1)
+          if (p < 1) pronto = false
+          const assentadas = Math.floor(p * original.length)
+          let saida = ''
+          for (let k = 0; k < original.length; k += 1) {
+            const c = original[k]
+            saida += k < assentadas ? c : glifoComo(c)
+          }
+          no.textContent = saida
+        })
+      } else {
+        pronto = false
+      }
+      if (pronto) repor()
+      else frame = requestAnimationFrame(tick)
+    }
+    /* O React monta atrás da tela de entrada, e a subida das palavras já
+       acontece lá. A decodificação, não: ela espera o evento que entrada.js
+       dispara quando a pessoa clica em Entrar, e roda quando o site está
+       de fato na frente dos olhos. Sem a tela (ou já sem ela), roda no
+       mount, com o atraso pedido. */
+    const comecar = (espera: number) => {
+      inicio = performance.now() + espera
+      frame = requestAnimationFrame(tick)
+    }
+    const entrada = document.getElementById('entrada')
+    const aoEntrar = () => comecar(260)
+    if (entrada) window.addEventListener('astro:entrou', aoEntrar, { once: true })
+    else comecar(delay * 1000)
+    return () => {
+      window.removeEventListener('astro:entrou', aoEntrar)
+      cancelAnimationFrame(frame)
+      repor()
+    }
+  }, [text, delay])
+
+  let indice = 0
+  return (
+    <MotionTag
+      className={className}
+      initial="hidden"
+      animate="show"
+      aria-label={text.replace(/\n/g, ' ')}
+    >
+      {linhas.map((palavras, numeroLinha) => (
+        <span key={numeroLinha} className="block" aria-hidden="true">
+          {palavras.map((palavra, numeroPalavra) => {
+            const i = indice
+            indice += 1
+            return (
+              <span key={`${palavra}-${numeroPalavra}`}>
+                <span className="inline-block overflow-hidden pt-[0.16em] -mt-[0.16em] pb-[0.08em] align-top">
+                  <motion.span
+                    ref={(no) => {
+                      nos.current[i] = no
+                    }}
+                    className="inline-block origin-bottom-left"
+                    variants={{ hidden: { y: '112%', rotate: 6 }, show: { y: '0%', rotate: 0 } }}
+                    transition={{ duration: 0.7, delay: delay + i * 0.055, ease: REVEAL_EASE }}
+                  >
+                    {palavra}
+                  </motion.span>
+                </span>
+                {numeroPalavra < palavras.length - 1 ? ' ' : null}
               </span>
             )
           })}

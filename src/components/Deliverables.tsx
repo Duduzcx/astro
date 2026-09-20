@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { GiantWord, Label, Reveal, WordReveal  } from './ui/Primitives'
+import { ScrollTrail } from './ui/ScrollTrail'
 
 /**
  * Lista do anexo "Dicionário de Entregáveis": o que é transferido para o
@@ -53,6 +54,7 @@ export function Deliverables() {
     >
       <GiantWord word="Seu" className="opacity-60" />
       <div className="shell relative">
+        <ScrollTrail />
         <Label>Evidência, não promessa</Label>
         <WordReveal
           text="O que você leva quando o projeto fecha"

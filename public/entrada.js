@@ -98,6 +98,10 @@
        saída teria movimento e a chegada não teria nenhum. */
     var raiz = document.documentElement
     raiz.classList.add('site-entrando')
+    /* Avisa a página: o que deve acontecer só quando a pessoa vê o site
+       (o título se decodificando, por exemplo) espera por este evento, e
+       não pelo mount do React, que acontece atrás desta tela. */
+    window.dispatchEvent(new Event('astro:entrou'))
 
     if (miolo) {
       miolo.style.animation = 'entradaSaiMiolo ' + SAIDA + 'ms ' + CURVA + ' ' + atraso + 'ms forwards'

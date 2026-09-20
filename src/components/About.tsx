@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { motion } from 'framer-motion'
 import { WordReveal, Reveal } from './ui/Primitives'
+import { ScrollTrail } from './ui/ScrollTrail'
 import { useAutoPauseVideo } from '../lib/useAutoPauseVideo'
 
 /** Como o time trabalha, em três hábitos. */
@@ -25,7 +26,8 @@ export function About() {
 
   return (
     <section id="sobre" aria-label="Sobre a Astro Soluções" className="relative z-10 py-24 md:py-32">
-      <div className="shell">
+      <div className="shell relative">
+        <ScrollTrail />
         <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
           <div>
             <WordReveal text={'Por que a Astro Soluções\nexiste'} className="font-impact text-[clamp(2.4rem,5.2vw,4.2rem)]" />
