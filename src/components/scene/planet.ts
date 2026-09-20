@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { loadTexture } from './textures'
 import { SIMPLEX_NOISE } from './glsl'
 
 /**
@@ -1040,7 +1041,6 @@ export type PlanetMaps = {
   specular?: MapTiers
 }
 
-const textureLoader = new THREE.TextureLoader()
 const ANISOTROPY = 16
 
 function prepare(texture: THREE.Texture) {
@@ -1054,14 +1054,14 @@ function prepare(texture: THREE.Texture) {
 function loadMap(tiers: MapTiers, onLoad: (texture: THREE.Texture) => void): THREE.Texture[] {
   const loaded: THREE.Texture[] = []
   if (typeof tiers === 'string') {
-    loaded.push(textureLoader.load(tiers, (texture) => onLoad(prepare(texture))))
+    loaded.push(loadTexture(tiers, (texture) => onLoad(prepare(texture))))
     return loaded
   }
   loaded.push(
-    textureLoader.load(tiers.low, (low) => {
+    loadTexture(tiers.low, (low) => {
       onLoad(prepare(low))
       loaded.push(
-        textureLoader.load(tiers.high, (high) => {
+        loadTexture(tiers.high, (high) => {
           onLoad(prepare(high))
           low.dispose()
         }),

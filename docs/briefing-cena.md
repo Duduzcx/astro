@@ -135,11 +135,15 @@ lado intercaladas (o build anterior servido em outra porta):
 
 O primeiro quadro chega mais tarde de propósito: os programas do hero ligam
 em paralelo no driver antes de o laço começar, e a tela de entrada cobre esse
-tempo. O que ainda pesa ali são as texturas de 4k subindo (1,5s de
-`texSubImage2D` no perfil): o próximo passo é `ImageBitmapLoader` com
-`imageOrientation: 'flipY'` e `texture.flipY = false`, que tira a cópia com
-flip da thread principal. Não foi feito porque muda o caminho das texturas
-do celular também, e o celular está selado.
+tempo. O que ainda pesa depois do clique são as texturas subindo: no
+Chromium elas agora chegam como `ImageBitmap` já virado (`textures.ts`,
+`flipY = false`), o que tira a cópia com flip da thread principal; sobrou
+cerca de 1,5s de `texSubImage2D` espalhado em uploads de 100 a 300ms (4k da
+Terra e do céu, texturas do GLB), um por quadro. O Safari e o iPhone ficam
+no `TextureLoader` de sempre: o `imageOrientation` do `createImageBitmap`
+chegou tarde lá e uma versão sem ele entregaria a Terra de cabeça para
+baixo. Próximo passo, se ainda incomodar: adiar a troca pelo degrau de 4k
+para depois da entrada, ou KTX2.
 
 ## Ferramentas
 

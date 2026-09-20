@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { loadTexture } from './textures'
 import { SIMPLEX_NOISE } from './glsl'
 import { createGalaxies } from './galaxies'
 
@@ -343,7 +344,6 @@ export function createSpace(
   const galaxies = options.view ? createGalaxies(options.view, skyRotation) : null
   if (galaxies) object.add(galaxies.object)
 
-  const loader = new THREE.TextureLoader()
   const textures: THREE.Texture[] = []
   const apply = (loaded: THREE.Texture) => {
     loaded.colorSpace = THREE.NoColorSpace
@@ -359,11 +359,11 @@ export function createSpace(
      há, o degrau leve é descartado: ele já não está em uso, mas ficava
      pendurado na GPU até o desmonte, 2,7 MB por nada. */
   textures.push(
-    loader.load(urls.low, (low) => {
+    loadTexture(urls.low, (low) => {
       apply(low)
       if (urls.high === urls.low) return
       textures.push(
-        loader.load(urls.high, (high) => {
+        loadTexture(urls.high, (high) => {
           apply(high)
           low.dispose()
         }),
