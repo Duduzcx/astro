@@ -166,6 +166,34 @@ caminhos para `earth-*`, `milky-way` e `moon` — confira com
 `grep -o "tier('[a-z-]*'\|pin('[a-z-]*'"` antes de acreditar num grep solto
 por nome, porque "saturn" casa com comentário.
 
+**O foguete sumia no desktop por uma corrida entre dois arquivos.** Em
+`rocket.ts` há um corredor de 350ms: se o aquecimento demora mais, o modelo
+é anexado ao foguete pelo timer. Depois o aquecimento termina e `warmRocket`
+fazia `scene.add(model)` — que no three REPARENTA — e `scene.remove(model)`:
+o corpo ficava órfão. No celular `compileAsync` vence os 350ms e a ordem é a
+inversa; no desktop, com bloom e programas maiores, nunca vence. Hoje o
+aquecimento guarda o pai e devolve o modelo a ele. Sintoma para reconhecer:
+a chama aparece e o casco não.
+
+**No desktop, sonde antes de teorizar.** Gastei quatro hipóteses (x fora
+do disco da Terra, oclusão por profundidade, material preto sem ambiente,
+`lighten()`) antes de expor os nós do foguete por um gancho temporário em
+`window` e ler zero meshes do GLB. O gancho custou dois minutos; as
+hipóteses, uma hora.
+
+**Perfil de CPU do desktop (CDP Profiler, rolagem de 21s, sem throttle):**
+36% (program), 22% ocioso, 11% `getProgramInfoLog`, 8% `actualScroll` do
+Lenis. O `getProgramInfoLog` é `checkShaderErrors`, hoje desligado fora do
+desenvolvimento. Os picos de 1,2 a 1,6s que sobram são link de programa na
+primeira aparição de um material durante a rolagem — o aquecimento não
+cobre tudo no desktop, e isso continua em aberto. Bloom é só 9% do quadro;
+o deslizamento do `text-spectrum-animated` era 10% e virou gradiente parado.
+
+**Números do desktop (perfil "Desktop Chrome" 1280x720):** sem throttle
+34,8–36,8ms por quadro; com throttle 4x, 119 antes destas mudanças e 94–97
+depois. O 4x é o cenário de notebook fraco; o número sem throttle é o que um
+desktop comum vê.
+
 **Uma medição isolada não é medição.** A dispersão entre corridas chega a 7ms
 na média por quadro. Eu subi a razão de pixels de 1,5 para 2 com base numa
 corrida que deu 33ms; o valor real era 151ms, e o cliente sentiu como

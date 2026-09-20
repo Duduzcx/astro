@@ -317,9 +317,10 @@
      fundo recortado no texto não é composição: repinta o glifo a cada quadro,
      para sempre, mesmo com a frase fora da tela — o navegador não desliga
      isso sozinho. No celular ele estava disputando o quadro com a cena. */
-  @media (min-width: 1024px) {
-    animation: astro-spectrum 7s linear infinite;
-  }
+  /* O gradiente fica; o deslizamento não. Animar background-position num
+     fundo recortado no texto repinta o glifo a cada quadro, para sempre, em
+     sete blocos da página: medido, custava cerca de 10% do quadro no
+     desktop. O celular já não animava pelo mesmo motivo. */
 
   @media (max-width: 1023px) {
     background: none;

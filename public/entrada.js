@@ -32,7 +32,7 @@
   /* Se ninguém clicar, entra sozinho. O botão é uma porta, não um pedágio:
      quem se distraiu ou não entendeu não pode ficar preso. */
   var AUTO = 9000
-  var SAIDA = 700
+  var SAIDA = 900
   /* Duas curvas, e a diferença importa. O miolo sai em ease-IN: começa
      devagar e acelera, que é como uma coisa se afasta. O fundo sai em
      ease-out, atrás dele. */
@@ -121,7 +121,7 @@
        qualquer `position: fixed` que venha a existir ali dentro. */
     setTimeout(function () {
       raiz.classList.remove('site-entrando')
-    }, atraso + 1100)
+    }, atraso + 1400)
   }
 
   if (botao) {

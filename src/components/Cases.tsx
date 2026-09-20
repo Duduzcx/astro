@@ -54,7 +54,7 @@ export function Cases() {
                 <p className="text-[13px] font-[480] tracking-[0.08em] text-slate uppercase">
                   {item.client}
                 </p>
-                <p className="text-spectrum-animated mt-5 text-[3rem] leading-none font-[480] tracking-[-0.01em]">
+                <p className="mt-5 text-[3rem] leading-none font-[480] tracking-[-0.01em] text-[#8db4f5]">
                   <AnimatedNumber value={item.metric} />
                 </p>
                 <p className="mt-1 text-[14px] text-ivory">{item.metricLabel}</p>

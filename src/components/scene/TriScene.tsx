@@ -95,6 +95,13 @@ export function TriScene() {
     })
     /* Celular a 1,5 de razão de pixels: a 1,0 a cena era esticada quase
        três vezes e virava desenho borrado. A taxa de 30fps segura o custo. */
+    /* Só em desenvolvimento. Com isto ligado (padrão do three), cada link de
+       programa chama getProgramInfoLog, que força a compilação a terminar
+       de forma síncrona: no perfil do desktop era 11,4% do tempo de CPU
+       durante a rolagem e a origem dos quadros de 1,2 a 1,6 segundos — o
+       "travar". Desligado, o link fica assíncrono e erro de shader continua
+       aparecendo no console de desenvolvimento, onde interessa. */
+    renderer.debug.checkShaderErrors = import.meta.env.DEV
     renderer.setPixelRatio(
       /* Sobe para 2 no celular. A 1,5 a cena era desenhada a metade da
          densidade da tela, e era isso que o cliente lia como baixa
@@ -281,7 +288,7 @@ export function TriScene() {
 
     /* Camada ambiente, sempre dispersa: os triângulos fracos flutuando em volta. */
     const ambientGeometry = buildTriangles(
-      lightweight ? 120 : 420,
+      lightweight ? 120 : 240,
       new THREE.Vector3(3.2, 2.1, 1.6),
       false,
     )
@@ -353,7 +360,10 @@ export function TriScene() {
        esticados sobre 683 pixels reais. Com 2k a ampliação cai pela metade.
        Esta é a textura mais visível da tela, porque é o fundo inteiro. */
     const skyTier = tier('milky-way', 'webp', '2k')
-    const space = createSpace(skyTier, lightweight || weakDevice ? 0 : 0.8, warm, {
+    /* Nebulosa a 0,3 no desktop, não 0,8: a 0,8 ela cobria a tela inteira
+       de roxo e azul e o fundo deixava de ser escuro. É a maior parte do que
+       o cliente chamou de poluição. */
+    const space = createSpace(skyTier, lightweight || weakDevice ? 0 : 0.3, warm, {
       renderer,
       /* A nebulosa assada é o fundo inteiro, esticada por toda a esfera do
          céu. A 1024 por 512 a parte visível dela numa tela de 1170 pixels
@@ -365,7 +375,9 @@ export function TriScene() {
       bakeSize: weakDevice ? [1024, 512] : lightweight ? [2048, 1024] : [1536, 768],
       /* Celular com um terço do realce: é isto, e não o gerador procedural,
          que controla quantas estrelas aparecem aqui. */
-      sparkle: lightweight ? 0.3 : 2.8,
+      /* 0,9 no desktop, não 2,8: o termo quadrático a 2,8 acendia toda
+         estrela fraca da fotografia. É o controle real de quantidade. */
+      sparkle: lightweight ? 0.3 : 0.9,
       /* A altura do alvo em pixels REAIS, não em CSS: é ela que diz quantos
          pixels cada galáxia ocupa, e portanto se o mipmap ajuda ou atrapalha. */
       view: {
@@ -439,10 +451,13 @@ export function TriScene() {
        camada densa assada na nebulosa (space.ts) já dá a profundidade. */
     /* Menos estrelas no celular: numa tela de mão o mesmo número vira
        chuvisco, e o que precisa aparecer é o astro da vez. */
-    const stars = createStars(lightweight ? 55 : 3600, renderer.getPixelRatio())
+    /* Novecentas, não três mil e seiscentas. No desktop o campo tinha 65
+       vezes o do celular e lia como poluição, não como céu — e cada ponto é
+       preenchimento aditivo que o bloom ainda multiplica. */
+    const stars = createStars(lightweight ? 55 : 900, renderer.getPixelRatio())
     scene.add(stars.object)
     /* Umas poucas brilhantes de verdade, com halo e espículas. */
-    const brightStars = createBrightStars(lightweight ? 3 : 8, {
+    const brightStars = createBrightStars(lightweight ? 3 : 5, {
       rightBias: !lightweight,
       view: { halfWidth, cameraZ: camera.position.z },
       /* No celular elas nasciam altas demais, coladas no topo, disputando
@@ -470,6 +485,16 @@ export function TriScene() {
       /* Só o foguete é desenhado neste frame de aquecimento: com a cena
          inteira visível, este render forçava a compilação de todos os
          outros astros de uma vez e travava a carga por segundos. */
+      /* O modelo pode já ter dono. Em rocket.ts há uma corrida de 350ms: se
+         o aquecimento demora mais que isso, o modelo é anexado ao foguete
+         antes de chegarmos aqui. E scene.add() no three REPARENTA — roubava o
+         modelo do foguete para a raiz, e o scene.remove() abaixo o deixava
+         órfão para sempre. Era exatamente isso que fazia o foguete de
+         lançamento sumir no desktop e não no celular: lá compileAsync vence
+         os 350ms e a ordem é a inversa; aqui, com bloom e programas maiores,
+         nunca vence. Guardar o pai e devolver o modelo a ele fecha a corrida
+         nos dois sentidos. A transformação local sobrevive à ida e volta. */
+      const dono = object.parent
       const wasVisible = scene.children.map((child) => child.visible)
       for (const child of scene.children) child.visible = false
       scene.add(object)
@@ -481,6 +506,7 @@ export function TriScene() {
       scene.children.forEach((child, index) => {
         child.visible = wasVisible[index] ?? child.visible
       })
+      if (dono) dono.add(object)
     }
     const rocket = createRocket({ height: rocketHeight, lightweight, warm: warmRocket })
     rocket.setPixelRatio(renderer.getPixelRatio())
@@ -655,7 +681,10 @@ export function TriScene() {
 
     /* O foguete em cruzeiro: pequeno, atravessando o desfile com a chama
        viva, e sumindo quando o planeta-alvo chega. */
-    const cruiser = createRocket({ height: rocketHeight * 0.5, lightweight, cruise: true, warm: warmRocket })
+    /* Metade da altura no celular; 0,8 no desktop, onde o quadro é largo e
+       a metade sumia ao lado dos planetas. */
+    const cruiseSize = lightweight ? 0.5 : 0.8
+    const cruiser = createRocket({ height: rocketHeight * cruiseSize, lightweight, cruise: true, warm: warmRocket })
     scene.add(cruiser.object)
     /* Rastros: o do lançamento e o do cruzeiro, cada um seguindo a sua
        própria trajetória. */
@@ -827,6 +856,26 @@ export function TriScene() {
            longe, que ninguém procura e ninguém sente sumir. */
         ambientField.visible = false
       }
+      /* No desktop a ordem é outra: o bloom sai no patamar 2 e a resolução
+         só no 3. Derrubar razão de pixels e metade das estrelas de um golpe
+         é um pulo que o olho vê como piscada; o halo do bloom sumindo é
+         macio. O celular não tem bloom e mantém a ordem antiga. */
+      if (nivel === 2 && !lightweight) {
+        postfx?.dispose()
+        postfx = null
+        downgradedPostFx = true
+        return
+      }
+      if (nivel === 3 && !lightweight) {
+        stars.object.geometry.setDrawRange(
+          0,
+          Math.floor(stars.object.geometry.getAttribute('position').count / 2),
+        )
+        rocket.lighten()
+        renderer.setPixelRatio(1)
+        renderer.setSize(window.innerWidth, stageHeight, false)
+        return
+      }
       if (nivel === 2) {
         stars.object.geometry.setDrawRange(
           0,
@@ -963,8 +1012,8 @@ export function TriScene() {
          no celular transforme o céu numa parede branca. */
       const warpTarget = Math.min(speed / 2600, 1)
       warp += (warpTarget - warp) * (1 - Math.exp(-delta * 6))
-      stars.update({ progress, opacity: narrow ? 0.72 : 0.85, warp }, time)
-      brightStars.update({ progress, opacity: narrow ? 0.7 : 0.9 }, time)
+      stars.update({ progress, opacity: narrow ? 0.72 : 0.6, warp }, time)
+      brightStars.update({ progress, opacity: narrow ? 0.7 : 0.55 }, time)
       meteors.update(time, delta, halfWidth, visibleHalfHeightNow())
       space.update(progress, time)
       /* Um pouco mais presente que o campo: em meia luz o Sol ainda
@@ -1085,8 +1134,10 @@ export function TriScene() {
            mundos, subindo, chegando perto e se afastando, com o eixo no
            rumo. Balança devagar no tempo, para nunca estar parada. */
         const cruiseAmp = (narrow ? 0.42 : 0.5) * halfWidth
-        const cruiseRise = visibleHalfHeight * 1.5
-        const cruiseY0 = -visibleHalfHeight * 0.75
+        /* No desktop a nave partia de 75% abaixo do centro e ficava colada
+           na borda de baixo, meio cortada. Parte de 55% e sobe menos. */
+        const cruiseRise = visibleHalfHeight * (narrow ? 1.5 : 1.2)
+        const cruiseY0 = -visibleHalfHeight * (narrow ? 0.75 : 0.55)
         const turns = Math.PI * 2 * 1.15
         const bobX = Math.sin(time * 0.7) * 0.02
         const bobY = Math.sin(time * 0.9) * 0.04
@@ -1142,7 +1193,7 @@ export function TriScene() {
           {
             head: t,
             span: 0.3,
-            width: rocketHeight * 0.5 * 0.09 * scaleNow,
+            width: rocketHeight * cruiseSize * 0.09 * scaleNow,
             opacity: fade * 0.7 * thrust,
             spread: 1.6,
           },
@@ -1158,7 +1209,12 @@ export function TriScene() {
          devolvido em pixels de buffer (ver space.ts); corrigido aquilo, x = 0
          passou a ser o centro de verdade. Aqui ele sai um pouco para a
          direita de propósito, para não ficar atrás da coluna de texto. */
-      const rocketX = (narrow ? 0.46 : 0.52) * halfWidth
+      /* O x fica preso dentro do disco da Terra, e isto é o motivo de o
+         foguete ter sumido no desktop. horizonDrop faz sqrt(max(r² − x², 0)):
+         quando 0,52 · halfWidth passa do raio, o max zera e a plataforma cai
+         um raio inteiro abaixo da borda da tela — no celular halfWidth é
+         pequeno e nunca chega lá, por isso lá ele sempre apareceu. */
+      const rocketX = Math.min((narrow ? 0.46 : 0.52) * halfWidth, earthRadius * 0.62)
       const horizonTop = -visibleHalfHeight + reveal
       const horizonDrop = earthRadius - Math.sqrt(Math.max(earthRadius * earthRadius - rocketX * rocketX, 0))
       const rocketPadY = horizonTop - horizonDrop + rocketHeight * 0.52
