@@ -781,6 +781,10 @@ export function TriScene() {
     /* A tabela do hero depende da altura do texto e da altura da página, que
        mudam quando as fontes carregam e quando o documento cresce. */
     const remeasure = () => {
+      /* Chega por ResizeObserver e por document.fonts.ready, e o segundo não
+         tem cancelamento: sem esta guarda ele rodava depois do desmonte e
+         tocava num renderer já descartado. */
+      if (disposed) return
       measureScroll()
       mobileTable = mobileKeyframes(halfWidth, halfHeight, maxScroll, stageHeight)
       takeoff = takeoffSpan(stageHeight / maxScroll)
@@ -1446,6 +1450,11 @@ export function TriScene() {
       glareMaterial.dispose()
       streakMaterial.dispose()
       renderer.dispose()
+      /* dispose() solta o que o three conhece; o contexto WebGL em si só é
+         devolvido quando o navegador decide, e no celular isso demora. Forçar
+         a perda entrega a GPU na hora. Os ouvintes de contexto já saíram
+         acima, então o evento que isto dispara não religa nada. */
+      renderer.forceContextLoss()
       mount.removeChild(renderer.domElement)
     }
   }, [])

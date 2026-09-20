@@ -70,7 +70,11 @@
     overflow-x: clip;
     /* O toque só pode rolar na vertical. É a garantia de que nenhum elemento
        largo que escape do clip vire um arrasto lateral no celular. */
-    touch-action: pan-y;
+    /* pan-y sozinho já matava o toque duplo de zoom, mas levava junto o
+       pinça de zoom — e ampliar a tela é acessibilidade (WCAG 1.4.4), não
+       gesto acidental. pinch-zoom devolve a pinça; o toque duplo continua
+       fora, porque ele só existe em `auto` e em `manipulation`. */
+    touch-action: pan-y pinch-zoom;
   }
 
   /* Peso 480 é a assinatura: afirma sem gritar. Nunca negrito. */

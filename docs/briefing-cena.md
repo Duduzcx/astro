@@ -146,6 +146,26 @@ foguete caía no procedural — só em produção, por semanas. Valide contra
 reintroduz a queixa de "a cena fica atrás do dedo", que é governada por
 `touchMultiplier` e pelo amortecimento da cena.
 
+**A primeira corrida depois de subir o preview sai pior.** Medi 38,5 /
+39,0 / 36,2 logo após reiniciar o servidor e 36,2 / 36,2 / 35,9 minutos
+depois, com o mesmo build. Comparar um lado frio com o outro quente inventa
+uma regressão de 2ms que não existe. Intercale as corridas dos dois lados,
+ou descarte as primeiras.
+
+**A cena não tem "pausa quando o canvas sai da tela" porque não há como ele
+sair.** O canvas é fixo e ocupa a janela inteira, e `frame-ancestors 'none'`
+impede que a página viva num iframe rolável. O que existe é o que pode
+acontecer de verdade: aba escondida para o laço (`visibilitychange`),
+contexto perdido para o laço, e o repouso do buraco negro desenha quadro sim,
+quadro não. Um IntersectionObserver ali seria código morto.
+
+**Texturas de Marte, Júpiter e Saturno não existem mais em `public/space`.**
+Os três são ilustrados sem textura desde a direção de arte; os arquivos
+ficaram 462 kB no repositório sem nunca serem pedidos. O carregador só monta
+caminhos para `earth-*`, `milky-way` e `moon` — confira com
+`grep -o "tier('[a-z-]*'\|pin('[a-z-]*'"` antes de acreditar num grep solto
+por nome, porque "saturn" casa com comentário.
+
 **Uma medição isolada não é medição.** A dispersão entre corridas chega a 7ms
 na média por quadro. Eu subi a razão de pixels de 1,5 para 2 com base numa
 corrida que deu 33ms; o valor real era 151ms, e o cliente sentiu como
