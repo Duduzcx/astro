@@ -94,6 +94,19 @@
     saiu = true
     tela.style.pointerEvents = 'none'
 
+    /* A rolagem é devolvida AGORA, não no fim da saída.
+       Ela estava presa ao mesmo setTimeout que remove a camada, e esse
+       temporizador chega atrasado justamente aqui: a thread principal fica
+       ligando shaders no instante do clique. Medido em produção — 2,8s
+       depois do clique a camada ainda estava no DOM, e nesse tempo o
+       visitante já via o site e não conseguia rolar.
+       Rolar durante a abertura não quebra nada: a cena acompanha o scroll
+       por trás do obturador, que é uma imagem a mais, não um erro. */
+    document.documentElement.style.overflow = raizEstilo
+    /* O Lenis mede a página uma vez; com a rolagem travada ele pode ter
+       medido zero. Um resize o faz recontar. */
+    window.dispatchEvent(new Event('resize'))
+
     /* A onda do clique parte do botão ANTES de a tela começar a sair. São
        120ms de confirmação: sem eles o toque some junto com a camada e o
        botão parece não ter respondido. Só no clique — na saída automática
@@ -137,16 +150,18 @@
     tela.style.animation =
       'entradaSai 240ms ' + CURVA_FUNDO + ' ' + (atraso + SAIDA - 100) + 'ms forwards'
 
-    /* A limpeza pode chegar atrasada sem custo: a esta altura a tela já está
-       invisível pelo compositor. O que falta é devolver a rolagem e tirar o
-       elemento do caminho. */
-    setTimeout(function () {
-      document.documentElement.style.overflow = raizEstilo
-      /* O Lenis mede a página uma vez; com a rolagem travada ele pode ter
-         medido zero. Um resize o faz recontar. */
-      window.dispatchEvent(new Event('resize'))
+    /* Só falta tirar o elemento do caminho, e isso pode chegar atrasado sem
+       custo: a esta altura a camada já está invisível pelo compositor e não
+       recebe clique. Dois gatilhos, o que vier primeiro: o fim da animação
+       do obturador e um temporizador de segurança. */
+    var limpou = false
+    function limpar() {
+      if (limpou) return
+      limpou = true
       if (tela.parentNode) tela.parentNode.removeChild(tela)
-    }, atraso + SAIDA + 300)
+    }
+    if (alto) alto.addEventListener('animationend', limpar)
+    setTimeout(limpar, atraso + SAIDA + 400)
 
     /* A classe sai depois que a animação termina. Deixá-la pendurada manteria
        um transform em main e footer para sempre, e um transform prende

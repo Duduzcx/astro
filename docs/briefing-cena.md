@@ -316,6 +316,41 @@ procure `traverseVisible`. Perdi uma rodada de medição nisso.
 de CPU aparece como a classe `WebGLUniforms` (minificada) com self time
 enorme. Se ela aparecer, é link síncrono de shader, não JavaScript.
 
+**A lente precisa entrar E sair desvanecendo.** Ela muda a imagem inteira de
+uma vez (halo, vinheta, grão), e qualquer troca num quadro só o olho lê como
+piscada. Eram duas fontes: a entrada, que caía depois do primeiro quadro (com
+o visitante já olhando), e a saída pelo nível 2 da escada de sobrevivência,
+que descartava a lente num quadro. Agora ela é preparada junto com o hero,
+quase sempre assume atrás da tela de entrada, e nos dois sentidos passa pelo
+`setMix` de `postfx.ts`, em meio segundo.
+
+**A escada dispara de verdade no desktop.** Numa rolagem longa numa máquina
+comum ela vai até o nível 3 (razão de pixels cai para 1). Não é teoria: foi
+medido. Qualquer coisa que o nível 2 ou 3 remova tem que sair suave.
+
+**`window.open` com `'noopener'` devolve `null` mesmo tendo aberto a aba.** É
+a especificação. O formulário acusava bloqueio em todo envio bem-sucedido.
+Abra sem a opção e corte o elo com `aba.opener = null`.
+
+**O `setTimeout` da limpeza da tela de entrada chega atrasado.** No instante
+do clique a thread principal está ligando shaders. Medido em produção: 2,8s
+depois do clique a camada ainda estava no DOM. Nada que o visitante precise
+pode depender desse temporizador — a rolagem é devolvida no próprio clique, e
+a remoção do elemento tem dois gatilhos (`animationend` do obturador e um
+temporizador de segurança).
+
+**Não meça o brilho do canvas de dentro da página.** O contexto é criado sem
+`preserveDrawingBuffer`, então `drawImage` do canvas fora do quadro devolve
+preto. Para ver a saída da tela de entrada, congele: `getAnimations()`,
+`pause()`, `currentTime = t`. Congele TODAS as animações envolvidas — deixei
+a do véu de fora uma vez e ele desapareceu sozinho, escondendo o obturador —
+e impeça a remoção do elemento na sonda.
+
+**Rolagem forçada não mede desempenho de forma confiável nesta máquina.** Com
+14px por quadro as medianas variam de 96 a 217ms entre corridas do MESMO
+código. Para comparar duas versões, intercale três corridas de cada lado no
+mesmo navegador e compare as faixas, não um número.
+
 ## Coisas que degradam a cena depois da carga — todas já removidas
 
 Esta foi a queixa mais longa do cliente: "abre bonito e fica feio". Quatro
@@ -384,28 +419,20 @@ poeira próxima cruzando o quadro, variação de matiz lenta no céu.
 
 ## Hospedagem e domínio
 
-Hoje o site vive em `https://astrosolucoes.netlify.app`, e canonical, Open
-Graph, JSON-LD, `robots.txt` e `sitemap.xml` apontam para lá. O cliente vai
-mudar para a Vercel; o domínio próprio (`astrosolucoes.com.br`) ainda não
-está apontando para lugar nenhum. Quando mudar, são sete ocorrências da URL
-para trocar: cinco em `index.html`, uma em cada arquivo de `public/`.
+O site vive em `https://astrosolucoes.vercel.app`. Canonical, Open Graph,
+JSON-LD, `robots.txt` e `sitemap.xml` apontam para lá — são sete ocorrências
+(cinco em `index.html`, uma em cada arquivo de `public/`) quando o domínio
+próprio entrar. O `vercel.json` entrega os cabeçalhos de segurança e de
+cache; conferido no ar.
 
-O `vercel.json` já está pronto e espelha o `netlify.toml`: os mesmos
-cabeçalhos de segurança e de cache, saída em `dist`, sem rewrite geral (o
-`public/404.html` é servido com 404 pela Vercel sozinha). O que NÃO
-atravessa a mudança:
+O Netlify Forms morreu com a migração. A Vercel é estática e responde **405**
+a um POST na própria página, então todo envio caía na tela de erro. O
+formulário agora monta a mensagem e abre o WhatsApp no mesmo gesto do clique.
+Se um dia houver caixa de entrada de verdade (função serverless, serviço de
+formulário), o lugar de mexer é o `handleSubmit` de `Contact.tsx`.
 
-- **Netlify Forms.** O formulário de contato posta para `/` com
-  `form-name`, que só o Netlify entende. Na Vercel o POST falha e o código
-  cai no resgate por WhatsApp (o texto vai junto), que já é o caminho de
-  hoje enquanto o painel do Netlify não ativa a detecção. Decidir antes de
-  mudar: função serverless que manda e-mail, um serviço de formulário, ou
-  assumir o WhatsApp como canal único e tirar o formulário.
-- **HSTS com preload.** A Vercel manda HSTS por conta própria no domínio
-  dela; no domínio próprio, ligar no painel.
-
-O hash sha256 que existia na CSP para o bloco JSON-LD era inerte (ver o
-comentário em `netlify.toml`): mudar o bloco não pede nada.
+Falta, e depende do cliente: HSTS no domínio próprio (painel da Vercel) e a
+decisão sobre os créditos CC BY no rodapé.
 
 ## A tela de entrada
 
