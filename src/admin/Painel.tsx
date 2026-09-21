@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 /**
- * Painel da empresa: leads, funil e números.
+ * Painel da empresa: CRM, funil e o robô do WhatsApp.
  *
  * É uma página separada do site (segunda entrada do build), então nada deste
  * código vai no pacote que o visitante baixa — e a cena 3D não vem junto.
@@ -29,11 +29,16 @@ type Lead = {
   situacao: Situacao
   valor_centavos: number
   anotacoes: string
+  retorno_em: string | null
+  responsavel: string
 }
+
+type Atividade = { id: number; quando: string; tipo: string; texto: string }
 
 type Resumo = {
   total: number
   semana: number
+  atrasados: number
   fechados: number
   receitaCentavos: number
   conversao: number | null
@@ -50,6 +55,14 @@ type Estado = {
   avisoEquipe: boolean
 }
 
+type Robo = {
+  textos: Record<string, string>
+  padrao: Record<string, string>
+  ligado: boolean
+  assinado: boolean
+  editavel: boolean
+}
+
 const CORES: Record<Situacao, string> = {
   novo: 'text-[#8db4f5] border-[#8db4f5]/35',
   contatado: 'text-[#c9a6ff] border-[#c9a6ff]/35',
@@ -58,11 +71,28 @@ const CORES: Record<Situacao, string> = {
   perdido: 'text-slate border-white/15',
 }
 
+const ROTULOS_ROBO: [string, string][] = [
+  ['boasVindas', 'Boas-vindas'],
+  ['menu', 'Menu de opções'],
+  ['opcao1', 'Opção 1 — agendar'],
+  ['opcao2', 'Opção 2 — o que fazemos'],
+  ['opcao3', 'Opção 3 — prazo e preço'],
+  ['opcao4', 'Opção 4 — falar com humano'],
+  ['naoEntendi', 'Quando não entende'],
+]
+
 const dinheiro = (centavos: number) =>
   (centavos / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
 
 const quando = (iso: string) =>
   new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+
+const hoje = () => new Date().toISOString().slice(0, 10)
+const atrasado = (lead: Lead) =>
+  Boolean(lead.retorno_em) &&
+  lead.retorno_em! <= hoje() &&
+  lead.situacao !== 'fechado' &&
+  lead.situacao !== 'perdido'
 
 async function pedir(caminho: string, opcoes: RequestInit = {}) {
   const resposta = await fetch(caminho, {
@@ -101,8 +131,8 @@ function Entrar({ aoEntrar, estado }: { aoEntrar: () => void; estado: Estado | n
         <p className="mt-2 text-[14px] text-slate">Área restrita da equipe.</p>
         {estado && !estado.configurado ? (
           <p className="mt-5 rounded-xl border border-[#ffd479]/30 bg-[#ffd479]/5 p-3 text-[13px] text-[#ffd479]">
-            O painel ainda não foi configurado. Cadastre <code>ADMIN_SENHA</code> e{' '}
-            <code>ADMIN_SEGREDO</code> nas variáveis de ambiente da Vercel e republique.
+            O painel ainda não foi configurado. Cadastre <code>ADMIN_SENHA</code> (12 caracteres ou
+            mais) e <code>ADMIN_SEGREDO</code> nas variáveis de ambiente da Vercel e republique.
           </p>
         ) : null}
         <label className="sr-only" htmlFor="senha">
@@ -134,16 +164,23 @@ function Numeros({ resumo }: { resumo: Resumo }) {
   const maior = Math.max(1, ...resumo.porSemana.map((s) => s.quantos))
   return (
     <>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {[
-          { rotulo: 'Leads no total', valor: String(resumo.total) },
-          { rotulo: 'Nos últimos 7 dias', valor: String(resumo.semana) },
-          { rotulo: 'Conversão', valor: resumo.conversao === null ? '—' : `${resumo.conversao}%` },
-          { rotulo: 'Receita fechada', valor: dinheiro(resumo.receitaCentavos) },
+          { rotulo: 'Leads no total', valor: String(resumo.total), alerta: false },
+          { rotulo: 'Nos últimos 7 dias', valor: String(resumo.semana), alerta: false },
+          { rotulo: 'Retornos vencidos', valor: String(resumo.atrasados), alerta: resumo.atrasados > 0 },
+          { rotulo: 'Conversão', valor: resumo.conversao === null ? '—' : `${resumo.conversao}%`, alerta: false },
+          { rotulo: 'Receita fechada', valor: dinheiro(resumo.receitaCentavos), alerta: false },
         ].map((cartao) => (
           <div key={cartao.rotulo} className="graphite-card">
             <p className="label-voice text-[10px]">{cartao.rotulo}</p>
-            <p className="mt-3 text-[2.2rem] leading-none font-[480] text-[#8db4f5]">{cartao.valor}</p>
+            <p
+              className={`mt-3 text-[1.9rem] leading-none font-[480] ${
+                cartao.alerta ? 'text-[#ffd479]' : 'text-[#8db4f5]'
+              }`}
+            >
+              {cartao.valor}
+            </p>
           </div>
         ))}
       </div>
@@ -196,13 +233,45 @@ function Numeros({ resumo }: { resumo: Resumo }) {
   )
 }
 
-function Cartao({ lead, aoMudar }: { lead: Lead; aoMudar: (campos: Partial<Lead>) => void }) {
+function Cartao({
+  lead,
+  aoMudar,
+  compacto = false,
+}: {
+  lead: Lead
+  aoMudar: (campos: Partial<Lead>) => void
+  compacto?: boolean
+}) {
   const [aberto, setAberto] = useState(false)
   const [anotacoes, setAnotacoes] = useState(lead.anotacoes)
   const [valor, setValor] = useState(String(lead.valor_centavos / 100 || ''))
+  const [atividades, setAtividades] = useState<Atividade[] | null>(null)
+  const [nova, setNova] = useState('')
+
+  useEffect(() => {
+    if (!aberto || atividades) return
+    pedir(`/api/admin/leads?lead=${lead.id}`)
+      .then((r) => setAtividades(r.atividades))
+      .catch(() => setAtividades([]))
+  }, [aberto, atividades, lead.id])
+
+  async function registrar() {
+    const texto = nova.trim()
+    if (!texto) return
+    setNova('')
+    try {
+      const { atividade } = await pedir('/api/admin/leads', {
+        method: 'POST',
+        body: JSON.stringify({ id: lead.id, texto }),
+      })
+      setAtividades((atuais) => [atividade, ...(atuais || [])])
+    } catch {
+      setNova(texto)
+    }
+  }
 
   return (
-    <li className="graphite-card">
+    <li className={`graphite-card ${atrasado(lead) ? 'border-[#ffd479]/40' : ''}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[1.05rem] text-ivory">{lead.nome || 'Sem nome'}</p>
@@ -211,27 +280,38 @@ function Cartao({ lead, aoMudar }: { lead: Lead; aoMudar: (campos: Partial<Lead>
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[11px] text-slate">{quando(lead.criado_em)}</span>
+          {atrasado(lead) ? (
+            <span className="rounded-full border border-[#ffd479]/40 px-2.5 py-0.5 text-[10px] text-[#ffd479] uppercase">
+              retorno vencido
+            </span>
+          ) : null}
+          {!compacto ? <span className="text-[11px] text-slate">{quando(lead.criado_em)}</span> : null}
           <span className="rounded-full border border-white/12 px-2.5 py-0.5 text-[10px] text-slate uppercase">
             {lead.canal}
           </span>
         </div>
       </div>
 
-      <dl className="mt-4 grid gap-2 text-[13px] sm:grid-cols-3">
-        {[
-          ['Precisa de', lead.necessidade],
-          ['Prazo', lead.urgencia],
-          ['Investimento', lead.orcamento],
-        ].map(([rotulo, valorTexto]) => (
-          <div key={rotulo}>
-            <dt className="label-voice text-[9px]">{rotulo}</dt>
-            <dd className="mt-1 text-ash">{valorTexto || '—'}</dd>
-          </div>
-        ))}
-      </dl>
+      {!compacto ? (
+        <dl className="mt-4 grid gap-2 text-[13px] sm:grid-cols-3">
+          {[
+            ['Precisa de', lead.necessidade],
+            ['Prazo', lead.urgencia],
+            ['Investimento', lead.orcamento],
+          ].map(([rotulo, valorTexto]) => (
+            <div key={rotulo}>
+              <dt className="label-voice text-[9px]">{rotulo}</dt>
+              <dd className="mt-1 text-ash">{valorTexto || '—'}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <p className="mt-2 text-[12px] text-ash">{lead.necessidade || '—'}</p>
+      )}
 
-      {lead.resumo ? <p className="mt-3 text-[13px] leading-[1.5] text-ash">{lead.resumo}</p> : null}
+      {lead.resumo && !compacto ? (
+        <p className="mt-3 text-[13px] leading-[1.5] text-ash">{lead.resumo}</p>
+      ) : null}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {SITUACOES.map((situacao) => (
@@ -257,41 +337,104 @@ function Cartao({ lead, aoMudar }: { lead: Lead; aoMudar: (campos: Partial<Lead>
 
       {aberto ? (
         <div className="mt-4 border-t border-white/8 pt-4">
-          <label className="label-voice text-[9px]" htmlFor={`valor-${lead.id}`}>
-            Valor do negócio (R$)
-          </label>
-          <div className="mt-2 flex gap-2">
-            <input
-              id={`valor-${lead.id}`}
-              inputMode="numeric"
-              value={valor}
-              onChange={(evento) => setValor(evento.target.value.replace(/[^\d]/g, ''))}
-              className="w-40 rounded-xl bg-obsidian px-3 py-2 text-[14px] text-ivory outline-none focus:shadow-[inset_0_0_0_1px_#4d84e0]"
-            />
-            <button
-              type="button"
-              onClick={() => aoMudar({ valor_centavos: Number(valor || 0) * 100 })}
-              className="rounded-xl bg-obsidian px-4 py-2 text-[13px] text-ivory hover:bg-[#1e2c4c]"
-            >
-              Salvar
-            </button>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <label className="label-voice text-[9px]" htmlFor={`retorno-${lead.id}`}>
+                Retornar em
+              </label>
+              <input
+                id={`retorno-${lead.id}`}
+                type="date"
+                defaultValue={lead.retorno_em || ''}
+                onChange={(evento) => aoMudar({ retorno_em: evento.target.value })}
+                className="mt-2 w-full rounded-xl bg-obsidian px-3 py-2 text-[13px] text-ivory outline-none focus:shadow-[inset_0_0_0_1px_#4d84e0]"
+              />
+            </div>
+            <div>
+              <label className="label-voice text-[9px]" htmlFor={`dono-${lead.id}`}>
+                Responsável
+              </label>
+              <input
+                id={`dono-${lead.id}`}
+                defaultValue={lead.responsavel}
+                onBlur={(evento) =>
+                  evento.target.value !== lead.responsavel && aoMudar({ responsavel: evento.target.value })
+                }
+                placeholder="quem cuida"
+                className="mt-2 w-full rounded-xl bg-obsidian px-3 py-2 text-[13px] text-ivory outline-none placeholder:text-slate focus:shadow-[inset_0_0_0_1px_#4d84e0]"
+              />
+            </div>
+            <div>
+              <label className="label-voice text-[9px]" htmlFor={`valor-${lead.id}`}>
+                Valor (R$)
+              </label>
+              <div className="mt-2 flex gap-2">
+                <input
+                  id={`valor-${lead.id}`}
+                  inputMode="numeric"
+                  value={valor}
+                  onChange={(evento) => setValor(evento.target.value.replace(/[^\d]/g, ''))}
+                  onBlur={() => aoMudar({ valor_centavos: Number(valor || 0) * 100 })}
+                  className="w-full rounded-xl bg-obsidian px-3 py-2 text-[13px] text-ivory outline-none focus:shadow-[inset_0_0_0_1px_#4d84e0]"
+                />
+              </div>
+            </div>
           </div>
 
           <label className="label-voice mt-5 block text-[9px]" htmlFor={`nota-${lead.id}`}>
-            Anotações
+            Anotações fixas
           </label>
           <textarea
             id={`nota-${lead.id}`}
-            rows={3}
+            rows={2}
             value={anotacoes}
             onChange={(evento) => setAnotacoes(evento.target.value)}
             onBlur={() => anotacoes !== lead.anotacoes && aoMudar({ anotacoes })}
             className="mt-2 w-full resize-none rounded-xl bg-obsidian px-3 py-2 text-[14px] text-ivory outline-none focus:shadow-[inset_0_0_0_1px_#4d84e0]"
           />
 
+          <p className="label-voice mt-5 text-[9px]">Histórico</p>
+          <form
+            onSubmit={(evento) => {
+              evento.preventDefault()
+              void registrar()
+            }}
+            className="mt-2 flex gap-2"
+          >
+            <label className="sr-only" htmlFor={`atividade-${lead.id}`}>
+              Registrar contato
+            </label>
+            <input
+              id={`atividade-${lead.id}`}
+              value={nova}
+              onChange={(evento) => setNova(evento.target.value)}
+              placeholder="Liguei, mandei proposta…"
+              className="w-full rounded-xl bg-obsidian px-3 py-2 text-[13px] text-ivory outline-none placeholder:text-slate focus:shadow-[inset_0_0_0_1px_#4d84e0]"
+            />
+            <button
+              type="submit"
+              className="shrink-0 rounded-xl bg-obsidian px-4 py-2 text-[13px] text-ivory hover:bg-[#1e2c4c]"
+            >
+              Registrar
+            </button>
+          </form>
+          {atividades === null ? (
+            <p className="mt-3 text-[12px] text-slate">Carregando…</p>
+          ) : atividades.length === 0 ? (
+            <p className="mt-3 text-[12px] text-slate">Nada registrado ainda.</p>
+          ) : (
+            <ul className="mt-3 flex flex-col gap-1.5">
+              {atividades.map((a) => (
+                <li key={a.id} className="text-[12px] text-ash">
+                  <span className="text-slate">{quando(a.quando)}</span> · {a.texto}
+                </li>
+              ))}
+            </ul>
+          )}
+
           {lead.conversa?.length ? (
             <>
-              <p className="label-voice mt-5 text-[9px]">A conversa</p>
+              <p className="label-voice mt-5 text-[9px]">A conversa que trouxe este lead</p>
               <ul className="mt-2 flex flex-col gap-1.5">
                 {lead.conversa.map((fala, i) => (
                   <li key={i} className={`text-[12px] ${fala.de === 'robo' ? 'text-slate' : 'text-ash'}`}>
@@ -308,12 +451,147 @@ function Cartao({ lead, aoMudar }: { lead: Lead; aoMudar: (campos: Partial<Lead>
   )
 }
 
+function Funil({ leads, aoMudar }: { leads: Lead[]; aoMudar: (id: number, campos: Partial<Lead>) => void }) {
+  return (
+    <div className="grid gap-3 lg:grid-cols-5">
+      {SITUACOES.map((situacao) => {
+        const doEstagio = leads.filter((l) => l.situacao === situacao)
+        const soma = doEstagio.reduce((total, l) => total + l.valor_centavos, 0)
+        return (
+          <section key={situacao} className="flex flex-col gap-2">
+            <header className="flex items-baseline justify-between px-1">
+              <h3 className="text-[13px] text-ivory capitalize">{situacao}</h3>
+              <span className="text-[11px] text-slate">
+                {doEstagio.length}
+                {soma ? ` · ${dinheiro(soma)}` : ''}
+              </span>
+            </header>
+            {doEstagio.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-white/8 px-3 py-6 text-center text-[12px] text-slate">
+                vazio
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {doEstagio.map((lead) => (
+                  <Cartao key={lead.id} lead={lead} compacto aoMudar={(campos) => aoMudar(lead.id, campos)} />
+                ))}
+              </ul>
+            )}
+          </section>
+        )
+      })}
+    </div>
+  )
+}
+
+function AbaRobo() {
+  const [robo, setRobo] = useState<Robo | null>(null)
+  const [rascunho, setRascunho] = useState<Record<string, string>>({})
+  const [aviso, setAviso] = useState('')
+
+  useEffect(() => {
+    pedir('/api/admin/whatsapp')
+      .then((r) => {
+        setRobo(r)
+        setRascunho(r.textos)
+      })
+      .catch(() => setAviso('não foi possível ler a configuração do robô'))
+  }, [])
+
+  if (!robo) return <p className="text-[14px] text-slate">{aviso || 'Carregando…'}</p>
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="grid gap-3 sm:grid-cols-3">
+        {[
+          ['Cloud API', robo.ligado ? 'ligada' : 'não configurada', robo.ligado],
+          ['Assinatura da Meta', robo.assinado ? 'conferida' : 'sem segredo', robo.assinado],
+          ['Textos editáveis', robo.editavel ? 'sim' : 'precisa do banco', robo.editavel],
+        ].map(([rotulo, valor, bom]) => (
+          <div key={String(rotulo)} className="graphite-card">
+            <p className="label-voice text-[10px]">{String(rotulo)}</p>
+            <p className={`mt-2 text-[15px] ${bom ? 'text-[#86e8a8]' : 'text-[#ffd479]'}`}>{String(valor)}</p>
+          </div>
+        ))}
+      </div>
+
+      {!robo.ligado ? (
+        <p className="rounded-xl border border-[#ffd479]/30 bg-[#ffd479]/5 px-4 py-3 text-[13px] text-[#ffd479]">
+          O robô ainda não atende: faltam as variáveis da Cloud API. O passo a passo está em
+          docs/whatsapp-automacao.md — e leia o aviso sobre o número, que sai do aplicativo comum
+          do WhatsApp.
+        </p>
+      ) : null}
+
+      <div className="graphite-card">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-[1.1rem] text-ivory">O que o robô responde</h3>
+            <p className="mt-1 text-[13px] text-slate">
+              Muda aqui e vale na próxima mensagem. Sem republicar o site.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setRascunho(robo.padrao)}
+              className="text-[12px] text-slate underline underline-offset-4 hover:text-ivory"
+            >
+              Voltar ao padrão
+            </button>
+            <button
+              type="button"
+              disabled={!robo.editavel}
+              onClick={async () => {
+                setAviso('')
+                try {
+                  const r = await pedir('/api/admin/whatsapp', {
+                    method: 'PUT',
+                    body: JSON.stringify({ textos: rascunho }),
+                  })
+                  setRobo({ ...robo, textos: r.textos })
+                  setAviso('salvo')
+                } catch (falha) {
+                  setAviso(falha instanceof Error ? falha.message : 'falhou')
+                }
+              }}
+              className="rounded-full bg-cobalt px-5 py-2 text-[13px] text-white transition-colors hover:bg-[#5d92ea] disabled:opacity-50"
+            >
+              Salvar
+            </button>
+          </div>
+        </div>
+        {aviso ? <p className="mt-3 text-[13px] text-[#8db4f5]">{aviso}</p> : null}
+
+        <div className="mt-5 flex flex-col gap-5">
+          {ROTULOS_ROBO.map(([chave, rotulo]) => (
+            <div key={chave}>
+              <label className="label-voice text-[9px]" htmlFor={`robo-${chave}`}>
+                {rotulo}
+              </label>
+              <textarea
+                id={`robo-${chave}`}
+                rows={chave === 'menu' || chave.startsWith('opcao') ? 6 : 3}
+                value={rascunho[chave] ?? ''}
+                onChange={(evento) => setRascunho({ ...rascunho, [chave]: evento.target.value })}
+                className="mt-2 w-full resize-y rounded-xl bg-obsidian px-3 py-2 font-mono text-[12px] leading-[1.6] text-ivory outline-none focus:shadow-[inset_0_0_0_1px_#4d84e0]"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function Painel() {
   const [estado, setEstado] = useState<Estado | null>(null)
   const [leads, setLeads] = useState<Lead[]>([])
   const [resumo, setResumo] = useState<Resumo | null>(null)
+  const [aba, setAba] = useState<'funil' | 'lista' | 'robo'>('funil')
   const [filtro, setFiltro] = useState<'' | Situacao>('')
   const [busca, setBusca] = useState('')
+  const [soAtrasados, setSoAtrasados] = useState(false)
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
 
@@ -329,9 +607,8 @@ export function Painel() {
     setCarregando(true)
     setErro('')
     try {
-      const busca_ = busca.trim()
       const [lista, numeros] = await Promise.all([
-        pedir(`/api/admin/leads?situacao=${filtro}&busca=${encodeURIComponent(busca_)}`),
+        pedir(`/api/admin/leads?situacao=${filtro}&busca=${encodeURIComponent(busca.trim())}`),
         pedir('/api/admin/resumo'),
       ])
       setLeads(lista.leads)
@@ -348,8 +625,8 @@ export function Painel() {
   }, [verificar])
 
   useEffect(() => {
-    if (estado?.dentro) void carregar()
-  }, [estado?.dentro, carregar])
+    if (estado?.dentro && estado.banco) void carregar()
+  }, [estado?.dentro, estado?.banco, carregar])
 
   const mudar = async (id: number, campos: Partial<Lead>) => {
     try {
@@ -358,18 +635,19 @@ export function Painel() {
         body: JSON.stringify({ id, ...campos }),
       })
       setLeads((atuais) => atuais.map((l) => (l.id === id ? lead : l)))
-      /* Mudar situação ou valor mexe nos números; recarrega só eles. */
       pedir('/api/admin/resumo').then(setResumo).catch(() => {})
     } catch (falha) {
       setErro(falha instanceof Error ? falha.message : 'falhou')
     }
   }
 
+  const visiveis = useMemo(() => (soAtrasados ? leads.filter(atrasado) : leads), [leads, soAtrasados])
+
   const avisos = useMemo(() => {
     if (!estado) return []
     const lista: string[] = []
-    if (!estado.banco) lista.push('Banco não configurado: nenhum lead é guardado. Cadastre POSTGRES_URL.')
-    if (!estado.whatsapp) lista.push('WhatsApp Cloud API não configurada: o robô e o aviso de lead novo não funcionam.')
+    if (!estado.banco) lista.push('Banco não configurado: nenhum lead é guardado. Cadastre POSTGRES_URL e republique.')
+    if (!estado.whatsapp) lista.push('WhatsApp Cloud API não configurada: o robô não atende e o aviso de lead novo não sai.')
     else if (!estado.avisoEquipe) lista.push('Falta EQUIPE_WHATSAPP: ninguém é avisado quando entra lead.')
     return lista
   }, [estado])
@@ -378,11 +656,11 @@ export function Painel() {
   if (!estado.dentro) return <Entrar aoEntrar={verificar} estado={estado} />
 
   return (
-    <div className="mx-auto max-w-6xl px-5 py-10">
+    <div className="mx-auto max-w-7xl px-5 py-10">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-[1.8rem] text-ivory">Painel Astro</h1>
-          <p className="mt-1 text-[13px] text-slate">Leads, funil e números da operação.</p>
+          <p className="mt-1 text-[13px] text-slate">CRM, funil e o robô do WhatsApp.</p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -420,52 +698,92 @@ export function Painel() {
 
       {erro ? <p className="mt-6 text-[13px] text-[#ff9b9b]">{erro}</p> : null}
 
-      {resumo ? <div className="mt-8">{<Numeros resumo={resumo} />}</div> : null}
-
-      <div className="mt-10 flex flex-wrap items-center gap-2">
-        {(['', ...SITUACOES] as const).map((situacao) => (
+      <nav className="mt-8 flex gap-2">
+        {[
+          ['funil', 'Funil'],
+          ['lista', 'Leads'],
+          ['robo', 'Robô do WhatsApp'],
+        ].map(([chave, rotulo]) => (
           <button
-            key={situacao || 'todos'}
+            key={chave}
             type="button"
-            onClick={() => setFiltro(situacao)}
-            className={`rounded-full border px-3.5 py-1.5 text-[13px] capitalize transition-colors ${
-              filtro === situacao ? 'border-[#8db4f5]/50 text-ivory' : 'border-white/10 text-slate hover:text-ivory'
+            onClick={() => setAba(chave as typeof aba)}
+            className={`rounded-full border px-4 py-2 text-[13px] transition-colors ${
+              aba === chave ? 'border-[#8db4f5]/50 text-ivory' : 'border-white/10 text-slate hover:text-ivory'
             }`}
           >
-            {situacao || 'todos'}
+            {rotulo}
           </button>
         ))}
-        <form
-          onSubmit={(evento) => {
-            evento.preventDefault()
-            void carregar()
-          }}
-          className="ml-auto flex gap-2"
-        >
-          <label className="sr-only" htmlFor="busca">
-            Buscar
-          </label>
-          <input
-            id="busca"
-            value={busca}
-            onChange={(evento) => setBusca(evento.target.value)}
-            placeholder="Buscar nome, empresa, contato…"
-            className="w-64 rounded-full bg-obsidian px-4 py-2 text-[13px] text-ivory outline-none placeholder:text-slate focus:shadow-[inset_0_0_0_1px_#4d84e0]"
-          />
-        </form>
-      </div>
+      </nav>
 
-      {leads.length === 0 ? (
-        <p className="mt-8 text-[14px] text-slate">
-          {estado.banco ? 'Nenhum lead por aqui ainda.' : 'Sem banco configurado, não há o que mostrar.'}
-        </p>
-      ) : (
-        <ul className="mt-5 flex flex-col gap-3">
-          {leads.map((lead) => (
-            <Cartao key={lead.id} lead={lead} aoMudar={(campos) => void mudar(lead.id, campos)} />
-          ))}
-        </ul>
-      )}
+      <div className="mt-6">
+        {aba === 'robo' ? (
+          <AbaRobo />
+        ) : !estado.banco ? (
+          <p className="text-[14px] text-slate">Sem banco configurado, não há o que mostrar.</p>
+        ) : (
+          <>
+            {resumo ? <Numeros resumo={resumo} /> : null}
+
+            <div className="mt-8 flex flex-wrap items-center gap-2">
+              {(['', ...SITUACOES] as const).map((situacao) => (
+                <button
+                  key={situacao || 'todos'}
+                  type="button"
+                  onClick={() => setFiltro(situacao)}
+                  className={`rounded-full border px-3.5 py-1.5 text-[13px] capitalize transition-colors ${
+                    filtro === situacao ? 'border-[#8db4f5]/50 text-ivory' : 'border-white/10 text-slate hover:text-ivory'
+                  }`}
+                >
+                  {situacao || 'todos'}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setSoAtrasados((v) => !v)}
+                className={`rounded-full border px-3.5 py-1.5 text-[13px] transition-colors ${
+                  soAtrasados ? 'border-[#ffd479]/50 text-[#ffd479]' : 'border-white/10 text-slate hover:text-ivory'
+                }`}
+              >
+                só vencidos
+              </button>
+              <form
+                onSubmit={(evento) => {
+                  evento.preventDefault()
+                  void carregar()
+                }}
+                className="ml-auto flex gap-2"
+              >
+                <label className="sr-only" htmlFor="busca">
+                  Buscar
+                </label>
+                <input
+                  id="busca"
+                  value={busca}
+                  onChange={(evento) => setBusca(evento.target.value)}
+                  placeholder="Buscar nome, empresa, contato…"
+                  className="w-64 rounded-full bg-obsidian px-4 py-2 text-[13px] text-ivory outline-none placeholder:text-slate focus:shadow-[inset_0_0_0_1px_#4d84e0]"
+                />
+              </form>
+            </div>
+
+            <div className="mt-5">
+              {visiveis.length === 0 ? (
+                <p className="text-[14px] text-slate">Nenhum lead por aqui ainda.</p>
+              ) : aba === 'funil' ? (
+                <Funil leads={visiveis} aoMudar={mudar} />
+              ) : (
+                <ul className="flex flex-col gap-3">
+                  {visiveis.map((lead) => (
+                    <Cartao key={lead.id} lead={lead} aoMudar={(campos) => void mudar(lead.id, campos)} />
+                  ))}
+                </ul>
+              )}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   )
 }

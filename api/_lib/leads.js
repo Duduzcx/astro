@@ -66,6 +66,12 @@ export async function atualizarLead(id, campos) {
     mudancas.situacao = campos.situacao
   }
   if (campos.anotacoes !== undefined) mudancas.anotacoes = texto(campos.anotacoes, 4000)
+  if (campos.responsavel !== undefined) mudancas.responsavel = texto(campos.responsavel, 60)
+  if (campos.retorno_em !== undefined) {
+    const valor = String(campos.retorno_em || '').trim()
+    if (valor && !/^\d{4}-\d{2}-\d{2}$/.test(valor)) throw new Error('data inválida')
+    mudancas.retorno_em = valor || null
+  }
   if (campos.valor_centavos !== undefined) {
     const n = Math.round(Number(campos.valor_centavos))
     if (!Number.isFinite(n) || n < 0) throw new Error('valor inválido')
@@ -75,6 +81,27 @@ export async function atualizarLead(id, campos) {
   mudancas.atualizado_em = new Date()
   const [linha] = await s`UPDATE leads SET ${s(mudancas)} WHERE id = ${Number(id)} RETURNING *`
   return linha || null
+}
+
+/** O histórico de um lead: o que foi conversado e quando. */
+export async function listarAtividades(leadId) {
+  await prepararBanco()
+  const s = sql()
+  return s`SELECT * FROM atividades WHERE lead_id = ${Number(leadId)} ORDER BY quando DESC LIMIT 100`
+}
+
+export async function registrarAtividade(leadId, { tipo = 'nota', texto: conteudo = '' } = {}) {
+  await prepararBanco()
+  const s = sql()
+  const limpo = texto(conteudo, 2000)
+  if (!limpo) throw new Error('nada para registrar')
+  const [linha] = await s`
+    INSERT INTO atividades ${s({ lead_id: Number(leadId), tipo: texto(tipo, 20) || 'nota', texto: limpo })}
+    RETURNING *`
+  /* Tocar no lead move ele para o topo de "mexido recentemente", que é como
+     um CRM deve ordenar quando alguém está trabalhando a carteira. */
+  await s`UPDATE leads SET atualizado_em = now() WHERE id = ${Number(leadId)}`
+  return linha
 }
 
 export async function apagarLead(id) {
@@ -104,10 +131,16 @@ export async function resumo() {
              coalesce(sum(valor_centavos) FILTER (WHERE situacao = 'fechado'), 0)::bigint AS receita
         FROM leads`,
   ])
+  const [atrasados] = await s`
+    SELECT count(*)::int AS quantos FROM leads
+    WHERE retorno_em IS NOT NULL AND retorno_em <= current_date
+      AND situacao NOT IN ('fechado', 'perdido')`
   const t = totais[0] || { total: 0, semana: 0, fechados: 0, receita: 0 }
   return {
     total: t.total,
     semana: t.semana,
+    /* Retornos vencidos. É o número que faz alguém abrir o painel de manhã. */
+    atrasados: atrasados?.quantos || 0,
     fechados: t.fechados,
     receitaCentavos: Number(t.receita),
     /* Conversão sobre o que já saiu do funil: contar quem entrou ontem como

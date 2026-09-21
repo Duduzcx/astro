@@ -85,6 +85,50 @@ export function Chatbot() {
   /* Isca de robô: fica fora da tela, gente nunca preenche. */
   const [armadilha, setArmadilha] = useState('')
 
+  /* O botão não acompanha a página inteira.
+     Ele fica fora do caminho no hero (onde os dois botões principais já
+     pedem a ação), some quando o contato ou o rodapé estão à vista — ali
+     ele cobriria justamente o formulário e os links que a pessoa foi
+     procurar — e só aparece no meio do percurso, que é onde alguém trava e
+     precisa perguntar. Enquanto a tela de carregamento está no ar, nada.
+     IntersectionObserver, não scroll: o navegador avisa quando muda, em vez
+     de a página perguntar a cada quadro. */
+  const [podeAparecer, setPodeAparecer] = useState(false)
+
+  useEffect(() => {
+    const alvos = ['#topo', '#contato', 'footer']
+      .map((selector) => document.querySelector(selector))
+      .filter((no): no is Element => Boolean(no))
+    if (alvos.length === 0) {
+      setPodeAparecer(true)
+      return
+    }
+    const atrapalhando = new Set<Element>()
+    const observador = new IntersectionObserver(
+      (entradas) => {
+        for (const entrada of entradas) {
+          if (entrada.isIntersecting) atrapalhando.add(entrada.target)
+          else atrapalhando.delete(entrada.target)
+        }
+        setPodeAparecer(atrapalhando.size === 0)
+      },
+      /* Uma margem negativa embaixo: o botão some um pouco ANTES de a seção
+         de contato encostar nele, e não no instante da colisão. */
+      { rootMargin: '0px 0px -25% 0px' },
+    )
+    for (const alvo of alvos) observador.observe(alvo)
+    return () => observador.disconnect()
+  }, [])
+
+  /* Enquanto a tela de carregamento cobre a página, o botão não existe. */
+  const [entrou, setEntrou] = useState(() => !document.getElementById('entrada'))
+  useEffect(() => {
+    if (entrou) return
+    const aoEntrar = () => setEntrou(true)
+    window.addEventListener('astro:entrou', aoEntrar, { once: true })
+    return () => window.removeEventListener('astro:entrou', aoEntrar)
+  }, [entrou])
+
   const fim = useRef<HTMLDivElement>(null)
   const campo = useRef<HTMLInputElement>(null)
   const painel = useRef<HTMLDivElement>(null)
@@ -187,23 +231,30 @@ export function Chatbot() {
 
   return (
     <>
-      {/* O botão. Fica acima do rodapé e abaixo do menu na ordem de pintura,
-          e some quando o painel está aberto no celular, onde não há espaço
-          para os dois. */}
-      <motion.button
-        type="button"
-        onClick={() => setAberto((v) => !v)}
-        aria-expanded={aberto}
-        aria-controls="astro-chat"
-        whileHover={{ scale: 1.04 }}
-        whileTap={{ scale: 0.96 }}
-        className={`fixed right-4 bottom-4 z-[70] inline-flex items-center gap-2.5 rounded-full bg-cobalt px-5 py-3.5 text-[15px] font-[420] text-white shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)] transition-colors hover:bg-[#5d92ea] sm:right-6 sm:bottom-6 ${
-          aberto ? 'hidden sm:inline-flex' : ''
-        }`}
-      >
-        <AstroStar className="h-3.5 w-3.5" />
-        {aberto ? 'Fechar' : 'Falar com a Astro'}
-      </motion.button>
+      {/* O botão. Some no hero, no contato e no rodapé; no celular some
+          também quando o painel está aberto, onde não cabem os dois. */}
+      <AnimatePresence>
+        {entrou && (podeAparecer || aberto) ? (
+          <motion.button
+            type="button"
+            onClick={() => setAberto((v) => !v)}
+            aria-expanded={aberto}
+            aria-controls="astro-chat"
+            initial={{ opacity: 0, y: semMovimento() ? 0 : 14, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: semMovimento() ? 0 : 10, scale: 0.96 }}
+            transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
+            className={`fixed right-4 bottom-4 z-[70] inline-flex items-center gap-2.5 rounded-full bg-cobalt px-5 py-3.5 text-[15px] font-[420] text-white shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)] transition-colors hover:bg-[#5d92ea] sm:right-6 sm:bottom-6 ${
+              aberto ? 'hidden sm:inline-flex' : ''
+            }`}
+          >
+            <AstroStar className="h-3.5 w-3.5" />
+            {aberto ? 'Fechar' : 'Falar com a Astro'}
+          </motion.button>
+        ) : null}
+      </AnimatePresence>
 
       <AnimatePresence>
         {aberto ? (

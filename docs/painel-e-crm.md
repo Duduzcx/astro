@@ -2,8 +2,11 @@
 
 Três peças que dividem a mesma base de dados:
 
-1. **O chat do site** (canto inferior direito) conversa com o visitante, faz
-   seis perguntas de qualificação e manda o resultado para dentro.
+1. **O chat do site** conversa com o visitante, faz seis perguntas de
+   qualificação e manda o resultado para dentro. O botão dele não fica na
+   tela o tempo todo: some no hero, no contato e no rodapé, onde cobriria os
+   botões e o formulário que a pessoa foi procurar, e aparece no meio do
+   percurso, que é onde alguém trava e precisa perguntar.
 2. **O painel** em `/admin` mostra esses contatos como um funil, com números.
 3. **O robô do WhatsApp** (`docs/whatsapp-automacao.md`) grava na mesma
    tabela, então o painel tem tudo num lugar só.
@@ -76,16 +79,34 @@ Sem isso, nada quebra: o lead é guardado e aparece no painel.
 
 ## O que o painel faz
 
-- **Números do topo:** total de leads, últimos 7 dias, conversão e receita
-  fechada. A conversão é calculada sobre o que já saiu do funil (fechados
-  sobre fechados + perdidos) — contar quem entrou ontem como "ainda não
-  fechou" faria o número parecer pior do que é.
-- **Funil:** quantos em cada situação — novo, contatado, proposta, fechado,
-  perdido.
-- **Entrada por semana** e **por canal** (chat do site, WhatsApp, formulário).
-- **Lista de leads:** o que a pessoa respondeu, a conversa completa, mudança
-  de situação com um toque, valor do negócio e anotações.
-- **Busca** por nome, empresa, contato ou resumo, e filtro por situação.
+Três abas.
+
+**Funil** — o quadro, uma coluna por estágio (novo, contatado, proposta,
+fechado, perdido), com a soma dos valores em cada coluna. Mover um negócio é
+um toque no estágio.
+
+**Leads** — a lista completa. Cada um abre com:
+
+- **Retornar em** — a data do próximo contato. Quem passou da data aparece
+  destacado em amarelo, entra no contador *Retornos vencidos* no topo e pode
+  ser isolado pelo filtro *só vencidos*. É este número que faz alguém abrir o
+  painel de manhã.
+- **Responsável** — quem cuida.
+- **Valor do negócio**, que alimenta a receita fechada.
+- **Histórico** — cada ligação, proposta ou conversa registrada com data. É
+  isto que separa um CRM de uma lista de contatos.
+- **A conversa** que trouxe o lead, inteira, do chat ou do WhatsApp.
+
+**Robô do WhatsApp** — o estado da integração (Cloud API ligada, assinatura
+conferida) e **os textos que o robô responde, editáveis ali mesmo**. Mudou,
+salvou, vale na próxima mensagem: sem programador e sem republicar. O padrão
+de fábrica continua no código, e o botão *Voltar ao padrão* o traz de volta.
+
+**Números do topo:** total, últimos 7 dias, retornos vencidos, conversão e
+receita fechada. A conversão é calculada sobre o que já saiu do funil
+(fechados sobre fechados + perdidos) — contar quem entrou ontem como "ainda
+não fechou" faria o número parecer pior do que é. Abaixo, entrada por semana
+e por canal.
 
 ## O que o chat do site faz
 
@@ -108,7 +129,7 @@ troca é a função `encerrar` em `src/components/Chatbot.tsx` e a rota
 | O quê | Arquivo |
 | --- | --- |
 | Perguntas do chat | `src/components/Chatbot.tsx`, constante `ROTEIRO` |
-| Textos do robô do WhatsApp | `api/whatsapp.js`, topo do arquivo |
+| Textos do robô do WhatsApp | pelo painel, aba *Robô do WhatsApp*. O padrão de fábrica fica em `api/_lib/whatsapp-textos.js` |
 | Situações do funil | `api/_lib/db.js`, constante `SITUACOES` (e a lista igual em `src/admin/Painel.tsx`) |
 | Cálculo dos números | `api/_lib/leads.js`, função `resumo` |
 

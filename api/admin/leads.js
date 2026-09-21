@@ -10,7 +10,14 @@
  * contra CSRF.
  */
 import { exigirSessao } from '../_lib/auth.js'
-import { apagarLead, atualizarLead, listarLeads, temBanco } from '../_lib/leads.js'
+import {
+  apagarLead,
+  atualizarLead,
+  listarAtividades,
+  listarLeads,
+  registrarAtividade,
+  temBanco,
+} from '../_lib/leads.js'
 
 export const config = { api: { bodyParser: false } }
 
@@ -38,8 +45,19 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
+      /* Com ?lead=NN devolve o histórico daquele lead; sem, devolve a lista. */
+      if (req.query.lead) {
+        return res.status(200).json({ atividades: await listarAtividades(req.query.lead) })
+      }
       const leads = await listarLeads({ situacao: req.query.situacao, busca: req.query.busca })
       return res.status(200).json({ leads })
+    }
+
+    if (req.method === 'POST') {
+      const dados = JSON.parse((await corpoCru(req)).toString('utf8'))
+      if (!dados?.id) return res.status(400).json({ erro: 'id é obrigatório' })
+      const atividade = await registrarAtividade(dados.id, dados)
+      return res.status(201).json({ atividade })
     }
 
     if (req.method === 'PATCH') {
@@ -57,12 +75,14 @@ export default async function handler(req, res) {
       return res.status(foi ? 200 : 404).json(foi ? { ok: true } : { erro: 'lead não encontrado' })
     }
 
-    res.setHeader('Allow', 'GET, PATCH, DELETE')
+    res.setHeader('Allow', 'GET, POST, PATCH, DELETE')
     return res.status(405).json({ erro: 'método não permitido' })
   } catch (erro) {
     /* Erro de validação é culpa de quem pediu; o resto é nosso. A mensagem
        volta porque quem está aqui já entrou com senha. */
-    const daPessoa = /situação desconhecida|valor inválido|nada para mudar|corpo/.test(erro?.message || '')
+    const daPessoa = /situação desconhecida|valor inválido|data inválida|nada para mudar|nada para registrar|corpo/.test(
+      erro?.message || '',
+    )
     if (!daPessoa) console.error('falha em /admin/leads:', erro?.message)
     return res.status(daPessoa ? 400 : 500).json({ erro: daPessoa ? erro.message : 'falha interna' })
   }

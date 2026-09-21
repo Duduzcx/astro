@@ -76,8 +76,34 @@ export async function prepararBanco() {
       valor_centavos BIGINT NOT NULL DEFAULT 0,
       anotacoes     TEXT NOT NULL DEFAULT ''
     )`
+  /* Colunas acrescentadas depois da primeira versão. IF NOT EXISTS porque
+     esta função roda em toda invocação fria, e em paralelo. */
+  await s`ALTER TABLE leads ADD COLUMN IF NOT EXISTS retorno_em DATE`
+  await s`ALTER TABLE leads ADD COLUMN IF NOT EXISTS responsavel TEXT NOT NULL DEFAULT ''`
   await s`CREATE INDEX IF NOT EXISTS leads_criado_em_idx ON leads (criado_em DESC)`
   await s`CREATE INDEX IF NOT EXISTS leads_situacao_idx ON leads (situacao)`
+  await s`CREATE INDEX IF NOT EXISTS leads_retorno_idx ON leads (retorno_em) WHERE retorno_em IS NOT NULL`
+
+  /* O histórico do relacionamento. É isto que separa um CRM de uma lista de
+     contatos: saber o que já foi conversado, e quando. */
+  await s`
+    CREATE TABLE IF NOT EXISTS atividades (
+      id      BIGSERIAL PRIMARY KEY,
+      lead_id BIGINT NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+      quando  TIMESTAMPTZ NOT NULL DEFAULT now(),
+      tipo    TEXT NOT NULL DEFAULT 'nota',
+      texto   TEXT NOT NULL DEFAULT ''
+    )`
+  await s`CREATE INDEX IF NOT EXISTS atividades_lead_idx ON atividades (lead_id, quando DESC)`
+
+  /* Configuração editável pelo painel — hoje os textos do robô do WhatsApp.
+     Ficam no banco para a equipe mudar sem mexer em código nem republicar. */
+  await s`
+    CREATE TABLE IF NOT EXISTS config (
+      chave TEXT PRIMARY KEY,
+      valor JSONB NOT NULL,
+      atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+    )`
   /* Tentativas de entrar no painel. Serve para travar força bruta sem
      precisar de um Redis só para isso. */
   await s`
