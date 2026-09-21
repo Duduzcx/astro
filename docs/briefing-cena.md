@@ -382,6 +382,31 @@ deriva contínua nos dois eixos, giro e respiração das galáxias, nuvens da
 Terra a 2,1x o giro do chão. Não existe: paralaxe por inclinação do aparelho,
 poeira próxima cruzando o quadro, variação de matiz lenta no céu.
 
+## Hospedagem e domínio
+
+Hoje o site vive em `https://astrosolucoes.netlify.app`, e canonical, Open
+Graph, JSON-LD, `robots.txt` e `sitemap.xml` apontam para lá. O cliente vai
+mudar para a Vercel; o domínio próprio (`astrosolucoes.com.br`) ainda não
+está apontando para lugar nenhum. Quando mudar, são sete ocorrências da URL
+para trocar: cinco em `index.html`, uma em cada arquivo de `public/`.
+
+O `vercel.json` já está pronto e espelha o `netlify.toml`: os mesmos
+cabeçalhos de segurança e de cache, saída em `dist`, sem rewrite geral (o
+`public/404.html` é servido com 404 pela Vercel sozinha). O que NÃO
+atravessa a mudança:
+
+- **Netlify Forms.** O formulário de contato posta para `/` com
+  `form-name`, que só o Netlify entende. Na Vercel o POST falha e o código
+  cai no resgate por WhatsApp (o texto vai junto), que já é o caminho de
+  hoje enquanto o painel do Netlify não ativa a detecção. Decidir antes de
+  mudar: função serverless que manda e-mail, um serviço de formulário, ou
+  assumir o WhatsApp como canal único e tirar o formulário.
+- **HSTS com preload.** A Vercel manda HSTS por conta própria no domínio
+  dela; no domínio próprio, ligar no painel.
+
+O hash sha256 que existia na CSP para o bloco JSON-LD era inerte (ver o
+comentário em `netlify.toml`): mudar o bloco não pede nada.
+
 ## A tela de entrada
 
 Vive em `index.html`, não no React e não em `src/index.css`. As duas

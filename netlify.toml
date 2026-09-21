@@ -17,18 +17,18 @@
     # foguete cair no modelo procedural só no ar: o blob já estava liberado,
     # mas o wasm abortava antes de descomprimir o GLB. É a diretiva estreita,
     # que permite wasm sem permitir eval de texto em JavaScript.
-    # O hash cobre o bloco JSON-LD embutido, que o CSP recusava executar. Ele
-    # é o valor que o próprio navegador informa como esperado, e não o que eu
-    # calculo do arquivo: o build servido difere do local em espaços em
-    # branco, e um byte de diferença muda o hash. Se o bloco de dados
-    # estruturados mudar, este valor tem que ser refeito — o console diz qual
-    # é o novo.
+    # Sem hash para o JSON-LD, de propósito. Já houve um aqui, com a crença
+    # de que o bloco de dados estruturados precisava passar na CSP. Medido:
+    # o bloco servido é byte a byte igual ao fonte, o hash que estava aqui
+    # não batia com ele, e mesmo assim não havia violação no console. O
+    # navegador não executa type=application/ld+json, então a CSP nem olha.
+    # Mudar o bloco não exige refazer nada.
     # `blob:` em script-src, worker-src e connect-src existe pelo decodificador
     # Draco: o three monta o worker dele a partir de uma blob URL e busca o
     # wasm por ela. Sem isto o navegador recusa, o modelo do foguete nunca
     # descomprime e a cena cai no foguete procedural depois de oito segundos —
     # e isso só acontecia no ar, porque o servidor local não manda CSP nenhum.
-    Content-Security-Policy = "default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval' 'sha256-mTJ4cJaTm2Gw95GeXEpZdvEEY9ybh6FZu1bwcNE7QlY='; worker-src 'self' blob:; child-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval'; worker-src 'self' blob:; child-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 
 [[headers]]
   for = "/assets/*"
