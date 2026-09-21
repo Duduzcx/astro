@@ -40,9 +40,21 @@ export function iguais(a, b) {
   return crypto.timingSafeEqual(ba, bb)
 }
 
+/** Tamanho mínimo da senha do painel. Abaixo disso a porta não abre. */
+export const MINIMO_SENHA = 12
+
+/**
+ * Uma senha curta transforma qualquer limite de tentativas em teatro: com
+ * seis caracteres, algumas horas de tentativas bastam. Em vez de confiar que
+ * alguém vai ler a recomendação no documento, a porta simplesmente não abre.
+ */
+export function senhaForte() {
+  return (process.env.ADMIN_SENHA || '').length >= MINIMO_SENHA
+}
+
 export function senhaConfere(tentativa) {
   const certa = process.env.ADMIN_SENHA || ''
-  if (!certa || !segredo()) return false
+  if (!certa || !segredo() || !senhaForte()) return false
   return iguais(tentativa, certa)
 }
 
@@ -100,11 +112,30 @@ export function exigirSessao(req, res) {
   return true
 }
 
-/** De onde veio a tentativa, para o registro de força bruta. */
+/**
+ * De onde veio a tentativa, para a trava de força bruta.
+ *
+ * NÃO use o primeiro item de `x-forwarded-for`: esse cabeçalho é escrito por
+ * quem chama, e quem está tentando adivinhar a senha manda um valor diferente
+ * a cada requisição — a trava por origem nunca fecharia. Foi exatamente isto
+ * que a revisão de segurança apontou.
+ *
+ * A ordem aqui é da fonte mais confiável para a menos: `x-vercel-forwarded-for`
+ * é escrito pela própria Vercel e sobrescreve o que o cliente mandou;
+ * `x-real-ip` vem do proxy; e, em último caso, o ÚLTIMO item da cadeia de
+ * `x-forwarded-for`, que é o que o proxy mais próximo acrescentou — os
+ * anteriores podem ser invenção.
+ *
+ * Mesmo assim a trava por origem não é a defesa principal: quem tem muitos
+ * endereços contorna qualquer uma delas. Ver a espera global em sessao.js.
+ */
 export function origem(req) {
-  const enc = req.headers['x-forwarded-for']
-  return String(Array.isArray(enc) ? enc[0] : enc || '')
-    .split(',')[0]
-    .trim()
-    .slice(0, 60)
+  const daVercel = req.headers['x-vercel-forwarded-for']
+  if (daVercel) return String(Array.isArray(daVercel) ? daVercel[0] : daVercel).split(',')[0].trim().slice(0, 60)
+  const doProxy = req.headers['x-real-ip']
+  if (doProxy) return String(Array.isArray(doProxy) ? doProxy[0] : doProxy).trim().slice(0, 60)
+  const cadeia = req.headers['x-forwarded-for']
+  if (!cadeia) return ''
+  const partes = String(Array.isArray(cadeia) ? cadeia[0] : cadeia).split(',')
+  return partes[partes.length - 1].trim().slice(0, 60)
 }

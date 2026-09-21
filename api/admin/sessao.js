@@ -5,11 +5,19 @@
  * DELETE           sai
  * GET              diz se a sessão vale e o que está configurado
  *
- * A trava de força bruta usa a própria tabela do banco. Cinco erros vindos da
- * mesma origem em dez minutos fecham a porta por dez minutos. Sem isso, uma
- * senha de agência cai numa tarde de tentativas.
+ * A trava de força bruta usa a própria tabela do banco, em dois níveis: por
+ * origem e global. A explicação de por que são dois está junto das
+ * constantes, mais abaixo.
  */
-import { cookieDeEntrada, cookieDeSaida, origem, senhaConfere, sessaoValida } from '../_lib/auth.js'
+import {
+  cookieDeEntrada,
+  cookieDeSaida,
+  MINIMO_SENHA,
+  origem,
+  senhaConfere,
+  senhaForte,
+  sessaoValida,
+} from '../_lib/auth.js'
 import { prepararBanco, sql, temBanco } from '../_lib/db.js'
 
 export const config = { api: { bodyParser: false } }
@@ -40,21 +48,46 @@ function lerCookie(req, nome) {
   return ''
 }
 
+/* Duas travas, e a segunda existe porque a primeira é contornável.
+
+   A trava POR ORIGEM fecha em cinco erros. Ela cuida do caso comum — alguém
+   tentando a senha de um lugar só — mas quem tem muitos endereços passa por
+   ela, e foi este o furo que a revisão de segurança apontou.
+
+   A trava GLOBAL não depende de nada que quem chama escolha, então nenhuma
+   troca de endereço a levanta. Ela é folgada de propósito: quarenta erros em
+   dez minutos é muito acima do que uma equipe de três pessoas produz, e
+   segura um ataque em cerca de cinco mil tentativas por dia — nada contra as
+   doze letras mínimas que a senha agora é obrigada a ter.
+
+   Por que folgada e não apertada: uma trava global apertada seria um botão de
+   desligar o painel à disposição de qualquer um. Preferi o teto alto somado à
+   senha forte obrigatória, que é o que de fato impede a adivinhação. */
 const ERROS_ATE_TRAVAR = 5
+const ERROS_GLOBAIS_ATE_TRAVAR = 40
 const JANELA = '10 minutes'
 
-async function estaTravado(de) {
-  if (!temBanco() || !de) return false
+async function travas(de) {
+  if (!temBanco()) return { porOrigem: false, global: false }
   await prepararBanco()
   const s = sql()
   const [linha] = await s`
-    SELECT count(*)::int AS erros FROM tentativas_login
-    WHERE origem = ${de} AND sucesso = false AND quando > now() - interval '${s.unsafe(JANELA)}'`
-  return (linha?.erros || 0) >= ERROS_ATE_TRAVAR
+    SELECT
+      count(*) FILTER (WHERE ${de} <> '' AND origem = ${de})::int AS daOrigem,
+      count(*)::int AS total
+    FROM tentativas_login
+    WHERE sucesso = false AND quando > now() - interval '${s.unsafe(JANELA)}'`
+  return {
+    porOrigem: (linha?.daorigem || 0) >= ERROS_ATE_TRAVAR,
+    global: (linha?.total || 0) >= ERROS_GLOBAIS_ATE_TRAVAR,
+  }
 }
 
 async function registrar(de, sucesso) {
-  if (!temBanco() || !de) return
+  /* Registra mesmo sem origem conhecida. Pular o registro deixaria a trava
+     global cega justamente para quem chega sem cabeçalho nenhum, que é o
+     caminho que um atacante escolheria. */
+  if (!temBanco()) return
   try {
     const s = sql()
     await s`INSERT INTO tentativas_login ${s({ origem: de, sucesso })}`
@@ -90,10 +123,22 @@ export default async function handler(req, res) {
   if (!process.env.ADMIN_SENHA || !process.env.ADMIN_SEGREDO) {
     return res.status(503).json({ erro: 'painel não configurado', detalhe: 'faltam ADMIN_SENHA e ADMIN_SEGREDO' })
   }
+  if (!senhaForte()) {
+    /* A porta não abre com senha curta, e diz por quê: é melhor a equipe
+       descobrir isto na primeira tentativa do que nunca. */
+    return res.status(503).json({
+      erro: 'senha do painel fraca demais',
+      detalhe: `ADMIN_SENHA precisa de pelo menos ${MINIMO_SENHA} caracteres`,
+    })
+  }
 
   const de = origem(req)
-  if (await estaTravado(de)) {
-    return res.status(429).json({ erro: 'muitas tentativas', detalhe: 'espere dez minutos' })
+  const trava = await travas(de)
+  if (trava.porOrigem || trava.global) {
+    return res.status(429).json({
+      erro: 'muitas tentativas',
+      detalhe: trava.global ? 'a porta está fechada por dez minutos' : 'espere dez minutos',
+    })
   }
 
   let senha = ''

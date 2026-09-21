@@ -34,7 +34,7 @@ Cadastre duas variáveis na Vercel (*Settings → Environment Variables*):
 
 | Variável | O que pôr |
 | --- | --- |
-| `ADMIN_SENHA` | A senha da equipe. Use algo longo — é a única porta. |
+| `ADMIN_SENHA` | A senha da equipe. **Mínimo de 12 caracteres — abaixo disso a porta não abre**, e o painel diz o motivo. É a única porta: use algo longo e aleatório. |
 | `ADMIN_SEGREDO` | Uma cadeia aleatória longa, que assina o cookie de sessão. Gere com `openssl rand -base64 48` e nunca reuse a senha aqui. |
 
 Republique e abra **astrosolucoes.vercel.app/admin**.
@@ -46,8 +46,16 @@ Republique e abra **astrosolucoes.vercel.app/admin**.
 - O cookie é `HttpOnly` (JavaScript da página não lê, então um XSS não rouba a
   sessão), `Secure` (só HTTPS), `SameSite=Lax` (não viaja em requisição vinda
   de outro site, o que corta CSRF) e vale 12 horas.
-- Cinco erros de senha da mesma origem em dez minutos travam a porta por dez
-  minutos.
+- Duas travas de tentativa. Uma por origem (cinco erros em dez minutos) e uma
+  global (quarenta erros em dez minutos). A global existe porque a primeira é
+  contornável: o endereço de quem chama vem de um cabeçalho, e quem tenta
+  adivinhar a senha manda um valor diferente a cada vez. A global não depende
+  de nada que o visitante escolha.
+- A origem é lida do cabeçalho que a própria Vercel escreve, nunca do que o
+  cliente manda.
+- A senha precisa ter 12 caracteres ou mais. Não é recomendação: com senha
+  curta a rota recusa entrar, porque limite de tentativas com senha fraca é
+  teatro.
 - A página `/admin` é pública — o que é privado são as rotas `/api/admin/*`,
   que exigem o cookie. Esconder a rota no navegador não protegeria nada, já
   que qualquer pessoa lê o JavaScript servido.
