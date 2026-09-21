@@ -322,6 +322,36 @@
     radial-gradient(520px 420px at 62% 8%, rgba(90, 143, 232, 0.1), transparent 70%);
 }
 
+/* Texto que acende de cima para baixo com a rolagem (ver TextoQueAcende.tsx).
+   A fronteira vem de --acesa, escrita por quadro; a faixa de transição é o
+   trecho entre os dois stops, e é ela que faz a luz "varrer" em vez de
+   cortar. Sem a variável (JavaScript desligado, reduced-motion), o texto
+   fica todo claro: é o padrão do primeiro stop.
+
+   O trecho ainda não aceso é a cor normal de corpo, opaca, e não um cinza
+   translúcido: por baixo passa a cena, e sobre Júpiter o translúcido sumia.
+   Conferido em captura. O efeito é o texto CLAREANDO, nunca um texto que
+   começa ilegível. */
+@utility texto-acende {
+  background-image: linear-gradient(
+    180deg,
+    var(--color-ivory) 0%,
+    var(--color-ivory) var(--acesa, 100%),
+    color-mix(in srgb, var(--color-ash) 88%, var(--color-onyx)) calc(var(--acesa, 100%) + 14%),
+    color-mix(in srgb, var(--color-ash) 88%, var(--color-onyx)) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .texto-acende {
+    background-image: none;
+    color: var(--color-ivory);
+  }
+}
+
 /* Texto em gradiente. Só para números e palavras em ênfase. */
 @utility text-spectrum {
   background: linear-gradient(92deg, #4d84e0 0%, #5a8fe8 45%, #8db4f5 100%);

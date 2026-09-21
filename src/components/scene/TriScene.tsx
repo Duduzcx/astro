@@ -305,6 +305,9 @@ export function TriScene() {
     let postfx: ReturnType<typeof createPostFx> | null = null
     /* Quanto da lente já está aplicado, de 0 a 1 (ver setMix em postfx.ts). */
     let lenteMistura = 1
+    /* A escada de sobrevivência pediu a lente de volta: ela desvanece e só
+       então é descartada. */
+    let lenteSaindo = false
     /* O visitante está de fato olhando a cena? Enquanto a tela de entrada
        cobre tudo, não: qualquer troca de imagem ali é invisível e pode ser
        instantânea. Depois que ele clica em Entrar, não pode mais. Sem tela
@@ -995,9 +998,13 @@ export function TriScene() {
          é um pulo que o olho vê como piscada; o halo do bloom sumindo é
          macio. O celular não tem bloom e mantém a ordem antiga. */
       if (nivel === 2 && !lightweight) {
-        postfx?.dispose()
-        postfx = null
+        /* A lente SAI DESVANECENDO, não de uma vez. Tirá-la num quadro só
+           muda a imagem inteira de repente (halo, vinheta, grão somem
+           juntos) e o olho lê exatamente como uma piscada — a mesma que a
+           entrada dela causava, só que na saída. O tick devolve a mistura a
+           zero e só então descarta. */
         downgradedPostFx = true
+        if (postfx) lenteSaindo = true
         return
       }
       if (nivel === 3 && !lightweight) {
@@ -1460,11 +1467,20 @@ export function TriScene() {
           /* Lente chegando com o site à vista: alguns quadros de entrada em
              vez de um estalo. Quando ela chega antes (o caso normal), a
              mistura já nasce em 1 e nada disto roda. */
-          if (lenteMistura < 1) {
+          if (lenteSaindo) {
+            lenteMistura = Math.max(0, lenteMistura - delta / 0.45)
+            postfx.setMix(lenteMistura)
+            if (lenteMistura === 0) {
+              postfx.dispose()
+              postfx = null
+              lenteSaindo = false
+            }
+          } else if (lenteMistura < 1) {
             lenteMistura = Math.min(1, lenteMistura + delta / 0.45)
             postfx.setMix(lenteMistura)
           }
-          postfx.render(time, 0.006 + rush * 0.014, rush)
+          if (postfx) postfx.render(time, 0.006 + rush * 0.014, rush)
+          else renderer.render(scene, camera)
         } else renderer.render(scene, camera)
       }
 
