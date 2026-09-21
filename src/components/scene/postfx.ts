@@ -149,6 +149,11 @@ export function createPostFx(
   )
   composer.addPass(bloom)
   const film = light ? null : new ShaderPass(FILM)
+  /* Os valores cheios da lente, guardados para a entrada gradual poder
+     interpolar a partir de zero. */
+  const forcaCheia = bloom.strength
+  const vinhetaCheia = film ? (film.uniforms.uVignette.value as number) : 0
+  const graoCheio = film ? (film.uniforms.uGrain.value as number) : 0
   if (film) {
     film.uniforms.uResolution.value.set(width, height)
     composer.addPass(film)
@@ -218,6 +223,21 @@ export function createPostFx(
     },
     setStrength(value: number) {
       bloom.strength = value
+    },
+    /**
+     * Entrada da lente, de 0 a 1. A lente muda a imagem toda de uma vez
+     * (halo, vinheta, grão), e ligá-la num quadro só é um estalo na tela.
+     * Normalmente ela já está no lugar antes de a tela de entrada sair e
+     * isto nem é usado; quando o driver demora e ela chega com o site à
+     * vista, este mix a traz em alguns quadros.
+     */
+    setMix(value: number) {
+      const v = Math.max(0, Math.min(1, value))
+      bloom.strength = forcaCheia * v
+      if (film) {
+        film.uniforms.uVignette.value = vinhetaCheia * v
+        film.uniforms.uGrain.value = graoCheio * v
+      }
     },
     dispose() {
       composer.dispose()

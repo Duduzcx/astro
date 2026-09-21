@@ -303,6 +303,14 @@ export function TriScene() {
      */
     /* Declarado antes do sizeStage, que o usa e roda já na montagem. */
     let postfx: ReturnType<typeof createPostFx> | null = null
+    /* Quanto da lente já está aplicado, de 0 a 1 (ver setMix em postfx.ts). */
+    let lenteMistura = 1
+    /* O visitante está de fato olhando a cena? Enquanto a tela de entrada
+       cobre tudo, não: qualquer troca de imagem ali é invisível e pode ser
+       instantânea. Depois que ele clica em Entrar, não pode mais. Sem tela
+       de entrada no documento, a cena já está à vista desde o começo. */
+    let aVista = !document.getElementById('entrada')
+    window.addEventListener('astro:entrou', () => { aVista = true }, { once: true })
     /* Quanto os astros sobem para ficarem no meio da TELA, em unidades de
        mundo. Zero quando o palco tem a altura da tela. */
     let astroShiftY = 0
@@ -427,7 +435,7 @@ export function TriScene() {
     /* Nebulosa a 0,3 no desktop, não 0,8: a 0,8 ela cobria a tela inteira
        de roxo e azul e o fundo deixava de ser escuro. É a maior parte do que
        o cliente chamou de poluição. */
-    const space = createSpace(skyTier, lightweight || weakDevice ? 0 : 0.3, warm, {
+    const space = createSpace(skyTier, lightweight || weakDevice ? 0 : 0.16, warm, {
       renderer,
       /* A nebulosa assada é o fundo inteiro, esticada por toda a esfera do
          céu. A 1024 por 512 a parte visível dela numa tela de 1170 pixels
@@ -441,7 +449,7 @@ export function TriScene() {
          que controla quantas estrelas aparecem aqui. */
       /* 0,9 no desktop, não 2,8: o termo quadrático a 2,8 acendia toda
          estrela fraca da fotografia. É o controle real de quantidade. */
-      sparkle: lightweight ? 0.3 : 0.9,
+      sparkle: lightweight ? 0.3 : 0.55,
       /* A altura do alvo em pixels REAIS, não em CSS: é ela que diz quantos
          pixels cada galáxia ocupa, e portanto se o mipmap ajuda ou atrapalha. */
       view: {
@@ -517,10 +525,10 @@ export function TriScene() {
     /* Novecentas, não três mil e seiscentas. No desktop o campo tinha 65
        vezes o do celular e lia como poluição, não como céu — e cada ponto é
        preenchimento aditivo que o bloom ainda multiplica. */
-    const stars = createStars(lightweight ? 55 : 900, renderer.getPixelRatio())
+    const stars = createStars(lightweight ? 55 : 420, renderer.getPixelRatio())
     scene.add(stars.object)
     /* Umas poucas brilhantes de verdade, com halo e espículas. */
-    const brightStars = createBrightStars(lightweight ? 3 : 5, {
+    const brightStars = createBrightStars(lightweight ? 3 : 3, {
       rightBias: !lightweight,
       view: { halfWidth, cameraZ: camera.position.z },
       /* No celular elas nasciam altas demais, coladas no topo, disputando
@@ -1138,8 +1146,8 @@ export function TriScene() {
          no celular transforme o céu numa parede branca. */
       const warpTarget = Math.min(speed / 2600, 1)
       warp += (warpTarget - warp) * (1 - Math.exp(-delta * 6))
-      stars.update({ progress, opacity: narrow ? 0.72 : 0.6, warp }, time)
-      brightStars.update({ progress, opacity: narrow ? 0.7 : 0.55 }, time)
+      stars.update({ progress, opacity: narrow ? 0.72 : 0.5, warp }, time)
+      brightStars.update({ progress, opacity: narrow ? 0.7 : 0.45 }, time)
       meteors.update(time, delta, halfWidth, visibleHalfHeightNow())
       space.update(progress, time)
       /* Um pouco mais presente que o campo: em meia luz o Sol ainda
@@ -1448,8 +1456,16 @@ export function TriScene() {
           explode: planetBreak(current.mix, current.form) * (1 - clamp01(current.form)),
           still: reducedMotion,
         })
-        if (postfx) postfx.render(time, 0.006 + rush * 0.014, rush)
-        else renderer.render(scene, camera)
+        if (postfx) {
+          /* Lente chegando com o site à vista: alguns quadros de entrada em
+             vez de um estalo. Quando ela chega antes (o caso normal), a
+             mistura já nasce em 1 e nada disto roda. */
+          if (lenteMistura < 1) {
+            lenteMistura = Math.min(1, lenteMistura + delta / 0.45)
+            postfx.setMix(lenteMistura)
+          }
+          postfx.render(time, 0.006 + rush * 0.014, rush)
+        } else renderer.render(scene, camera)
       }
 
       if (!revealed) {
@@ -1458,9 +1474,6 @@ export function TriScene() {
         /* O primeiro quadro desenhado é o sinal para a tela de entrada sair.
            É o marco honesto: não "o script carregou", e sim "há imagem". */
         window.dispatchEvent(new Event('astro:cena-pronta'))
-        /* Com o hero na tela, a lente e a fila começam a ligar programas em
-           paralelo no driver, sem prender a thread. */
-        if (wantsPostFx) prepararLente()
         window.setTimeout(() => idle(warmNext), 150)
       }
     }
@@ -1560,16 +1573,21 @@ export function TriScene() {
        composer.render() ligava tudo de forma síncrona: 2,8s presos, no
        Windows, no instante em que a pessoa clicava em Entrar. */
     const prepararLente = () => {
-      if (postfx || downgradedPostFx || disposed) return
+      if (postfx || downgradedPostFx || disposed) return Promise.resolve()
       const lente = createPostFx(renderer, scene, camera, window.innerWidth, stageHeight, lightweight)
       const materials = emitir(scene, warmTarget)
       for (const material of lente.aquecer(warmTarget)) materials.add(material)
-      void prontos(materials).then(() => {
+      return prontos(materials).then(() => {
         if (disposed || downgradedPostFx || postfx) {
           lente.dispose()
           return
         }
         lente.setSize(window.innerWidth, stageHeight)
+        /* Se o site ainda não apareceu, a lente já nasce cheia: a troca
+           acontece atrás da tela de entrada e ninguém vê. Se apareceu, ela
+           entra em alguns quadros pela rampa no tick. */
+        lenteMistura = aVista ? 0 : 1
+        lente.setMix(lenteMistura)
         postfx = lente
       })
     }
@@ -1585,6 +1603,18 @@ export function TriScene() {
        como antes. O teto do ambiente é mais folgado, mas existe: um driver
        que nunca responde não pode segurar o foguete para sempre. */
     const limite = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms))
+    /* A lente é preparada JUNTO com o hero, e não depois do primeiro quadro
+       como antes. Ela muda a imagem toda de uma vez (halo, vinheta, grão), e
+       antes essa troca caía com o visitante já olhando: era este o piscar do
+       desktop. Agora ela quase sempre entra enquanto a tela de entrada ainda
+       cobre tudo, instantânea e invisível. Se o driver demorar e ela chegar
+       depois, a rampa do tick a traz em meio segundo — suave, e nunca um
+       estalo.
+
+       O aviso de cena pronta NÃO espera por ela: esperar empurrava o botão
+       de quatro para seis segundos, e a cena crua já é a cena certa, só sem
+       o acabamento. */
+    if (wantsPostFx) void prepararLente()
     const heroMateriais = emitir(scene, null)
     const ambienteMateriais = emitirAmbiente(warmTarget)
     ambientePronto = Promise.race([prontos(ambienteMateriais), limite(4000)]).then(() => {

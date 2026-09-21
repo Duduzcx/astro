@@ -24,6 +24,9 @@
   var barra = document.getElementById('entrada-barra')
   var botao = document.getElementById('entrada-botao')
   var onda = document.getElementById('entrada-onda')
+  var alto = document.getElementById('entrada-alto')
+  var baixo = document.getElementById('entrada-baixo')
+  var fenda = document.getElementById('entrada-fenda')
 
   var PISO = 2000
   /* Teto: WebGL recusado, aparelho sem contexto, erro no bundle. Passado este
@@ -32,7 +35,18 @@
   /* Se ninguém clicar, entra sozinho. O botão é uma porta, não um pedágio:
      quem se distraiu ou não entendeu não pode ficar preso. */
   var AUTO = 9000
-  var SAIDA = 900
+  /* A saída tem dois tempos, e a ordem é o que a faz parecer intencional: o
+     miolo sai primeiro, sozinho, e só depois as metades abrem. Medido em
+     quadros congelados: com as duas coisas juntas, a fenda abre POR TRÁS do
+     radar e do botão, e a cena aparece cortada por texto que ainda está
+     saindo. */
+  var MIOLO = 420
+  var ANTES_DO_OBTURADOR = 280
+  var OBTURADOR = 980
+  var SAIDA = ANTES_DO_OBTURADOR + OBTURADOR
+  /* A curva do obturador: quase parada no começo e rápida no fim. É o que faz
+     as metades parecerem pesadas, em vez de duas caixas deslizando. */
+  var CURVA_OBTURADOR = 'cubic-bezier(0.7, 0, 0.3, 1)'
   /* Duas curvas, e a diferença importa. O miolo sai em ease-IN: começa
      devagar e acelera, que é como uma coisa se afasta. O fundo sai em
      ease-out, atrás dele. */
@@ -103,11 +117,25 @@
        não pelo mount do React, que acontece atrás desta tela. */
     window.dispatchEvent(new Event('astro:entrou'))
 
+    /* Primeiro tempo: o miolo acelera para fora e some. */
     if (miolo) {
-      miolo.style.animation = 'entradaSaiMiolo ' + SAIDA + 'ms ' + CURVA + ' ' + atraso + 'ms forwards'
+      miolo.style.animation = 'entradaSaiMiolo ' + MIOLO + 'ms ' + CURVA + ' ' + atraso + 'ms forwards'
     }
+    /* Segundo tempo: a luz acende na emenda e as metades abrem. */
+    var abertura = atraso + ANTES_DO_OBTURADOR
+    if (fenda) {
+      fenda.style.animation = 'entradaFenda 560ms ease-out ' + abertura + 'ms forwards'
+    }
+    if (alto) {
+      alto.style.animation = 'entradaAlto ' + OBTURADOR + 'ms ' + CURVA_OBTURADOR + ' ' + abertura + 'ms forwards'
+    }
+    if (baixo) {
+      baixo.style.animation = 'entradaBaixo ' + OBTURADOR + 'ms ' + CURVA_OBTURADOR + ' ' + abertura + 'ms forwards'
+    }
+    /* A camada em si só apaga no fim, como rede de segurança: se um navegador
+       não animar as metades, ela ainda some em vez de ficar presa na tela. */
     tela.style.animation =
-      'entradaSai ' + (SAIDA + 140) + 'ms ' + CURVA_FUNDO + ' ' + (atraso + 110) + 'ms forwards'
+      'entradaSai 240ms ' + CURVA_FUNDO + ' ' + (atraso + SAIDA - 100) + 'ms forwards'
 
     /* A limpeza pode chegar atrasada sem custo: a esta altura a tela já está
        invisível pelo compositor. O que falta é devolver a rolagem e tirar o
@@ -118,7 +146,7 @@
          medido zero. Um resize o faz recontar. */
       window.dispatchEvent(new Event('resize'))
       if (tela.parentNode) tela.parentNode.removeChild(tela)
-    }, atraso + SAIDA + 260)
+    }, atraso + SAIDA + 300)
 
     /* A classe sai depois que a animação termina. Deixá-la pendurada manteria
        um transform em main e footer para sempre, e um transform prende
