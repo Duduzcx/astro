@@ -2,6 +2,7 @@ import { Suspense, lazy } from 'react'
 import { TintLayer } from './components/TintLayer'
 import { AuroraBlobs } from './components/AuroraBlobs'
 import { ScrollProgress } from './components/ScrollProgress'
+import { Chatbot } from './components/Chatbot'
 import { Nav } from './components/Nav'
 import { Hero } from './components/Hero'
 import { Marquee } from './components/Marquee'
@@ -83,6 +84,7 @@ export default function App() {
       </main>
 
       <Footer />
+      <Chatbot />
     </>
   )
 }

@@ -30,6 +30,7 @@
  * ninguém num menu.
  */
 import crypto from 'node:crypto'
+import { criarLead, temBanco } from './_lib/leads.js'
 
 /* O corpo cru é necessário para conferir a assinatura: qualquer
    reserialização muda um byte e derruba o HMAC. */
@@ -201,6 +202,23 @@ export default async function handler(req, res) {
         mensagem.interactive?.list_reply?.title ||
         ''
       const intencao = entender(texto)
+
+      /* O que vale como lead: quem pediu para agendar e quem escreveu algo
+         que o robô não entendeu (aí um humano vai atender de qualquer forma).
+         Cumprimento e curiosidade sobre preço não viram lead — encheriam o
+         painel de linha vazia e esconderiam quem interessa.
+         Falhar aqui nunca pode calar o robô: a pessoa do outro lado está
+         esperando resposta. */
+      if (temBanco() && (intencao === 1 || intencao === null)) {
+        criarLead({
+          nome: mudanca?.value?.contacts?.[0]?.profile?.name || '',
+          contato: de,
+          canal: 'whatsapp',
+          necessidade: intencao === 1 ? 'Agendar diagnóstico' : 'A definir',
+          resumo: texto,
+          conversa: [{ de: 'pessoa', texto }],
+        }).catch((erro) => console.error('lead do WhatsApp não foi guardado:', erro?.message))
+      }
 
       if (intencao === 'saudacao' || !texto) {
         await responder(de, `${BOAS_VINDAS}\n\n${MENU}`)

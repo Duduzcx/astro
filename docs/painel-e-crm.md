@@ -1,0 +1,118 @@
+# Painel da empresa, chat do site e CRM
+
+Três peças que dividem a mesma base de dados:
+
+1. **O chat do site** (canto inferior direito) conversa com o visitante, faz
+   seis perguntas de qualificação e manda o resultado para dentro.
+2. **O painel** em `/admin` mostra esses contatos como um funil, com números.
+3. **O robô do WhatsApp** (`docs/whatsapp-automacao.md`) grava na mesma
+   tabela, então o painel tem tudo num lugar só.
+
+Sem banco configurado, o chat continua funcionando: ele manda a conversa
+inteira pelo WhatsApp. Nada se perde — mas nada é guardado, e o painel avisa
+isso em amarelo, bem grande. Nunca fingimos ter recebido.
+
+---
+
+## 1. Ligar o banco (10 minutos)
+
+Serve qualquer Postgres. O mais rápido é o da própria Vercel:
+
+1. No painel da Vercel, aba **Storage** → **Create Database** → **Postgres**.
+2. Conecte ao projeto. A Vercel cria a variável `POSTGRES_URL` sozinha.
+3. **Republique** o site. Variável nova só entra num deploy novo.
+
+Outras opções servem igual: Neon, Supabase ou um servidor seu. Copie a string
+de conexão para uma variável chamada `POSTGRES_URL` (ou `DATABASE_URL`).
+
+As tabelas se criam sozinhas na primeira chamada. Não há passo de migração
+para esquecer.
+
+## 2. Abrir o painel
+
+Cadastre duas variáveis na Vercel (*Settings → Environment Variables*):
+
+| Variável | O que pôr |
+| --- | --- |
+| `ADMIN_SENHA` | A senha da equipe. Use algo longo — é a única porta. |
+| `ADMIN_SEGREDO` | Uma cadeia aleatória longa, que assina o cookie de sessão. Gere com `openssl rand -base64 48` e nunca reuse a senha aqui. |
+
+Republique e abra **astrosolucoes.vercel.app/admin**.
+
+### Como a porta é protegida
+
+- A senha é comparada em tempo constante, e o que volta é um cookie **assinado
+  com HMAC**, não a senha.
+- O cookie é `HttpOnly` (JavaScript da página não lê, então um XSS não rouba a
+  sessão), `Secure` (só HTTPS), `SameSite=Lax` (não viaja em requisição vinda
+  de outro site, o que corta CSRF) e vale 12 horas.
+- Cinco erros de senha da mesma origem em dez minutos travam a porta por dez
+  minutos.
+- A página `/admin` é pública — o que é privado são as rotas `/api/admin/*`,
+  que exigem o cookie. Esconder a rota no navegador não protegeria nada, já
+  que qualquer pessoa lê o JavaScript servido.
+- `/admin` está fora do `robots.txt` e marcada como `noindex`.
+
+**Se alguém sair da equipe, troque `ADMIN_SENHA` e `ADMIN_SEGREDO`.** Trocar o
+segredo invalida na hora todas as sessões abertas.
+
+## 3. Avisar a equipe quando entra lead (opcional)
+
+Com a Cloud API já configurada (veja `docs/whatsapp-automacao.md`), acrescente
+`EQUIPE_WHATSAPP` com o número que recebe o aviso, no formato
+`5511999999999`. Cada lead novo do chat chega lá formatado.
+
+Sem isso, nada quebra: o lead é guardado e aparece no painel.
+
+---
+
+## O que o painel faz
+
+- **Números do topo:** total de leads, últimos 7 dias, conversão e receita
+  fechada. A conversão é calculada sobre o que já saiu do funil (fechados
+  sobre fechados + perdidos) — contar quem entrou ontem como "ainda não
+  fechou" faria o número parecer pior do que é.
+- **Funil:** quantos em cada situação — novo, contatado, proposta, fechado,
+  perdido.
+- **Entrada por semana** e **por canal** (chat do site, WhatsApp, formulário).
+- **Lista de leads:** o que a pessoa respondeu, a conversa completa, mudança
+  de situação com um toque, valor do negócio e anotações.
+- **Busca** por nome, empresa, contato ou resumo, e filtro por situação.
+
+## O que o chat do site faz
+
+Segue um roteiro de seis perguntas: o que precisa, para quando, orçamento
+previsto, o que trava hoje (opcional), nome e contato. Só então envia.
+
+Ele **não** improvisa. É um roteiro, não um modelo de linguagem. A escolha é
+deliberada: um modelo solto respondendo por uma agência inventa prazo e preço,
+e quem paga a conta é a reputação. O roteiro é previsível, custa zero por
+conversa e entrega exatamente o que o time precisa para responder bem.
+
+Se um dia fizer sentido colocar um modelo de linguagem no lugar, o ponto de
+troca é a função `encerrar` em `src/components/Chatbot.tsx` e a rota
+`api/lead.js` — o resto continua igual.
+
+---
+
+## Onde mexer
+
+| O quê | Arquivo |
+| --- | --- |
+| Perguntas do chat | `src/components/Chatbot.tsx`, constante `ROTEIRO` |
+| Textos do robô do WhatsApp | `api/whatsapp.js`, topo do arquivo |
+| Situações do funil | `api/_lib/db.js`, constante `SITUACOES` (e a lista igual em `src/admin/Painel.tsx`) |
+| Cálculo dos números | `api/_lib/leads.js`, função `resumo` |
+
+Depois de mexer, rode `npm test && npm run lint && npm run build`.
+
+## Quando algo não funciona
+
+Abra *Logs* no painel da Vercel e filtre pela rota:
+
+- **`/api/lead` respondendo 503** — falta `POSTGRES_URL`, ou ela não foi
+  publicada num deploy novo.
+- **`/admin` pedindo senha em looping** — falta `ADMIN_SEGREDO`, ou ele mudou
+  entre deploys (o que invalida os cookies).
+- **429 ao entrar** — a trava de força bruta pegou; espere dez minutos.
+- **Painel vazio com aviso amarelo** — é o esperado antes do passo 1.
