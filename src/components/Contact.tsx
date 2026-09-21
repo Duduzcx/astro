@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { ArrowGlyph, MagneticButton, WordReveal, Reveal } from './ui/Primitives'
-import { site } from '../lib/site'
+import { site, whatsappLink } from '../lib/site'
 import { AstroMark } from './brand/AstroMark'
 
 const inputClasses =
@@ -40,16 +40,27 @@ export function Contact() {
       setStatus('sent')
       return
     }
+    /* A mensagem vai pronta e arrumada: quem recebe lê de relance quem é,
+       de onde veio e qual é o problema, sem ter de perguntar três vezes.
+       Campos vazios não entram — "Empresa:" sozinho numa linha só suja. */
+    const linha = (rotulo: string, valor: FormDataEntryValue | null) => {
+      const texto = String(valor || '').trim()
+      return texto ? [`${rotulo}: ${texto}`] : []
+    }
+    const desafio = String(data.get('desafio') || '').trim()
     const texto = [
-      'Olá! Vim pelo site da Astro Soluções.',
+      'Olá, Astro Soluções! 👋',
       '',
-      `Nome: ${data.get('nome') || ''}`,
-      `E-mail: ${data.get('email') || ''}`,
-      `Empresa: ${data.get('empresa') || ''}`,
+      'Vim pelo site e queria falar sobre o meu desafio.',
       '',
-      String(data.get('desafio') || ''),
+      ...linha('Nome', data.get('nome')),
+      ...linha('E-mail', data.get('email')),
+      ...linha('Empresa', data.get('empresa')),
+      ...(desafio ? ['', 'O que trava hoje:', desafio] : []),
+      '',
+      'Fico no aguardo!',
     ].join('\n')
-    const destino = `https://wa.me/5511921572675?text=${encodeURIComponent(texto)}`
+    const destino = whatsappLink(texto)
     setResgate(destino)
     /* No mesmo gesto do clique, senão o navegador trata como janela não
        pedida e bloqueia.

@@ -2,6 +2,31 @@
  * Fonte única dos dados da empresa e dos alvos de navegação.
  * O e-mail ainda é o Gmail provisório, até a caixa no domínio existir.
  */
+
+/** O número no formato do WhatsApp: país, DDD e número, sem sinais. */
+export const whatsappNumero = '5511921572675'
+
+/**
+ * Monta um link de WhatsApp com a mensagem já escrita.
+ *
+ * O texto importa: quem chega com a mensagem pronta manda em vez de
+ * desistir na tela em branco, e a conversa já começa dizendo de onde a
+ * pessoa veio. Um lugar só para montar o link — antes o número aparecia
+ * cravado dentro do formulário, e um número em dois lugares é um número
+ * que vai divergir.
+ */
+export function whatsappLink(texto: string) {
+  return `https://wa.me/${whatsappNumero}?text=${encodeURIComponent(texto)}`
+}
+
+/** A mensagem de quem clicou num botão de WhatsApp, sem passar pelo formulário. */
+export const whatsappConvite = [
+  'Olá, Astro Soluções! 👋',
+  '',
+  'Vim pelo site e quero agendar o diagnóstico gratuito.',
+  'Pode me contar como funciona?',
+].join('\n')
+
 export const site = {
   name: 'Astro Soluções',
   cnpj: '65.903.572/0001-26',
@@ -11,11 +36,11 @@ export const site = {
   },
   phone: {
     label: '(11) 92157-2675',
-    href: 'tel:+5511921572675',
+    href: `tel:+${whatsappNumero}`,
   },
   whatsapp: {
     label: '(11) 92157-2675',
-    href: 'https://wa.me/5511921572675?text=Quero%20agendar%20um%20diagn%C3%B3stico%20com%20a%20Astro%20Solu%C3%A7%C3%B5es',
+    href: whatsappLink(whatsappConvite),
   },
   instagram: {
     label: '@astros.solucoes',
