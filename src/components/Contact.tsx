@@ -7,28 +7,41 @@ const inputClasses =
   'w-full rounded-2xl bg-obsidian px-5 py-3.5 text-[15px] text-ivory placeholder:text-slate outline-none transition-shadow focus:shadow-[inset_0_0_0_1px_#4d84e0]'
 
 /**
- * Formulário do Netlify. O espelho oculto fica no index.html porque o build só
- * enxerga HTML estático. Ao lado, o atalho: 20 minutos no WhatsApp.
+ * O formulário entrega no WhatsApp.
+ *
+ * Antes ele postava para o Netlify Forms. O site mudou para a Vercel, que é
+ * estática e responde 405 a um POST na própria página — medido: TODO envio
+ * caía na tela de erro. Um formulário que sempre falha é pior do que não
+ * ter formulário.
+ *
+ * Sem servidor, o caminho honesto é o que já era o resgate: o que a pessoa
+ * escreveu vira uma mensagem pronta no WhatsApp, aberta no mesmo gesto do
+ * clique — e é por ser no mesmo gesto que o navegador não bloqueia a aba. A
+ * tela seguinte confirma e deixa o link à mão, porque abrir aba é coisa que
+ * bloqueador de anúncio às vezes come.
+ *
+ * Se um dia houver caixa de entrada de verdade (função serverless mandando
+ * e-mail, ou um serviço de formulário), o lugar de mexer é `entregar`:
+ * o resto da tela não precisa saber por onde a mensagem saiu.
  */
 export function Contact() {
-  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
-
-  /* Envio por AJAX: POST urlencoded para a própria página. Falhou (rede,
-     deploy fora do Netlify, 4xx/5xx), a tela diz que falhou e aponta o
-     WhatsApp — confirmar sem ter enviado era perder lead em silêncio. */
-  /* Quando o envio falha, o que a pessoa escreveu vai junto para o WhatsApp.
-     Sem isto ela teria de redigitar tudo, e quase ninguém redigita: o lead
-     simplesmente se perde. Guardar o texto transforma uma falha de envio num
-     contato concluído por outro caminho. */
+  const [status, setStatus] = useState<'idle' | 'sent' | 'error'>('idle')
+  /* O link pronto, guardado para a tela de confirmação: se a aba não abrir,
+     a pessoa clica e vai com o texto que escreveu. Sem isto ela teria de
+     redigitar tudo, e quase ninguém redigita. */
   const [resgate, setResgate] = useState('')
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    setStatus('sending')
     const data = new FormData(event.currentTarget)
-    const body = new URLSearchParams(data as unknown as Record<string, string>).toString()
+    /* Isca de robô: humano não vê o campo, robô preenche. Preenchido, a tela
+       agradece e nada é aberto — o robô não fica sabendo que falhou. */
+    if (String(data.get('bot-field') || '').trim()) {
+      setStatus('sent')
+      return
+    }
     const texto = [
-      'Olá! Tentei enviar pelo site e o formulário falhou.',
+      'Olá! Vim pelo site da Astro Soluções.',
       '',
       `Nome: ${data.get('nome') || ''}`,
       `E-mail: ${data.get('email') || ''}`,
@@ -36,18 +49,19 @@ export function Contact() {
       '',
       String(data.get('desafio') || ''),
     ].join('\n')
-    setResgate(`https://wa.me/5511921572675?text=${encodeURIComponent(texto)}`)
-    try {
-      const response = await fetch('/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body,
-      })
-      if (!response.ok) throw new Error(String(response.status))
-      setStatus('sent')
-    } catch {
-      setStatus('error')
-    }
+    const destino = `https://wa.me/5511921572675?text=${encodeURIComponent(texto)}`
+    setResgate(destino)
+    /* No mesmo gesto do clique, senão o navegador trata como janela não
+       pedida e bloqueia.
+
+       Sem 'noopener' na string de recursos, de propósito: com ela o
+       window.open devolve null MESMO tendo aberto a aba, por especificação,
+       e a tela acusava bloqueio em todo envio bem-sucedido (medido). O elo
+       com a janela nova é cortado logo abaixo, que dá a mesma proteção e
+       ainda devolve a referência que diz se abriu. */
+    const aba = window.open(destino, '_blank')
+    if (aba) aba.opener = null
+    setStatus(aba ? 'sent' : 'error')
   }
 
   return (
@@ -127,21 +141,30 @@ export function Contact() {
                 className="graphite-card flex h-full flex-col items-start justify-center"
               >
                 <AstroMark className="mb-5 h-12 w-12" />
-                <p className="text-[1.4rem] text-ivory">Recebido ✓</p>
+                <p className="text-[1.4rem] text-ivory">Tudo pronto ✓</p>
                 <p className="mt-3 max-w-sm text-ash">
-                  Obrigado! A gente lê com atenção e responde em até um dia útil — normalmente
-                  antes.
+                  Abrimos o WhatsApp com a sua mensagem já escrita — é só enviar. A gente
+                  responde na hora, e em até um dia útil no pior caso.
                 </p>
+                <a
+                  href={resgate || site.whatsapp.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-5 inline-flex items-center gap-2.5 rounded-full bg-obsidian px-6 py-3.5 text-[15px] text-ivory transition-colors hover:bg-[#1e2c4c]"
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#4ade80]" />
+                  Não abriu? Abrir aqui
+                </a>
               </div>
             ) : status === 'error' ? (
               <div
                 role="alert"
                 className="graphite-card flex h-full flex-col items-start justify-center"
               >
-                <p className="text-[1.4rem] text-ivory">Não foi dessa vez.</p>
+                <p className="text-[1.4rem] text-ivory">Quase lá.</p>
                 <p className="mt-3 max-w-sm text-ash">
-                  O envio falhou, mas nada se perdeu: o botão abaixo abre o WhatsApp já com
-                  o que você escreveu. A gente responde na hora.
+                  O navegador bloqueou a aba nova, mas nada se perdeu: o botão abaixo abre o
+                  WhatsApp já com o que você escreveu. A gente responde na hora.
                 </p>
                 <a
                   href={resgate || site.whatsapp.href}
@@ -163,13 +186,10 @@ export function Contact() {
             ) : (
               <form
                 name="contato"
-                method="POST"
-                data-netlify="true"
                 onSubmit={handleSubmit}
                 className="graphite-card flex flex-col gap-3"
               >
-                <input type="hidden" name="form-name" value="contato" />
-                {/* Honeypot: humano não vê, robô preenche, Netlify descarta. */}
+                {/* Isca: humano não vê o campo, robô preenche — e aí nada é enviado. */}
                 <input
                   name="bot-field"
                   tabIndex={-1}
@@ -220,10 +240,9 @@ export function Contact() {
                 />
                 <MagneticButton
                   type="submit"
-                  disabled={status === 'sending'}
-                  className="mt-2 inline-flex items-center justify-center gap-2.5 rounded-full bg-cobalt px-7 py-3.5 text-[15px] font-[420] text-white transition-colors duration-300 hover:bg-[#5d92ea] disabled:opacity-60"
+                  className="mt-2 inline-flex items-center justify-center gap-2.5 rounded-full bg-cobalt px-7 py-3.5 text-[15px] font-[420] text-white transition-colors duration-300 hover:bg-[#5d92ea]"
                 >
-                  {status === 'sending' ? 'Enviando…' : 'Enviar desafio'} <ArrowGlyph />
+                  Enviar no WhatsApp <ArrowGlyph />
                 </MagneticButton>
               </form>
             )}
