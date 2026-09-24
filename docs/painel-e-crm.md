@@ -144,4 +144,10 @@ Abra *Logs* no painel da Vercel e filtre pela rota:
 - **`/admin` pedindo senha em looping** — falta `ADMIN_SEGREDO`, ou ele mudou
   entre deploys (o que invalida os cookies).
 - **429 ao entrar** — a trava de força bruta pegou; espere dez minutos.
-- **Painel vazio com aviso amarelo** — é o esperado antes do passo 1.
+- **Painel vazio com aviso amarelo** — é o esperado antes do passo 1. Enquanto
+  o banco não está ligado, o painel entra em *modo demonstração*: mostra três
+  leads de exemplo, marcados como exemplo, só para você ver a ferramenta
+  funcionando. Eles não podem ser editados e somem quando o banco entra.
+
+O widget do chat, a ponte da inteligência e as proteções de custo estão em
+`docs/chat-inteligente.md`.

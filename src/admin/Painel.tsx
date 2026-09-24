@@ -58,9 +58,101 @@ type Estado = {
 type Robo = {
   textos: Record<string, string>
   padrao: Record<string, string>
+  instrucao: string
+  instrucaoPadrao: string
+  inteligencia: string
   ligado: boolean
   assinado: boolean
   editavel: boolean
+}
+
+/* Leads de demonstração, mostrados SÓ enquanto o banco não está ligado.
+   Existem para a equipe ver a ferramenta funcionando antes de configurar
+   nada — e vêm marcados como exemplo no aviso do topo e no nome de cada um,
+   porque um painel que mostra número inventado sem avisar é pior do que um
+   painel vazio. */
+const EXEMPLOS: Lead[] = [
+  {
+    id: -1,
+    criado_em: new Date().toISOString(),
+    nome: 'Exemplo — Marina Duarte',
+    empresa: 'Transportes Duarte',
+    contato: 'marina@exemplo.com.br',
+    canal: 'chat',
+    necessidade: 'Automação de processo',
+    urgencia: 'Nas próximas semanas',
+    orcamento: 'R$ 10 a 30 mil',
+    resumo: 'Roteirização feita à mão numa planilha que só uma pessoa sabe operar.',
+    conversa: [
+      { de: 'robo', texto: 'O que você precisa resolver?' },
+      { de: 'pessoa', texto: 'Automação de processo' },
+    ],
+    situacao: 'novo',
+    valor_centavos: 0,
+    anotacoes: '',
+    retorno_em: null,
+    responsavel: '',
+  },
+  {
+    id: -2,
+    criado_em: new Date(Date.now() - 86_400_000 * 3).toISOString(),
+    nome: 'Exemplo — Rafael Lima',
+    empresa: 'Clínica Horizonte',
+    contato: '11 99999-0000',
+    canal: 'whatsapp',
+    necessidade: 'Agendar diagnóstico',
+    urgencia: 'Era para ontem',
+    orcamento: 'Prefiro conversar antes',
+    resumo: 'Agendamento por telefone, com faltas e remarcações fora de controle.',
+    conversa: [],
+    situacao: 'proposta',
+    valor_centavos: 1_800_000,
+    anotacoes: 'Proposta enviada, aguardando retorno da sócia.',
+    retorno_em: new Date(Date.now() - 86_400_000).toISOString().slice(0, 10),
+    responsavel: 'Duduzcx',
+  },
+  {
+    id: -3,
+    criado_em: new Date(Date.now() - 86_400_000 * 9).toISOString(),
+    nome: 'Exemplo — Construtora Vega',
+    empresa: 'Vega',
+    contato: 'contato@exemplo.com',
+    canal: 'formulario',
+    necessidade: 'Sistema sob medida',
+    urgencia: 'Neste trimestre',
+    orcamento: 'Acima de R$ 30 mil',
+    resumo: 'Portal do cliente para acompanhar a obra.',
+    conversa: [],
+    situacao: 'fechado',
+    valor_centavos: 4_200_000,
+    anotacoes: '',
+    retorno_em: null,
+    responsavel: 'Duduzcx',
+  },
+]
+
+const RESUMO_EXEMPLO: Resumo = {
+  total: 3,
+  semana: 1,
+  atrasados: 1,
+  fechados: 1,
+  receitaCentavos: 4_200_000,
+  conversao: 100,
+  porSituacao: [
+    { situacao: 'novo', quantos: 1, valorCentavos: 0 },
+    { situacao: 'proposta', quantos: 1, valorCentavos: 1_800_000 },
+    { situacao: 'fechado', quantos: 1, valorCentavos: 4_200_000 },
+  ],
+  porSemana: [
+    { semana: '2026-09-08', quantos: 1 },
+    { semana: '2026-09-15', quantos: 1 },
+    { semana: '2026-09-22', quantos: 1 },
+  ],
+  porCanal: [
+    { canal: 'chat', quantos: 1 },
+    { canal: 'whatsapp', quantos: 1 },
+    { canal: 'formulario', quantos: 1 },
+  ],
 }
 
 const CORES: Record<Situacao, string> = {
@@ -493,7 +585,7 @@ function AbaRobo() {
     pedir('/api/admin/whatsapp')
       .then((r) => {
         setRobo(r)
-        setRascunho(r.textos)
+        setRascunho({ ...r.textos, instrucao: r.instrucao })
       })
       .catch(() => setAviso('não foi possível ler a configuração do robô'))
   }, [])
@@ -524,9 +616,31 @@ function AbaRobo() {
       ) : null}
 
       <div className="graphite-card">
+        <p className="label-voice text-[10px]">Inteligência do chat do site</p>
+        <p className="mt-2 text-[13px] text-slate">
+          {robo.inteligencia
+            ? 'Ligada (' + robo.inteligencia + '). O chat responde perguntas livres depois do roteiro.'
+            : 'Desligada. O chat usa só o roteiro de seis perguntas, que funciona e nao custa nada. Para ligar, cadastre ANTHROPIC_API_KEY ou OPENAI_API_KEY na Vercel.'}
+        </p>
+        <label className="label-voice mt-5 block text-[9px]" htmlFor="robo-instrucao">
+          Instrucao que a inteligencia le antes de falar pela empresa
+        </label>
+        <textarea
+          id="robo-instrucao"
+          rows={10}
+          value={rascunho.instrucao ?? ''}
+          onChange={(evento) => setRascunho({ ...rascunho, instrucao: evento.target.value })}
+          className="mt-2 w-full resize-y rounded-xl bg-obsidian px-3 py-2 font-mono text-[12px] leading-[1.6] text-ivory outline-none focus:shadow-[inset_0_0_0_1px_#4d84e0]"
+        />
+        <p className="mt-2 text-[12px] text-slate">
+          E aqui que se proibe inventar preco e prazo. Em branco, volta ao padrao de fabrica.
+        </p>
+      </div>
+
+      <div className="graphite-card">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="text-[1.1rem] text-ivory">O que o robô responde</h3>
+            <h3 className="text-[1.1rem] text-ivory">O que o robo do WhatsApp responde</h3>
             <p className="mt-1 text-[13px] text-slate">
               Muda aqui e vale na próxima mensagem. Sem republicar o site.
             </p>
@@ -534,7 +648,7 @@ function AbaRobo() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setRascunho(robo.padrao)}
+              onClick={() => setRascunho({ ...robo.padrao, instrucao: robo.instrucaoPadrao })}
               className="text-[12px] text-slate underline underline-offset-4 hover:text-ivory"
             >
               Voltar ao padrão
@@ -547,7 +661,7 @@ function AbaRobo() {
                 try {
                   const r = await pedir('/api/admin/whatsapp', {
                     method: 'PUT',
-                    body: JSON.stringify({ textos: rascunho }),
+                    body: JSON.stringify({ textos: rascunho, instrucao: rascunho.instrucao }),
                   })
                   setRobo({ ...robo, textos: r.textos })
                   setAviso('salvo')
@@ -628,6 +742,10 @@ export function Painel() {
     if (estado?.dentro && estado.banco) void carregar()
   }, [estado?.dentro, estado?.banco, carregar])
 
+  /* Sem banco, o painel mostra exemplos em vez de uma tela vazia — com o
+     aviso de que sao exemplos, e sem deixar mexer neles. */
+  const demonstracao = Boolean(estado?.dentro && !estado.banco)
+
   const mudar = async (id: number, campos: Partial<Lead>) => {
     try {
       const { lead } = await pedir('/api/admin/leads', {
@@ -641,7 +759,8 @@ export function Painel() {
     }
   }
 
-  const visiveis = useMemo(() => (soAtrasados ? leads.filter(atrasado) : leads), [leads, soAtrasados])
+  const base = demonstracao ? EXEMPLOS : leads
+  const visiveis = useMemo(() => (soAtrasados ? base.filter(atrasado) : base), [base, soAtrasados])
 
   const avisos = useMemo(() => {
     if (!estado) return []
@@ -720,11 +839,16 @@ export function Painel() {
       <div className="mt-6">
         {aba === 'robo' ? (
           <AbaRobo />
-        ) : !estado.banco ? (
-          <p className="text-[14px] text-slate">Sem banco configurado, não há o que mostrar.</p>
         ) : (
           <>
-            {resumo ? <Numeros resumo={resumo} /> : null}
+            {demonstracao ? (
+              <p className="mb-4 rounded-xl border border-[#8db4f5]/25 bg-[#8db4f5]/5 px-4 py-3 text-[13px] text-[#8db4f5]">
+                Modo demonstracao: estes leads sao exemplos, para voce ver a ferramenta
+                funcionando. Ligue o banco (POSTGRES_URL) e eles somem, dando lugar aos contatos
+                de verdade.
+              </p>
+            ) : null}
+            {demonstracao ? <Numeros resumo={RESUMO_EXEMPLO} /> : resumo ? <Numeros resumo={resumo} /> : null}
 
             <div className="mt-8 flex flex-wrap items-center gap-2">
               {(['', ...SITUACOES] as const).map((situacao) => (
@@ -772,11 +896,18 @@ export function Painel() {
               {visiveis.length === 0 ? (
                 <p className="text-[14px] text-slate">Nenhum lead por aqui ainda.</p>
               ) : aba === 'funil' ? (
-                <Funil leads={visiveis} aoMudar={mudar} />
+                <Funil leads={visiveis} aoMudar={demonstracao ? () => {} : mudar} />
               ) : (
                 <ul className="flex flex-col gap-3">
                   {visiveis.map((lead) => (
-                    <Cartao key={lead.id} lead={lead} aoMudar={(campos) => void mudar(lead.id, campos)} />
+                    <Cartao
+                      key={lead.id}
+                      lead={lead}
+                      aoMudar={(campos) => {
+                        if (demonstracao) return
+                        void mudar(lead.id, campos)
+                      }}
+                    />
                   ))}
                 </ul>
               )}

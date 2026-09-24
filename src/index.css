@@ -322,6 +322,68 @@
     radial-gradient(520px 420px at 62% 8%, rgba(90, 143, 232, 0.1), transparent 70%);
 }
 
+/* O botão flutuante do atendimento e a gaveta que ele abre.
+
+   Vidro de verdade: backdrop-filter borra o que está ATRÁS do elemento, que
+   aqui é a cena 3D. É trabalho de composição na GPU sobre uma camada fixa, e
+   não repintura da página — o canvas segue desenhando sem saber que existe
+   algo por cima. Por isso a gaveta é `position: fixed` e entra por
+   `transform`: não há reflow, não há layout empurrado, não há um pixel do
+   canvas invalidado.
+
+   `will-change` só na gaveta, e só enquanto ela existe: promovê-la a camada
+   própria é o que mantém a animação de entrada fora do thread principal. */
+@utility astro-fab {
+  background: linear-gradient(150deg, rgba(77, 132, 224, 0.95), rgba(27, 39, 64, 0.92));
+  border: 1px solid rgba(141, 180, 245, 0.32);
+  box-shadow:
+    0 18px 44px -16px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(10px);
+  color: var(--color-ivory);
+  isolation: isolate;
+}
+
+.astro-fab-anel {
+  position: absolute;
+  inset: -2px;
+  border-radius: 9999px;
+  border: 1px solid rgba(141, 180, 245, 0.55);
+  pointer-events: none;
+  animation: astro-fab-pulso 2.8s ease-out infinite;
+}
+
+@keyframes astro-fab-pulso {
+  0% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(1.45);
+  }
+}
+
+@utility astro-gaveta {
+  /* Duas camadas de cor sobre o desfoque: um degradê que escurece para a
+     direita, onde o texto mora, e um véu plano que garante contraste mesmo
+     quando um astro claro passa por trás. Sem ele o texto sumia sobre o Sol. */
+  background:
+    linear-gradient(200deg, rgba(19, 27, 46, 0.72) 0%, rgba(10, 15, 30, 0.86) 100%),
+    rgba(10, 15, 30, 0.35);
+  backdrop-filter: blur(22px) saturate(140%);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: -30px 0 70px -40px rgba(0, 0, 0, 0.95);
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .astro-fab-anel {
+    animation: none;
+  }
+}
+
 /* Texto que acende de cima para baixo com a rolagem (ver TextoQueAcende.tsx).
    A fronteira vem de --acesa, escrita por quadro; a faixa de transição é o
    trecho entre os dois stops, e é ela que faz a luz "varrer" em vez de

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { AstroStar } from './brand/AstroMark'
+import { AstroMark } from './brand/AstroMark'
 import { site, whatsappLink } from '../lib/site'
 
 /**
@@ -80,7 +80,13 @@ export function Chatbot() {
   const [falas, setFalas] = useState<Fala[]>(ABERTURA)
   const [respostas, setRespostas] = useState<Record<string, string>>({})
   const [rascunho, setRascunho] = useState('')
-  const [estado, setEstado] = useState<'conversando' | 'enviando' | 'pronto' | 'whatsapp'>('conversando')
+  const [estado, setEstado] = useState<'conversando' | 'enviando' | 'pronto' | 'whatsapp' | 'livre'>(
+    'conversando',
+  )
+  /* Conversa livre depois do roteiro, quando há inteligência ligada em
+     /api/bot. Sem chave configurada a rota diz `roteiro` e este caminho
+     simplesmente não aparece — o chat termina como sempre terminou. */
+  const [pensando, setPensando] = useState(false)
   const [linkResgate, setLinkResgate] = useState('')
   /* Isca de robô: fica fora da tela, gente nunca preenche. */
   const [armadilha, setArmadilha] = useState('')
@@ -201,6 +207,40 @@ export function Chatbot() {
     }
   }
 
+  /** Manda uma mensagem solta para a ponte e traz a resposta. */
+  async function conversar(texto: string) {
+    const minhas = [...falas, { de: 'pessoa' as const, texto }]
+    setFalas(minhas)
+    setRascunho('')
+    setPensando(true)
+    try {
+      const resposta = await fetch('/api/bot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mensagem: texto, historico: falas, armadilha }),
+      })
+      const corpo = await resposta.json()
+      if (corpo?.modo === 'ia' && corpo.resposta) {
+        setFalas([...minhas, { de: 'robo', texto: corpo.resposta }])
+      } else {
+        /* Sem inteligência, ou ela falhou: nunca deixar no vácuo. */
+        setFalas([
+          ...minhas,
+          {
+            de: 'robo',
+            texto: 'Anotei! Uma pessoa do time responde no seu contato — se preferir agora, é só chamar no WhatsApp.',
+          },
+        ])
+        setEstado('whatsapp')
+      }
+    } catch {
+      setFalas([...minhas, { de: 'robo', texto: 'Não consegui responder agora. Me chama no WhatsApp que a gente resolve.' }])
+      setEstado('whatsapp')
+    } finally {
+      setPensando(false)
+    }
+  }
+
   function responder(valor: string) {
     const limpo = valor.trim()
     if (!limpo && !passo?.opcional) return
@@ -231,63 +271,89 @@ export function Chatbot() {
 
   return (
     <>
-      {/* O botão. Some no hero, no contato e no rodapé; no celular some
-          também quando o painel está aberto, onde não cabem os dois. */}
+      {/* Botão flutuante, só a marca. Sem texto ele ocupa um canto em vez de
+          uma faixa, e some no hero, no contato e no rodapé. O nome do que ele
+          faz vive no aria-label, que é onde o leitor de tela procura. */}
       <AnimatePresence>
-        {entrou && (podeAparecer || aberto) ? (
+        {entrou && !aberto && podeAparecer ? (
           <motion.button
             type="button"
-            onClick={() => setAberto((v) => !v)}
-            aria-expanded={aberto}
+            onClick={() => setAberto(true)}
+            aria-label="Abrir o atendimento da Astro Soluções"
+            aria-expanded={false}
             aria-controls="astro-chat"
-            initial={{ opacity: 0, y: semMovimento() ? 0 : 14, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: semMovimento() ? 0 : 10, scale: 0.96 }}
-            transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.96 }}
-            className={`fixed right-4 bottom-4 z-[70] inline-flex items-center gap-2.5 rounded-full bg-cobalt px-5 py-3.5 text-[15px] font-[420] text-white shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)] transition-colors hover:bg-[#5d92ea] sm:right-6 sm:bottom-6 ${
-              aberto ? 'hidden sm:inline-flex' : ''
-            }`}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
+            whileHover={{ scale: 1.06 }}
+            whileTap={{ scale: 0.94 }}
+            className="astro-fab fixed right-5 bottom-5 z-[70] grid h-14 w-14 place-items-center rounded-full sm:right-7 sm:bottom-7 sm:h-15 sm:w-15"
           >
-            <AstroStar className="h-3.5 w-3.5" />
-            {aberto ? 'Fechar' : 'Falar com a Astro'}
+            <AstroMark className="h-7 w-7" />
+            {/* O anel que pulsa. É um pseudo-elemento em transform e opacity,
+                então mora no compositor e não repinta nada — nem a página,
+                nem o canvas da cena. */}
+            <span aria-hidden="true" className="astro-fab-anel" />
           </motion.button>
         ) : null}
       </AnimatePresence>
 
       <AnimatePresence>
         {aberto ? (
-          <motion.div
-            id="astro-chat"
-            ref={painel}
-            role="dialog"
-            aria-label="Atendimento da Astro Soluções"
-            initial={{ opacity: 0, y: semMovimento() ? 0 : 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: semMovimento() ? 0 : 16 }}
-            transition={{ duration: 0.26, ease: [0.16, 1, 0.3, 1] }}
-            className="graphite-card fixed inset-x-3 bottom-3 z-[71] flex max-h-[82svh] flex-col gap-4 !p-0 sm:inset-x-auto sm:right-6 sm:bottom-24 sm:w-[380px]"
-          >
-            <header className="flex items-center justify-between gap-3 border-b border-white/8 px-5 py-4">
-              <span className="flex items-center gap-2.5 text-[14px] text-ivory">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#4ade80]" />
-                Atendimento Astro
-              </span>
-              <button
-                type="button"
-                onClick={() => setAberto(false)}
-                aria-label="Fechar o atendimento"
-                className="text-[13px] text-slate transition-colors hover:text-ivory"
-              >
-                Fechar
-              </button>
-            </header>
-
-            <div
-              aria-live="polite"
-              className="flex min-h-[180px] flex-1 flex-col gap-2.5 overflow-y-auto px-5"
+          <>
+            {/* O véu. Escurece a cena sem apagá-la, e fechar tocando fora é o
+                gesto que todo mundo tenta primeiro. */}
+            <motion.button
+              type="button"
+              aria-label="Fechar o atendimento"
+              onClick={() => setAberto(false)}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.28 }}
+              className="fixed inset-0 z-[70] cursor-default bg-onyx/45"
+            />
+            <motion.div
+              id="astro-chat"
+              ref={painel}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Atendimento da Astro Soluções"
+              /* Entra deslizando da direita, em transform — o compositor
+                 resolve sozinho, sem empurrar layout nem forçar o canvas da
+                 cena a repintar. No celular a gaveta ocupa a tela toda. */
+              initial={{ x: semMovimento() ? 0 : '100%', opacity: semMovimento() ? 0 : 1 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: semMovimento() ? 0 : '100%', opacity: semMovimento() ? 0 : 1 }}
+              transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
+              className="astro-gaveta fixed top-0 right-0 bottom-0 z-[71] flex w-full max-w-[420px] flex-col"
             >
+              <header className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
+                <span className="flex items-center gap-3 text-[14px] text-ivory">
+                  <AstroMark className="h-6 w-6" />
+                  <span className="flex flex-col leading-tight">
+                    Atendimento Astro
+                    <span className="flex items-center gap-1.5 text-[11px] text-slate">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#4ade80]" />
+                      respondemos agora
+                    </span>
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setAberto(false)}
+                  aria-label="Fechar o atendimento"
+                  className="rounded-full border border-white/12 px-3 py-1.5 text-[12px] text-slate transition-colors hover:text-ivory"
+                >
+                  Fechar
+                </button>
+              </header>
+
+              <div
+                aria-live="polite"
+                className="flex min-h-[180px] flex-1 flex-col gap-2.5 overflow-y-auto px-5 py-5"
+              >
               {falas.map((fala, i) => (
                 <p
                   key={i}
@@ -303,11 +369,26 @@ export function Chatbot() {
               <div ref={fim} />
             </div>
 
-            <footer className="border-t border-white/8 px-5 py-4">
+              <footer className="border-t border-white/10 px-5 py-4">
               {estado === 'enviando' ? (
                 <p className="text-[13px] text-slate">Enviando…</p>
               ) : estado === 'pronto' ? (
-                <p className="text-[13px] text-slate">Conversa encerrada. Obrigado!</p>
+                <div className="flex flex-col gap-3">
+                  <p className="text-[13px] text-slate">Conversa encerrada. Obrigado!</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEstado('livre')
+                      setFalas((atuais) => [
+                        ...atuais,
+                        { de: 'robo', texto: 'Claro! Pode perguntar o que quiser sobre a Astro.' },
+                      ])
+                    }}
+                    className="self-start text-[13px] text-[#8db4f5] underline underline-offset-4 hover:text-ivory"
+                  >
+                    Tenho outra dúvida
+                  </button>
+                </div>
               ) : estado === 'whatsapp' ? (
                 <a
                   href={linkResgate || site.whatsapp.href}
@@ -318,6 +399,36 @@ export function Chatbot() {
                   <span className="h-1.5 w-1.5 rounded-full bg-[#4ade80]" />
                   Enviar no WhatsApp
                 </a>
+              ) : estado === 'livre' ? (
+                <form
+                  onSubmit={(evento) => {
+                    evento.preventDefault()
+                    const texto = rascunho.trim()
+                    if (texto && !pensando) void conversar(texto)
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <label className="sr-only" htmlFor="astro-chat-livre">
+                    Sua pergunta
+                  </label>
+                  <input
+                    id="astro-chat-livre"
+                    value={rascunho}
+                    onChange={(evento) => setRascunho(evento.target.value)}
+                    placeholder={pensando ? 'Pensando…' : 'Escreva a sua pergunta'}
+                    disabled={pensando}
+                    maxLength={600}
+                    className="w-full rounded-full bg-obsidian px-4 py-2.5 text-[14px] text-ivory outline-none placeholder:text-slate focus:shadow-[inset_0_0_0_1px_#4d84e0] disabled:opacity-60"
+                  />
+                  <button
+                    type="submit"
+                    disabled={pensando}
+                    aria-label="Enviar pergunta"
+                    className="shrink-0 rounded-full bg-cobalt px-4 py-2.5 text-[14px] text-white transition-colors hover:bg-[#5d92ea] disabled:opacity-60"
+                  >
+                    →
+                  </button>
+                </form>
               ) : passo?.opcoes ? (
                 <div className="flex flex-wrap gap-2">
                   {passo.opcoes.map((opcao) => (
@@ -379,8 +490,9 @@ export function Chatbot() {
                 aria-hidden="true"
                 className="absolute -left-[9999px] h-px w-px opacity-0"
               />
-            </footer>
-          </motion.div>
+              </footer>
+            </motion.div>
+          </>
         ) : null}
       </AnimatePresence>
     </>
