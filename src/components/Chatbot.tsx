@@ -74,6 +74,86 @@ const ABERTURA: Fala[] = [
 const semMovimento = () =>
   typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
+/* Elementos que, se estiverem sob o botão, já bastam para escondê-lo: são
+   coisas que a pessoa precisa ver ou tocar. */
+const IMPORTANTES = new Set(['IMG', 'SVG', 'BUTTON', 'A', 'INPUT', 'TEXTAREA', 'SELECT', 'VIDEO'])
+
+/** Este elemento pinta alguma coisa neste ponto, ou é só espaço vazio? */
+function pinta(elemento: Element): boolean {
+  const tag = elemento.tagName.toUpperCase()
+  /* A cena, a página e a raiz são o fundo: passar por cima delas é justamente
+     o que o botão deve poder fazer. */
+  if (tag === 'CANVAS' || tag === 'HTML' || tag === 'BODY') return false
+  if ((elemento as HTMLElement).id === 'root') return false
+  if (IMPORTANTES.has(tag)) return true
+
+  /* Camadas do tamanho da tela são fundo, não conteúdo: o banho de cor, o
+     véu de leitura e os contêineres de seção cobrem a viewport inteira e
+     pintam alguma coisa em todo ponto. Contá-los escondia o botão na página
+     inteira — medido: ele nunca aparecia. Conteúdo de verdade tem tamanho de
+     conteúdo, e os filhos que de fato pintam vêm antes na pilha. */
+  const caixa = elemento.getBoundingClientRect()
+  if (caixa.width >= window.innerWidth * 0.95 && caixa.height >= window.innerHeight * 0.95) return false
+
+  const estilo = getComputedStyle(elemento)
+  if (estilo.visibility === 'hidden' || estilo.opacity === '0') return false
+
+  /* Cor de fundo e borda NÃO contam como informação.
+     Contavam, e no celular — onde o conteúdo ocupa a largura toda — o canto
+     quase sempre cai sobre o fundo de algum cartão: o botão não aparecia em
+     página nenhuma, medido. O que a pessoa precisa ler é texto, imagem e
+     coisa clicável; o canto vazio de um cartão não é informação. */
+
+  /* Texto escrito NESTE elemento, não num filho: o filho já teria sido
+     devolvido antes por elementsFromPoint, que entrega do mais fundo ao mais
+     raso. */
+  for (const no of elemento.childNodes) {
+    if (no.nodeType === Node.TEXT_NODE && no.textContent && no.textContent.trim()) return true
+  }
+  return false
+}
+
+/**
+ * Tem conteúdo debaixo do botão?
+ *
+ * Testa alguns pontos dentro da área que o botão ocupa e pergunta ao
+ * navegador o que está ali. É o único jeito honesto: qualquer lista de
+ * "seções onde ele atrapalha" fica desatualizada no dia em que alguém mexe
+ * no layout, e foi assim que ele acabou cobrindo um cartão.
+ *
+ * Custa um teste de posição por parada da rolagem, nunca por quadro.
+ */
+function temConteudoAtras(): boolean {
+  if (typeof document === 'undefined') return false
+  const largo = window.innerWidth >= 640
+  const margem = largo ? 28 : 20
+  const tamanho = largo ? 60 : 56
+  const folga = 10
+  const direita = window.innerWidth - margem + folga
+  const esquerda = window.innerWidth - margem - tamanho - folga
+  const baixo = window.innerHeight - margem + folga
+  const cima = window.innerHeight - margem - tamanho - folga
+  const meioX = (esquerda + direita) / 2
+  const meioY = (cima + baixo) / 2
+  const pontos: [number, number][] = [
+    [meioX, meioY],
+    [esquerda + 2, cima + 2],
+    [direita - 2, cima + 2],
+    [esquerda + 2, baixo - 2],
+    [direita - 2, baixo - 2],
+  ]
+  for (const [x, y] of pontos) {
+    if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) continue
+    for (const elemento of document.elementsFromPoint(x, y)) {
+      /* O próprio botão e a gaveta não contam como obstáculo. */
+      if (elemento.closest('.astro-fab') || elemento.closest('#astro-chat')) continue
+      if (pinta(elemento)) return true
+      /* Elemento transparente: continua descendo a pilha. */
+    }
+  }
+  return false
+}
+
 export function Chatbot() {
   const [aberto, setAberto] = useState(false)
   const [indice, setIndice] = useState(0)
@@ -100,6 +180,8 @@ export function Chatbot() {
      IntersectionObserver, não scroll: o navegador avisa quando muda, em vez
      de a página perguntar a cada quadro. */
   const [podeAparecer, setPodeAparecer] = useState(false)
+  /* Nada de conteúdo embaixo. Medido de verdade, não adivinhado por seção. */
+  const [canoLivre, setCanoLivre] = useState(true)
 
   useEffect(() => {
     const alvos = ['#topo', '#contato', 'footer']
@@ -124,6 +206,35 @@ export function Chatbot() {
     )
     for (const alvo of alvos) observador.observe(alvo)
     return () => observador.disconnect()
+  }, [])
+
+  /* O teste de colisão roda quando a rolagem PARA, e não durante: durante a
+     rolagem ele custaria um cálculo de layout por quadro, disputando thread
+     com a cena. Enquanto a página se move o botão fica escondido, o que de
+     quebra tira ele da frente justamente quando ninguém vai clicar nele. */
+  useEffect(() => {
+    let parada = 0
+    let quadro = 0
+    const medir = () => {
+      quadro = 0
+      setCanoLivre(!temConteudoAtras())
+    }
+    const aoMexer = () => {
+      setCanoLivre(false)
+      window.clearTimeout(parada)
+      parada = window.setTimeout(() => {
+        if (!quadro) quadro = requestAnimationFrame(medir)
+      }, 220)
+    }
+    medir()
+    window.addEventListener('scroll', aoMexer, { passive: true })
+    window.addEventListener('resize', aoMexer)
+    return () => {
+      window.clearTimeout(parada)
+      if (quadro) cancelAnimationFrame(quadro)
+      window.removeEventListener('scroll', aoMexer)
+      window.removeEventListener('resize', aoMexer)
+    }
   }, [])
 
   /* Enquanto a tela de carregamento cobre a página, o botão não existe. */
@@ -275,7 +386,7 @@ export function Chatbot() {
           uma faixa, e some no hero, no contato e no rodapé. O nome do que ele
           faz vive no aria-label, que é onde o leitor de tela procura. */}
       <AnimatePresence>
-        {entrou && !aberto && podeAparecer ? (
+        {entrou && !aberto && podeAparecer && canoLivre ? (
           <motion.button
             type="button"
             onClick={() => setAberto(true)}

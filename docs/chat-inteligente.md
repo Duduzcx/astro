@@ -6,10 +6,35 @@ Um botão flutuante com a marca, no canto inferior direito. Sem texto: ele
 ocupa um canto em vez de uma faixa. O nome do que ele faz vive no
 `aria-label`, que é onde o leitor de tela procura.
 
-Ele não acompanha a página inteira. Some no hero, no contato e no rodapé —
-ali cobriria os botões e o formulário que a pessoa foi procurar — e aparece
-no meio do percurso, que é onde alguém trava e precisa perguntar. Enquanto a
-tela de carregamento está no ar, não existe.
+Ele não acompanha a página inteira, e não decide isso por lista de seções.
+
+**Ele mede o que está embaixo dele.** Quando a rolagem para, o widget faz um
+teste de posição em cinco pontos da área que ocupa e pergunta ao navegador o
+que há ali. Havendo informação — texto, imagem, botão, link, campo — ele some.
+Um teste de verdade, porque qualquer lista de "seções onde ele atrapalha"
+fica desatualizada no dia em que alguém mexe no layout. Foi assim que ele
+acabou cobrindo um cartão.
+
+Duas coisas que a medição ensinou, e que estão no código:
+
+- **Camadas do tamanho da tela não contam.** O banho de cor e o véu de
+  leitura cobrem a viewport inteira e pintam algo em todo ponto. Contá-los
+  escondia o botão na página inteira.
+- **Fundo de cartão não é informação.** Contava, e no celular — onde o
+  conteúdo ocupa a largura toda — o canto quase sempre cai sobre o fundo de
+  algum cartão: o botão não aparecia em lugar nenhum. O que a pessoa precisa
+  ler é texto, imagem e coisa clicável.
+
+Medido varrendo a página inteira depois da mudança: **nenhuma sobreposição**,
+no desktop e no celular, com o botão ainda visível em boa parte do percurso.
+
+O teste roda quando a rolagem PARA, nunca durante — durante custaria um
+cálculo de layout por quadro, disputando thread com a cena. Enquanto a página
+se move o botão fica escondido, o que de quebra o tira da frente justamente
+quando ninguém vai clicar nele.
+
+Além disso ele some no hero, no contato e no rodapé, e não existe enquanto a
+tela de carregamento está no ar.
 
 Clicando, abre uma **gaveta lateral** com vidro (`backdrop-filter`), véu
 escuro atrás e fechamento por toque fora, botão ou tecla Esc.
