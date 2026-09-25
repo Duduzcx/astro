@@ -2,6 +2,7 @@ User-agent: *
 Allow: /
 
 Disallow: /admin
+Disallow: /crm
 Disallow: /api/
 
 Sitemap: https://astrosolucoes.vercel.app/sitemap.xml

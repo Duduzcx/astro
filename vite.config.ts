@@ -13,6 +13,8 @@ export default defineConfig({
       input: {
         main: 'index.html',
         admin: 'admin.html',
+        /* O CRM das clínicas: terceira entrada, pelo mesmo motivo. */
+        crm: 'crm.html',
       },
     },
   },

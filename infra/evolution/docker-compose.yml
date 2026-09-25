@@ -1,0 +1,82 @@
+# Evolution API (v2) para o CRM das clínicas — um serviço, um Postgres e um
+# Redis, tudo num VM gratuito (Oracle Cloud Always Free, ARM 4 OCPU / 24 GB).
+#
+#   cp .env.exemplo .env   # e preencha AUTHENTICATION_API_KEY e as senhas
+#   docker compose up -d
+#   curl -H "apikey: $AUTHENTICATION_API_KEY" http://localhost:8080/instance/fetchInstances
+#
+# Ponha um HTTPS na frente (Caddy abaixo, com um domínio ou um DuckDNS): a
+# Vercel só chama webhooks https, e o token do webhook viaja na URL.
+services:
+  evolution:
+    image: atendai/evolution-api:v2.2.3
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:8080:8080'
+    env_file: .env
+    environment:
+      SERVER_URL: ${SERVER_URL}
+      AUTHENTICATION_API_KEY: ${AUTHENTICATION_API_KEY}
+      DATABASE_ENABLED: 'true'
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://evolution:${POSTGRES_PASSWORD}@postgres:5432/evolution?schema=public
+      DATABASE_CONNECTION_CLIENT_NAME: evolution
+      DATABASE_SAVE_DATA_INSTANCE: 'true'
+      DATABASE_SAVE_DATA_NEW_MESSAGE: 'false'
+      DATABASE_SAVE_MESSAGE_UPDATE: 'false'
+      DATABASE_SAVE_DATA_CONTACTS: 'false'
+      DATABASE_SAVE_DATA_CHATS: 'false'
+      CACHE_REDIS_ENABLED: 'true'
+      CACHE_REDIS_URI: redis://redis:6379/6
+      CACHE_REDIS_PREFIX_KEY: evolution
+      CACHE_LOCAL_ENABLED: 'false'
+      QRCODE_LIMIT: '30'
+      LANGUAGE: pt-BR
+      LOG_LEVEL: ERROR,WARN
+      CONFIG_SESSION_PHONE_CLIENT: Astro CRM
+      CONFIG_SESSION_PHONE_NAME: Chrome
+      WEBHOOK_GLOBAL_ENABLED: 'false'
+    volumes:
+      - evolution_instances:/evolution/instances
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: evolution
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+
+  # HTTPS automático. Aponte um domínio (ou um nome do DuckDNS) para o IP
+  # público do VM e coloque-o em DOMINIO no .env.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      DOMINIO: ${DOMINIO}
+    command: caddy reverse-proxy --from ${DOMINIO} --to evolution:8080
+    volumes:
+      - caddy_data:/data
+    depends_on:
+      - evolution
+
+volumes:
+  evolution_instances:
+  postgres_data:
+  redis_data:
+  caddy_data:
