@@ -28,6 +28,12 @@ Duas coisas que a medição ensinou, e que estão no código:
 Medido varrendo a página inteira depois da mudança: **nenhuma sobreposição**,
 no desktop e no celular, com o botão ainda visível em boa parte do percurso.
 
+São **duas medições** por parada, e a segunda é a que importa: o conteúdo
+desta página entra por animação quando aparece na tela, e à primeira medição
+um cartão que está subindo ainda não ocupa o lugar dele. Medido em produção —
+sobrava exatamente um caso de sobreposição em cada aparelho até a segunda
+medição existir.
+
 O teste roda quando a rolagem PARA, nunca durante — durante custaria um
 cálculo de layout por quadro, disputando thread com a cena. Enquanto a página
 se move o botão fica escondido, o que de quebra o tira da frente justamente

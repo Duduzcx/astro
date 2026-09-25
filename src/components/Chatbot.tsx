@@ -213,24 +213,36 @@ export function Chatbot() {
      com a cena. Enquanto a página se move o botão fica escondido, o que de
      quebra tira ele da frente justamente quando ninguém vai clicar nele. */
   useEffect(() => {
-    let parada = 0
+    const relogios: number[] = []
     let quadro = 0
     const medir = () => {
       quadro = 0
       setCanoLivre(!temConteudoAtras())
     }
+    const agendar = (espera: number) => {
+      relogios.push(
+        window.setTimeout(() => {
+          if (!quadro) quadro = requestAnimationFrame(medir)
+        }, espera),
+      )
+    }
     const aoMexer = () => {
       setCanoLivre(false)
-      window.clearTimeout(parada)
-      parada = window.setTimeout(() => {
-        if (!quadro) quadro = requestAnimationFrame(medir)
-      }, 220)
+      for (const r of relogios.splice(0)) window.clearTimeout(r)
+      /* Duas medições, e a segunda é a que importa.
+         O conteúdo desta página entra por animação quando aparece na tela: à
+         primeira medição, 220ms depois da rolagem parar, um cartão que está
+         subindo ainda não ocupa o lugar dele. Medido em produção — sobrava um
+         caso de sobreposição em cada aparelho. A segunda medição, com a
+         revelação já assentada, pega o que faltou. */
+      agendar(220)
+      agendar(1100)
     }
     medir()
     window.addEventListener('scroll', aoMexer, { passive: true })
     window.addEventListener('resize', aoMexer)
     return () => {
-      window.clearTimeout(parada)
+      for (const r of relogios) window.clearTimeout(r)
       if (quadro) cancelAnimationFrame(quadro)
       window.removeEventListener('scroll', aoMexer)
       window.removeEventListener('resize', aoMexer)
