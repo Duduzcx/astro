@@ -186,7 +186,7 @@ export type SpaceOptions = {
 export function createSpace(
   urls: { low: string; high: string },
   nebula = 0,
-  warm?: (texture: THREE.Texture) => void,
+  warm?: (texture: THREE.Texture, aplicar: () => void) => void,
   options: SpaceOptions = {},
 ) {
   const geometry = new THREE.SphereGeometry(14, 48, 32)
@@ -262,33 +262,28 @@ export function createSpace(
        aparecendo de cima para baixo sem travar a rolagem. */
     const strips = Math.min(40, Math.max(8, Math.round((w * h) / 30000)))
     let strip = 0
-    const viewportSize = new THREE.Vector2()
     const bakeStrip = () => {
       if (!bakeTarget) return
       const y = Math.floor((h * strip) / strips)
       const nextY = Math.floor((h * (strip + 1)) / strips)
       const previous = renderer.getRenderTarget()
+      /* A tesoura é do próprio alvo, em pixels do alvo. Pelo renderer
+         (setScissor, setViewport) tudo é multiplicado pela razão de pixels
+         da tela: a 1,25 o viewport ia a 1920 por 960 num alvo de 1536 por
+         768, a nebulosa era assada um quarto maior do que cabia, com o topo
+         e a direita cortados fora, e o renderer ficava com um viewport e
+         uma tesoura sujos que precisavam ser devolvidos à mão. Pelo alvo
+         nada disso existe: o setRenderTarget aplica e desfaz sozinho. */
+      bakeTarget.scissor.set(0, y, w, nextY - y)
+      bakeTarget.scissorTest = true
       renderer.setRenderTarget(bakeTarget)
-      renderer.setScissorTest(true)
-      renderer.setScissor(0, y, w, nextY - y)
-      renderer.setViewport(0, 0, w, h)
       renderer.render(bakeScene, bakeCamera)
-      renderer.setScissorTest(false)
       renderer.setRenderTarget(previous)
-      /* Devolver o viewport em unidades lógicas, não em pixels do buffer.
-         `domElement.width` já vem multiplicado pela razão de pixels, e o
-         `setViewport` multiplica de novo: num celular a 1,5 o viewport
-         voltava 1,5 vez maior que a tela, ancorado no canto. A cena inteira
-         era desenhada grande demais e empurrada para a direita — era isto
-         que punha o foguete, o Sol, o buraco negro e a supernova no terço
-         direito, e o que fazia o foguete parecer enorme e cortado. */
-      renderer.getSize(viewportSize)
-      renderer.setViewport(0, 0, viewportSize.x, viewportSize.y)
       strip += 1
       if (strip < strips) {
         requestAnimationFrame(bakeStrip)
-
       } else {
+        bakeTarget.scissorTest = false
         bakeMaterial.dispose()
         bakeGeometry.dispose()
       }
@@ -345,13 +340,20 @@ export function createSpace(
   if (galaxies) object.add(galaxies.object)
 
   const textures: THREE.Texture[] = []
-  const apply = (loaded: THREE.Texture) => {
+  /* A textura só entra na esfera depois de subir para a GPU pela fila da
+     cena (`warm`); `depois` roda nesse momento, e é quando o degrau leve
+     pode ser descartado. */
+  const apply = (loaded: THREE.Texture, depois?: () => void) => {
     loaded.colorSpace = THREE.NoColorSpace
     loaded.minFilter = THREE.LinearMipmapLinearFilter
     loaded.anisotropy = 8
-    warm?.(loaded)
-    material.uniforms.uMap.value = loaded
-    object.visible = true
+    const entrar = () => {
+      material.uniforms.uMap.value = loaded
+      object.visible = true
+      depois?.()
+    }
+    if (warm) warm(loaded, entrar)
+    else entrar()
   }
   /* Em degraus: o leve aparece primeiro, o pesado substitui. Quando os dois
      degraus são o mesmo arquivo não há segundo passo — antes havia, e ele
@@ -364,8 +366,7 @@ export function createSpace(
       if (urls.high === urls.low) return
       textures.push(
         loadTexture(urls.high, (high) => {
-          apply(high)
-          low.dispose()
+          apply(high, () => low.dispose())
         }),
       )
     }),

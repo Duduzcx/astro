@@ -510,3 +510,99 @@ Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 
 Neste projeto "faça o push" significa merge em `main` e push. Rodar
 `npm test && npm run lint` **com E lógico** antes de qualquer push.
+
+## Desktop a 60 quadros e a tela de entrada sem congelar (setembro de 2026)
+
+Medido num Intel Iris Xe (notebook, 1440 por 900 a 1,25 de razão de pixels),
+que é a classe de máquina do cliente. Os números vêm de `EXT_disjoint_timer_query_webgl2`
+(tempo de GPU por passe), do trace do processo de GPU do Chrome e de screencast
+com detecção de quadros anômalos. Os roteiros foram temporários e não estão no
+repositório; a receita está nas armadilhas abaixo.
+
+### O que custava
+
+| Passe (quadro parado, patamar 0) | GPU antes | GPU depois |
+| --- | --- | --- |
+| cena no alvo (fundo, astros, campos) | 6,6 ms | 6,1 ms |
+| pirâmide do bloom (highpass, 5 desfoques, composição) | 3,1 ms | 2,9 ms |
+| mistura do bloom sobre o quadro (tela cheia, meio-float) | 2,8 ms | 0 (dobrado no filme) |
+| passe de filme (vinheta, grão, desfoque de borda, aberração) | 2,9 ms | 3,3 ms |
+| **total** | **15,3 ms → 30 quadros** | **12,3 ms** |
+
+Com a lente na resolução de CSS (alvos a 0,8 do canvas, canvas intacto):
+3,3 a 8,4 ms conforme a seção, 60 quadros na página inteira. Cada passe de
+tela cheia custa perto de 2,8 ms nessa GPU; é a unidade de conta.
+
+Descobertas que mudaram o desenho:
+
+- **A lente encolhe por dentro, nunca o canvas.** `renderer.setSize` limpa o
+  buffer: um quadro em branco no meio do buraco negro, que o cliente via como
+  o buraco negro sumindo e voltando. A escada do desktop agora só muda a
+  escala dos alvos do composer (`postfx.setScale`), e o passe de filme amplia
+  ao canvas. Nada de descartar a lente (o halo do disco de acreção sumia para
+  sempre no patamar 2), nada de meia estrela, nada de razão de pixels.
+- **A lente mede o próprio custo de GPU** assim que entra, atrás da tela de
+  entrada, e desce um patamar por vez enquanto a mediana de 24 quadros passa de
+  11 ms (o resto dos 16,7 é do navegador). Os 30 primeiros quadros depois de
+  cada mudança não contam: são alocação de alvo e driver engasgado; contando,
+  a lente descia três degraus numa máquina que precisava de um. Onde a
+  extensão não existe, vale o medidor de quadros (mediana acima de 30 ms no
+  desktop, 45 ms no celular).
+- **Caixas pretas na rolagem eram tiles do DOM.** Quando a GPU não sobra, o
+  Chrome atrasa o raster das seções e pinta o que falta na cor de fundo da
+  página, em retângulos com borda reta, por cima do canvas. Com a cena sem
+  desenhar: zero em 1700 quadros. Com folga de GPU (lente na resolução de
+  CSS): dois quadros em 45 s de rolagem rápida, contra dezenove.
+- **Pular quadros apaga o canvas.** A cadência de 30 quadros nas partes
+  quietas de uma máquina rebaixada (um quadro sim, um não) aparecia no
+  screencast como séries de três a cinco quadros com o canvas inteiro preto e
+  a página intacta por cima. Todo quadro desenha agora; quem economiza é a
+  escada.
+- **A assadura da nebulosa usava a tesoura do renderer**, que multiplica pela
+  razão de pixels: a 1,25 o viewport ia a 1920 por 960 num alvo de 1536 por
+  768, e a nebulosa era assada um quarto maior do que cabia, cortada no topo
+  e na direita. Tesoura e viewport são do próprio alvo agora.
+- **Costuras do buraco negro.** As trocas de forma (remanescente → buraco em
+  0,388–0,39; buraco → poeira em 0,72–0,73) eram feitas com o campo a zero
+  de opacidade: um trecho preto da página que numa rolagem rápida lia como
+  piscada. Ficam a 0,07 e 0,06: a troca não se vê, e a tela não apaga.
+
+### A tela de entrada
+
+O que congelava o radar não era a thread principal (o experimento com um
+laço ocupado de 700 ms provou que as animações são do compositor). Era o
+processo de GPU, onde mora o compositor do Chrome:
+
+- **Desenhar com programa ainda compilando** faz o processo de GPU esperar
+  o `D3DCompile` daquele shader — medido no trace: 1,1 a 1,8 s num único
+  shader de pixel (`GetPixelExecutableTask::run`, `MainLinkLoadEvent::wait`).
+  O prazo de 1,2 s que mandava "ligar o que faltar no primeiro quadro, atrás
+  da tela de entrada" congelava a tela de entrada por um segundo. O laço só
+  começa com os programas do hero prontos (teto de 12 s para driver morto).
+- **No desktop só as variantes de render target ligam antes do primeiro
+  quadro** (o composer desenha a cena num alvo): 49 programas em vez de 81, e
+  o maior tempo de fila caiu de 7,1 s para 0,6 s.
+- **Texturas acima de 1k só sobem depois da entrada**, com a fila de programas
+  vazia e meio segundo entre elas. Uma de 4k na abertura eram 240 ms de thread
+  principal e de compositor parados. A textura entra no material só depois de
+  subir (`warm(texture, aplicar)`): entrando antes, o próprio desenho a subia
+  de forma síncrona.
+- O que sobra a frio (cache de shaders vazio): ~300 ms quando as fontes web
+  chegam (raster do texto), ~500 ms com os compiladores do driver ocupando
+  todos os núcleos, e cerca de 1 s antes do primeiro quadro que o perfil não
+  atribui além de "(program)" — pista para depois: são centenas de idas
+  síncronas ao processo de GPU (`getUniformLocation` de 49 programas no
+  primeiro uso). Com o cache do driver quente nada disso existe.
+
+### Armadilhas novas
+
+- `bloom.resolution` é ignorado depois de `composer.setSize`: a pirâmide do
+  UnrealBloomPass é sempre metade da resolução efetiva do composer. O
+  "divisor" que existia no código nunca valeu.
+- A leitura do buffer (`readPixels` dentro do mesmo rAF) prova o que foi
+  desenhado; o screencast prova o que foi apresentado. Divergem, e a
+  divergência é a pista: quadros pretos com desenho completo são apresentação
+  (tiles, canvas apagado), não a cena.
+- No trace, `Display::DrawAndSwap` (categoria `viz`) é o quadro apresentado
+  de verdade; `Page.screencastFrame` passa pela thread principal do renderer
+  e some quando ela trava, mesmo com o compositor vivo.

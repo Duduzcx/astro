@@ -110,9 +110,14 @@
         0%, 100% { opacity: 0.88; transform: scale(1); }
         50% { opacity: 1; transform: scale(1.04); }
       }
+      /* A barra anda por transform, não por width. Width é layout, e layout
+         é thread principal — exatamente a thread que fica presa ligando
+         shaders enquanto esta tela existe. A barra congelava no meio, e era
+         isso que o cliente via como a tela de carregamento "travando".
+         scaleX vai para o compositor e corre com a thread presa. */
       @keyframes entradaBarra {
-        from { width: 0%; }
-        to { width: 96%; }
+        from { transform: scaleX(0); }
+        to { transform: scaleX(0.96); }
       }
       /* As linhas de boot são animadas por CSS, não por JavaScript, e a razão
          é medida: enquanto a cena compila shaders a thread principal fica
@@ -190,7 +195,7 @@
         to { opacity: 0; transform: scale(2.4); }
       }
       @keyframes entradaBarraFim {
-        to { width: 100%; }
+        to { transform: scaleX(1); }
       }
       /* O botão aparece por animação de CSS, com atraso, pelo mesmo motivo do
          resto: a thread principal está presa compilando shaders e não pode ser
@@ -269,7 +274,7 @@
         .entrada-linha:nth-child(3) { opacity: 1; }
         #entrada-botao { animation-name: entradaBotao; animation-duration: 1ms; }
         .entrada-pulso { opacity: 0.18; }
-        #entrada-barra { animation: none; width: 96%; }
+        #entrada-barra { animation: none; transform: scaleX(0.96); }
       }
     </style>
   </head>
@@ -365,7 +370,7 @@
         >
           <div
             id="entrada-barra"
-            style="height:100%;width:0;border-radius:2px;background-color:#4d84e0;box-shadow:0 0 10px rgba(77,132,224,0.85);"
+            style="height:100%;width:100%;transform:scaleX(0);transform-origin:left;border-radius:2px;background-color:#4d84e0;box-shadow:0 0 10px rgba(77,132,224,0.85);will-change:transform;"
           ></div>
         </div>
 

@@ -74,22 +74,23 @@ export function TriScene() {
     const lightweight = window.innerWidth < 1024
 
     const renderer = new THREE.WebGLRenderer({
-      /* MSAA volta ao celular. A justificativa de desligá-lo era que ali o
-         bloom estava sempre ligado e um composer desenhava a cena num alvo
-         próprio, deixando ao canvas só um quad de tela cheia sem bordas para
-         suavizar. Essa premissa caiu: wantsPostFx é !weakDevice &&
-         !lightweight, então no celular o composer não é criado e o laço cai
-         em renderer.render direto no framebuffer padrão — que é exatamente
-         onde esta flag atua.
+      /* MSAA só onde ele suaviza alguma coisa: no celular. Lá a lente não
+         existe (wantsPostFx é !weakDevice && !lightweight) e o laço desenha
+         direto no framebuffer padrão, que é onde esta flag atua — e é
+         geometria que precisa dela. O starship.glb tem 175.503 triângulos
+         desenhados num objeto de cerca de 580 por 105 pixels reais: perto
+         de três triângulos por pixel na seção dos motores e nas grelhas.
+         Sem MSAA a cobertura de cada pixel é decidida por um triângulo
+         sorteado entre vários, e o compositor ainda amplia 3,0 sobre 1,75
+         depois — a serrilha vira borda suja. Vale também para o limbo dos
+         planetas, o anel de Saturno e os dois campos de linhas.
 
-         E é geometria que precisa dela. O starship.glb tem 175.503
-         triângulos desenhados num objeto de cerca de 580 por 105 pixels
-         reais: perto de três triângulos por pixel na seção dos motores e
-         nas grelhas. Sem MSAA a cobertura de cada pixel é decidida por um
-         triângulo sorteado entre vários, e o compositor ainda amplia 3,0
-         sobre 1,75 depois — a serrilha vira borda suja. Vale também para o
-         limbo dos planetas, o anel de Saturno e os dois campos de linhas. */
-      antialias: !weakDevice,
+         No desktop a cena inteira é desenhada num alvo próprio pela lente, e
+         o canvas só recebe o quad de tela cheia do passe de filme: um quad
+         não tem borda para suavizar, e o multisample ali era só custo — o
+         driver resolvia quatro amostras por pixel a cada quadro para
+         entregar exatamente a mesma imagem. */
+      antialias: lightweight && !weakDevice,
       alpha: true,
       powerPreference: 'high-performance',
     })
@@ -307,7 +308,6 @@ export function TriScene() {
     let lenteMistura = 1
     /* A escada de sobrevivência pediu a lente de volta: ela desvanece e só
        então é descartada. */
-    let lenteSaindo = false
     /* O visitante está de fato olhando a cena? Enquanto a tela de entrada
        cobre tudo, não: qualquer troca de imagem ali é invisível e pode ser
        instantânea. Depois que ele clica em Entrar, não pode mais. Sem tela
@@ -394,17 +394,39 @@ export function TriScene() {
        thread principal sumia por segundos e a página ficava parada — era a
        demora que o cliente via ao entrar. Aqui elas entram numa fila e sobem
        uma por frame, entre um desenho e outro. */
-    const warmQueueTextures: THREE.Texture[] = []
+    /* Cada subida leva junto o que fazer depois dela (pôr a textura no
+       material): a textura só entra em cena depois de estar na GPU. Entrando
+       antes, o próprio desenho a subia, de forma síncrona, no primeiro
+       quadro em que o astro aparece — e uma de 4k são até 240ms parados. */
+    type Subida = { texture: THREE.Texture; aplicar?: () => void }
+    const warmQueueTextures: Subida[] = []
     /* decode() tira a decodificação da imagem da thread principal. Sem isso
        o texSubImage2D decodificava um webp de 4k na hora de subir, e no
        desktop eram quase dois segundos só disso, medidos em produção. */
-    const warm = (texture: THREE.Texture) => {
-      const image = texture.image as { decode?: () => Promise<void> } | undefined
+    /* As texturas pesadas (acima de 1k) esperam: sobem só com o site à
+       vista e a fila de programas vazia, uma a cada meio segundo. Na
+       abertura, a subida de uma de 4k prendia a thread principal por até
+       240ms e parava o compositor pelo mesmo tempo — a tela de entrada
+       congelava com o radar no meio da volta. O hero só precisa do degrau
+       leve, que já está lá. */
+    const filaPesada: Subida[] = []
+    const warm = (texture: THREE.Texture, aplicar?: () => void) => {
+      const image = texture.image as { decode?: () => Promise<void>; width?: number } | undefined
       const enfileirar = () => {
-        if (!disposed) warmQueueTextures.push(texture)
+        if (disposed) return
+        const subida = { texture, aplicar }
+        if ((image?.width ?? 0) > 1024) filaPesada.push(subida)
+        else warmQueueTextures.push(subida)
       }
       if (image && typeof image.decode === 'function') image.decode().then(enfileirar, enfileirar)
       else enfileirar()
+    }
+    /* Sobe a próxima da fila e, subida, a põe em cena. */
+    const subirUma = () => {
+      const pendente = warmQueueTextures.shift()
+      if (!pendente) return
+      renderer.initTexture(pendente.texture)
+      pendente.aplicar?.()
     }
 
     /* O espaço: panorama da Via Láctea atrás de tudo, com as nebulosas
@@ -519,7 +541,6 @@ export function TriScene() {
        brilho que ele dava aos astros passa a ser feito dentro dos shaders
        deles, que é mais barato e não borra o resto da cena. */
     const wantsPostFx = !weakDevice && !lightweight
-    let downgradedPostFx = false
 
     /* Estrelas ao fundo, a página inteira. No celular são menos pontos: a
        camada densa assada na nebulosa (space.ts) já dá a profundidade. */
@@ -613,8 +634,9 @@ export function TriScene() {
       await ambientePronto
       if (disposed) return
       buildEnvironment()
-      const materials = emitir(object, null)
-      for (const material of emitir(object, warmTarget)) materials.add(material)
+      /* Só a variante que o foguete vai usar: no desktop a de render
+         target (a lente desenha a cena num alvo), no celular a de tela. */
+      const materials = emitir(object, wantsPostFx ? warmTarget : null)
       await prontos(materials)
       if (disposed) return
       /* Só o foguete é desenhado neste frame de aquecimento: com a cena
@@ -973,69 +995,66 @@ export function TriScene() {
        máquina não segura a taxa, derruba resolução e camada ambiente uma vez
        só. Seguro barato para notebook velho, que não dá para detectar. */
     let sampled = 0
-    let downgraded = false
     /* Escada de sobrevivência, em vez de precipício.
        A versão anterior era um degrau único e sem volta: ou a cena ficava
        inteira, ou perdia tudo de uma vez. Num aparelho bom ele disparava por
        um limiar apertado e estragava a imagem; desligado, um aparelho fraco
        ficava sem socorro nenhum e travava. Agora são três patamares, cada um
-       tirando só o que é preciso, e o corte acontece na ordem do que menos
-       aparece: primeiro o campo ambiente, que é decoração; depois a metade
-       das estrelas e a resolução; e só no último caso a resolução plena.
+       tirando só o que é preciso, e nenhum deles pode ser visto acontecendo:
+       o que sai, sai desvanecendo; o que encolhe, encolhe por dentro.
        O medidor usa a mediana e não a média, porque um único quadro de
        compilação de shader não pode condenar um aparelho que vai bem. */
     const janela: number[] = []
     let patamar = 0
     let proximaAvaliacao = 0
+    /* O campo ambiente sai numa rampa de opacidade (no tick), não num
+       quadro: apagá-lo de uma vez era uma piscada. */
+    let ambienteApagando = false
+    let ambienteFator = 1
+    /* Escala dos alvos da lente em relação ao canvas, no desktop. Guardada
+       fora da lente porque o patamar pode cair antes de ela existir. */
+    let escalaLente = 1
     const rebaixar = (nivel: number) => {
       if (nivel === 1) {
         /* O campo ambiente é o que menos falta: triângulos fracos flutuando
            longe, que ninguém procura e ninguém sente sumir. */
-        ambientField.visible = false
+        ambienteApagando = true
       }
-      /* No desktop a ordem é outra: o bloom sai no patamar 2 e a resolução
-         só no 3. Derrubar razão de pixels e metade das estrelas de um golpe
-         é um pulo que o olho vê como piscada; o halo do bloom sumindo é
-         macio. O celular não tem bloom e mantém a ordem antiga. */
-      if (nivel === 2 && !lightweight) {
-        /* A lente SAI DESVANECENDO, não de uma vez. Tirá-la num quadro só
-           muda a imagem inteira de repente (halo, vinheta, grão somem
-           juntos) e o olho lê exatamente como uma piscada — a mesma que a
-           entrada dela causava, só que na saída. O tick devolve a mistura a
-           zero e só então descarta. */
-        downgradedPostFx = true
-        if (postfx) lenteSaindo = true
+      if (!lightweight) {
+        /* No desktop nada some, nada pula e o canvas não muda de tamanho.
+           Medido num Intel Iris Xe: dos 15ms de GPU por quadro, os astros
+           custavam 4; o resto era preenchimento de tela cheia (fundo,
+           pirâmide do bloom, passe de filme). Então o que cede é o número
+           de pixels que a lente desenha por dentro: os alvos internos
+           encolhem (para a resolução de CSS no patamar 1, a 85% dela no 2 e
+           a 70% no 3) e o passe de filme amplia ao canvas, que fica como
+           está.
+           A versão anterior descartava a lente inteira no patamar 2 (o halo
+           do disco de acreção e da supernova sumia, para sempre) e no 3
+           trocava a razão de pixels do canvas — e redimensionar o canvas
+           apaga o buffer: um quadro em branco no meio do buraco negro, que
+           o cliente via como o buraco negro sumindo e voltando. */
+        const razao = renderer.getPixelRatio()
+        const nativa = razao > 1 ? 1 / razao : 0.85
+        escalaLente = nivel === 1 ? nativa : nivel === 2 ? nativa * 0.85 : nativa * 0.7
+        postfx?.setScale(escalaLente)
+        if (nivel === 3) rocket.lighten()
         return
       }
-      if (nivel === 3 && !lightweight) {
-        stars.object.geometry.setDrawRange(
-          0,
-          Math.floor(stars.object.geometry.getAttribute('position').count / 2),
-        )
-        rocket.lighten()
-        renderer.setPixelRatio(1)
-        renderer.setSize(window.innerWidth, stageHeight, false)
-        return
-      }
+      /* O celular não tem lente: o que custa lá é pixel do canvas e
+         geometria, e é isso que cede. */
       if (nivel === 2) {
         stars.object.geometry.setDrawRange(
           0,
           Math.floor(stars.object.geometry.getAttribute('position').count / 2),
         )
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, lightweight ? 1.25 : 1))
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25))
         renderer.setSize(window.innerWidth, stageHeight, false)
-        postfx?.setSize(window.innerWidth, stageHeight)
       }
       if (nivel === 3) {
         rocket.lighten()
         renderer.setPixelRatio(1)
         renderer.setSize(window.innerWidth, stageHeight, false)
-        /* A lente é a última a cair, e cai junto com a resolução: a essa
-           altura o aparelho já provou que não segura, e brilho custa cinco
-           desfoques por quadro. */
-        postfx?.dispose()
-        postfx = null
-        downgradedPostFx = true
       }
     }
     const considerDowngrade = (delta: number) => {
@@ -1050,11 +1069,15 @@ export function TriScene() {
       const mediana = ordenada[Math.floor(ordenada.length / 2)]
       janela.length = 0
       if (sampled < proximaAvaliacao) return
-      /* Quarenta e cinco milissegundos é o ponto em que a rolagem deixa de
-         parecer contínua. Acima disso, alguma coisa sai. */
-      if (mediana > 0.045) {
+      /* No celular, quarenta e cinco milissegundos é o ponto em que a
+         rolagem deixa de parecer contínua, e é onde a escada de lá (que
+         tira pixel e geometria de verdade) compensa. No desktop o degrau
+         não se vê, então o limiar é a própria cadência: mediana acima de
+         trinta é uma máquina presa em 30 quadros num monitor de 60, e a
+         lente encolhendo por dentro a devolve a 60. Num monitor de 120Hz
+         um quadro de 8ms nunca chega perto. */
+      if (mediana > (lightweight ? 0.045 : 0.03)) {
         patamar += 1
-        downgraded = true
         rebaixar(patamar)
         /* Uma pausa antes de julgar de novo: o patamar anterior precisa de
            tempo para aparecer na medida, senão os três caem juntos. */
@@ -1147,7 +1170,11 @@ export function TriScene() {
       const centerY = current.y + pointer.y * -0.04 + shakeY
       sphereMaterial.uniforms.uCenter.value.set(centerX, centerY)
       ambientMaterial.uniforms.uTime.value = time * 0.6
-      ambientMaterial.uniforms.uOpacity.value = narrow ? 0.06 : 0.14
+      if (ambienteApagando && ambienteFator > 0) {
+        ambienteFator = Math.max(0, ambienteFator - delta / 0.6)
+        if (ambienteFator === 0) ambientField.visible = false
+      }
+      ambientMaterial.uniforms.uOpacity.value = (narrow ? 0.06 : 0.14) * ambienteFator
       /* Rolagem rápida vira curvatura: o risco cresce com a velocidade e
          volta ao ponto quando a página para. O teto evita que um arrastão
          no celular transforme o céu numa parede branca. */
@@ -1430,59 +1457,48 @@ export function TriScene() {
         sunRays.update(glare.position, fade, time)
       }
 
-      /* No desktop todo frame desenha: com grão e cintilação no passe de
-         filme, pular frames virava um piscar a 30Hz nas partes "paradas" da
-         página, e a cadência trocando de 60 para 30 a cada limiar lia como
-         engasgo. Só a máquina que já provou não aguentar (rebaixada pela
-         qualidade adaptativa) volta a desenhar a 30fps onde a cena está
-         quieta: campo só textura, ou apagado. No celular a cena desenha a
-         30fps, e a cena andava na metade da cadência do scroll nativo — o
-         deslize parecia arrastado. Agora todo frame desenha em todo lugar;
-         o custo por frame caiu o bastante para pagar isso. */
-      /* Uma textura por frame sobe para a GPU. */
-      const pending = warmQueueTextures.shift()
-      if (pending) renderer.initTexture(pending)
+      /* Todo quadro desenha, em toda máquina. A versão anterior pulava um
+         quadro sim, um não, nas partes quietas de uma máquina rebaixada, e
+         isso era visto: sem preserveDrawingBuffer, um quadro sem desenho é
+         um quadro em que o navegador pode apresentar o buffer vazio — o
+         canvas inteiro preto por alguns instantes, com a página intacta por
+         cima. Filmado em screencast: séries de três a cinco quadros pretos
+         justamente onde a cena está parada e a pessoa está lendo. O que
+         economiza numa máquina fraca é a escada (a lente encolhe por
+         dentro), não a cadência. */
+      /* Uma textura por frame sobe para a GPU. As pesadas entram na fila
+         só com o site à vista, os programas todos ligados e meio segundo
+         entre uma e outra: cada subida ainda é um quadro perdido, e dois
+         seguidos são um tranco. */
+      if (aVista && filaPesada.length && warmQueue.length === 0 && !warming && frameCount % 30 === 0) {
+        warmQueueTextures.push(filaPesada.shift() as Subida)
+      }
+      subirUma()
 
       /* A lente entra por prepararLente(), quando os programas dela estão
          ligados; até lá a cena desenha direto. */
 
       frameCount += 1
-      const restful =
-        downgraded &&
-        current.thrust < 0.01 &&
-        current.opacity < 0.3 &&
-        (current.mix > 0.85 || current.opacity <= 0.015)
-      if (!(restful && frameCount % 2)) {
-        /* A câmera se mexe por último, com o estado já amortecido: deriva
-           contínua de poucos pixels e push-in na ignição e na explosão. */
-        cameraMotion.update({
-          time,
-          pixel: (2 * halfWidth) / window.innerWidth,
-          thrust: current.thrust,
-          lift: current.lift,
-          explode: planetBreak(current.mix, current.form) * (1 - clamp01(current.form)),
-          still: reducedMotion,
-        })
-        if (postfx) {
-          /* Lente chegando com o site à vista: alguns quadros de entrada em
-             vez de um estalo. Quando ela chega antes (o caso normal), a
-             mistura já nasce em 1 e nada disto roda. */
-          if (lenteSaindo) {
-            lenteMistura = Math.max(0, lenteMistura - delta / 0.45)
-            postfx.setMix(lenteMistura)
-            if (lenteMistura === 0) {
-              postfx.dispose()
-              postfx = null
-              lenteSaindo = false
-            }
-          } else if (lenteMistura < 1) {
-            lenteMistura = Math.min(1, lenteMistura + delta / 0.45)
-            postfx.setMix(lenteMistura)
-          }
-          if (postfx) postfx.render(time, 0.006 + rush * 0.014, rush)
-          else renderer.render(scene, camera)
-        } else renderer.render(scene, camera)
-      }
+      /* A câmera se mexe por último, com o estado já amortecido: deriva
+         contínua de poucos pixels e push-in na ignição e na explosão. */
+      cameraMotion.update({
+        time,
+        pixel: (2 * halfWidth) / window.innerWidth,
+        thrust: current.thrust,
+        lift: current.lift,
+        explode: planetBreak(current.mix, current.form) * (1 - clamp01(current.form)),
+        still: reducedMotion,
+      })
+      if (postfx) {
+        /* Lente chegando com o site à vista: alguns quadros de entrada em
+           vez de um estalo. Quando ela chega antes (o caso normal), a
+           mistura já nasce em 1 e nada disto roda. */
+        if (lenteMistura < 1) {
+          lenteMistura = Math.min(1, lenteMistura + delta / 0.45)
+          postfx.setMix(lenteMistura)
+        }
+        postfx.render(time, 0.006 + rush * 0.014, rush)
+      } else renderer.render(scene, camera)
 
       if (!revealed) {
         revealed = true
@@ -1558,7 +1574,7 @@ export function TriScene() {
       if (disposed || warming) return
       /* No desktop a fila espera a lente entrar: é ela que decide a variante
          de programa (render target) que os astros vão usar. */
-      if (wantsPostFx && !postfx && !downgradedPostFx) {
+      if (wantsPostFx && !postfx) {
         window.setTimeout(warmNext, 60)
         return
       }
@@ -1589,22 +1605,48 @@ export function TriScene() {
        composer.render() ligava tudo de forma síncrona: 2,8s presos, no
        Windows, no instante em que a pessoa clicava em Entrar. */
     const prepararLente = () => {
-      if (postfx || downgradedPostFx || disposed) return Promise.resolve()
-      const lente = createPostFx(renderer, scene, camera, window.innerWidth, stageHeight, lightweight)
+      if (postfx || disposed) return Promise.resolve()
+      const lente = createPostFx(renderer, scene, camera, window.innerWidth, stageHeight)
       const materials = emitir(scene, warmTarget)
       for (const material of lente.aquecer(warmTarget)) materials.add(material)
       return prontos(materials).then(() => {
-        if (disposed || downgradedPostFx || postfx) {
+        if (disposed || postfx) {
           lente.dispose()
           return
         }
         lente.setSize(window.innerWidth, stageHeight)
+        if (escalaLente !== 1) lente.setScale(escalaLente)
         /* Se o site ainda não apareceu, a lente já nasce cheia: a troca
            acontece atrás da tela de entrada e ninguém vê. Se apareceu, ela
            entra em alguns quadros pela rampa no tick. */
         lenteMistura = aVista ? 0 : 1
         lente.setMix(lenteMistura)
         postfx = lente
+        /* A lente mede o próprio custo de GPU assim que entra, ainda atrás
+           da tela de entrada, e desce um patamar por vez enquanto o quadro
+           não couber em 11ms — o que sobra dos 16,7 para o navegador pintar
+           a página por cima. Quando a GPU não sobra, o Chrome atrasa o
+           raster das seções e pinta os pedaços que faltam na cor de fundo:
+           caixas pretas piscando sobre a cena durante a rolagem, que foi o
+           que o cliente descreveu como o site piscando. O medidor de quadros
+           mais abaixo cobre os outros navegadores e os casos presos na CPU,
+           mas leva segundos para decidir; este decide antes de a pessoa ver
+           o site. Medido num Intel Iris Xe a 1,25 de razão de pixels:
+           12,3ms na resolução do canvas, 60 quadros e nenhuma caixa preta
+           com a lente na resolução de CSS. */
+        const medirDeNovo = (medianaMs: number) => {
+          if (disposed || medianaMs <= 11 || patamar >= 3) return
+          patamar += 1
+          rebaixar(patamar)
+          proximaAvaliacao = sampled + 120
+          lente.medirGpu(medirDeNovo, 30)
+        }
+        /* Os primeiros trinta quadros não contam, nem os trinta depois de
+           cada degrau: são os quadros em que os alvos acabaram de ser
+           alocados e o driver ainda está engasgado com eles. Contando-os, a
+           lente descia três degraus seguidos numa máquina que só precisava
+           de um. */
+        lente.medirGpu(medirDeNovo, 30)
       })
     }
     /* Os programas do hero e os do prefiltro são emitidos agora e ligam em
@@ -1612,28 +1654,38 @@ export function TriScene() {
        convolução GGX do prefiltro leva 1,8s para ligar no Windows e só o
        foguete precisa dela, então o ambiente é gerado quando os seus
        programas ficam prontos, num tick próprio, e o hero não espera por
-       isso. O laço começa quando os programas do hero estão prontos OU
-       1,2s depois da emissão, o que vier antes: passado o limite, o que
-       faltar liga no primeiro quadro, ainda atrás da tela de entrada. Sem
-       a extensão tudo se diz pronto na hora e o primeiro quadro compila
-       como antes. O teto do ambiente é mais folgado, mas existe: um driver
-       que nunca responde não pode segurar o foguete para sempre. */
-    const limite = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms))
-    /* A lente é preparada JUNTO com o hero, e não depois do primeiro quadro
-       como antes. Ela muda a imagem toda de uma vez (halo, vinheta, grão), e
-       antes essa troca caía com o visitante já olhando: era este o piscar do
-       desktop. Agora ela quase sempre entra enquanto a tela de entrada ainda
-       cobre tudo, instantânea e invisível. Se o driver demorar e ela chegar
-       depois, a rampa do tick a traz em meio segundo — suave, e nunca um
-       estalo.
+       isso.
 
-       O aviso de cena pronta NÃO espera por ela: esperar empurrava o botão
-       de quatro para seis segundos, e a cena crua já é a cena certa, só sem
-       o acabamento. */
-    if (wantsPostFx) void prepararLente()
-    const heroMateriais = emitir(scene, null)
+       O laço só começa quando os programas do hero estão prontos. Havia um
+       prazo de 1,2s que mandava desenhar com o que faltasse "ligando no
+       primeiro quadro, atrás da tela de entrada" — invisível para o
+       JavaScript, não para a pessoa. Um desenho com programa ainda
+       compilando faz o processo de GPU esperar o D3DCompile daquele shader
+       (medido no trace do processo: 1,1 a 1,8s num único shader de pixel),
+       e o compositor do navegador, que mora nesse mesmo processo, para
+       junto: a tela de entrada congelava com o radar no meio da volta, por
+       um segundo, e era isso que o cliente descrevia. Sem a extensão de
+       compilação paralela tudo se diz pronto na hora, como sempre. O teto
+       de 12s existe só para um driver que nunca responde não segurar o
+       foguete para sempre. */
+    const limite = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms))
+    /* A lente é preparada JUNTO com o hero e, no desktop, é ela que o
+       primeiro quadro espera: a troca de cena crua para cena com lente
+       (halo, vinheta, grão) muda a imagem toda de uma vez, e quando caía
+       com o visitante já olhando era o piscar do desktop. Se o driver
+       demorar além do teto e ela chegar depois, a rampa do tick a traz em
+       meio segundo — suave, e nunca um estalo. */
+    /* No desktop o hero É a lente: o composer desenha a cena num alvo, então
+       os programas que o primeiro quadro usa são as variantes de render
+       target, e só elas ligam antes dele. A versão anterior ligava também
+       as variantes de tela de tudo — 81 programas em vez de 49 — para um
+       caminho direto que no desktop só existe enquanto a lente não chegou,
+       e cada programa a mais na fila do driver atrasava os que o hero
+       precisava. No celular não há lente e as variantes de tela são as
+       certas. */
+    const heroPronto = wantsPostFx ? prepararLente() : prontos(emitir(scene, null))
     const ambienteMateriais = emitirAmbiente(warmTarget)
-    ambientePronto = Promise.race([prontos(ambienteMateriais), limite(4000)]).then(() => {
+    ambientePronto = Promise.race([prontos(ambienteMateriais), limite(12000)]).then(() => {
       if (!disposed) buildEnvironment()
     })
     /* Enquanto os programas ligam, a thread está livre: as texturas que já
@@ -1643,12 +1695,11 @@ export function TriScene() {
     let subindo = true
     const subir = () => {
       if (disposed || !subindo) return
-      const pending = warmQueueTextures.shift()
-      if (pending) renderer.initTexture(pending)
+      subirUma()
       window.setTimeout(subir, 20)
     }
     subir()
-    void Promise.race([prontos(heroMateriais), limite(1200)]).then(() => {
+    void Promise.race([heroPronto, limite(12000)]).then(() => {
       subindo = false
       if (!disposed && frame === 0) frame = requestAnimationFrame(tick)
     })

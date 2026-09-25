@@ -30,9 +30,12 @@ export const KEYFRAMES: Keyframes = [
      de choque e a ejeta se abrem e o remanescente fica brilhando até a
      seção acabar. A opacidade é quem apaga o remanescente. */
   [0.378, 1.0, 0.45, 0.12, 1.35, 0.85, 0],
-  [0.388, 1.0, 0.45, 0.16, 1.4, 0.0, 0],
-  /* Invisível: troca de forma aqui, ninguém vê a costura. */
-  [0.39, 0.9, 0.5, 0.0, 0.5, 0.0, 1],
+  [0.388, 1.0, 0.45, 0.16, 1.4, 0.07, 0],
+  /* Quase apagado, não apagado: a forma troca aqui (o remanescente vira
+     buraco negro) e a 0,07 de opacidade a costura não aparece. A zero, o
+     campo inteiro sumia por um trecho da página entre a explosão e o
+     buraco — um quadro preto que, numa rolagem rápida, lia como piscada. */
+  [0.39, 0.9, 0.5, 0.0, 0.5, 0.07, 1],
   /* Buraco negro nasce pequeno nos Resultados (0.386 a 0.438), cresce
      engolindo os detritos e fica pelos Projetos inteiros. */
   [0.4, 0.6, 0.5, 0.0, 0.55, 0.55, 1],
@@ -42,9 +45,11 @@ export const KEYFRAMES: Keyframes = [
   [0.65, 0.05, 0.5, 0.0, 1.08, 0.6, 1],
   [0.675, 0.06, 0.5, 0.0, 1.08, 0.5, 1],
   [0.7, 0.9, 0.0, 0.0, 1.35, 0.22, 1],
-  [0.72, 0.9, 0.0, 0.0, 1.35, 0.0, 1],
-  /* Invisível de novo: o campo vira poeira dourada de estrela. */
-  [0.73, 0.9, 0.0, 0.0, 1.35, 0.0, 2],
+  [0.72, 0.9, 0.0, 0.0, 1.35, 0.06, 1],
+  /* Quase apagado de novo, pelo mesmo motivo: o campo vira poeira dourada
+     de estrela, e disperso a 0,06 a troca não se vê — mas a tela não fica
+     preta no caminho. */
+  [0.73, 0.9, 0.0, 0.0, 1.35, 0.06, 2],
   [0.76, 0.9, 0.0, 0.0, 1.35, 0.22, 2],
   [0.885, 0.9, 0.0, 0.0, 1.35, 0.22, 2],
   /* A poeira condensa: uma estrela nasce durante o contato... */

@@ -1050,8 +1050,13 @@ function prepare(texture: THREE.Texture) {
   return texture
 }
 
-/** Carrega o degrau leve, aplica, e depois o pesado por cima. */
-function loadMap(tiers: MapTiers, onLoad: (texture: THREE.Texture) => void): THREE.Texture[] {
+/** Carrega o degrau leve, aplica, e depois o pesado por cima. O `depois`
+    de cada textura roda quando ela já está em cena: é aí que o degrau leve
+    pode ser descartado, e não antes. */
+function loadMap(
+  tiers: MapTiers,
+  onLoad: (texture: THREE.Texture, depois?: () => void) => void,
+): THREE.Texture[] {
   const loaded: THREE.Texture[] = []
   if (typeof tiers === 'string') {
     loaded.push(loadTexture(tiers, (texture) => onLoad(prepare(texture))))
@@ -1062,8 +1067,7 @@ function loadMap(tiers: MapTiers, onLoad: (texture: THREE.Texture) => void): THR
       onLoad(prepare(low))
       loaded.push(
         loadTexture(tiers.high, (high) => {
-          onLoad(prepare(high))
-          low.dispose()
+          onLoad(prepare(high), () => low.dispose())
         }),
       )
     }),
@@ -1110,14 +1114,19 @@ export function createPlanet({
   toon?: { a: string; b: string; c: string; bands: number }
   /** Tira a sombra volumétrica de nuvem do código-fonte do shader. */
   lightClouds?: boolean
-  /** Chamado com cada textura assim que chega: sobe para a GPU na hora,
-      em vez de travar o primeiro frame em que o planeta aparece. */
-  warm?: (texture: THREE.Texture) => void
+  /** Chamado com cada textura assim que chega: a cena a sobe para a GPU na
+      sua fila e só então chama `aplicar`, que a põe no material. Sem isto o
+      primeiro quadro em que o planeta aparece pagaria a subida inteira. */
+  warm?: (texture: THREE.Texture, aplicar: () => void) => void
 }) {
   const load = (tiers: MapTiers, apply: (texture: THREE.Texture) => void) =>
-    loadMap(tiers, (texture) => {
-      warm?.(texture)
-      apply(texture)
+    loadMap(tiers, (texture, depois) => {
+      const entrar = () => {
+        apply(texture)
+        depois?.()
+      }
+      if (warm) warm(texture, entrar)
+      else entrar()
     })
   const object = new THREE.Group()
   const kindIndex = KIND_INDEX[kind]

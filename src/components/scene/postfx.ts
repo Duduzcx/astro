@@ -23,6 +23,8 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
 const FILM = {
   uniforms: {
     tDiffuse: { value: null as THREE.Texture | null },
+    /* A pirâmide do bloom já composta, a meia resolução. */
+    tBloom: { value: null as THREE.Texture | null },
     uResolution: { value: new THREE.Vector2(1, 1) },
     uTime: { value: 0 },
     uVignette: { value: 0.3 },
@@ -42,6 +44,7 @@ const FILM = {
   `,
   fragmentShader: /* glsl */ `
     uniform sampler2D tDiffuse;
+    uniform sampler2D tBloom;
     uniform vec2 uResolution;
     uniform float uTime;
     uniform float uVignette;
@@ -82,6 +85,15 @@ const FILM = {
         c = acc / 10.0;
       }
 
+      /* O halo do bloom entra aqui, numa leitura da pirâmide a meia
+         resolução, em vez de num passe próprio de tela cheia sobre o
+         quadro. Era o passe mais caro da lente depois da própria cena:
+         ler e reescrever cada pixel em meio-float, 2,8ms por quadro no
+         Intel Iris Xe, para somar uma textura que cabe numa leitura. O
+         resultado é o mesmo (soma aditiva, mesma pirâmide, mesma força),
+         só que sem o passe. */
+      c.rgb += texture2D(tBloom, uv).rgb;
+
       /* Aberração cromática: vermelho para fora, azul para dentro, ao longo
          do raio. Zero no centro; nos cantos vale uAberration pixels. Entra
          como diferença sobre a amostra central, então onde há desfoque a
@@ -104,9 +116,16 @@ const FILM = {
 }
 
 /**
- * Bloom cinematográfico, só no desktop: o que passa do limiar (motor,
- * disco de acreção, supernova, borda da atmosfera) sangra luz. Meia
- * resolução, três níveis. No celular a cena desenha direto.
+ * Bloom cinematográfico, só no desktop (o celular desenha direto, com MSAA):
+ * o que passa do limiar (motor, disco de acreção, supernova, borda da
+ * atmosfera) sangra luz.
+ *
+ * Três passes de tela cheia por quadro, e nem um a mais: a cena no alvo em
+ * meio-float, a pirâmide do bloom (que trabalha a meia resolução e para
+ * baixo) e o passe de filme, que soma o halo, aplica vinheta, grão, desfoque
+ * de borda e aberração e entrega ao canvas. Cada passe de tela cheia custa
+ * perto de 2,8ms num Intel Iris Xe, então cada um que existe precisa pagar
+ * a passagem.
  */
 export function createPostFx(
   renderer: THREE.WebGLRenderer,
@@ -114,11 +133,6 @@ export function createPostFx(
   camera: THREE.Camera,
   width: number,
   height: number,
-  /* No celular entra só o bloom: é ele que faz o Sol, o motor e o disco de
-     acreção brilharem de verdade. O passe de filme (vinheta, grão, desfoque
-     de borda, aberração) é uma leitura de textura por pixel e mais oito no
-     anel — luxo de desktop. */
-  light = false,
 ) {
   const target = new THREE.WebGLRenderTarget(width, height, { type: THREE.HalfFloatType })
   const composer = new EffectComposer(renderer, target)
@@ -127,36 +141,60 @@ export function createPostFx(
   /* Limiar alto: só o que é luz de verdade sangra (motor, disco, núcleo da
      supernova, limbo da atmosfera). Abaixo disso o casco branco virava neve.
      Raio mais largo e força contida: o halo se espalha macio em vez de
-     engrossar o branco em volta da fonte. */
-  /* Um quarto da resolução: o halo é macio por natureza, e a pirâmide de
-     cinco níveis a meia resolução era o passe mais caro da lente. */
-  /* No celular o bloom trabalha num oitavo da resolução: o halo é macio
-     por natureza e ninguém vê a diferença, mas são cinco desfoques numa
-     pirâmide, e cada nível custa preenchimento. */
-  /* Um oitavo, não um dezesseis avos: a 1/16 a pirâmide fica em 36 por 79
-     pixels num celular e o halo sobe esticado, grosseiro. */
-  const divisor = light ? 8 : 4
-  const bloom = new UnrealBloomPass(
-    new THREE.Vector2(width / divisor, height / divisor),
-    /* O limiar alto de antes existia para conter o clarão do hero, que
-       ocupava proporcionalmente muito mais tela no celular. Esse clarão não
-       existe mais lá, e o que sobrou eram astros sem brilho: o Sol, o disco
-       de acreção e a supernova não passavam do limiar e saíam chapados.
-       Força maior e limiar mais baixo devolvem o halo a quem precisa dele. */
-    light ? 0.4 : 0.36,
-    light ? 0.58 : 0.62,
-    light ? 0.94 : 0.92,
-  )
+     engrossar o branco em volta da fonte.
+     O tamanho passado aqui é provisório: o setSize do composer dimensiona a
+     pirâmide a partir da metade da resolução do alvo, e é ele quem vale. */
+  const bloom = new UnrealBloomPass(new THREE.Vector2(width, height), 0.36, 0.62, 0.92)
   composer.addPass(bloom)
-  const film = light ? null : new ShaderPass(FILM)
+  const film = new ShaderPass(FILM)
+  /* O passe de mistura do bloom não é desenhado: o UnrealBloomPass termina
+     somando a pirâmide composta sobre o quadro inteiro, a resolução cheia, e
+     o passe de filme lê a pirâmide direto (tBloom) e faz a mesma soma numa
+     leitura. O quad interno do passe pula esse material e só ele. */
+  const quad = (bloom as unknown as { _fsQuad: { material: THREE.Material; render(r: THREE.WebGLRenderer): void } })._fsQuad
+  const desenharQuad = quad.render.bind(quad)
+  quad.render = (r) => {
+    if (quad.material !== bloom.blendMaterial) desenharQuad(r)
+  }
+  film.uniforms.tBloom.value = bloom.renderTargetsHorizontal[0].texture
   /* Os valores cheios da lente, guardados para a entrada gradual poder
      interpolar a partir de zero. */
   const forcaCheia = bloom.strength
-  const vinhetaCheia = film ? (film.uniforms.uVignette.value as number) : 0
-  const graoCheio = film ? (film.uniforms.uGrain.value as number) : 0
-  if (film) {
-    film.uniforms.uResolution.value.set(width, height)
-    composer.addPass(film)
+  const vinhetaCheia = film.uniforms.uVignette.value as number
+  const graoCheio = film.uniforms.uGrain.value as number
+  film.uniforms.uResolution.value.set(width, height)
+  composer.addPass(film)
+  /* Escala dos alvos internos em relação ao canvas (1 = a mesma resolução). */
+  let escala = 1
+  /* Medidor de GPU: uma query de tempo em volta do composer.render, no
+     Chromium (EXT_disjoint_timer_query_webgl2). Onde a extensão não existe a
+     lente não mede nada, e quem decide é o medidor de quadros da cena. */
+  const gl2 = renderer.getContext() instanceof WebGL2RenderingContext ? (renderer.getContext() as WebGL2RenderingContext) : null
+  const cronometro = gl2 ? gl2.getExtension('EXT_disjoint_timer_query_webgl2') : null
+  let aoMedir: ((medianaMs: number) => void) | null = null
+  let descartar = 0
+  const pendentes: WebGLQuery[] = []
+  const amostras: number[] = []
+  const colher = () => {
+    if (!gl2 || !cronometro) return
+    for (let i = pendentes.length - 1; i >= 0; i--) {
+      const q = pendentes[i]
+      if (!gl2.getQueryParameter(q, gl2.QUERY_RESULT_AVAILABLE)) continue
+      if (!gl2.getParameter(cronometro.GPU_DISJOINT_EXT)) {
+        if (descartar > 0) descartar -= 1
+        else amostras.push((gl2.getQueryParameter(q, gl2.QUERY_RESULT) as number) / 1e6)
+      }
+      gl2.deleteQuery(q)
+      pendentes.splice(i, 1)
+    }
+    if (aoMedir && amostras.length >= 24) {
+      const ordenadas = [...amostras].sort((a, b) => a - b)
+      const mediana = ordenadas[Math.floor(ordenadas.length / 2)]
+      const avisar = aoMedir
+      aoMedir = null
+      amostras.length = 0
+      avisar(mediana)
+    }
   }
   return {
     /**
@@ -165,14 +203,30 @@ export function createPostFx(
      * até 2px de franja nos cantos.
      */
     render(time: number, edgeBlur = 0, rush = 0) {
-      if (film) {
-        const k = Math.min(rush * 1.6, 1)
-        film.uniforms.uTime.value = time
-        film.uniforms.uEdgeBlur.value = edgeBlur
-        film.uniforms.uZoom.value = 1 + 0.03 * k
-        film.uniforms.uAberration.value = 2.0 * k
-      }
+      const k = Math.min(rush * 1.6, 1)
+      film.uniforms.uTime.value = time
+      film.uniforms.uEdgeBlur.value = edgeBlur
+      film.uniforms.uZoom.value = 1 + 0.03 * k
+      film.uniforms.uAberration.value = 2.0 * k
+      colher()
+      const query = aoMedir && gl2 && cronometro ? gl2.createQuery() : null
+      if (query && gl2 && cronometro) gl2.beginQuery(cronometro.TIME_ELAPSED_EXT, query)
       composer.render()
+      if (query && gl2 && cronometro) {
+        gl2.endQuery(cronometro.TIME_ELAPSED_EXT)
+        pendentes.push(query)
+      }
+    },
+    /**
+     * Mede o tempo de GPU de um quadro da lente e chama `avisar` com a
+     * mediana de 24 quadros, em milissegundos, ignorando os `pular`
+     * primeiros. Só no Chromium; noutros navegadores nunca chama.
+     */
+    medirGpu(avisar: (medianaMs: number) => void, pular = 0) {
+      if (!cronometro) return
+      amostras.length = 0
+      descartar = pular
+      aoMedir = avisar
     },
     /**
      * Emite a compilação dos programas da lente sem esperar por eles: com o
@@ -205,21 +259,30 @@ export function createPostFx(
         ...bloom.separableBlurMaterials,
         bloom.compositeMaterial,
       ]
-      if (film) internos.push(bloom.blendMaterial)
-      const ultimo = film ? film.material : bloom.blendMaterial
       const anterior = renderer.getRenderTarget()
       renderer.setRenderTarget(alvo)
       const a = renderer.compile(cena(internos), cam)
       renderer.setRenderTarget(null)
-      const b = renderer.compile(cena([ultimo]), cam)
+      const b = renderer.compile(cena([film.material]), cam)
       renderer.setRenderTarget(anterior)
       quad.dispose()
       return new Set<THREE.Material>([...a, ...b])
     },
     setSize(w: number, h: number) {
+      composer.setPixelRatio(renderer.getPixelRatio() * escala)
       composer.setSize(w, h)
-      bloom.resolution.set(w / divisor, h / divisor)
-      film?.uniforms.uResolution.value.set(w, h)
+      film.uniforms.uResolution.value.set(w, h)
+    },
+    /**
+     * Escala dos alvos internos em relação ao canvas. É o degrau de
+     * sobrevivência do desktop: a cena e a pirâmide passam a ser desenhadas
+     * em menos pixels e o passe de filme amplia ao tamanho do canvas, que
+     * não muda. Mudar o canvas (setSize do renderer) apaga o buffer por um
+     * quadro, e esse quadro apagado era a piscada que o cliente via.
+     */
+    setScale(valor: number) {
+      escala = valor
+      composer.setPixelRatio(renderer.getPixelRatio() * escala)
     },
     setStrength(value: number) {
       bloom.strength = value
@@ -234,12 +297,13 @@ export function createPostFx(
     setMix(value: number) {
       const v = Math.max(0, Math.min(1, value))
       bloom.strength = forcaCheia * v
-      if (film) {
-        film.uniforms.uVignette.value = vinhetaCheia * v
-        film.uniforms.uGrain.value = graoCheio * v
-      }
+      film.uniforms.uVignette.value = vinhetaCheia * v
+      film.uniforms.uGrain.value = graoCheio * v
     },
     dispose() {
+      aoMedir = null
+      if (gl2) for (const q of pendentes) gl2.deleteQuery(q)
+      pendentes.length = 0
       composer.dispose()
       target.dispose()
     },
