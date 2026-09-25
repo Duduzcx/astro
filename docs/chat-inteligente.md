@@ -97,8 +97,13 @@ perguntas de sempre — que funcionam, qualificam e não custam nada.
 - **Instrução de sistema nunca vem do navegador.** Texto de fora virando
   instrução é exatamente como se sequestra um atendimento.
 - **A instrução proíbe inventar preço e prazo.** Ela é editável no painel,
-  aba *Robô do WhatsApp* — e é o lugar mais importante do sistema, porque é
-  o que impede a inteligência de prometer o que a empresa não vai cumprir.
+  aba *Automação WhatsApp* — e é o lugar mais importante do sistema, porque
+  é o que impede a inteligência de prometer o que a empresa não vai cumprir.
+- **O interruptor geral do painel também vale aqui.** *Bot de atendimento*
+  desativado, a ponte responde `roteiro` e o chat segue com as perguntas.
+- **Tudo o que a inteligência responde fica no diário** da mesma aba
+  (*Interações*), sem identificar quem escreveu: o chat não tem sessão, e
+  endereço de rede é dado pessoal que não precisa ficar lá.
 - **Falha nunca deixa ninguém no vácuo.** Chave vencida, cota estourada ou
   modelo fora do ar caem para o roteiro e para o WhatsApp.
 

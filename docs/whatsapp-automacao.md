@@ -95,7 +95,16 @@ Outras coisas que valem saber antes:
 
 ### Se não responder
 
-Abra *Logs* no painel da Vercel e filtre por `/api/whatsapp`:
+Primeiro o painel do site, aba *Automação WhatsApp*:
+
+- **Conexão *Desconectado*** — o detalhe diz se falta variável, se a Meta
+  recusou o token ou se não respondeu. É conferido na hora, com a Meta.
+- **Bot de atendimento *Desativado*** — alguém desligou o interruptor. O
+  robô lê e registra, mas não responde: é de propósito.
+- **Interações** — se a mensagem aparece ali, ela chegou e o robô decidiu o
+  que fazer; se a resposta está vazia, é o interruptor ou uma falha no envio.
+
+Depois, *Logs* no painel da Vercel, filtrando por `/api/whatsapp`:
 
 - **Sem nenhuma linha** — a Meta não está chamando. Reveja o passo 7.
 - **401 assinatura invalida** — `WHATSAPP_APP_SECRET` errado ou não publicado.
@@ -106,10 +115,12 @@ Abra *Logs* no painel da Vercel e filtre por `/api/whatsapp`:
 
 ### Onde mexer nos textos
 
-Tudo no topo de `api/whatsapp.js`: `MENU`, `RESPOSTAS`, `BOAS_VINDAS` e
-`NAO_ENTENDI`. A função `entender` decide qual resposta vai — ela tem teste em
-`tests/whatsapp.test.ts`, então rode `npm test` depois de mexer nas palavras-
-chave.
+Pelo painel, aba *Automação WhatsApp*: cada texto tem a sua caixa, e vale na
+próxima mensagem. O padrão de fábrica mora em `api/_lib/whatsapp-textos.js`.
+A função `entender`, em `api/whatsapp.js`, decide qual resposta vai — ela tem
+teste em `tests/whatsapp.test.ts`, e o webhook inteiro (assinatura, montagem
+da resposta, envio) em `tests/whatsapp-handler.test.ts`. Rode `npm test`
+depois de mexer nas palavras-chave ou na montagem.
 
 ### O que o robô não faz, de propósito
 

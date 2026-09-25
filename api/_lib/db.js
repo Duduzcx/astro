@@ -104,6 +104,19 @@ export async function prepararBanco() {
       valor JSONB NOT NULL,
       atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now()
     )`
+  /* O diário do robô: cada mensagem que entrou (WhatsApp ou chat do site)
+     e o que saiu. É o que o painel mostra como interações em tempo real.
+     Podado a duas mil linhas por quem grava. */
+  await s`
+    CREATE TABLE IF NOT EXISTS bot_logs (
+      id      BIGSERIAL PRIMARY KEY,
+      quando  TIMESTAMPTZ NOT NULL DEFAULT now(),
+      canal   TEXT NOT NULL DEFAULT '',
+      de      TEXT NOT NULL DEFAULT '',
+      entrada TEXT NOT NULL DEFAULT '',
+      saida   TEXT NOT NULL DEFAULT '',
+      modo    TEXT NOT NULL DEFAULT ''
+    )`
   /* Tentativas de entrar no painel. Serve para travar força bruta sem
      precisar de um Redis só para isso. */
   await s`

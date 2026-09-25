@@ -81,9 +81,14 @@ Sem isso, nada quebra: o lead é guardado e aparece no painel.
 
 Três abas.
 
-**Funil** — o quadro, uma coluna por estágio (novo, contatado, proposta,
-fechado, perdido), com a soma dos valores em cada coluna. Mover um negócio é
-um toque no estágio.
+**Funil** — o quadro, uma coluna por etapa: *Novos Leads*, *Em Atendimento*,
+*Proposta Enviada*, *Fechado/Ganho* e *Perdido*, com a soma dos valores em
+cada coluna. Cada cartão traz nome, telefone ou e-mail, o que a pessoa pediu
+e a data de entrada. Mover um negócio é arrastar o cartão para a coluna, ou
+os botões *Voltar* e *Avançar* do próprio cartão — que fazem o mesmo no toque
+e no teclado. *Perdido* é saída lateral, não a etapa depois de *Fechado*:
+avançar de um negócio ganho nunca o marca como perdido. (No banco as etapas
+continuam `novo`, `contatado`, `proposta`, `fechado` e `perdido`.)
 
 **Leads** — a lista completa. Cada um abre com:
 
@@ -97,10 +102,31 @@ um toque no estágio.
   isto que separa um CRM de uma lista de contatos.
 - **A conversa** que trouxe o lead, inteira, do chat ou do WhatsApp.
 
-**Robô do WhatsApp** — o estado da integração (Cloud API ligada, assinatura
-conferida) e **os textos que o robô responde, editáveis ali mesmo**. Mudou,
-salvou, vale na próxima mensagem: sem programador e sem republicar. O padrão
-de fábrica continua no código, e o botão *Voltar ao padrão* o traz de volta.
+**Automação WhatsApp** — quatro coisas:
+
+- **Conexão**: *Conectado* ou *Desconectado*, conferido de verdade — o painel
+  pergunta à Meta se o token e o número valem, e mostra o nome verificado e o
+  número. "Tem variável cadastrada" não é conexão: um token vencido tem
+  variável e não atende ninguém.
+- **Credenciais**: quais das quatro (Access Token, Phone Number ID, Verify
+  Token, App Secret) estão cadastradas. Elas vivem nas variáveis de ambiente
+  da Vercel e nunca passam pelo painel nem pelo banco — um banco com token
+  dentro é um token a mais para vazar. A Cloud API não pareia por QR code;
+  QR é coisa de robô montado sobre o aplicativo (Evolution, Baileys), que a
+  Meta pode bloquear.
+- **Bot de atendimento**: o interruptor geral. Desligado, o robô do WhatsApp
+  lê, registra e guarda o lead, mas não responde — quem responde é uma
+  pessoa, pelo aplicativo; e o chat do site volta ao roteiro de perguntas.
+  Precisa do banco.
+- **Interações**: cada mensagem que chegou (WhatsApp ou chat do site) e o
+  que saiu, com o modo que decidiu a resposta. Atualiza a cada cinco
+  segundos enquanto a aba está aberta; função sem servidor não segura
+  conexão para empurrar eventos. Ficam as últimas duas mil.
+
+E **os textos que o robô responde, editáveis ali mesmo**, mais a instrução
+que a inteligência do chat lê. Mudou, salvou, vale na próxima mensagem: sem
+programador e sem republicar. O padrão de fábrica continua no código, e o
+botão *Voltar ao padrão* o traz de volta.
 
 **Números do topo:** total, últimos 7 dias, retornos vencidos, conversão e
 receita fechada. A conversão é calculada sobre o que já saiu do funil
@@ -129,8 +155,9 @@ troca é a função `encerrar` em `src/components/Chatbot.tsx` e a rota
 | O quê | Arquivo |
 | --- | --- |
 | Perguntas do chat | `src/components/Chatbot.tsx`, constante `ROTEIRO` |
-| Textos do robô do WhatsApp | pelo painel, aba *Robô do WhatsApp*. O padrão de fábrica fica em `api/_lib/whatsapp-textos.js` |
-| Situações do funil | `api/_lib/db.js`, constante `SITUACOES` (e a lista igual em `src/admin/Painel.tsx`) |
+| Textos do robô do WhatsApp | pelo painel, aba *Automação WhatsApp*. O padrão de fábrica fica em `api/_lib/whatsapp-textos.js` |
+| Interruptor e diário do robô | `api/_lib/config.js` (`botAtivo`) e `api/_lib/logs.js`; quem grava é `api/whatsapp.js` e `api/bot.js` |
+| Etapas do funil | `api/_lib/db.js`, constante `SITUACOES` (e os nomes que a equipe vê em `ROTULOS_SITUACAO`, em `src/admin/Painel.tsx`) |
 | Cálculo dos números | `api/_lib/leads.js`, função `resumo` |
 
 Depois de mexer, rode `npm test && npm run lint && npm run build`.
@@ -144,6 +171,10 @@ Abra *Logs* no painel da Vercel e filtre pela rota:
 - **`/admin` pedindo senha em looping** — falta `ADMIN_SEGREDO`, ou ele mudou
   entre deploys (o que invalida os cookies).
 - **429 ao entrar** — a trava de força bruta pegou; espere dez minutos.
+- **Aba Automação mostrando *Desconectado*** — o detalhe ao lado diz o
+  motivo: faltam variáveis, a Meta recusou o token (vencido ou sem
+  permissão) ou não respondeu. É a mesma conferência que o robô faria ao
+  tentar mandar mensagem, feita na hora.
 - **Painel vazio com aviso amarelo** — é o esperado antes do passo 1. Enquanto
   o banco não está ligado, o painel entra em *modo demonstração*: mostra três
   leads de exemplo, marcados como exemplo, só para você ver a ferramenta

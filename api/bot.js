@@ -23,8 +23,9 @@
  * dinheiro. Sem ele, um roteiro simples consome a conta da empresa numa
  * madrugada.
  */
-import { lerConfig } from './_lib/config.js'
+import { botAtivo, lerConfig } from './_lib/config.js'
 import { prepararBanco, sql, temBanco } from './_lib/db.js'
+import { registrarLog } from './_lib/logs.js'
 
 export const config = { api: { bodyParser: false } }
 
@@ -182,6 +183,10 @@ export default async function handler(req, res) {
   const mensagem = limpar(dados?.mensagem)
   if (!mensagem) return res.status(400).json({ erro: 'mensagem vazia' })
 
+  /* A chave geral do painel: desligada, o chat volta ao roteiro de perguntas,
+     que funciona sem inteligência nenhuma. */
+  if (!(await botAtivo())) return res.status(200).json({ modo: 'roteiro', motivo: 'desligado no painel' })
+
   if (!(await dentroDoTeto())) {
     /* Teto do dia batido: não é erro, é o roteiro assumindo. Quem está do
        outro lado continua atendido. */
@@ -212,11 +217,15 @@ export default async function handler(req, res) {
       : await responderComOpenAI(instrucao, mensagens)
     const resposta = limpar(texto, 1500)
     if (!resposta) return res.status(200).json({ modo: 'roteiro', motivo: 'resposta vazia' })
+    /* O diário do painel. Quem escreveu não é identificado: o chat não tem
+       sessão, e endereço de rede é dado pessoal que não precisa ficar aqui. */
+    void registrarLog({ canal: 'site', de: 'visitante', entrada: mensagem, saida: resposta, modo: 'ia' })
     return res.status(200).json({ modo: 'ia', resposta })
   } catch (erro) {
     /* Chave vencida, cota estourada, modelo fora do ar: nada disso pode
        deixar alguém sem atendimento. Cai para o roteiro. */
     console.error('bot falhou:', erro?.message)
+    void registrarLog({ canal: 'site', de: 'visitante', entrada: mensagem, saida: '', modo: 'falha' })
     return res.status(200).json({ modo: 'roteiro', motivo: 'falha na inteligência' })
   }
 }

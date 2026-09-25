@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react'
 
 /**
  * Painel da empresa: CRM, funil e o robô do WhatsApp.
@@ -13,6 +13,18 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 const SITUACOES = ['novo', 'contatado', 'proposta', 'fechado', 'perdido'] as const
 type Situacao = (typeof SITUACOES)[number]
+
+/* Os nomes que a equipe lê. As chaves do banco continuam as de sempre. */
+const ROTULOS_SITUACAO: Record<Situacao, string> = {
+  novo: 'Novos Leads',
+  contatado: 'Em Atendimento',
+  proposta: 'Proposta Enviada',
+  fechado: 'Fechado/Ganho',
+  perdido: 'Perdido',
+}
+/* O caminho de um negócio. "Perdido" é saída lateral, não a etapa depois de
+   "Fechado": avançar de um negócio ganho nunca pode marcá-lo como perdido. */
+const TRILHA: Situacao[] = ['novo', 'contatado', 'proposta', 'fechado']
 
 type Lead = {
   id: number
@@ -61,9 +73,22 @@ type Robo = {
   instrucao: string
   instrucaoPadrao: string
   inteligencia: string
+  ativo: boolean
+  conexao: { estado: 'conectado' | 'desconectado'; detalhe: string; qualidade?: string }
+  credenciais: { token: boolean; phoneId: boolean; verifyToken: boolean; appSecret: boolean }
   ligado: boolean
   assinado: boolean
   editavel: boolean
+}
+
+type Registro = {
+  id: number
+  quando: string
+  canal: string
+  de: string
+  entrada: string
+  saida: string
+  modo: string
 }
 
 /* Leads de demonstração, mostrados SÓ enquanto o banco não está ligado.
@@ -287,7 +312,7 @@ function Numeros({ resumo }: { resumo: Resumo }) {
               const largura = resumo.total ? Math.round((quantos / resumo.total) * 100) : 0
               return (
                 <li key={situacao} className="flex items-center gap-3 text-[13px]">
-                  <span className="w-20 shrink-0 text-ash capitalize">{situacao}</span>
+                  <span className="w-36 shrink-0 text-ash">{ROTULOS_SITUACAO[situacao]}</span>
                   <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/8">
                     <span className="block h-full rounded-full bg-[#8db4f5]" style={{ width: `${largura}%` }} />
                   </span>
@@ -362,8 +387,22 @@ function Cartao({
     }
   }
 
+  const passo = TRILHA.indexOf(lead.situacao)
+  const anterior = lead.situacao === 'perdido' ? 'contatado' : passo > 0 ? TRILHA[passo - 1] : null
+  const proximo = passo >= 0 && passo < TRILHA.length - 1 ? TRILHA[passo + 1] : null
+  const passoClasse =
+    'rounded-full border border-white/12 px-3 py-1 text-[12px] text-ash transition-colors hover:text-ivory disabled:cursor-default disabled:opacity-35'
+
   return (
-    <li className={`graphite-card ${atrasado(lead) ? 'border-[#ffd479]/40' : ''}`}>
+    <li
+      className={`graphite-card ${atrasado(lead) ? 'border-[#ffd479]/40' : ''} ${compacto ? 'cursor-grab active:cursor-grabbing' : ''}`}
+      draggable={compacto}
+      onDragStart={(evento) => {
+        if (!compacto) return
+        evento.dataTransfer.setData('text/plain', String(lead.id))
+        evento.dataTransfer.effectAllowed = 'move'
+      }}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-[1.05rem] text-ivory">{lead.nome || 'Sem nome'}</p>
@@ -377,7 +416,7 @@ function Cartao({
               retorno vencido
             </span>
           ) : null}
-          {!compacto ? <span className="text-[11px] text-slate">{quando(lead.criado_em)}</span> : null}
+          <span className="text-[11px] text-slate">{quando(lead.criado_em)}</span>
           <span className="rounded-full border border-white/12 px-2.5 py-0.5 text-[10px] text-slate uppercase">
             {lead.canal}
           </span>
@@ -398,7 +437,10 @@ function Cartao({
           ))}
         </dl>
       ) : (
-        <p className="mt-2 text-[12px] text-ash">{lead.necessidade || '—'}</p>
+        <p className="mt-2 line-clamp-3 text-[12px] leading-[1.5] text-ash">
+          {lead.necessidade || '—'}
+          {lead.resumo ? <span className="text-slate"> — {lead.resumo}</span> : null}
+        </p>
       )}
 
       {lead.resumo && !compacto ? (
@@ -406,18 +448,50 @@ function Cartao({
       ) : null}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        {SITUACOES.map((situacao) => (
-          <button
-            key={situacao}
-            type="button"
-            onClick={() => aoMudar({ situacao })}
-            className={`rounded-full border px-3 py-1 text-[12px] capitalize transition-colors ${
-              lead.situacao === situacao ? CORES[situacao] : 'border-white/10 text-slate hover:text-ivory'
-            }`}
-          >
-            {situacao}
-          </button>
-        ))}
+        {compacto ? (
+          <>
+            <button
+              type="button"
+              disabled={!anterior}
+              onClick={() => anterior && aoMudar({ situacao: anterior })}
+              aria-label={anterior ? `Voltar para ${ROTULOS_SITUACAO[anterior]}` : 'Não há etapa anterior'}
+              className={passoClasse}
+            >
+              ← Voltar
+            </button>
+            <button
+              type="button"
+              disabled={!proximo}
+              onClick={() => proximo && aoMudar({ situacao: proximo })}
+              aria-label={proximo ? `Avançar para ${ROTULOS_SITUACAO[proximo]}` : 'Não há etapa seguinte'}
+              className={passoClasse}
+            >
+              Avançar →
+            </button>
+            {lead.situacao !== 'perdido' && lead.situacao !== 'fechado' ? (
+              <button
+                type="button"
+                onClick={() => aoMudar({ situacao: 'perdido' })}
+                className="rounded-full border border-white/10 px-3 py-1 text-[12px] text-slate transition-colors hover:border-[#ff9b9b]/40 hover:text-[#ff9b9b]"
+              >
+                Perdido
+              </button>
+            ) : null}
+          </>
+        ) : (
+          SITUACOES.map((situacao) => (
+            <button
+              key={situacao}
+              type="button"
+              onClick={() => aoMudar({ situacao })}
+              className={`rounded-full border px-3 py-1 text-[12px] transition-colors ${
+                lead.situacao === situacao ? CORES[situacao] : 'border-white/10 text-slate hover:text-ivory'
+              }`}
+            >
+              {ROTULOS_SITUACAO[situacao]}
+            </button>
+          ))
+        )}
         <button
           type="button"
           onClick={() => setAberto((v) => !v)}
@@ -544,15 +618,38 @@ function Cartao({
 }
 
 function Funil({ leads, aoMudar }: { leads: Lead[]; aoMudar: (id: number, campos: Partial<Lead>) => void }) {
+  /* A coluna sob o cartão arrastado acende. Arrastar é o atalho do mouse; os
+     botões de avançar e voltar de cada cartão fazem o mesmo no toque e no
+     teclado. */
+  const [alvo, setAlvo] = useState<Situacao | null>(null)
+  const soltar = (situacao: Situacao) => (evento: DragEvent<HTMLElement>) => {
+    evento.preventDefault()
+    setAlvo(null)
+    const id = Number(evento.dataTransfer.getData('text/plain'))
+    const lead = leads.find((l) => l.id === id)
+    if (lead && lead.situacao !== situacao) aoMudar(id, { situacao })
+  }
   return (
-    <div className="grid gap-3 lg:grid-cols-5">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
       {SITUACOES.map((situacao) => {
         const doEstagio = leads.filter((l) => l.situacao === situacao)
         const soma = doEstagio.reduce((total, l) => total + l.valor_centavos, 0)
         return (
-          <section key={situacao} className="flex flex-col gap-2">
+          <section
+            key={situacao}
+            className={`flex flex-col gap-2 rounded-2xl p-1 transition-colors ${alvo === situacao ? 'bg-[#8db4f5]/8' : ''}`}
+            onDragOver={(evento) => {
+              evento.preventDefault()
+              evento.dataTransfer.dropEffect = 'move'
+              if (alvo !== situacao) setAlvo(situacao)
+            }}
+            onDragLeave={(evento) => {
+              if (!evento.currentTarget.contains(evento.relatedTarget as Node | null)) setAlvo(null)
+            }}
+            onDrop={soltar(situacao)}
+          >
             <header className="flex items-baseline justify-between px-1">
-              <h3 className="text-[13px] text-ivory capitalize">{situacao}</h3>
+              <h3 className="text-[13px] text-ivory">{ROTULOS_SITUACAO[situacao]}</h3>
               <span className="text-[11px] text-slate">
                 {doEstagio.length}
                 {soma ? ` · ${dinheiro(soma)}` : ''}
@@ -576,6 +673,94 @@ function Funil({ leads, aoMudar }: { leads: Lead[]; aoMudar: (id: number, campos
   )
 }
 
+const MODOS: Record<string, string> = {
+  menu: 'menu',
+  opcao1: 'agendar',
+  opcao2: 'o que fazemos',
+  opcao3: 'prazo e preço',
+  opcao4: 'humano',
+  humano: 'para humano',
+  silencio: 'em silêncio',
+  ia: 'inteligência',
+  falha: 'falha',
+}
+
+function Interacoes() {
+  const [registros, setRegistros] = useState<Registro[] | null>(null)
+  const [aoVivo, setAoVivo] = useState(true)
+
+  /* "Tempo real" aqui é uma leitura a cada cinco segundos enquanto a aba está
+     aberta. Função sem servidor não segura conexão para empurrar eventos; e
+     cinco segundos é o que a equipe leva para olhar uma linha. */
+  useEffect(() => {
+    let vivo = true
+    const ler = () =>
+      pedir('/api/admin/whatsapp?logs=1')
+        .then((r) => {
+          if (vivo) setRegistros(r.logs)
+        })
+        .catch(() => {
+          if (vivo) setRegistros((atuais) => atuais || [])
+        })
+    void ler()
+    const relogio = aoVivo ? window.setInterval(ler, 5000) : 0
+    return () => {
+      vivo = false
+      if (relogio) window.clearInterval(relogio)
+    }
+  }, [aoVivo])
+
+  return (
+    <div className="graphite-card">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="text-[1.1rem] text-ivory">Interações do robô</h3>
+          <p className="mt-1 text-[13px] text-slate">
+            Cada mensagem que chegou, pelo WhatsApp ou pelo chat do site, e o que saiu.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setAoVivo((v) => !v)}
+          className={`rounded-full border px-3.5 py-1.5 text-[12px] transition-colors ${
+            aoVivo ? 'border-[#86e8a8]/40 text-[#86e8a8]' : 'border-white/10 text-slate hover:text-ivory'
+          }`}
+        >
+          {aoVivo ? '● ao vivo' : 'pausado'}
+        </button>
+      </div>
+      {registros === null ? (
+        <p className="mt-4 text-[13px] text-slate">Carregando…</p>
+      ) : registros.length === 0 ? (
+        <p className="mt-4 text-[13px] text-slate">
+          Nenhuma interação registrada ainda. Elas aparecem aqui assim que alguém escrever para o
+          robô — com o banco ligado.
+        </p>
+      ) : (
+        <ul className="mt-4 flex max-h-[28rem] flex-col gap-2 overflow-y-auto pr-1">
+          {registros.map((r) => (
+            <li key={r.id} className="rounded-xl bg-obsidian/70 px-3 py-2 text-[12px]">
+              <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase text-slate">
+                <span>{quando(r.quando)}</span>
+                <span className="rounded-full border border-white/12 px-2 py-0.5">{r.canal}</span>
+                <span className="rounded-full border border-white/12 px-2 py-0.5">{MODOS[r.modo] || r.modo}</span>
+                <span className="normal-case">{r.de}</span>
+              </div>
+              <p className="mt-1.5 text-ash">
+                <span className="text-slate">recebeu:</span> {r.entrada || '—'}
+              </p>
+              <p className="mt-1 text-ash">
+                <span className="text-slate">respondeu:</span>{' '}
+                {r.saida ? r.saida.slice(0, 220) + (r.saida.length > 220 ? '…' : '') : 'nada (robô desligado ou falha)'}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 function AbaRobo() {
   const [robo, setRobo] = useState<Robo | null>(null)
   const [rascunho, setRascunho] = useState<Record<string, string>>({})
@@ -592,19 +777,87 @@ function AbaRobo() {
 
   if (!robo) return <p className="text-[14px] text-slate">{aviso || 'Carregando…'}</p>
 
+  const conectado = robo.conexao.estado === 'conectado'
+  const credencial = (ok: boolean) => (ok ? 'configurado ••••••••' : 'falta')
+
+  async function alternar() {
+    if (!robo) return
+    const ativo = !robo.ativo
+    setRobo({ ...robo, ativo })
+    try {
+      const r = await pedir('/api/admin/whatsapp', { method: 'PUT', body: JSON.stringify({ ativo }) })
+      setRobo((atual) => (atual ? { ...atual, ativo: r.ativo } : atual))
+    } catch (falha) {
+      setRobo((atual) => (atual ? { ...atual, ativo: !ativo } : atual))
+      setAviso(falha instanceof Error ? falha.message : 'não foi possível mudar')
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid gap-3 sm:grid-cols-3">
-        {[
-          ['Cloud API', robo.ligado ? 'ligada' : 'não configurada', robo.ligado],
-          ['Assinatura da Meta', robo.assinado ? 'conferida' : 'sem segredo', robo.assinado],
-          ['Textos editáveis', robo.editavel ? 'sim' : 'precisa do banco', robo.editavel],
-        ].map(([rotulo, valor, bom]) => (
-          <div key={String(rotulo)} className="graphite-card">
-            <p className="label-voice text-[10px]">{String(rotulo)}</p>
-            <p className={`mt-2 text-[15px] ${bom ? 'text-[#86e8a8]' : 'text-[#ffd479]'}`}>{String(valor)}</p>
-          </div>
-        ))}
+      <div className="grid gap-3 lg:grid-cols-3">
+        <div className="graphite-card">
+          <p className="label-voice text-[10px]">Conexão com o WhatsApp</p>
+          <p className={`mt-2 flex items-center gap-2 text-[15px] ${conectado ? 'text-[#86e8a8]' : 'text-[#ffd479]'}`}>
+            <span aria-hidden="true">{conectado ? '●' : '○'}</span>
+            {conectado ? 'Conectado' : 'Desconectado'}
+          </p>
+          <p className="mt-1 text-[12px] text-slate">{robo.conexao.detalhe}</p>
+          {robo.conexao.qualidade ? (
+            <p className="mt-1 text-[12px] text-slate">qualidade do número na Meta: {robo.conexao.qualidade}</p>
+          ) : null}
+        </div>
+
+        <div className="graphite-card">
+          <p className="label-voice text-[10px]">Credenciais (Meta Cloud API)</p>
+          <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[12px]">
+            {[
+              ['Access Token', robo.credenciais.token],
+              ['Phone Number ID', robo.credenciais.phoneId],
+              ['Verify Token', robo.credenciais.verifyToken],
+              ['App Secret', robo.credenciais.appSecret],
+            ].map(([rotulo, ok]) => (
+              <div key={String(rotulo)} className="contents">
+                <dt className="text-slate">{String(rotulo)}</dt>
+                <dd className={ok ? 'text-ash' : 'text-[#ffd479]'}>{credencial(Boolean(ok))}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-2 text-[11px] leading-[1.5] text-slate">
+            Vivem nas variáveis de ambiente da Vercel, nunca aqui nem no banco. A Cloud API não
+            pareia por QR code: isso é coisa de robô sobre o aplicativo (Evolution, Baileys), que a
+            Meta pode bloquear.
+          </p>
+        </div>
+
+        <div className="graphite-card">
+          <p className="label-voice text-[10px]">Bot de atendimento</p>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={robo.ativo}
+            disabled={!robo.editavel}
+            onClick={() => void alternar()}
+            className="mt-2 flex items-center gap-3 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span
+              aria-hidden="true"
+              className={`relative inline-block h-6 w-11 rounded-full transition-colors ${robo.ativo ? 'bg-[#86e8a8]' : 'bg-white/15'}`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-onyx transition-[left] ${robo.ativo ? 'left-[22px]' : 'left-0.5'}`}
+              />
+            </span>
+            <span className={`text-[15px] ${robo.ativo ? 'text-[#86e8a8]' : 'text-[#ffd479]'}`}>
+              {robo.ativo ? 'Ativado' : 'Desativado'}
+            </span>
+          </button>
+          <p className="mt-2 text-[11px] leading-[1.5] text-slate">
+            {robo.editavel
+              ? 'Desligado, o robô do WhatsApp lê, registra e guarda o lead, mas não responde — quem responde é uma pessoa. O chat do site volta ao roteiro.'
+              : 'O interruptor precisa do banco (POSTGRES_URL). Sem ele o robô fica ligado.'}
+          </p>
+        </div>
       </div>
 
       {!robo.ligado ? (
@@ -614,6 +867,8 @@ function AbaRobo() {
           do WhatsApp.
         </p>
       ) : null}
+
+      <Interacoes />
 
       <div className="graphite-card">
         <p className="label-voice text-[10px]">Inteligência do chat do site</p>
@@ -779,7 +1034,7 @@ export function Painel() {
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-[1.8rem] text-ivory">Painel Astro</h1>
-          <p className="mt-1 text-[13px] text-slate">CRM, funil e o robô do WhatsApp.</p>
+          <p className="mt-1 text-[13px] text-slate">CRM, funil e a automação do WhatsApp.</p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -821,7 +1076,7 @@ export function Painel() {
         {[
           ['funil', 'Funil'],
           ['lista', 'Leads'],
-          ['robo', 'Robô do WhatsApp'],
+          ['robo', 'Automação WhatsApp'],
         ].map(([chave, rotulo]) => (
           <button
             key={chave}
@@ -856,11 +1111,11 @@ export function Painel() {
                   key={situacao || 'todos'}
                   type="button"
                   onClick={() => setFiltro(situacao)}
-                  className={`rounded-full border px-3.5 py-1.5 text-[13px] capitalize transition-colors ${
+                  className={`rounded-full border px-3.5 py-1.5 text-[13px] transition-colors ${
                     filtro === situacao ? 'border-[#8db4f5]/50 text-ivory' : 'border-white/10 text-slate hover:text-ivory'
                   }`}
                 >
-                  {situacao || 'todos'}
+                  {situacao ? ROTULOS_SITUACAO[situacao] : 'Todos'}
                 </button>
               ))}
               <button

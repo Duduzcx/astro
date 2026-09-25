@@ -21,6 +21,17 @@ export async function lerConfig(chave, padrao) {
   }
 }
 
+/**
+ * A chave geral do atendimento automático, ligada e desligada pelo painel.
+ * Desligada, o robô do WhatsApp fica em silêncio (a mensagem é registrada e
+ * o lead entra, mas quem responde é uma pessoa) e o chat do site volta ao
+ * roteiro. Sem banco não há como desligar: fica ligado.
+ */
+export async function botAtivo() {
+  const valor = await lerConfig('bot_ativo', true)
+  return valor !== false
+}
+
 export async function gravarConfig(chave, valor) {
   await prepararBanco()
   const s = sql()

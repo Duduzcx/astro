@@ -31,7 +31,8 @@
  */
 import crypto from 'node:crypto'
 import { criarLead, temBanco } from './_lib/leads.js'
-import { lerConfig } from './_lib/config.js'
+import { botAtivo, lerConfig } from './_lib/config.js'
+import { registrarLog } from './_lib/logs.js'
 import { TEXTOS_PADRAO } from './_lib/whatsapp-textos.js'
 
 /* O corpo cru é necessário para conferir a assinatura: qualquer
@@ -145,6 +146,9 @@ export default async function handler(req, res) {
      alguém sem resposta do outro lado. */
   const textos = { ...TEXTOS_PADRAO, ...(await lerConfig('whatsapp_textos', TEXTOS_PADRAO)) }
   const RESPOSTAS = { 1: textos.opcao1, 2: textos.opcao2, 3: textos.opcao3, 4: textos.opcao4 }
+  /* A chave geral do painel. Desligado, o robô lê e registra tudo, guarda o
+     lead, e não responde: quem responde é uma pessoa, pelo aplicativo. */
+  const ativo = await botAtivo()
 
   const mudancas = (evento?.entry || []).flatMap((e) => e.changes || [])
   for (const mudanca of mudancas) {
@@ -178,17 +182,29 @@ export default async function handler(req, res) {
         }).catch((erro) => console.error('lead do WhatsApp não foi guardado:', erro?.message))
       }
 
+      let modo
+      let resposta
       if (intencao === 'saudacao' || !texto) {
-        await responder(de, `${BOAS_VINDAS}\n\n${MENU}`)
-        continue
+        modo = 'menu'
+        resposta = `${textos.boasVindas}\n\n${textos.menu}`
+      } else if (typeof intencao === 'number') {
+        modo = `opcao${intencao}`
+        resposta = RESPOSTAS[intencao]
+      } else {
+        /* Não entendeu: nunca insistir. Avisa que um humano vai ler e mostra
+           o menu uma vez, para quem preferir o atalho. */
+        modo = 'humano'
+        resposta = `${textos.naoEntendi}\n\n${textos.menu}`
       }
-      if (typeof intencao === 'number') {
-        await responder(de, RESPOSTAS[intencao])
-        continue
-      }
-      /* Não entendeu: nunca insistir. Avisa que um humano vai ler e mostra o
-         menu uma vez, para quem preferir o atalho. */
-      await responder(de, `${NAO_ENTENDI}\n\n${MENU}`)
+      /* O diário do painel. Registrar nunca segura a resposta. */
+      void registrarLog({
+        canal: 'whatsapp',
+        de,
+        entrada: texto,
+        saida: ativo ? resposta : '',
+        modo: ativo ? modo : 'silencio',
+      })
+      if (ativo) await responder(de, resposta)
     }
   }
 }
