@@ -1,4 +1,4 @@
-import { mascararCpf } from '../../../lib/bot/util.ts'
+import { mascararCpf } from './bot/util.ts'
 import { agenda, configuracao, evolution, supabaseAdmin, tokenDoWebhook, urlPublica } from './ambiente.ts'
 import { rodarMotor } from './bot.ts'
 import { camposEditaveis, publica, type LinhaClinica } from './clinica.ts'

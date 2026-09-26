@@ -1,5 +1,5 @@
-import { texto } from '../../../lib/bot/textos.ts'
-import { formatarVagaAmigavel } from '../../../lib/bot/util.ts'
+import { texto } from './bot/textos.ts'
+import { formatarVagaAmigavel } from './bot/util.ts'
 import { segredoDoCron, supabaseAdmin } from './ambiente.ts'
 import { dependencias, exigirSegredo } from './bot.ts'
 import { paraClinica } from './clinica.ts'

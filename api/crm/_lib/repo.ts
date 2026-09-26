@@ -1,4 +1,4 @@
-import type { Agendamento, Canal, Conversa, Paciente, Procedimento, Repo } from '../../../lib/bot/tipos.ts'
+import type { Agendamento, Canal, Conversa, Paciente, Procedimento, Repo } from './bot/tipos.ts'
 import { avisarTelegram, supabaseAdmin } from './ambiente.ts'
 
 /**

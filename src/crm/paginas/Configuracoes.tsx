@@ -1,5 +1,5 @@
 import { useMemo, useState, type ChangeEvent } from 'react'
-import { CHAVES_TEXTO, ROTULOS_TEXTO, TEXTOS_PADRAO, texto } from '../../../lib/bot/textos.ts'
+import { CHAVES_TEXTO, ROTULOS_TEXTO, TEXTOS_PADRAO, texto } from '../../../api/crm/_lib/bot/textos.ts'
 import { enviar, type Clinica, type Eu } from '../api'
 import { Aviso, Botao, Campo, Titulo } from '../ui'
 import { campoClasse } from '../estilos'

@@ -15,8 +15,8 @@ o que roda:
 
 | No pedido | Aqui |
 | --- | --- |
-| Route Handlers e Server Actions | uma função só, `api/crm/[...rota].ts`, que roteia por caminho. O plano gratuito da Vercel para em doze funções por deploy, e cada arquivo em `api/` vira uma |
-| `lib/evolution.ts`, `lib/calcom.ts`, `lib/bot/` | exatamente isso, em TypeScript, na raiz do repositório. O motor não conhece Supabase, Evolution nem Cal.com: recebe um canal, um repositório e uma agenda injetados (`lib/bot/tipos.ts`) |
+| Route Handlers e Server Actions | uma função só, `api/crm/rota.ts`, que roteia por caminho. O plano gratuito da Vercel para em doze funções por deploy, e cada arquivo em `api/` vira uma |
+| `lib/evolution.ts`, `lib/calcom.ts`, `lib/bot/` | o mesmo conteúdo, em `api/crm/_lib/`. Tem de morar dentro de `api/`: a Vercel não empacota arquivos `.ts` de fora dela, e a função quebrava ao subir (medido com quatro funções-sonda). O motor não conhece Supabase, Evolution nem Cal.com: recebe um canal, um repositório e uma agenda injetados (`bot/tipos.ts`) |
 | páginas em `/app/crm/...` | `crm.html` + `src/crm/`, com um roteador de um arquivo. `/crm/*` é reescrito para `crm.html` no `vercel.json` |
 | Supabase Auth no servidor | Supabase Auth no navegador (e-mail e senha, chave pública); cada chamada às rotas leva o JWT, que o servidor confere com a chave de serviço e troca pela `clinica_id` do usuário |
 | Realtime | o painel assina `mensagens` e `conversas` com a chave pública; as policies de leitura por clínica estão nas migrations |
@@ -41,9 +41,9 @@ Outras decisões:
 | O quê | Onde |
 | --- | --- |
 | migrations | `supabase/migrations/20260925120000_*.sql`, `20260925120100_*.sql` |
-| motor do assistente | `lib/bot/motor.ts` (máquina de estados), `textos.ts` (mensagens e tom), `faq.ts` (Groq), `util.ts`, `tipos.ts` |
-| clientes | `lib/evolution.ts`, `lib/calcom.ts` |
-| rotas | `api/crm/[...rota].ts` → `api/crm/_lib/` (`bot.ts` webhook e motor, `cron.ts`, `painel.ts`, `repo.ts` Supabase, `sessao.ts`, `clinica.ts`, `ambiente.ts`) |
+| motor do assistente | `api/crm/_lib/bot/motor.ts` (máquina de estados), `textos.ts` (mensagens e tom), `faq.ts` (Groq), `util.ts`, `tipos.ts` |
+| clientes | `api/crm/_lib/evolution.ts`, `api/crm/_lib/calcom.ts` |
+| rotas | `api/crm/rota.ts` (o caminho chega por rewrite em `?p=`) → `api/crm/_lib/` (`bot.ts` webhook e motor, `cron.ts`, `painel.ts`, `repo.ts` Supabase, `sessao.ts`, `clinica.ts`, `ambiente.ts`) |
 | painel | `crm.html`, `src/crm/App.tsx`, `src/crm/paginas/*` |
 | testes | `tests/bot-motor.test.ts` (conversas inteiras, sem rede), `tests/bot-util.test.ts` |
 | Evolution API | `infra/evolution/docker-compose.yml` |
@@ -131,7 +131,7 @@ para o plano Pro, o mesmo endpoint entra em `vercel.json`:
 
 ## Como o assistente decide
 
-`lib/bot/motor.ts`, uma etapa por mensagem, guardada em `conversas.etapa`:
+`api/crm/_lib/bot/motor.ts`, uma etapa por mensagem, guardada em `conversas.etapa`:
 `inicio` → (`coletando_nome` → `coletando_cpf`) ou `menu_principal` →
 `triagem` → `escolhendo_tipo` → `escolhendo_vaga` → `concluido`; o cron põe
 em `aguardando_confirmacao`. Urgência (palavras da clínica) e "falar com

@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { criarCalcom } from '../../../lib/calcom.ts'
-import { criarEvolution } from '../../../lib/evolution.ts'
-import { criarFaq } from '../../../lib/bot/faq.ts'
+import { criarCalcom } from './calcom.ts'
+import { criarEvolution } from './evolution.ts'
+import { criarFaq } from './bot/faq.ts'
 import { ErroHttp } from './http.ts'
 
 /**

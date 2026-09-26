@@ -1,6 +1,6 @@
 import { webhookEvolution } from './_lib/bot.ts'
 import { cronLembretes } from './_lib/cron.ts'
-import { ErroHttp, type Req, type Res } from './_lib/http.ts'
+import { ErroHttp, primeiro, type Req, type Res } from './_lib/http.ts'
 import { rotasPainel } from './_lib/painel.ts'
 
 /**
@@ -11,11 +11,17 @@ import { rotasPainel } from './_lib/painel.ts'
  *   whatsapp/webhook/{instancia}   o que a Evolution API entrega
  *   cron/lembretes                 o anti-faltas, com CRON_SECRET
  *   (o resto)                      o painel, com a sessão do Supabase Auth
+ *
+ * O caminho chega em `?p=`, escrito pelo rewrite do vercel.json, e não pelo
+ * nome do arquivo. Um arquivo `[...rota].ts` seria o jeito natural, e foi o
+ * primeiro: a Vercel o publicou casando UM segmento só — `/api/crm/eu`
+ * entrava e `/api/crm/cron/lembretes` dava 404. Com o rewrite o roteamento
+ * é explícito e não depende de como a plataforma lê colchetes.
  */
 export default async function handler(req: Req, res: Res) {
-  const url = new URL(req.url || '/', 'http://local')
-  const partes = url.pathname
-    .replace(/^\/api\/crm\/?/, '')
+  const daQuery = primeiro(req.query.p)
+  const doCaminho = new URL(req.url || '/', 'http://local').pathname.replace(/^\/api\/crm\/?/, '')
+  const partes = (daQuery || doCaminho)
     .split('/')
     .filter(Boolean)
     .map((p) => decodeURIComponent(p))

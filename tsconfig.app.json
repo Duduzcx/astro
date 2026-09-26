@@ -22,5 +22,9 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "lib"]
+  /* O painel do CRM mostra a pré-visualização das mensagens do assistente, e
+     para isso importa os textos do motor. Só a pasta do motor entra aqui: o
+     resto de api/ é código de servidor, com Buffer e process, que não
+     compila com as bibliotecas do navegador. */
+  "include": ["src", "api/crm/_lib/bot"]
 }

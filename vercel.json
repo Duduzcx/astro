@@ -112,6 +112,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/crm/(.*)",
+      "destination": "/api/crm/rota?p=$1"
+    },
+    {
       "source": "/admin",
       "destination": "/admin.html"
     },

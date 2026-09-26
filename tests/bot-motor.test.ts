@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { processar } from '../lib/bot/motor.ts'
-import type { Agendamento, Clinica, Conversa, Deps, Paciente, Procedimento, Repo, Vaga } from '../lib/bot/tipos.ts'
+import { processar } from '../api/crm/_lib/bot/motor.ts'
+import type { Agendamento, Clinica, Conversa, Deps, Paciente, Procedimento, Repo, Vaga } from '../api/crm/_lib/bot/tipos.ts'
 
 /* O motor inteiro, sem rede: canal, repositório e agenda falsos. Cada teste
    conta uma conversa e confere o que saiu, o que foi gravado e a etapa em

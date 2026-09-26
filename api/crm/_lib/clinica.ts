@@ -1,5 +1,5 @@
-import type { Clinica, HorarioFuncionamento, TomDeVoz } from '../../../lib/bot/tipos.ts'
-import { CHAVES_TEXTO } from '../../../lib/bot/textos.ts'
+import type { Clinica, HorarioFuncionamento, TomDeVoz } from './bot/tipos.ts'
+import { CHAVES_TEXTO } from './bot/textos.ts'
 import { numeroOuNulo, textoCurto, textoLongo } from './http.ts'
 
 /** A linha de config_clinica como está no banco. */
