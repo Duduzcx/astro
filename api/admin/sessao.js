@@ -18,7 +18,8 @@ import {
   senhaForte,
   sessaoValida,
 } from '../_lib/auth.js'
-import { prepararBanco, sql, temBanco } from '../_lib/db.js'
+import { prepararBanco, sql, temBanco, diagnosticoBanco } from '../_lib/db.js'
+import { idDoNumero, tokenDaMeta } from '../whatsapp.js'
 
 export const config = { api: { bodyParser: false } }
 
@@ -101,11 +102,17 @@ async function registrar(de, sucesso) {
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
+    const dentro = sessaoValida(lerCookie(req, 'astro_sessao'))
+    /* O diagnóstico do banco só para quem já entrou: ele diz o nome da
+       variável lida e o endereço do servidor, que é informação de dentro.
+       E é uma consulta a mais — não vale correr para um visitante anônimo. */
+    const banco = dentro ? await diagnosticoBanco() : { ok: temBanco(), variavel: '', motivo: '' }
     return res.status(200).json({
-      dentro: sessaoValida(lerCookie(req, 'astro_sessao')),
+      dentro,
       configurado: Boolean(process.env.ADMIN_SENHA && process.env.ADMIN_SEGREDO),
-      banco: temBanco(),
-      whatsapp: Boolean(process.env.WHATSAPP_TOKEN && process.env.WHATSAPP_PHONE_ID),
+      banco: banco.ok,
+      bancoDetalhe: banco,
+      whatsapp: Boolean(tokenDaMeta() && idDoNumero()),
       avisoEquipe: Boolean(process.env.EQUIPE_WHATSAPP),
     })
   }

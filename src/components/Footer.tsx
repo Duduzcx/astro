@@ -121,12 +121,9 @@ export function Footer() {
         </div>
 
         <div className="border-t border-white/10">
-          <div className="shell flex flex-col gap-2 py-5 md:flex-row md:items-center md:justify-between">
+          <div className="shell py-5">
             <p className="text-[12px] font-[420] tracking-[0.01em] text-slate">
               © {year} {site.name} · CNPJ {site.cnpj} · {site.city}
-            </p>
-            <p className="text-[12px] font-[420] tracking-[0.01em] text-slate">
-              Texturas: Solar System Scope · Foguete: Clarence365 · CC BY 4.0
             </p>
           </div>
         </div>

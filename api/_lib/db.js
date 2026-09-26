@@ -17,10 +17,46 @@
  */
 import postgres from 'postgres'
 
-const url = process.env.POSTGRES_URL || process.env.DATABASE_URL || ''
+/**
+ * A cadeia de conexão, procurada em todos os nomes que os provedores usam.
+ * Cada um batiza a sua: a Vercel escreve POSTGRES_URL, a Supabase mostra
+ * como "Connection string" e sugere DATABASE_URL, a Neon dá DATABASE_URL, e
+ * quem copia do painel às vezes traz aspas ou `psql ` na frente. Aceitar
+ * tudo isso é a diferença entre "cadastrei e não funcionou" e funcionar.
+ */
+const NOMES = [
+  'POSTGRES_URL',
+  'DATABASE_URL',
+  'POSTGRES_URL_NON_POOLING',
+  'POSTGRES_PRISMA_URL',
+  'SUPABASE_DB_URL',
+  'NEON_DATABASE_URL',
+]
+
+function acharUrl() {
+  for (const nome of NOMES) {
+    const bruto = String(process.env[nome] || '').trim()
+    if (!bruto) continue
+    /* Tira aspas de quem colou com elas e o `psql ` que a Supabase põe na
+       frente do comando de exemplo. */
+    const limpo = bruto
+      .replace(/^psql\s+/i, '')
+      .replace(/^["']|["']$/g, '')
+      .trim()
+    if (/^postgres(ql)?:\/\//i.test(limpo)) return { url: limpo, nome }
+  }
+  return { url: '', nome: '' }
+}
+
+const { url, nome: nomeDaVariavel } = acharUrl()
 
 export function temBanco() {
   return Boolean(url)
+}
+
+/** De onde veio a cadeia de conexão, para o painel dizer o que leu. */
+export function fonteDoBanco() {
+  return nomeDaVariavel
 }
 
 let sqlCache = null
@@ -29,10 +65,17 @@ let sqlCache = null
 export function sql() {
   if (!url) throw new Error('POSTGRES_URL não configurada')
   if (!sqlCache) {
+    /* Pelo pooler em modo transação (a porta 6543 da Supabase, o pgbouncer
+       de qualquer provedor) uma instrução preparada some entre uma chamada
+       e outra: o driver a registra numa conexão e a executa em outra, e
+       vem "prepared statement does not exist" na segunda consulta. Fora do
+       pooler as preparadas valem a pena e ficam ligadas. */
+    const pelaPonte = /pooler\.|pgbouncer|:6543/i.test(url)
     sqlCache = postgres(url, {
       max: 1,
       idle_timeout: 20,
       connect_timeout: 10,
+      prepare: !pelaPonte,
       /* A maioria dos Postgres gerenciados exige TLS e usa certificado que o
          Node não conhece de fábrica. `require` cifra a conexão sem exigir a
          cadeia — é o que os provedores documentam para serverless. */
@@ -43,6 +86,38 @@ export function sql() {
     })
   }
   return sqlCache
+}
+
+/**
+ * O banco responde? Devolve o que o painel precisa mostrar quando alguém
+ * cadastra a variável e nada aparece: "cadastrada" não é "conectada", e o
+ * motivo de não conectar é quase sempre um destes quatro.
+ */
+export async function diagnosticoBanco() {
+  if (!url) return { ok: false, variavel: '', motivo: 'nenhuma cadeia de conexão cadastrada' }
+  let anfitriao = ''
+  try {
+    anfitriao = new URL(url).host
+  } catch {
+    return { ok: false, variavel: nomeDaVariavel, motivo: 'a cadeia de conexão não é uma URL válida' }
+  }
+  try {
+    await prepararBanco()
+    const [linha] = await sql()`SELECT count(*)::int AS leads FROM leads`
+    return { ok: true, variavel: nomeDaVariavel, anfitriao, leads: linha?.leads ?? 0 }
+  } catch (erro) {
+    const m = String(erro?.message || '')
+    const motivo = /password|SASL|autenti/i.test(m)
+      ? 'senha recusada — confira a senha dentro da cadeia de conexão'
+      : /ENOTFOUND|EAI_AGAIN|getaddrinfo/i.test(m)
+        ? 'endereço do banco não encontrado — confira o host'
+        : /ETIMEDOUT|timeout|ECONNREFUSED/i.test(m)
+          ? 'o banco não respondeu — confira a porta e se o projeto está ativo'
+          : /self.signed|certificate/i.test(m)
+            ? 'certificado recusado — acrescente ?sslmode=require ao fim da cadeia'
+            : m.slice(0, 160) || 'falha desconhecida'
+    return { ok: false, variavel: nomeDaVariavel, anfitriao, motivo }
+  }
 }
 
 /**

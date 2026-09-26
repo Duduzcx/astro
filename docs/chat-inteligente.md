@@ -59,6 +59,13 @@ escuro atrás e fechamento por toque fora, botão ou tecla Esc.
 Medido no desktop e no celular depois da mudança: nenhum erro de console, a
 gaveta em `position: fixed`, `z-index` 71 e desfoque ativo.
 
+## O cérebro, compartilhado
+
+A instrução mestre, a escolha do modelo, o teto de gasto e o caminho de fuga
+moram em `api/_lib/inteligencia.js`. O chat do site e o robô do WhatsApp
+usam exatamente o mesmo: editar a instrução no painel muda os dois, e o teto
+diário conta as respostas dos dois juntos.
+
 ## A ponte: `/api/bot`
 
 Recebe `{ mensagem, historico }` e devolve `{ modo: 'ia', resposta }` ou

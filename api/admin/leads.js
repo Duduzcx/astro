@@ -13,6 +13,7 @@ import { exigirSessao } from '../_lib/auth.js'
 import {
   apagarLead,
   atualizarLead,
+  lerLead,
   listarAtividades,
   listarLeads,
   registrarAtividade,
@@ -47,7 +48,11 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       /* Com ?lead=NN devolve o histórico daquele lead; sem, devolve a lista. */
       if (req.query.lead) {
-        return res.status(200).json({ atividades: await listarAtividades(req.query.lead) })
+        /* O lead vem junto do histórico, e não só as atividades: enquanto a
+           gaveta está aberta, o robô pode ter respondido no WhatsApp, e a
+           conversa da lista já estaria velha. */
+        const [atividades, lead] = await Promise.all([listarAtividades(req.query.lead), lerLead(req.query.lead)])
+        return res.status(200).json({ atividades, lead })
       }
       const leads = await listarLeads({ situacao: req.query.situacao, busca: req.query.busca })
       return res.status(200).json({ leads })

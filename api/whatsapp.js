@@ -1,10 +1,27 @@
 /**
- * Atendente automático do WhatsApp.
+ * Atendente do WhatsApp — Cloud API oficial da Meta.
  *
- * É um webhook da WhatsApp Cloud API (Meta). A Vercel transforma qualquer
- * arquivo em /api numa função sem servidor, então este arquivo responde em
+ * É um webhook: a Vercel transforma qualquer arquivo em /api numa função sem
+ * servidor, então este arquivo responde em
  * https://astrosolucoes.vercel.app/api/whatsapp — é este endereço que se
  * cadastra no painel da Meta.
+ *
+ *   GET   a Meta chama uma vez para provar que o endereço é seu
+ *   POST   cada mensagem que chega ao número da empresa
+ *
+ * O QUE ACONTECE QUANDO CHEGA UMA MENSAGEM
+ *
+ *   1. A assinatura da Meta é conferida (HMAC com o segredo do aplicativo).
+ *      Sem isso, quem descobrir o endereço fala em nome da empresa.
+ *   2. A mensagem é guardada na conversa do lead daquele número — criando o
+ *      lead, se for a primeira vez. É esse histórico que o painel mostra.
+ *   3. Com inteligência configurada e o bot ligado no painel, o histórico
+ *      inteiro vai para o modelo junto com a instrução mestre (a mesma do
+ *      chat do site, editável no painel, que proíbe inventar preço e prazo)
+ *      e a resposta volta pelo mesmo número.
+ *   4. Sem chave, sem banco ou com o teto do dia batido, responde o roteiro
+ *      de menu — que atende bem e não custa nada. Nunca deixa ninguém sem
+ *      resposta.
  *
  * ANTES DE LIGAR, LEIA. O número usado na Cloud API SAI do aplicativo comum
  * do WhatsApp e passa a ser atendido só por API. Se o (11) 92157-2675 é o
@@ -15,23 +32,30 @@
  * Variáveis de ambiente (painel da Vercel, Settings > Environment Variables):
  *   WHATSAPP_VERIFY_TOKEN  senha inventada por você; a Meta a devolve na
  *                          verificação do webhook e ela só serve para provar
- *                          que o endereço é seu.
+ *                          que o endereço é seu. Alias: WEBHOOK_VERIFY_TOKEN.
  *   WHATSAPP_TOKEN         token permanente do usuário do sistema, com a
  *                          permissão whatsapp_business_messaging.
  *   WHATSAPP_PHONE_ID      id do número remetente (Phone number ID), não o
- *                          número em si.
- *   WHATSAPP_APP_SECRET    segredo do aplicativo da Meta. Sem ele, quem
- *                          descobrir o endereço fala em nome do robô: a
- *                          assinatura de cada requisição é conferida com ele.
+ *                          número em si. Alias: PHONE_NUMBER_ID.
+ *   WHATSAPP_APP_SECRET    segredo do aplicativo da Meta. Sem ele, nenhuma
+ *                          mensagem é aceita: a assinatura é conferida com
+ *                          ele.
+ *   ANTHROPIC_API_KEY ou OPENAI_API_KEY   ligam a inteligência (opcional).
  *
- * Sem estado, de propósito. Uma função sem servidor morre entre uma chamada e
- * outra, então não existe "em que passo a conversa está": cada mensagem é
- * lida por inteiro e respondida por si. É menos esperto e nunca prende
- * ninguém num menu.
+ * Os apelidos existem porque o painel da Meta chama esses campos de "Phone
+ * number ID" e "Verify token": quem copia de lá acerta de qualquer jeito.
  */
 import crypto from 'node:crypto'
-import { criarLead, temBanco } from './_lib/leads.js'
+import { acharLeadPorContato, acrescentarFala, criarLead, temBanco, texto as limparTexto } from './_lib/leads.js'
 import { botAtivo, lerConfig } from './_lib/config.js'
+import {
+  conversaParaMensagens,
+  dentroDoTeto,
+  instrucaoAtual,
+  limpar,
+  responderComIA,
+  temInteligencia,
+} from './_lib/inteligencia.js'
 import { registrarLog } from './_lib/logs.js'
 import { TEXTOS_PADRAO } from './_lib/whatsapp-textos.js'
 
@@ -40,6 +64,10 @@ import { TEXTOS_PADRAO } from './_lib/whatsapp-textos.js'
 export const config = { api: { bodyParser: false } }
 
 const GRAPH = 'https://graph.facebook.com/v21.0'
+
+export const tokenDaMeta = () => process.env.WHATSAPP_TOKEN || ''
+export const idDoNumero = () => process.env.WHATSAPP_PHONE_ID || process.env.PHONE_NUMBER_ID || ''
+export const tokenDeVerificacao = () => process.env.WHATSAPP_VERIFY_TOKEN || process.env.WEBHOOK_VERIFY_TOKEN || ''
 
 /** Tira acento e caixa, para "diagnostico" e "Diagnóstico" caírem no mesmo lugar. */
 function simplificar(texto) {
@@ -52,7 +80,8 @@ function simplificar(texto) {
 
 /**
  * Descobre a intenção da mensagem. Devolve 1..4, 'saudacao' ou null.
- * Exportada para o teste: é o cérebro do robô e a única parte que se pode
+ * Exportada para o teste: é o cérebro do ROTEIRO, o caminho que atende
+ * quando não há inteligência configurada, e a única parte que se pode
  * verificar sem falar com a Meta.
  */
 export function entender(texto) {
@@ -60,18 +89,22 @@ export function entender(texto) {
   const numero = t.match(/^([1-4])\b/)
   if (numero) return Number(numero[1])
   if (/(agendar|diagnostico|reuniao|conversar|horario|marcar)/.test(t)) return 1
-  if (/(servico|fazem|portfolio|projeto|site|sistema|automacao|integracao)/.test(t)) return 2
+  /* Preço antes de serviço, e a ordem importa: "quanto custa um sistema?"
+     casa com as duas listas, e quem pergunta isso quer o preço, não o
+     catálogo. O contrário não acontece — "vocês fazem sistema?" não tem
+     nenhuma palavra de preço. */
   if (/(preco|valor|quanto custa|orcamento|investimento|prazo|quanto tempo)/.test(t)) return 3
+  if (/(servico|fazem|portfolio|projeto|site|sistema|automacao|integracao)/.test(t)) return 2
   if (/(humano|pessoa|atendente|falar com alguem|suporte)/.test(t)) return 4
   if (/^(oi|ola|bom dia|boa tarde|boa noite|menu|inicio|comecar)\b/.test(t)) return 'saudacao'
   return null
 }
 
 async function responder(para, texto) {
-  const resposta = await fetch(`${GRAPH}/${process.env.WHATSAPP_PHONE_ID}/messages`, {
+  const resposta = await fetch(`${GRAPH}/${idDoNumero()}/messages`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+      Authorization: `Bearer ${tokenDaMeta()}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -87,6 +120,7 @@ async function responder(para, texto) {
        número inválido. */
     console.error('WhatsApp recusou o envio:', resposta.status, await resposta.text())
   }
+  return resposta.ok
 }
 
 function corpoCru(req) {
@@ -112,13 +146,52 @@ function assinaturaConfere(req, cru) {
   return a.length === b.length && crypto.timingSafeEqual(a, b)
 }
 
+/**
+ * O lead daquele número, criado se for a primeira mensagem. É a linha que o
+ * painel mostra no funil, e é nela que a conversa inteira fica guardada.
+ */
+async function leadDoNumero(telefone, nomeExibido, primeiraMensagem) {
+  const existente = await acharLeadPorContato(telefone)
+  if (existente) return existente
+  return criarLead({
+    nome: nomeExibido || '',
+    contato: telefone,
+    canal: 'whatsapp',
+    necessidade: 'A definir',
+    resumo: primeiraMensagem,
+    conversa: [],
+  })
+}
+
+/**
+ * O que o modelo precisa saber além da instrução mestre: que está no
+ * WhatsApp, e o que a empresa já sabe deste contato. Nada aqui é inventado —
+ * são os campos do próprio lead.
+ */
+function contextoDoCanal(lead) {
+  const sabido = [
+    lead?.nome ? `Nome informado: ${lead.nome}` : '',
+    lead?.empresa ? `Empresa: ${lead.empresa}` : '',
+    lead?.necessidade && lead.necessidade !== 'A definir' ? `Precisa de: ${lead.necessidade}` : '',
+    lead?.urgencia ? `Prazo: ${lead.urgencia}` : '',
+    lead?.orcamento ? `Investimento previsto: ${lead.orcamento}` : '',
+  ].filter(Boolean)
+  return [
+    '',
+    'CANAL: WhatsApp. Escreva como se escreve no WhatsApp — frases curtas, sem formatação pesada, sem listas longas.',
+    'A pessoa já está falando com a empresa: não se apresente de novo a cada mensagem.',
+    sabido.length ? 'O que a equipe já sabe deste contato:\n' + sabido.map((l) => `- ${l}`).join('\n') : 'Ainda não sabemos nada sobre este contato.',
+  ].join('\n')
+}
+
 export default async function handler(req, res) {
   /* A Meta chama com GET uma vez, para provar que o endereço é seu. */
   if (req.method === 'GET') {
     const modo = req.query['hub.mode']
     const token = req.query['hub.verify_token']
     const desafio = req.query['hub.challenge']
-    if (modo === 'subscribe' && token && token === process.env.WHATSAPP_VERIFY_TOKEN) {
+    const esperado = tokenDeVerificacao()
+    if (modo === 'subscribe' && esperado && token === esperado) {
       return res.status(200).send(desafio)
     }
     return res.status(403).send('verificacao recusada')
@@ -158,44 +231,64 @@ export default async function handler(req, res) {
     for (const mensagem of mensagens) {
       const de = mensagem.from
       if (!de) continue
-      const texto =
+      const texto = limpar(
         mensagem.text?.body ||
-        mensagem.interactive?.button_reply?.title ||
-        mensagem.interactive?.list_reply?.title ||
-        ''
-      const intencao = entender(texto)
+          mensagem.interactive?.button_reply?.title ||
+          mensagem.interactive?.list_reply?.title ||
+          '',
+        1500,
+      )
+      const nomeExibido = limparTexto(mudanca?.value?.contacts?.[0]?.profile?.name, 120)
 
-      /* O que vale como lead: quem pediu para agendar e quem escreveu algo
-         que o robô não entendeu (aí um humano vai atender de qualquer forma).
-         Cumprimento e curiosidade sobre preço não viram lead — encheriam o
-         painel de linha vazia e esconderiam quem interessa.
-         Falhar aqui nunca pode calar o robô: a pessoa do outro lado está
-         esperando resposta. */
-      if (temBanco() && (intencao === 1 || intencao === null)) {
-        criarLead({
-          nome: mudanca?.value?.contacts?.[0]?.profile?.name || '',
-          contato: de,
-          canal: 'whatsapp',
-          necessidade: intencao === 1 ? 'Agendar diagnóstico' : 'A definir',
-          resumo: texto,
-          conversa: [{ de: 'pessoa', texto }],
-        }).catch((erro) => console.error('lead do WhatsApp não foi guardado:', erro?.message))
+      /* O histórico vive no lead. Sem banco não há histórico: a conversa
+         segue pelo roteiro, que não depende de memória nenhuma. */
+      let lead = null
+      let conversa = []
+      if (temBanco()) {
+        try {
+          lead = await leadDoNumero(de, nomeExibido, texto)
+          conversa = await acrescentarFala(lead.id, { de: 'pessoa', texto })
+        } catch (erro) {
+          console.error('não foi possível guardar a mensagem recebida:', erro?.message)
+        }
       }
 
-      let modo
-      let resposta
-      if (intencao === 'saudacao' || !texto) {
-        modo = 'menu'
-        resposta = `${textos.boasVindas}\n\n${textos.menu}`
-      } else if (typeof intencao === 'number') {
-        modo = `opcao${intencao}`
-        resposta = RESPOSTAS[intencao]
-      } else {
-        /* Não entendeu: nunca insistir. Avisa que um humano vai ler e mostra
-           o menu uma vez, para quem preferir o atalho. */
-        modo = 'humano'
-        resposta = `${textos.naoEntendi}\n\n${textos.menu}`
+      let modo = ''
+      let resposta = ''
+
+      if (ativo && texto && temInteligencia() && (await dentroDoTeto())) {
+        try {
+          const instrucao = (await instrucaoAtual()) + contextoDoCanal(lead)
+          /* A última fala já está na conversa; o histórico inteiro vai, e é
+             isso que faz o robô lembrar do que foi dito antes. */
+          const mensagensParaIA = conversa.length
+            ? conversaParaMensagens(conversa)
+            : [{ role: 'user', content: texto }]
+          resposta = await responderComIA(instrucao, mensagensParaIA)
+          if (resposta) modo = 'ia'
+        } catch (erro) {
+          /* Chave vencida, cota estourada, modelo fora do ar: cai para o
+             roteiro, que é o que sempre funcionou. */
+          console.error('inteligência falhou no WhatsApp:', erro?.message)
+        }
       }
+
+      if (!resposta) {
+        const intencao = entender(texto)
+        if (intencao === 'saudacao' || !texto) {
+          modo = 'menu'
+          resposta = `${textos.boasVindas}\n\n${textos.menu}`
+        } else if (typeof intencao === 'number') {
+          modo = `opcao${intencao}`
+          resposta = RESPOSTAS[intencao]
+        } else {
+          /* Não entendeu: nunca insistir. Avisa que um humano vai ler e mostra
+             o menu uma vez, para quem preferir o atalho. */
+          modo = 'humano'
+          resposta = `${textos.naoEntendi}\n\n${textos.menu}`
+        }
+      }
+
       /* O diário do painel. Registrar nunca segura a resposta. */
       void registrarLog({
         canal: 'whatsapp',
@@ -204,7 +297,12 @@ export default async function handler(req, res) {
         saida: ativo ? resposta : '',
         modo: ativo ? modo : 'silencio',
       })
-      if (ativo) await responder(de, resposta)
+
+      if (!ativo) continue
+      const foi = await responder(de, resposta)
+      if (foi && lead) {
+        await acrescentarFala(lead.id, { de: 'robo', texto: resposta }).catch(() => undefined)
+      }
     }
   }
 }

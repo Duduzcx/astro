@@ -22,6 +22,9 @@ test('entende o pedido escrito, com ou sem acento', () => {
   assert.equal(entender('qual o prazo'), 3)
   assert.equal(entender('quero falar com uma pessoa'), 4)
   assert.equal(entender('vocês fazem sistema?'), 2)
+  /* Pergunta que casa com as duas listas: quem quer saber o preço de um
+     sistema recebe o preço, não o catálogo de serviços. */
+  assert.equal(entender('quanto custa um sistema?'), 3)
 })
 
 test('cumprimento abre o menu', () => {

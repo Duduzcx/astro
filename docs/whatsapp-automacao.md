@@ -63,6 +63,40 @@ Outras coisas que valem saber antes:
 - **Verificação.** A conta comercial precisa ser verificada pela Meta. Isso
   leva dias, não minutos, e pede documento da empresa.
 
+### As variáveis, uma a uma
+
+| Variável | Onde achar no painel da Meta | Apelido aceito |
+| --- | --- | --- |
+| `WHATSAPP_TOKEN` | WhatsApp → API Setup → token do usuário do sistema, com a permissão `whatsapp_business_messaging` | — |
+| `WHATSAPP_PHONE_ID` | WhatsApp → API Setup → **Phone number ID** (o número comprido, não o telefone) | `PHONE_NUMBER_ID` |
+| `WHATSAPP_VERIFY_TOKEN` | você inventa; é o mesmo valor que se digita em *Verify token* ao cadastrar o webhook | `WEBHOOK_VERIFY_TOKEN` |
+| `WHATSAPP_APP_SECRET` | Configurações do app → Básico → **Chave secreta do app** | — |
+| `ANTHROPIC_API_KEY` **ou** `OPENAI_API_KEY` | opcional: liga a inteligência. Sem ela o robô responde pelo menu | — |
+| `EQUIPE_WHATSAPP` | opcional: número que recebe o aviso de lead novo | — |
+
+Os apelidos existem porque o painel da Meta chama esses campos de *Phone
+number ID* e *Verify token*: quem copia de lá acerta de qualquer jeito.
+
+O endereço do webhook é **`https://astrosolucoes.vercel.app/api/whatsapp`**,
+com os campos `messages` assinados.
+
+### O cérebro: o que acontece quando chega uma mensagem
+
+1. A assinatura da Meta é conferida (HMAC com a chave secreta do app). Sem
+   ela, nada é aceito: quem descobrisse o endereço falaria pela empresa.
+2. A mensagem entra na conversa do **lead daquele número** — criando o lead,
+   se for a primeira vez. É esse histórico que a gaveta do painel mostra.
+3. Com inteligência configurada e o bot ligado, o histórico inteiro vai para
+   o modelo junto com a **instrução mestre** (a mesma do chat do site,
+   editável no painel, que proíbe inventar preço e prazo) mais o que a
+   empresa já sabe do contato. A resposta volta pelo mesmo número e também é
+   guardada na conversa.
+4. Sem chave, sem banco, com o teto do dia batido ou com o modelo fora do
+   ar, responde o **roteiro de menu**. Ninguém fica sem resposta.
+
+O teto diário (`BOT_TETO_DIARIO`, padrão 300) vale para os dois canais
+juntos: o endereço é público e cada resposta custa dinheiro.
+
 ### Passo a passo
 
 1. **Meta for Developers** (developers.facebook.com) → criar um aplicativo do

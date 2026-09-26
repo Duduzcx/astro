@@ -19,17 +19,39 @@ isso em amarelo, bem grande. Nunca fingimos ter recebido.
 
 ## 1. Ligar o banco (10 minutos)
 
-Serve qualquer Postgres. O mais rápido é o da própria Vercel:
+O painel guarda os leads num Postgres qualquer, pela **cadeia de conexão**
+(a URI que começa com `postgresql://`). Três caminhos, todos gratuitos:
 
-1. No painel da Vercel, aba **Storage** → **Create Database** → **Postgres**.
-2. Conecte ao projeto. A Vercel cria a variável `POSTGRES_URL` sozinha.
-3. **Republique** o site. Variável nova só entra num deploy novo.
+- **Vercel**: aba **Storage** → **Create Database** → **Postgres**. Conecte
+  ao projeto e a `POSTGRES_URL` aparece sozinha.
+- **Supabase** (é o que a Astro já usa no módulo das clínicas): projeto →
+  **Connect** → **Connection string** → aba **Transaction pooler**. Troque
+  `[YOUR-PASSWORD]` pela senha do banco e cole o resultado inteiro.
+- **Neon**, ou um servidor seu: copie a cadeia que o painel mostra.
 
-Outras opções servem igual: Neon, Supabase ou um servidor seu. Copie a string
-de conexão para uma variável chamada `POSTGRES_URL` (ou `DATABASE_URL`).
+Cole em **uma** variável na Vercel e republique — variável nova só entra num
+deploy novo:
+
+| Variável | Quando usar |
+| --- | --- |
+| `POSTGRES_URL` | o nome preferido; use este se estiver em dúvida |
+| `DATABASE_URL` | aceito igual, é o nome que a Neon e a Supabase sugerem |
+| `SUPABASE_DB_URL`, `POSTGRES_URL_NON_POOLING`, `POSTGRES_PRISMA_URL`, `NEON_DATABASE_URL` | aceitos, para quem já tem o nome cadastrado |
+
+Colar com aspas, ou com o `psql ` que a Supabase põe na frente do exemplo,
+não quebra nada: a rota limpa os dois. Pelo pooler (a porta 6543, ou um host
+com `pooler.` no nome) as instruções preparadas são desligadas sozinhas —
+sem isso, a segunda consulta de cada chamada falharia com *prepared
+statement does not exist*.
 
 As tabelas se criam sozinhas na primeira chamada. Não há passo de migração
 para esquecer.
+
+**Se o aviso amarelo continuar**, ele agora diz o motivo: qual variável foi
+lida, de qual servidor, e o que o banco respondeu (senha recusada, host não
+encontrado, sem resposta, certificado). É o diagnóstico que a rota
+`/api/admin/sessao` faz de verdade, tentando conectar — não um "tem variável
+cadastrada".
 
 ## 2. Abrir o painel
 
@@ -90,7 +112,8 @@ e no teclado. *Perdido* é saída lateral, não a etapa depois de *Fechado*:
 avançar de um negócio ganho nunca o marca como perdido. (No banco as etapas
 continuam `novo`, `contatado`, `proposta`, `fechado` e `perdido`.)
 
-**Leads** — a lista completa. Cada um abre com:
+**Leads** — a lista completa. Clicar em *Detalhes*, aqui ou num cartão do
+funil, abre a **gaveta** do lead pela direita (Esc fecha). Dentro dela:
 
 - **Retornar em** — a data do próximo contato. Quem passou da data aparece
   destacado em amarelo, entra no contador *Retornos vencidos* no topo e pode
@@ -100,7 +123,10 @@ continuam `novo`, `contatado`, `proposta`, `fechado` e `perdido`.)
 - **Valor do negócio**, que alimenta a receita fechada.
 - **Histórico** — cada ligação, proposta ou conversa registrada com data. É
   isto que separa um CRM de uma lista de contatos.
-- **A conversa** que trouxe o lead, inteira, do chat ou do WhatsApp.
+- **A conversa com o robô**, inteira, em balões: o que a pessoa escreveu e
+  o que o robô respondeu, pelo chat do site ou pelo WhatsApp. Enquanto a
+  gaveta está aberta ela se atualiza a cada oito segundos, então dá para
+  acompanhar um atendimento acontecendo. Ficam as últimas 120 falas.
 
 **Automação WhatsApp** — quatro coisas:
 

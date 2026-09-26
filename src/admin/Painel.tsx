@@ -63,6 +63,10 @@ type Estado = {
   dentro: boolean
   configurado: boolean
   banco: boolean
+  /* O que o servidor leu ao tentar conectar: qual variável valeu, de que
+     servidor, e o motivo de não ter conectado. "Cadastrei e não funcionou"
+     precisa de uma resposta, não de um aviso genérico. */
+  bancoDetalhe?: { ok: boolean; variavel: string; anfitriao?: string; motivo?: string; leads?: number }
   whatsapp: boolean
   avisoEquipe: boolean
 }
@@ -353,40 +357,14 @@ function Numeros({ resumo }: { resumo: Resumo }) {
 function Cartao({
   lead,
   aoMudar,
+  aoAbrir,
   compacto = false,
 }: {
   lead: Lead
   aoMudar: (campos: Partial<Lead>) => void
+  aoAbrir: () => void
   compacto?: boolean
 }) {
-  const [aberto, setAberto] = useState(false)
-  const [anotacoes, setAnotacoes] = useState(lead.anotacoes)
-  const [valor, setValor] = useState(String(lead.valor_centavos / 100 || ''))
-  const [atividades, setAtividades] = useState<Atividade[] | null>(null)
-  const [nova, setNova] = useState('')
-
-  useEffect(() => {
-    if (!aberto || atividades) return
-    pedir(`/api/admin/leads?lead=${lead.id}`)
-      .then((r) => setAtividades(r.atividades))
-      .catch(() => setAtividades([]))
-  }, [aberto, atividades, lead.id])
-
-  async function registrar() {
-    const texto = nova.trim()
-    if (!texto) return
-    setNova('')
-    try {
-      const { atividade } = await pedir('/api/admin/leads', {
-        method: 'POST',
-        body: JSON.stringify({ id: lead.id, texto }),
-      })
-      setAtividades((atuais) => [atividade, ...(atuais || [])])
-    } catch {
-      setNova(texto)
-    }
-  }
-
   const passo = TRILHA.indexOf(lead.situacao)
   const anterior = lead.situacao === 'perdido' ? 'contatado' : passo > 0 ? TRILHA[passo - 1] : null
   const proximo = passo >= 0 && passo < TRILHA.length - 1 ? TRILHA[passo + 1] : null
@@ -494,130 +472,262 @@ function Cartao({
         )}
         <button
           type="button"
-          onClick={() => setAberto((v) => !v)}
+          onClick={aoAbrir}
           className="ml-auto text-[12px] text-slate underline underline-offset-4 hover:text-ivory"
         >
-          {aberto ? 'Fechar' : 'Detalhes'}
+          Detalhes
         </button>
       </div>
 
-      {aberto ? (
-        <div className="mt-4 border-t border-white/8 pt-4">
+    </li>
+  )
+}
+
+/**
+ * A gaveta do lead: tudo o que se sabe de uma pessoa, inclusive a CONVERSA
+ * de verdade que ela teve com o robô — pelo chat do site ou pelo WhatsApp.
+ *
+ * Ela recarrega sozinha a cada oito segundos enquanto está aberta, porque o
+ * robô pode estar respondendo neste instante do outro lado; e recarrega o
+ * lead inteiro, não só o histórico, pelo mesmo motivo. Antes isto era um
+ * bloco que se abria dentro do cartão: num cartão de coluna do funil, com
+ * 250 pixels de largura, a conversa ficava ilegível.
+ */
+function Gaveta({ id, deLista, aoMudar, aoFechar }: { id: number; deLista: Lead | null; aoMudar: (campos: Partial<Lead>) => void; aoFechar: () => void }) {
+  const [lead, setLead] = useState<Lead | null>(deLista)
+  const [atividades, setAtividades] = useState<Atividade[] | null>(null)
+  const [nova, setNova] = useState('')
+  const [anotacoes, setAnotacoes] = useState(deLista?.anotacoes ?? '')
+  const [valor, setValor] = useState(String((deLista?.valor_centavos ?? 0) / 100 || ''))
+  const [erro, setErro] = useState('')
+  const exemplo = id < 0
+
+  const buscar = useCallback(() => {
+    if (exemplo) return
+    pedir(`/api/admin/leads?lead=${id}`)
+      .then((r) => {
+        setAtividades(r.atividades)
+        if (r.lead) setLead(r.lead)
+      })
+      .catch((falha) => setErro(falha instanceof Error ? falha.message : 'falhou'))
+  }, [id, exemplo])
+
+  useEffect(() => {
+    buscar()
+    if (exemplo) return
+    /* Oito segundos: rápido o bastante para a equipe ver a conversa andando
+       enquanto o robô atende, devagar o bastante para não pesar. */
+    const relogio = window.setInterval(buscar, 8000)
+    return () => window.clearInterval(relogio)
+  }, [buscar, exemplo])
+
+  useEffect(() => {
+    const aoTeclar = (evento: KeyboardEvent) => evento.key === 'Escape' && aoFechar()
+    window.addEventListener('keydown', aoTeclar)
+    return () => window.removeEventListener('keydown', aoTeclar)
+  }, [aoFechar])
+
+  async function registrar() {
+    const texto = nova.trim()
+    if (!texto || exemplo) return
+    setNova('')
+    try {
+      const { atividade } = await pedir('/api/admin/leads', {
+        method: 'POST',
+        body: JSON.stringify({ id, texto }),
+      })
+      setAtividades((atuais) => [atividade, ...(atuais || [])])
+    } catch {
+      setNova(texto)
+    }
+  }
+
+  const mudar = (campos: Partial<Lead>) => {
+    if (exemplo) return
+    setLead((atual) => (atual ? { ...atual, ...campos } : atual))
+    aoMudar(campos)
+  }
+
+  if (!lead) return null
+  const conversa = lead.conversa || []
+
+  return (
+    <>
+      <button type="button" aria-label="Fechar" onClick={aoFechar} className="fixed inset-0 z-[80] cursor-default bg-onyx/65 backdrop-blur-[2px]" />
+      <aside
+        role="dialog"
+        aria-label={`Detalhes de ${lead.nome || 'lead'}`}
+        className="fixed top-0 right-0 bottom-0 z-[81] flex w-full max-w-[560px] flex-col overflow-y-auto border-l border-white/10 bg-graphite"
+      >
+        <header className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-white/8 bg-graphite/95 px-5 py-4 backdrop-blur">
+          <div>
+            <p className="text-[1.15rem] text-ivory">{lead.nome || 'Sem nome'}</p>
+            <p className="mt-1 text-[13px] text-slate">
+              {[lead.empresa, lead.contato].filter(Boolean).join(' · ') || 'sem contato'}
+            </p>
+            <p className="mt-1 text-[11px] text-slate uppercase">
+              {lead.canal} · entrou em {quando(lead.criado_em)}
+            </p>
+          </div>
+          <button type="button" onClick={aoFechar} className="rounded-full border border-white/12 px-3 py-1 text-[12px] text-ash hover:text-ivory">
+            Fechar
+          </button>
+        </header>
+
+        <div className="flex flex-col gap-5 px-5 py-5">
+          {erro ? <p className="text-[13px] text-[#ff9b9b]">{erro}</p> : null}
+
+          <div className="flex flex-wrap items-center gap-2">
+            {SITUACOES.map((situacao) => (
+              <button
+                key={situacao}
+                type="button"
+                onClick={() => mudar({ situacao })}
+                className={`rounded-full border px-3 py-1 text-[12px] transition-colors ${
+                  lead.situacao === situacao ? CORES[situacao] : 'border-white/10 text-slate hover:text-ivory'
+                }`}
+              >
+                {ROTULOS_SITUACAO[situacao]}
+              </button>
+            ))}
+          </div>
+
+          <dl className="grid gap-3 text-[13px] sm:grid-cols-3">
+            {[
+              ['Precisa de', lead.necessidade],
+              ['Prazo', lead.urgencia],
+              ['Investimento', lead.orcamento],
+            ].map(([rotulo, valorTexto]) => (
+              <div key={rotulo}>
+                <dt className="label-voice text-[9px]">{rotulo}</dt>
+                <dd className="mt-1 text-ash">{valorTexto || '—'}</dd>
+              </div>
+            ))}
+          </dl>
+
+          {lead.resumo ? <p className="text-[13px] leading-[1.5] text-ash">{lead.resumo}</p> : null}
+
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
-              <label className="label-voice text-[9px]" htmlFor={`retorno-${lead.id}`}>
+              <label className="label-voice text-[9px]" htmlFor={`g-retorno-${id}`}>
                 Retornar em
               </label>
               <input
-                id={`retorno-${lead.id}`}
+                id={`g-retorno-${id}`}
                 type="date"
                 defaultValue={lead.retorno_em || ''}
-                onChange={(evento) => aoMudar({ retorno_em: evento.target.value })}
+                onChange={(evento) => mudar({ retorno_em: evento.target.value })}
                 className="mt-2 w-full rounded-xl bg-obsidian px-3 py-2 text-[13px] text-ivory outline-none focus:shadow-[inset_0_0_0_1px_#4d84e0]"
               />
             </div>
             <div>
-              <label className="label-voice text-[9px]" htmlFor={`dono-${lead.id}`}>
+              <label className="label-voice text-[9px]" htmlFor={`g-dono-${id}`}>
                 Responsável
               </label>
               <input
-                id={`dono-${lead.id}`}
+                id={`g-dono-${id}`}
                 defaultValue={lead.responsavel}
-                onBlur={(evento) =>
-                  evento.target.value !== lead.responsavel && aoMudar({ responsavel: evento.target.value })
-                }
+                onBlur={(evento) => evento.target.value !== lead.responsavel && mudar({ responsavel: evento.target.value })}
                 placeholder="quem cuida"
                 className="mt-2 w-full rounded-xl bg-obsidian px-3 py-2 text-[13px] text-ivory outline-none placeholder:text-slate focus:shadow-[inset_0_0_0_1px_#4d84e0]"
               />
             </div>
             <div>
-              <label className="label-voice text-[9px]" htmlFor={`valor-${lead.id}`}>
+              <label className="label-voice text-[9px]" htmlFor={`g-valor-${id}`}>
                 Valor (R$)
               </label>
-              <div className="mt-2 flex gap-2">
-                <input
-                  id={`valor-${lead.id}`}
-                  inputMode="numeric"
-                  value={valor}
-                  onChange={(evento) => setValor(evento.target.value.replace(/[^\d]/g, ''))}
-                  onBlur={() => aoMudar({ valor_centavos: Number(valor || 0) * 100 })}
-                  className="w-full rounded-xl bg-obsidian px-3 py-2 text-[13px] text-ivory outline-none focus:shadow-[inset_0_0_0_1px_#4d84e0]"
-                />
-              </div>
+              <input
+                id={`g-valor-${id}`}
+                inputMode="numeric"
+                value={valor}
+                onChange={(evento) => setValor(evento.target.value.replace(/[^\d]/g, ''))}
+                onBlur={() => mudar({ valor_centavos: Number(valor || 0) * 100 })}
+                className="mt-2 w-full rounded-xl bg-obsidian px-3 py-2 text-[13px] text-ivory outline-none focus:shadow-[inset_0_0_0_1px_#4d84e0]"
+              />
             </div>
           </div>
 
-          <label className="label-voice mt-5 block text-[9px]" htmlFor={`nota-${lead.id}`}>
-            Anotações fixas
-          </label>
-          <textarea
-            id={`nota-${lead.id}`}
-            rows={2}
-            value={anotacoes}
-            onChange={(evento) => setAnotacoes(evento.target.value)}
-            onBlur={() => anotacoes !== lead.anotacoes && aoMudar({ anotacoes })}
-            className="mt-2 w-full resize-none rounded-xl bg-obsidian px-3 py-2 text-[14px] text-ivory outline-none focus:shadow-[inset_0_0_0_1px_#4d84e0]"
-          />
-
-          <p className="label-voice mt-5 text-[9px]">Histórico</p>
-          <form
-            onSubmit={(evento) => {
-              evento.preventDefault()
-              void registrar()
-            }}
-            className="mt-2 flex gap-2"
-          >
-            <label className="sr-only" htmlFor={`atividade-${lead.id}`}>
-              Registrar contato
+          <div>
+            <label className="label-voice text-[9px]" htmlFor={`g-nota-${id}`}>
+              Anotações fixas
             </label>
-            <input
-              id={`atividade-${lead.id}`}
-              value={nova}
-              onChange={(evento) => setNova(evento.target.value)}
-              placeholder="Liguei, mandei proposta…"
-              className="w-full rounded-xl bg-obsidian px-3 py-2 text-[13px] text-ivory outline-none placeholder:text-slate focus:shadow-[inset_0_0_0_1px_#4d84e0]"
+            <textarea
+              id={`g-nota-${id}`}
+              rows={2}
+              value={anotacoes}
+              onChange={(evento) => setAnotacoes(evento.target.value)}
+              onBlur={() => anotacoes !== lead.anotacoes && mudar({ anotacoes })}
+              className="mt-2 w-full resize-none rounded-xl bg-obsidian px-3 py-2 text-[14px] text-ivory outline-none focus:shadow-[inset_0_0_0_1px_#4d84e0]"
             />
-            <button
-              type="submit"
-              className="shrink-0 rounded-xl bg-obsidian px-4 py-2 text-[13px] text-ivory hover:bg-[#1e2c4c]"
-            >
-              Registrar
-            </button>
-          </form>
-          {atividades === null ? (
-            <p className="mt-3 text-[12px] text-slate">Carregando…</p>
-          ) : atividades.length === 0 ? (
-            <p className="mt-3 text-[12px] text-slate">Nada registrado ainda.</p>
-          ) : (
-            <ul className="mt-3 flex flex-col gap-1.5">
-              {atividades.map((a) => (
-                <li key={a.id} className="text-[12px] text-ash">
-                  <span className="text-slate">{quando(a.quando)}</span> · {a.texto}
-                </li>
-              ))}
-            </ul>
-          )}
+          </div>
 
-          {lead.conversa?.length ? (
-            <>
-              <p className="label-voice mt-5 text-[9px]">A conversa que trouxe este lead</p>
-              <ul className="mt-2 flex flex-col gap-1.5">
-                {lead.conversa.map((fala, i) => (
-                  <li key={i} className={`text-[12px] ${fala.de === 'robo' ? 'text-slate' : 'text-ash'}`}>
-                    <span className="text-[10px] uppercase">{fala.de === 'robo' ? 'astro' : 'pessoa'}</span>{' '}
+          <section>
+            <p className="label-voice text-[9px]">A conversa com o robô</p>
+            {conversa.length === 0 ? (
+              <p className="mt-2 text-[12px] text-slate">
+                Nada conversado ainda. O que a pessoa escrever no chat do site ou no WhatsApp aparece aqui.
+              </p>
+            ) : (
+              <ul className="mt-3 flex flex-col gap-2">
+                {conversa.map((fala, i) => (
+                  <li
+                    key={i}
+                    className={`max-w-[85%] rounded-2xl px-3 py-2 text-[13px] leading-[1.5] whitespace-pre-wrap ${
+                      fala.de === 'robo' ? 'self-start bg-obsidian text-ash' : 'ml-auto bg-cobalt/25 text-ivory'
+                    }`}
+                  >
+                    <span className="mb-1 block text-[10px] uppercase opacity-60">{fala.de === 'robo' ? 'astro' : 'pessoa'}</span>
                     {fala.texto}
                   </li>
                 ))}
               </ul>
-            </>
-          ) : null}
+            )}
+          </section>
+
+          <section>
+            <p className="label-voice text-[9px]">Histórico da equipe</p>
+            <form
+              onSubmit={(evento) => {
+                evento.preventDefault()
+                void registrar()
+              }}
+              className="mt-2 flex gap-2"
+            >
+              <label className="sr-only" htmlFor={`g-atividade-${id}`}>
+                Registrar contato
+              </label>
+              <input
+                id={`g-atividade-${id}`}
+                value={nova}
+                onChange={(evento) => setNova(evento.target.value)}
+                placeholder="Liguei, mandei proposta…"
+                className="w-full rounded-xl bg-obsidian px-3 py-2 text-[13px] text-ivory outline-none placeholder:text-slate focus:shadow-[inset_0_0_0_1px_#4d84e0]"
+              />
+              <button type="submit" className="shrink-0 rounded-xl bg-obsidian px-4 py-2 text-[13px] text-ivory hover:bg-[#1e2c4c]">
+                Registrar
+              </button>
+            </form>
+            {atividades === null ? (
+              <p className="mt-3 text-[12px] text-slate">{exemplo ? 'Exemplo: aqui fica o que a equipe registrar.' : 'Carregando…'}</p>
+            ) : atividades.length === 0 ? (
+              <p className="mt-3 text-[12px] text-slate">Nada registrado ainda.</p>
+            ) : (
+              <ul className="mt-3 flex flex-col gap-1.5">
+                {atividades.map((a) => (
+                  <li key={a.id} className="text-[12px] text-ash">
+                    <span className="text-slate">{quando(a.quando)}</span> · {a.texto}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         </div>
-      ) : null}
-    </li>
+      </aside>
+    </>
   )
 }
 
-function Funil({ leads, aoMudar }: { leads: Lead[]; aoMudar: (id: number, campos: Partial<Lead>) => void }) {
+function Funil({ leads, aoMudar, aoAbrir }: { leads: Lead[]; aoMudar: (id: number, campos: Partial<Lead>) => void; aoAbrir: (id: number) => void }) {
   /* A coluna sob o cartão arrastado acende. Arrastar é o atalho do mouse; os
      botões de avançar e voltar de cada cartão fazem o mesmo no toque e no
      teclado. */
@@ -662,7 +772,13 @@ function Funil({ leads, aoMudar }: { leads: Lead[]; aoMudar: (id: number, campos
             ) : (
               <ul className="flex flex-col gap-2">
                 {doEstagio.map((lead) => (
-                  <Cartao key={lead.id} lead={lead} compacto aoMudar={(campos) => aoMudar(lead.id, campos)} />
+                  <Cartao
+                    key={lead.id}
+                    lead={lead}
+                    compacto
+                    aoMudar={(campos) => aoMudar(lead.id, campos)}
+                    aoAbrir={() => aoAbrir(lead.id)}
+                  />
                 ))}
               </ul>
             )}
@@ -963,6 +1079,8 @@ export function Painel() {
   const [soAtrasados, setSoAtrasados] = useState(false)
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
+  /* Qual lead está aberto na gaveta. Só o id: o conteúdo a gaveta busca. */
+  const [aberto, setAberto] = useState<number | null>(null)
 
   const verificar = useCallback(async () => {
     try {
@@ -1020,8 +1138,15 @@ export function Painel() {
   const avisos = useMemo(() => {
     if (!estado) return []
     const lista: string[] = []
-    if (!estado.banco) lista.push('Banco não configurado: nenhum lead é guardado. Cadastre POSTGRES_URL e republique.')
-    if (!estado.whatsapp) lista.push('WhatsApp Cloud API não configurada: o robô não atende e o aviso de lead novo não sai.')
+    const d = estado.bancoDetalhe
+    if (!estado.banco) {
+      lista.push(
+        d?.variavel
+          ? `Banco cadastrado em ${d.variavel}${d.anfitriao ? ` (${d.anfitriao})` : ''}, mas não conectou: ${d.motivo}. Nenhum lead é guardado enquanto isso.`
+          : 'Banco não configurado: nenhum lead é guardado. Cadastre POSTGRES_URL (a cadeia de conexão do seu Postgres) na Vercel e republique.',
+      )
+    }
+    if (!estado.whatsapp) lista.push('WhatsApp Cloud API não configurada: o robô não atende e o aviso de lead novo não sai. Faltam WHATSAPP_TOKEN e WHATSAPP_PHONE_ID.')
     else if (!estado.avisoEquipe) lista.push('Falta EQUIPE_WHATSAPP: ninguém é avisado quando entra lead.')
     return lista
   }, [estado])
@@ -1151,13 +1276,14 @@ export function Painel() {
               {visiveis.length === 0 ? (
                 <p className="text-[14px] text-slate">Nenhum lead por aqui ainda.</p>
               ) : aba === 'funil' ? (
-                <Funil leads={visiveis} aoMudar={demonstracao ? () => {} : mudar} />
+                <Funil leads={visiveis} aoMudar={demonstracao ? () => {} : mudar} aoAbrir={setAberto} />
               ) : (
                 <ul className="flex flex-col gap-3">
                   {visiveis.map((lead) => (
                     <Cartao
                       key={lead.id}
                       lead={lead}
+                      aoAbrir={() => setAberto(lead.id)}
                       aoMudar={(campos) => {
                         if (demonstracao) return
                         void mudar(lead.id, campos)
@@ -1170,6 +1296,18 @@ export function Painel() {
           </>
         )}
       </div>
+
+      {aberto !== null ? (
+        <Gaveta
+          id={aberto}
+          deLista={base.find((l) => l.id === aberto) ?? null}
+          aoFechar={() => setAberto(null)}
+          aoMudar={(campos) => {
+            if (demonstracao) return
+            void mudar(aberto, campos)
+          }}
+        />
+      ) : null}
     </div>
   )
 }

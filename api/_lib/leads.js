@@ -4,6 +4,11 @@
  */
 import { prepararBanco, sql, SITUACOES, temBanco } from './db.js'
 
+/* A conversa é um histórico, não um arquivo: as últimas cento e vinte falas
+   são mais do que qualquer modelo lê, e o campo não cresce sem fim num
+   número que escreve todo dia. */
+const FALAS_GUARDADAS = 120
+
 /** Corta e limpa um campo de texto vindo de fora. Nada entra sem limite. */
 export function texto(valor, limite = 500) {
   return String(valor ?? '')
@@ -18,7 +23,7 @@ export function texto(valor, limite = 500) {
  */
 export function limparConversa(bruta) {
   if (!Array.isArray(bruta)) return []
-  return bruta.slice(0, 60).map((passo) => ({
+  return bruta.slice(-FALAS_GUARDADAS).map((passo) => ({
     de: passo?.de === 'pessoa' ? 'pessoa' : 'robo',
     texto: texto(passo?.texto, 800),
   }))
@@ -43,6 +48,33 @@ export async function criarLead(dados) {
   return linha
 }
 
+/**
+ * O lead daquele contato (telefone ou e-mail), o mais recente. É como o robô
+ * do WhatsApp reencontra quem já falou com a empresa — e como a conversa
+ * continua de onde parou em vez de recomeçar a cada mensagem.
+ */
+export async function acharLeadPorContato(contato) {
+  await prepararBanco()
+  const s = sql()
+  const [linha] = await s`
+    SELECT * FROM leads WHERE contato = ${texto(contato, 160)}
+    ORDER BY criado_em DESC LIMIT 1`
+  return linha || null
+}
+
+/** Guarda as falas mais recentes, e devolve a conversa já com a nova. */
+export async function acrescentarFala(id, fala) {
+  await prepararBanco()
+  const s = sql()
+  const [atual] = await s`SELECT conversa FROM leads WHERE id = ${Number(id)}`
+  if (!atual) return []
+  const conversa = limparConversa([...(atual.conversa || []), fala]).slice(-FALAS_GUARDADAS)
+  await s`
+    UPDATE leads SET conversa = ${JSON.stringify(conversa)}::jsonb, atualizado_em = now()
+    WHERE id = ${Number(id)}`
+  return conversa
+}
+
 export async function listarLeads({ situacao = '', busca = '', limite = 200 } = {}) {
   await prepararBanco()
   const s = sql()
@@ -55,6 +87,14 @@ export async function listarLeads({ situacao = '', busca = '', limite = 200 } = 
            OR contato ILIKE ${'%' + termo + '%'} OR resumo ILIKE ${'%' + termo + '%'})
     ORDER BY criado_em DESC
     LIMIT ${Math.min(Number(limite) || 200, 500)}`
+}
+
+/** Um lead pelo id. É o que a gaveta do painel recarrega. */
+export async function lerLead(id) {
+  await prepararBanco()
+  const s = sql()
+  const [linha] = await s`SELECT * FROM leads WHERE id = ${Number(id)}`
+  return linha || null
 }
 
 export async function atualizarLead(id, campos) {

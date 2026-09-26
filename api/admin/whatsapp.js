@@ -20,7 +20,7 @@ import { botAtivo, gravarConfig, lerConfig } from '../_lib/config.js'
 import { temBanco } from '../_lib/db.js'
 import { listarLogs } from '../_lib/logs.js'
 import { TEXTOS_PADRAO } from '../_lib/whatsapp-textos.js'
-import { INSTRUCAO_PADRAO } from '../bot.js'
+import { INSTRUCAO_PADRAO, qualInteligencia } from '../_lib/inteligencia.js'
 
 const GRAPH = 'https://graph.facebook.com/v21.0'
 
@@ -104,8 +104,8 @@ export default async function handler(req, res) {
       padrao: TEXTOS_PADRAO,
       instrucao: typeof instrucao === 'string' ? instrucao : INSTRUCAO_PADRAO,
       instrucaoPadrao: INSTRUCAO_PADRAO,
-      /* A inteligência do chat do site: ligada só se houver chave. */
-      inteligencia: process.env.ANTHROPIC_API_KEY ? 'claude' : process.env.OPENAI_API_KEY ? 'openai' : '',
+      /* A inteligência que fala pela empresa nos dois canais. */
+      inteligencia: qualInteligencia(),
       ativo,
       conexao,
       credenciais: {
