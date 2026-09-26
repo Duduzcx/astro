@@ -1,14 +1,14 @@
-import { processar } from './bot/motor.ts'
-import type { Agenda, Deps, Entrada } from './bot/tipos.ts'
-import { lerMensagemDoWebhook } from './evolution.ts'
-import { agenda, evolution, faq, supabaseAdmin, tokenDoWebhook } from './ambiente.ts'
-import type { LinhaClinica } from './clinica.ts'
-import { corpo, ErroHttp, primeiro, type Req, type Res } from './http.ts'
-import { canalRegistrador, criarRepo, registrarMensagem } from './repo.ts'
-import { clinicaPorInstancia } from './sessao.ts'
+import { processar } from './bot/motor.js'
+
+import { lerMensagemDoWebhook } from './evolution.js'
+import { agenda, evolution, faq, supabaseAdmin, tokenDoWebhook } from './ambiente.js'
+
+import { corpo, ErroHttp, primeiro,                    } from './http.js'
+import { canalRegistrador, criarRepo, registrarMensagem } from './repo.js'
+import { clinicaPorInstancia } from './sessao.js'
 
 /** Sem Cal.com configurado o motor não pode marcar: a agenda avisa em vez de fingir. */
-const AGENDA_AUSENTE: Agenda = {
+const AGENDA_AUSENTE         = {
   async vagas() {
     return []
   },
@@ -18,7 +18,7 @@ const AGENDA_AUSENTE: Agenda = {
   async cancelar() {},
 }
 
-export function dependencias(clinica: LinhaClinica, simulador: boolean): Deps {
+export function dependencias(clinica              , simulador         )       {
   const evo = evolution()
   const base = !simulador && evo && clinica.evolution_instance ? evo.canal(clinica.evolution_instance) : null
   return {
@@ -29,7 +29,7 @@ export function dependencias(clinica: LinhaClinica, simulador: boolean): Deps {
   }
 }
 
-export async function rodarMotor(clinica: LinhaClinica, entrada: Entrada, simulador = false) {
+export async function rodarMotor(clinica              , entrada         , simulador = false) {
   await processar(dependencias(clinica, simulador), clinica, entrada)
 }
 
@@ -40,7 +40,7 @@ export async function rodarMotor(clinica: LinhaClinica, entrada: Entrada, simula
  * igual ao da nossa instalação, ou o token que pusemos na URL ao registrar
  * o webhook. Sem um dos dois, 401 antes de ler qualquer coisa.
  */
-export async function webhookEvolution(req: Req, res: Res, instancia: string) {
+export async function webhookEvolution(req     , res     , instancia        ) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
     return res.status(405).json({ erro: 'método não permitido' })
@@ -64,10 +64,10 @@ export async function webhookEvolution(req: Req, res: Res, instancia: string) {
   const db = supabaseAdmin()
   try {
     if (tipo === 'connection.update') {
-      const dados = (evento.data || {}) as { state?: string; wuid?: string }
+      const dados = (evento.data || {})
       const estado = String(dados.state || '').toLowerCase()
       if (estado === 'open') {
-        let numero: string | null = null
+        let numero                = null
         const evo = evolution()
         if (evo) numero = (await evo.estado(instancia).catch(() => ({ numero: null }))).numero
         await db.from('config_clinica').update({ whatsapp_status: 'conectado', whatsapp_numero: numero, updated_at: new Date().toISOString() }).eq('id', clinica.id)
@@ -88,11 +88,11 @@ export async function webhookEvolution(req: Req, res: Res, instancia: string) {
     await rodarMotor(clinica, { telefone: mensagem.telefone, texto: mensagem.texto, nomeExibido: mensagem.nomeExibido })
   } catch (erro) {
     /* Nada de conteúdo no log: só o que aconteceu. */
-    console.error('webhook do WhatsApp falhou:', (erro as Error)?.message)
+    console.error('webhook do WhatsApp falhou:', (erro         )?.message)
   }
 }
 
-export function exigirSegredo(req: Req, segredo: string) {
+export function exigirSegredo(req     , segredo        ) {
   if (!segredo) throw new ErroHttp(503, 'CRON_SECRET não configurado')
   const cabecalho = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '')
   const alternativo = String(req.headers['x-cron-secret'] || '')

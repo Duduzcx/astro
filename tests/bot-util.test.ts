@@ -1,9 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { cpfValido, dentroDoHorario, escolher, ehUrgente, formatarDataHora, mascararCpf, nomeValido, pareceUmaPergunta } from '../api/crm/_lib/bot/util.ts'
-import { achatarVagas } from '../api/crm/_lib/calcom.ts'
-import { texto } from '../api/crm/_lib/bot/textos.ts'
-import { lerMensagemDoWebhook } from '../api/crm/_lib/evolution.ts'
+import { cpfValido, dentroDoHorario, escolher, ehUrgente, formatarDataHora, mascararCpf, nomeValido, pareceUmaPergunta } from '../api/crm/_lib/bot/util.js'
+import { achatarVagas } from '../api/crm/_lib/calcom.js'
+import { texto } from '../api/crm/_lib/bot/textos.js'
+import { lerMensagemDoWebhook } from '../api/crm/_lib/evolution.js'
 
 test('escolher entende número, texto inteiro, começo e palavra distintiva', () => {
   const opcoes = ['Avaliação 30min', 'Limpeza 60min', 'Falar com recepção']

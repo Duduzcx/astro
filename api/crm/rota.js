@@ -1,7 +1,7 @@
-import { webhookEvolution } from './_lib/bot.ts'
-import { cronLembretes } from './_lib/cron.ts'
-import { ErroHttp, primeiro, type Req, type Res } from './_lib/http.ts'
-import { rotasPainel } from './_lib/painel.ts'
+import { webhookEvolution } from './_lib/bot.js'
+import { cronLembretes } from './_lib/cron.js'
+import { ErroHttp, primeiro,                    } from './_lib/http.js'
+import { rotasPainel } from './_lib/painel.js'
 
 /**
  * Uma função só para o CRM inteiro. O plano gratuito da Vercel para em doze
@@ -18,7 +18,7 @@ import { rotasPainel } from './_lib/painel.ts'
  * entrava e `/api/crm/cron/lembretes` dava 404. Com o rewrite o roteamento
  * é explícito e não depende de como a plataforma lê colchetes.
  */
-export default async function handler(req: Req, res: Res) {
+export default async function handler(req     , res     ) {
   const daQuery = primeiro(req.query.p)
   const doCaminho = new URL(req.url || '/', 'http://local').pathname.replace(/^\/api\/crm\/?/, '')
   const partes = (daQuery || doCaminho)
@@ -32,7 +32,7 @@ export default async function handler(req: Req, res: Res) {
   } catch (erro) {
     if (erro instanceof ErroHttp) return res.status(erro.codigo).json({ erro: erro.message })
     /* Nada de dado de paciente no log: só a mensagem do erro. */
-    console.error('crm falhou:', (erro as Error)?.message)
+    console.error('crm falhou:', (erro         )?.message)
     if (!res.headersSent) return res.status(500).json({ erro: 'falha interna' })
   }
 }

@@ -1,7 +1,7 @@
-import type { HorarioFuncionamento } from './tipos.ts'
+
 
 /** Tira acento, caixa e espaço sobrando: "Avaliação" e "avaliacao" viram iguais. */
-export function simplificar(texto: string) {
+export function simplificar(texto        ) {
   return texto
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
@@ -10,7 +10,7 @@ export function simplificar(texto: string) {
     .trim()
 }
 
-export function somenteDigitos(texto: string) {
+export function somenteDigitos(texto        ) {
   return texto.replace(/\D/g, '')
 }
 
@@ -19,7 +19,7 @@ export function somenteDigitos(texto: string) {
  * texto da opção inteiro ou o começo dele ("limpeza" para "Limpeza 60min").
  * Devolve o índice, ou -1.
  */
-export function escolher(entrada: string, opcoes: string[]): number {
+export function escolher(entrada        , opcoes          )         {
   const t = simplificar(entrada)
   const numero = t.match(/^(?:opcao\s*)?(\d{1,2})\b/)
   if (numero) {
@@ -37,23 +37,23 @@ export function escolher(entrada: string, opcoes: string[]): number {
 }
 
 /** Nome e sobrenome, só letras: "vocês aceitam convênio?" não é nome. */
-export function nomeValido(texto: string) {
+export function nomeValido(texto        ) {
   if (/[?\d]/.test(texto)) return false
   const partes = texto.trim().split(/\s+/)
   return partes.length >= 2 && partes.length <= 8 && partes.every((p) => /^[\p{L}'.-]+$/u.test(p))
 }
 
-export function cpfValido(texto: string) {
+export function cpfValido(texto        ) {
   return somenteDigitos(texto).length === 11
 }
 
 /** ***.***.***-12 — o que o painel mostra. */
-export function mascararCpf(cpf: string | null | undefined) {
+export function mascararCpf(cpf                           ) {
   const d = somenteDigitos(cpf || '')
   return d.length === 11 ? `***.***.***-${d.slice(-2)}` : d ? '***' : ''
 }
 
-export function ehUrgente(texto: string, palavras: string[]) {
+export function ehUrgente(texto        , palavras          ) {
   const t = simplificar(texto)
   return palavras.some((p) => p && t.includes(simplificar(p)))
 }
@@ -61,12 +61,12 @@ export function ehUrgente(texto: string, palavras: string[]) {
 const INTERROGATIVAS = /^(quanto|qual|quais|onde|como|quando|voces|vcs|tem|aceita|aceitam|atende|atendem|fazem|faz|posso|pode|precisa|preciso|existe|funciona|e verdade|sera)\b/
 
 /** Texto livre que parece pergunta, e não resposta ao que o bot pediu. */
-export function pareceUmaPergunta(texto: string) {
+export function pareceUmaPergunta(texto        ) {
   const t = simplificar(texto)
   return t.includes('?') || INTERROGATIVAS.test(t)
 }
 
-const DIAS: Record<string, keyof HorarioFuncionamento> = {
+const DIAS                                             = {
   Mon: 'seg',
   Tue: 'ter',
   Wed: 'qua',
@@ -77,7 +77,7 @@ const DIAS: Record<string, keyof HorarioFuncionamento> = {
 }
 
 /** Partes de uma data no fuso da clínica. */
-export function partesNoFuso(data: Date, timezone: string) {
+export function partesNoFuso(data      , timezone        ) {
   const partes = new Intl.DateTimeFormat('en-US', {
     timeZone: timezone,
     weekday: 'short',
@@ -85,13 +85,13 @@ export function partesNoFuso(data: Date, timezone: string) {
     minute: '2-digit',
     hour12: false,
   }).formatToParts(data)
-  const pegar = (tipo: string) => partes.find((p) => p.type === tipo)?.value || ''
+  const pegar = (tipo        ) => partes.find((p) => p.type === tipo)?.value || ''
   const hora = pegar('hour') === '24' ? '00' : pegar('hour')
   return { dia: DIAS[pegar('weekday')] || 'seg', horario: `${hora}:${pegar('minute')}` }
 }
 
 /** A clínica está aberta agora? Sem horário cadastrado, considera aberta. */
-export function dentroDoHorario(horario: HorarioFuncionamento | null | undefined, agora: Date, timezone: string) {
+export function dentroDoHorario(horario                                         , agora      , timezone        ) {
   if (!horario || Object.keys(horario).length === 0) return true
   const { dia, horario: hm } = partesNoFuso(agora, timezone)
   const intervalos = horario[dia] || []
@@ -99,7 +99,7 @@ export function dentroDoHorario(horario: HorarioFuncionamento | null | undefined
 }
 
 /** "25/09/2026 - 14:30" no fuso da clínica. */
-export function formatarDataHora(iso: string, timezone: string) {
+export function formatarDataHora(iso        , timezone        ) {
   const d = new Date(iso)
   const data = new Intl.DateTimeFormat('pt-BR', { timeZone: timezone, day: '2-digit', month: '2-digit', year: 'numeric' }).format(d)
   const hora = new Intl.DateTimeFormat('pt-BR', { timeZone: timezone, hour: '2-digit', minute: '2-digit', hour12: false }).format(d)
@@ -107,20 +107,20 @@ export function formatarDataHora(iso: string, timezone: string) {
 }
 
 /** "quinta-feira, 25/09 às 14:30", para mensagens. */
-export function formatarVagaAmigavel(iso: string, timezone: string) {
+export function formatarVagaAmigavel(iso        , timezone        ) {
   const d = new Date(iso)
   const dia = new Intl.DateTimeFormat('pt-BR', { timeZone: timezone, weekday: 'long', day: '2-digit', month: '2-digit' }).format(d)
   const hora = new Intl.DateTimeFormat('pt-BR', { timeZone: timezone, hour: '2-digit', minute: '2-digit', hour12: false }).format(d)
   return `${dia} às ${hora}`
 }
 
-export function somarMinutos(iso: string, minutos: number) {
+export function somarMinutos(iso        , minutos        ) {
   return new Date(new Date(iso).getTime() + minutos * 60_000).toISOString()
 }
 
 /** Preenche {chaves} num texto. Chave sem valor vira vazio, não "undefined". */
-export function preencher(modelo: string, valores: Record<string, string | number | null | undefined>) {
-  return modelo.replace(/\{(\w+)\}/g, (_, chave: string) => {
+export function preencher(modelo        , valores                                                    ) {
+  return modelo.replace(/\{(\w+)\}/g, (_, chave        ) => {
     const v = valores[chave]
     return v === null || v === undefined ? '' : String(v)
   })

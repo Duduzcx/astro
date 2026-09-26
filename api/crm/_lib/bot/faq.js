@@ -1,4 +1,4 @@
-import type { Faq } from './tipos.ts'
+
 
 /**
  * Perguntas livres respondidas com a base de conhecimento da clínica, por um
@@ -19,7 +19,7 @@ const TONS = {
   descontraido: 'Seja leve e informal, como um recepcionista simpático; emojis são bem-vindos com moderação.',
 }
 
-export function criarFaq(env: { GROQ_API_KEY?: string; GROQ_MODELO?: string }): Faq | undefined {
+export function criarFaq(env                                                 )                  {
   const chave = env.GROQ_API_KEY
   if (!chave) return undefined
   const modelo = env.GROQ_MODELO || MODELO_PADRAO
@@ -67,7 +67,7 @@ export function criarFaq(env: { GROQ_API_KEY?: string; GROQ_MODELO?: string }): 
       signal: AbortSignal.timeout(9000),
     })
     if (!r.ok) throw new Error(`groq ${r.status}`)
-    const dados = (await r.json()) as { choices?: { message?: { content?: string } }[] }
+    const dados = (await r.json())
     const resposta = (dados.choices?.[0]?.message?.content || '').trim()
     if (!resposta || /SEM_RESPOSTA/i.test(resposta)) return null
     return resposta

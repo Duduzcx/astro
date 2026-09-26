@@ -1,8 +1,8 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { criarCalcom } from './calcom.ts'
-import { criarEvolution } from './evolution.ts'
-import { criarFaq } from './bot/faq.ts'
-import { ErroHttp } from './http.ts'
+import { createClient,                     } from '@supabase/supabase-js'
+import { criarCalcom } from './calcom.js'
+import { criarEvolution } from './evolution.js'
+import { criarFaq } from './bot/faq.js'
+import { ErroHttp } from './http.js'
 
 /**
  * Tudo o que vem do ambiente da Vercel, num lugar só.
@@ -20,9 +20,9 @@ const env = process.env
 
 export const SUPABASE_URL_PADRAO = 'https://mtmrotcstapfmtxqzwog.supabase.co'
 
-let admin: SupabaseClient | null = null
+let admin                        = null
 
-export function supabaseAdmin(): SupabaseClient {
+export function supabaseAdmin()                 {
   const url = env.SUPABASE_URL || SUPABASE_URL_PADRAO
   const chave = env.SUPABASE_SERVICE_ROLE_KEY
   if (!chave) throw new ErroHttp(503, 'CRM sem banco: cadastre SUPABASE_SERVICE_ROLE_KEY na Vercel')
@@ -56,7 +56,7 @@ export function segredoDoCron() {
 }
 
 /** Aviso opcional à recepção por Telegram. Falhar nunca pode travar o bot. */
-export async function avisarTelegram(texto: string) {
+export async function avisarTelegram(texto        ) {
   const token = env.TELEGRAM_BOT_TOKEN
   const chat = env.TELEGRAM_CHAT_ID
   if (!token || !chat) return
@@ -68,7 +68,7 @@ export async function avisarTelegram(texto: string) {
       signal: AbortSignal.timeout(6000),
     })
   } catch (erro) {
-    console.error('aviso ao Telegram falhou:', (erro as Error)?.message)
+    console.error('aviso ao Telegram falhou:', (erro         )?.message)
   }
 }
 

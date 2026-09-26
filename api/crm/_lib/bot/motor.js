@@ -1,5 +1,5 @@
-import type { Clinica, Conversa, Deps, Entrada, Paciente, Procedimento, TipoAgendamento } from './tipos.ts'
-import { texto } from './textos.ts'
+
+import { texto } from './textos.js'
 import {
   cpfValido,
   dentroDoHorario,
@@ -11,7 +11,7 @@ import {
   simplificar,
   somarMinutos,
   somenteDigitos,
-} from './util.ts'
+} from './util.js'
 
 /**
  * O motor: uma máquina de estados por (clínica, telefone).
@@ -25,9 +25,7 @@ const OPCOES_MENU = ['Agendar consulta', 'Retorno/Manutenção', 'Falar com rece
 const DIAS_DE_BUSCA = 14
 const LIMITE_TENTATIVAS = 2
 
-type TipoOferecido = { nome: string; eventTypeId: number; duracao: number; tipo: TipoAgendamento }
-
-function classificar(nome: string, retorno: boolean): TipoAgendamento {
+function classificar(nome        , retorno         )                  {
   if (retorno) return 'retorno'
   const n = simplificar(nome)
   if (n.includes('limpeza') || n.includes('profilaxia')) return 'limpeza'
@@ -35,7 +33,7 @@ function classificar(nome: string, retorno: boolean): TipoAgendamento {
   return 'tratamento'
 }
 
-export async function processar(deps: Deps, clinica: Clinica, entrada: Entrada): Promise<void> {
+export async function processar(deps      , clinica         , entrada         )                {
   const { repo, canal } = deps
   const agora = deps.agora ?? (() => new Date())
   const telefone = entrada.telefone
@@ -43,12 +41,12 @@ export async function processar(deps: Deps, clinica: Clinica, entrada: Entrada):
   const conversa = await repo.lerConversa(clinica.id, telefone)
   if (conversa.humano_ativo) return
 
-  const ctx = { ...conversa.contexto } as Record<string, unknown>
-  const salvar = (etapa: string, mais: Partial<Conversa> = {}) =>
+  const ctx = { ...conversa.contexto }
+  const salvar = (etapa        , mais                    = {}) =>
     repo.salvarConversa(clinica.id, telefone, { etapa, contexto: ctx, ...mais })
-  const dizer = (chave: Parameters<typeof texto>[1], valores: Record<string, string | number | null | undefined> = {}) =>
+  const dizer = (chave                             , valores                                                     = {}) =>
     canal.enviarTexto(telefone, texto(clinica, chave, valores))
-  const transferir = async (chave: 'urgencia' | 'recepcao' | 'limiteTentativas', motivo: string) => {
+  const transferir = async (chave                                              , motivo        ) => {
     /* O painel usa isto para a etiqueta da conversa (urgência em vermelho). */
     ctx.motivo_humano = chave === 'urgencia' ? 'urgencia' : chave === 'recepcao' ? 'recepcao' : 'limite'
     ctx.motivo_detalhe = motivo
@@ -59,10 +57,10 @@ export async function processar(deps: Deps, clinica: Clinica, entrada: Entrada):
 
   /* Pergunta livre no meio de uma etapa: responde com a base de conhecimento
      e volta para onde estava. Devolve true se tratou. */
-  const desvioFaq = async (): Promise<boolean> => {
+  const desvioFaq = async ()                   => {
     if (!deps.faq || !pareceUmaPergunta(msg)) return false
     const conhecimento = await repo.listarConhecimento(clinica.id)
-    let resposta: string | null = null
+    let resposta                = null
     try {
       resposta = await deps.faq(msg, { clinica, conhecimento })
     } catch {
@@ -95,11 +93,11 @@ export async function processar(deps: Deps, clinica: Clinica, entrada: Entrada):
   const oferecerTipos = async () => {
     const procedimentos = await repo.listarProcedimentos(clinica.id)
     /* Sem procedimentos cadastrados valem os dois tipos de evento da clínica. */
-    const alternativos: TipoOferecido[] = []
+    const alternativos                  = []
     if (clinica.event_type_avaliacao) alternativos.push({ nome: 'Avaliação', eventTypeId: clinica.event_type_avaliacao, duracao: 30, tipo: 'avaliacao' })
     if (clinica.event_type_limpeza) alternativos.push({ nome: 'Limpeza', eventTypeId: clinica.event_type_limpeza, duracao: 60, tipo: 'limpeza' })
-    const tipos: TipoOferecido[] = procedimentos.length
-      ? procedimentos.map((p: Procedimento) => ({
+    const tipos                  = procedimentos.length
+      ? procedimentos.map((p              ) => ({
           nome: p.nome,
           eventTypeId: p.cal_event_type_id,
           duracao: p.duracao_min,
@@ -115,13 +113,12 @@ export async function processar(deps: Deps, clinica: Clinica, entrada: Entrada):
     await canal.enviarOpcoes(
       telefone,
       texto(clinica, 'escolherTipo'),
-      tipos.map((t) => `${t.nome} ${t.duracao}min`),
-    )
+      tipos.map((t) => `${t.nome} ${t.duracao}min`))
     await salvar('escolhendo_tipo')
   }
 
-  const buscarVagas = async (chave: 'vagas' | 'vagaOcupada') => {
-    const tipo = ctx.tipoEscolhido as TipoOferecido
+  const buscarVagas = async (chave                         ) => {
+    const tipo = ctx.tipoEscolhido
     const de = agora()
     const ate = new Date(de.getTime() + DIAS_DE_BUSCA * 86_400_000)
     const vagas = (await deps.agenda.vagas(tipo.eventTypeId, de, ate, clinica.timezone)).slice(0, 3)
@@ -142,12 +139,11 @@ export async function processar(deps: Deps, clinica: Clinica, entrada: Entrada):
     await canal.enviarOpcoes(
       telefone,
       texto(clinica, chave, { tipo: tipo.nome }),
-      vagas.map((v) => formatarVagaAmigavel(v.inicio, clinica.timezone)),
-    )
+      vagas.map((v) => formatarVagaAmigavel(v.inicio, clinica.timezone)))
     await salvar('escolhendo_vaga')
   }
 
-  const pacienteAtual = async (): Promise<Paciente | null> => {
+  const pacienteAtual = async ()                           => {
     if (typeof ctx.paciente_id === 'string') {
       const p = await repo.lerPaciente(ctx.paciente_id)
       if (p) return p
@@ -155,7 +151,7 @@ export async function processar(deps: Deps, clinica: Clinica, entrada: Entrada):
     return repo.buscarPaciente(clinica.id, telefone)
   }
 
-  const menu = async (paciente: Paciente) => {
+  const menu = async (paciente          ) => {
     ctx.paciente_id = paciente.id
     ctx.nome = paciente.nome
     await canal.enviarOpcoes(telefone, texto(clinica, 'boasVindasVolta', { nome: paciente.nome.split(' ')[0] }), OPCOES_MENU)
@@ -243,7 +239,7 @@ export async function processar(deps: Deps, clinica: Clinica, entrada: Entrada):
     }
 
     case 'escolhendo_tipo': {
-      const tipos = (ctx.tipos as TipoOferecido[] | undefined) || []
+      const tipos = (ctx.tipos                               ) || []
       const i = escolher(msg, tipos.map((t) => `${t.nome} ${t.duracao}min`))
       if (i < 0) {
         if (await desvioFaq()) {
@@ -260,18 +256,18 @@ export async function processar(deps: Deps, clinica: Clinica, entrada: Entrada):
     }
 
     case 'escolhendo_vaga': {
-      const vagas = (ctx.vagas as string[] | undefined) || []
+      const vagas = (ctx.vagas                        ) || []
       const i = escolher(msg, vagas.map((v) => formatarVagaAmigavel(v, clinica.timezone)))
       if (i < 0) {
         if (await desvioFaq()) {
-          await canal.enviarOpcoes(telefone, texto(clinica, 'vagas', { tipo: (ctx.tipoEscolhido as TipoOferecido).nome }), vagas.map((v) => formatarVagaAmigavel(v, clinica.timezone)))
+          await canal.enviarOpcoes(telefone, texto(clinica, 'vagas', { tipo: (ctx.tipoEscolhido                 ).nome }), vagas.map((v) => formatarVagaAmigavel(v, clinica.timezone)))
           return
         }
         await dizer('naoEntendi')
-        await canal.enviarOpcoes(telefone, texto(clinica, 'vagas', { tipo: (ctx.tipoEscolhido as TipoOferecido).nome }), vagas.map((v) => formatarVagaAmigavel(v, clinica.timezone)))
+        await canal.enviarOpcoes(telefone, texto(clinica, 'vagas', { tipo: (ctx.tipoEscolhido                 ).nome }), vagas.map((v) => formatarVagaAmigavel(v, clinica.timezone)))
         return
       }
-      const tipo = ctx.tipoEscolhido as TipoOferecido
+      const tipo = ctx.tipoEscolhido
       const paciente = await pacienteAtual()
       if (!paciente) {
         await salvar('inicio')
@@ -282,7 +278,7 @@ export async function processar(deps: Deps, clinica: Clinica, entrada: Entrada):
       }
       const inicio = vagas[i]
       const nome = entrada.teste ? `[TESTE] ${paciente.nome}` : paciente.nome
-      let uid: string | null = null
+      let uid                = null
       try {
         uid = (await deps.agenda.criar({ eventTypeId: tipo.eventTypeId, inicio, nome, email: paciente.email || `${somenteDigitos(telefone)}@paciente.astro.bot`, timezone: clinica.timezone })).uid
       } catch {

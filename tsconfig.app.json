@@ -6,6 +6,8 @@
     "module": "esnext",
     "types": ["vite/client"],
     "allowArbitraryExtensions": true,
+    /* O painel importa os textos do assistente, que são JavaScript. */
+    "allowJs": true,
     "skipLibCheck": true,
 
     /* Bundler mode */

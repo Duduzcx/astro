@@ -1,5 +1,5 @@
-import type { Clinica, TomDeVoz } from './tipos.ts'
-import { preencher } from './util.ts'
+
+import { preencher } from './util.js'
 
 /**
  * Os textos do assistente. A clínica pode reescrever qualquer um pelo painel
@@ -32,11 +32,9 @@ export const CHAVES_TEXTO = [
   'confirmado',
   'cancelado',
   'naoEntendi',
-] as const
+]
 
-export type ChaveTexto = (typeof CHAVES_TEXTO)[number]
-
-export const ROTULOS_TEXTO: Record<ChaveTexto, string> = {
+export const ROTULOS_TEXTO                             = {
   apresentacao: 'Apresentação (paciente novo)',
   pedirNome: 'Pedir o nome',
   nomeInvalido: 'Nome incompleto',
@@ -60,7 +58,7 @@ export const ROTULOS_TEXTO: Record<ChaveTexto, string> = {
   naoEntendi: 'Não entendeu a resposta',
 }
 
-export const TEXTOS_PADRAO: Record<ChaveTexto, string> = {
+export const TEXTOS_PADRAO                             = {
   apresentacao: '{saudacao} Aqui é o assistente virtual da {clinica}. Vou te ajudar a marcar sua consulta.',
   pedirNome: 'Para começar, me diga seu nome completo, por favor.',
   nomeInvalido: 'Preciso do nome completo (nome e sobrenome). Pode me dizer?',
@@ -89,22 +87,20 @@ export const TEXTOS_PADRAO: Record<ChaveTexto, string> = {
   naoEntendi: 'Não entendi. Pode responder com o número da opção?',
 }
 
-const SAUDACAO: Record<TomDeVoz, string> = {
+const SAUDACAO                           = {
   formal: 'Olá.',
   acolhedor: 'Olá! 😊',
   descontraido: 'Oi! 👋',
 }
 
-const FECHO: Record<TomDeVoz, string> = {
+const FECHO                           = {
   formal: 'Ficamos à disposição.',
   acolhedor: 'Estamos te esperando com carinho.',
   descontraido: 'Te vejo lá!',
 }
 
-export type Valores = Record<string, string | number | null | undefined>
-
 /** O texto de uma chave, com o que a clínica escreveu por cima do padrão. */
-export function texto(clinica: Pick<Clinica, 'mensagens' | 'tom_voz' | 'nome' | 'dentista_nome' | 'endereco' | 'link_maps' | 'recomendacoes' | 'telefone_recepcao' | 'valor_avaliacao'>, chave: ChaveTexto, valores: Valores = {}) {
+export function texto(clinica                                                                                                                                                          , chave            , valores          = {}) {
   const modelo = (clinica.mensagens && clinica.mensagens[chave]) || TEXTOS_PADRAO[chave]
   const tom = clinica.tom_voz || 'acolhedor'
   return preencher(modelo, {

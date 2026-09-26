@@ -1,4 +1,4 @@
-import type { Agenda, Vaga } from './bot/tipos.ts'
+
 
 /**
  * Cal.com API v2. Três chamadas: vagas, criar e cancelar. Cada uma pede o seu
@@ -12,21 +12,21 @@ const BASE = 'https://api.cal.com/v2'
  * que faz as vagas desta semana aparecerem antes das da próxima sem regra
  * nenhuma a mais.
  */
-export function achatarVagas(dados: unknown): Vaga[] {
-  const porDia = (dados && typeof dados === 'object' ? (dados as Record<string, unknown>) : {}) as Record<string, unknown>
-  const vagas: Vaga[] = []
+export function achatarVagas(dados         )         {
+  const porDia = (dados && typeof dados === 'object' ? (dados                           ) : {})
+  const vagas         = []
   for (const lista of Object.values(porDia)) {
     if (!Array.isArray(lista)) continue
     for (const item of lista) {
-      const inicio = typeof item === 'string' ? item : (item as { start?: string; time?: string })?.start || (item as { time?: string })?.time
+      const inicio = typeof item === 'string' ? item : (item                                     )?.start || (item                     )?.time
       if (inicio && !Number.isNaN(Date.parse(inicio))) vagas.push({ inicio: new Date(inicio).toISOString() })
     }
   }
   return vagas.sort((a, b) => a.inicio.localeCompare(b.inicio))
 }
 
-export function criarCalcom(apiKey: string): Agenda {
-  const cabecalhos = (versao: string) => ({
+export function criarCalcom(apiKey        )         {
+  const cabecalhos = (versao        ) => ({
     Authorization: `Bearer ${apiKey}`,
     'Content-Type': 'application/json',
     'cal-api-version': versao,
@@ -41,7 +41,7 @@ export function criarCalcom(apiKey: string): Agenda {
       url.searchParams.set('timeZone', timezone)
       const r = await fetch(url, { headers: cabecalhos('2024-09-04'), signal: AbortSignal.timeout(12000) })
       if (!r.ok) throw new Error(`cal.com slots ${r.status}`)
-      const corpo = (await r.json()) as { data?: unknown }
+      const corpo = (await r.json())
       const agora = inicio.getTime()
       return achatarVagas(corpo.data).filter((v) => Date.parse(v.inicio) > agora)
     },
@@ -58,7 +58,7 @@ export function criarCalcom(apiKey: string): Agenda {
         signal: AbortSignal.timeout(12000),
       })
       if (!r.ok) throw new Error(`cal.com booking ${r.status}: ${(await r.text()).slice(0, 200)}`)
-      const corpo = (await r.json()) as { data?: { uid?: string } }
+      const corpo = (await r.json())
       if (!corpo.data?.uid) throw new Error('cal.com booking sem uid')
       return { uid: corpo.data.uid }
     },

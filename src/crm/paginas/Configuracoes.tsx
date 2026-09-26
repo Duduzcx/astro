@@ -1,5 +1,5 @@
 import { useMemo, useState, type ChangeEvent } from 'react'
-import { CHAVES_TEXTO, ROTULOS_TEXTO, TEXTOS_PADRAO, texto } from '../../../api/crm/_lib/bot/textos.ts'
+import { CHAVES_TEXTO, ROTULOS_TEXTO, TEXTOS_PADRAO, texto } from '../../../api/crm/_lib/bot/textos.js'
 import { enviar, type Clinica, type Eu } from '../api'
 import { Aviso, Botao, Campo, Titulo } from '../ui'
 import { campoClasse } from '../estilos'
@@ -298,7 +298,7 @@ export function TomEMensagens({ clinica, aoSalvar }: { clinica: Clinica; aoSalva
         <h3 className="text-[1.1rem] text-ivory">Mensagens do assistente</h3>
         <p className="mt-1 text-[13px] text-slate">Em branco, vale o padrão. Chaves entre chaves são preenchidas na hora: {'{nome}'}, {'{clinica}'}, {'{dentista}'}, {'{endereco}'}, {'{maps}'}, {'{recomendacoes}'}, {'{tipo}'}, {'{data}'}, {'{hora}'}, {'{valor}'}, {'{recepcao}'}, {'{saudacao}'}, {'{fecho}'}.</p>
         <ul className="mt-5 flex flex-col gap-5">
-          {CHAVES_TEXTO.map((chave) => (
+          {(CHAVES_TEXTO as readonly (keyof typeof TEXTOS_PADRAO)[]).map((chave) => (
             <li key={chave} className="grid gap-3 lg:grid-cols-2">
               <Campo rotulo={ROTULOS_TEXTO[chave]}>
                 <textarea rows={3} value={mensagens[chave] ?? ''} onChange={(e) => setMensagens({ ...mensagens, [chave]: e.target.value })} placeholder={TEXTOS_PADRAO[chave]} className={`${campoClasse} resize-y font-mono text-[12px]`} />

@@ -1,9 +1,8 @@
-import { texto } from './bot/textos.ts'
-import { formatarVagaAmigavel } from './bot/util.ts'
-import { segredoDoCron, supabaseAdmin } from './ambiente.ts'
-import { dependencias, exigirSegredo } from './bot.ts'
-import { paraClinica } from './clinica.ts'
-import type { Req, Res } from './http.ts'
+import { texto } from './bot/textos.js'
+import { formatarVagaAmigavel } from './bot/util.js'
+import { segredoDoCron, supabaseAdmin } from './ambiente.js'
+import { dependencias, exigirSegredo } from './bot.js'
+import { paraClinica } from './clinica.js'
 
 /**
  * Anti-faltas. Chamado de hora em hora (Vercel Cron no plano pago; no plano
@@ -12,7 +11,7 @@ import type { Req, Res } from './http.ts'
  * partir de agora, sem lembrete enviado, manda a pergunta de confirmação e
  * põe a conversa em `aguardando_confirmacao`.
  */
-export async function cronLembretes(req: Req, res: Res) {
+export async function cronLembretes(req     , res     ) {
   exigirSegredo(req, segredoDoCron())
   const db = supabaseAdmin()
   const agora = Date.now()
@@ -30,9 +29,9 @@ export async function cronLembretes(req: Req, res: Res) {
 
   let enviados = 0
   let pulados = 0
-  const clinicas = new Map<string, ReturnType<typeof paraClinica>>()
-  type Linha = { id: string; clinica_id: string; tipo: string; inicio: string; pacientes: { nome: string; telefone: string } | { nome: string; telefone: string }[] | null }
-  for (const linha of (pendentes || []) as unknown as Linha[]) {
+  const clinicas = new Map                                        ()
+
+  for (const linha of (pendentes || [])                      ) {
     const paciente = Array.isArray(linha.pacientes) ? linha.pacientes[0] : linha.pacientes
     if (!paciente || paciente.telefone.startsWith('sim_')) {
       pulados += 1
@@ -40,7 +39,7 @@ export async function cronLembretes(req: Req, res: Res) {
     }
     if (!clinicas.has(linha.clinica_id)) {
       const { data } = await db.from('config_clinica').select('*').eq('id', linha.clinica_id).maybeSingle()
-      if (data) clinicas.set(linha.clinica_id, paraClinica(data as Record<string, unknown>))
+      if (data) clinicas.set(linha.clinica_id, paraClinica(data                           ))
     }
     const clinica = clinicas.get(linha.clinica_id)
     if (!clinica || clinica.whatsapp_status !== 'conectado' || !clinica.evolution_instance) {
@@ -52,8 +51,7 @@ export async function cronLembretes(req: Req, res: Res) {
       const hora = formatarVagaAmigavel(linha.inicio, clinica.timezone).split(' às ')[1] || ''
       await deps.canal.enviarTexto(
         paciente.telefone,
-        texto(clinica, 'lembrete', { nome: paciente.nome.split(' ')[0], tipo: linha.tipo, hora }),
-      )
+        texto(clinica, 'lembrete', { nome: paciente.nome.split(' ')[0], tipo: linha.tipo, hora }))
       await db.from('agendamentos').update({ lembrete_enviado_em: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', linha.id)
       const conversa = await deps.repo.lerConversa(clinica.id, paciente.telefone)
       await deps.repo.salvarConversa(clinica.id, paciente.telefone, {
@@ -62,7 +60,7 @@ export async function cronLembretes(req: Req, res: Res) {
       })
       enviados += 1
     } catch (erro) {
-      console.error('lembrete falhou:', (erro as Error)?.message)
+      console.error('lembrete falhou:', (erro         )?.message)
       pulados += 1
     }
   }

@@ -1,13 +1,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { processar } from '../api/crm/_lib/bot/motor.ts'
-import type { Agendamento, Clinica, Conversa, Deps, Paciente, Procedimento, Repo, Vaga } from '../api/crm/_lib/bot/tipos.ts'
+import { processar } from '../api/crm/_lib/bot/motor.js'
 
 /* O motor inteiro, sem rede: canal, repositório e agenda falsos. Cada teste
    conta uma conversa e confere o que saiu, o que foi gravado e a etapa em
    que a conversa ficou. */
 
-const CLINICA: Clinica = {
+const CLINICA = {
   id: 'cli-1',
   nome: 'Clínica Sorriso',
   dentista_nome: 'Dra. Ana',
@@ -25,12 +24,12 @@ const CLINICA: Clinica = {
   mensagens: {},
 }
 
-const PROCEDIMENTOS: Procedimento[] = [
+const PROCEDIMENTOS = [
   { id: 'p1', nome: 'Avaliação', duracao_min: 30, cal_event_type_id: 111, descricao: null },
   { id: 'p2', nome: 'Limpeza', duracao_min: 60, cal_event_type_id: 222, descricao: null },
 ]
 
-const VAGAS: Vaga[] = [
+const VAGAS = [
   { inicio: '2026-10-01T13:00:00.000Z' },
   { inicio: '2026-10-01T14:00:00.000Z' },
   { inicio: '2026-10-02T13:00:00.000Z' },
@@ -39,12 +38,12 @@ const VAGAS: Vaga[] = [
 
 type Saida = { telefone: string; texto: string; opcoes?: string[] }
 
-function fabrica(opcoes: { vagas?: Vaga[]; criarFalha?: number; faq?: Deps['faq']; agora?: Date; procedimentos?: Procedimento[] } = {}) {
+function fabrica(opcoes: { vagas?: { inicio: string }[]; criarFalha?: number; faq?: (p: string, c: unknown) => Promise<string | null>; agora?: Date; procedimentos?: typeof PROCEDIMENTOS } = {}) {
   const enviadas: Saida[] = []
   const estado = {
-    pacientes: [] as (Paciente & { clinicaId: string; cpf: string })[],
-    conversas: new Map<string, Conversa>(),
-    agendamentos: [] as (Agendamento & { queixa: string; clinicaId: string })[],
+    pacientes: [] as { id: string; nome: string; telefone: string; email: string | null; clinicaId: string; cpf: string }[],
+    conversas: new Map<string, { etapa: string; contexto: Record<string, unknown>; humano_ativo: boolean; tentativas_agenda: number }>(),
+    agendamentos: [] as { id: string; paciente_id: string; cal_booking_uid: string; event_type_id: number; tipo: string; inicio: string; fim: string; status: string; queixa: string; clinicaId: string }[],
     espera: [] as { pacienteId: string; tipo: string }[],
     semResposta: [] as string[],
     notificacoes: [] as string[],
@@ -53,7 +52,7 @@ function fabrica(opcoes: { vagas?: Vaga[]; criarFalha?: number; faq?: Deps['faq'
   }
   let falhasRestantes = opcoes.criarFalha ?? 0
   let ids = 0
-  const repo: Repo = {
+  const repo = {
     async buscarPaciente(clinicaId, telefone) {
       return estado.pacientes.find((p) => p.clinicaId === clinicaId && p.telefone === telefone) ?? null
     },
@@ -102,7 +101,7 @@ function fabrica(opcoes: { vagas?: Vaga[]; criarFalha?: number; faq?: Deps['faq'
       estado.notificacoes.push(motivo)
     },
   }
-  const deps: Deps = {
+  const deps = {
     canal: {
       async enviarTexto(telefone, texto) {
         enviadas.push({ telefone, texto })

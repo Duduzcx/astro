@@ -1,16 +1,16 @@
-import type { Agendamento, Canal, Conversa, Paciente, Procedimento, Repo } from './bot/tipos.ts'
-import { avisarTelegram, supabaseAdmin } from './ambiente.ts'
+
+import { avisarTelegram, supabaseAdmin } from './ambiente.js'
 
 /**
  * O repositório do motor sobre o Supabase, com a service_role. Nunca loga
  * CPF nem queixa: erro aqui vira uma linha genérica no log da Vercel.
  */
-export function criarRepo(): Repo {
+export function criarRepo()       {
   const db = () => supabaseAdmin()
   return {
     async buscarPaciente(clinicaId, telefone) {
       const { data } = await db().from('pacientes').select('id, nome, telefone, email').eq('clinica_id', clinicaId).eq('telefone', telefone).maybeSingle()
-      return (data as Paciente | null) ?? null
+      return (data                   ) ?? null
     },
 
     async criarPaciente(clinicaId, dados) {
@@ -20,21 +20,21 @@ export function criarRepo(): Repo {
         .select('id, nome, telefone, email')
         .single()
       if (error || !data) throw new Error('não foi possível cadastrar o paciente')
-      return data as Paciente
+      return data
     },
 
     async lerPaciente(id) {
       const { data } = await db().from('pacientes').select('id, nome, telefone, email').eq('id', id).maybeSingle()
-      return (data as Paciente | null) ?? null
+      return (data                   ) ?? null
     },
 
     async lerConversa(clinicaId, telefone) {
       const { data } = await db().from('conversas').select('etapa, contexto, humano_ativo, tentativas_agenda').eq('clinica_id', clinicaId).eq('telefone', telefone).maybeSingle()
       if (data) {
-        const c = data as Conversa
-        return { etapa: c.etapa || 'inicio', contexto: (c.contexto && typeof c.contexto === 'object' ? c.contexto : {}) as Record<string, unknown>, humano_ativo: Boolean(c.humano_ativo), tentativas_agenda: Number(c.tentativas_agenda) || 0 }
+        const c = data
+        return { etapa: c.etapa || 'inicio', contexto: (c.contexto && typeof c.contexto === 'object' ? c.contexto : {})                           , humano_ativo: Boolean(c.humano_ativo), tentativas_agenda: Number(c.tentativas_agenda) || 0 }
       }
-      const nova: Conversa = { etapa: 'inicio', contexto: {}, humano_ativo: false, tentativas_agenda: 0 }
+      const nova           = { etapa: 'inicio', contexto: {}, humano_ativo: false, tentativas_agenda: 0 }
       await db().from('conversas').upsert({ clinica_id: clinicaId, telefone, ...nova, ultima_mensagem_em: new Date().toISOString() }, { onConflict: 'clinica_id,telefone' })
       return nova
     },
@@ -48,7 +48,7 @@ export function criarRepo(): Repo {
 
     async listarProcedimentos(clinicaId) {
       const { data } = await db().from('procedimentos').select('id, nome, duracao_min, cal_event_type_id, descricao').eq('clinica_id', clinicaId).eq('ativo', true).order('ordem').order('nome')
-      return ((data as Procedimento[] | null) ?? []).map((p) => ({ ...p, cal_event_type_id: Number(p.cal_event_type_id), duracao_min: Number(p.duracao_min) }))
+      return ((data                         ) ?? []).map((p) => ({ ...p, cal_event_type_id: Number(p.cal_event_type_id), duracao_min: Number(p.duracao_min) }))
     },
 
     async criarAgendamento(dados) {
@@ -73,7 +73,7 @@ export function criarRepo(): Repo {
 
     async lerAgendamento(id) {
       const { data } = await db().from('agendamentos').select('id, paciente_id, cal_booking_uid, event_type_id, tipo, inicio, fim, status').eq('id', id).maybeSingle()
-      return (data as Agendamento | null) ?? null
+      return (data                      ) ?? null
     },
 
     async atualizarAgendamento(id, mudancas) {
@@ -86,7 +86,7 @@ export function criarRepo(): Repo {
 
     async listarConhecimento(clinicaId) {
       const { data } = await db().from('base_conhecimento').select('pergunta, resposta').eq('clinica_id', clinicaId).eq('ativo', true).limit(200)
-      return (data as { pergunta: string; resposta: string }[] | null) ?? []
+      return (data                                                   ) ?? []
     },
 
     async registrarSemResposta(clinicaId, telefone, pergunta) {
@@ -98,13 +98,13 @@ export function criarRepo(): Repo {
          aviso fora do painel, quando configurado. */
       const { data } = await db().from('config_clinica').select('nome').eq('id', clinicaId).maybeSingle()
       const final = telefone.replace(/^sim_.*/, 'simulador').replace(/^\+?\d+(\d{4})$/, '…$1')
-      await avisarTelegram(`[${(data as { nome?: string } | null)?.nome || 'clínica'}] conversa precisa da recepção (${motivo}) — contato final ${final}`)
+      await avisarTelegram(`[${(data                            )?.nome || 'clínica'}] conversa precisa da recepção (${motivo}) — contato final ${final}`)
     },
   }
 }
 
 /** Grava uma mensagem no histórico do painel e toca a conversa. */
-export async function registrarMensagem(clinicaId: string, telefone: string, direcao: 'entrada' | 'saida', origem: 'bot' | 'humano' | 'paciente', conteudo: string, wamid?: string) {
+export async function registrarMensagem(clinicaId        , telefone        , direcao                     , origem                               , conteudo        , wamid         ) {
   const db = supabaseAdmin()
   const agora = new Date().toISOString()
   await db.from('mensagens').insert({ clinica_id: clinicaId, telefone, direcao, origem, conteudo: conteudo.slice(0, 4000), tipo: 'text', wamid: wamid || null })
@@ -112,8 +112,8 @@ export async function registrarMensagem(clinicaId: string, telefone: string, dir
 }
 
 /** Um canal que grava tudo o que o bot manda, antes de mandar de verdade. */
-export function canalRegistrador(clinicaId: string, base: Canal | null): Canal {
-  const enviar = async (telefone: string, texto: string) => {
+export function canalRegistrador(clinicaId        , base              )        {
+  const enviar = async (telefone        , texto        ) => {
     await registrarMensagem(clinicaId, telefone, 'saida', 'bot', texto)
     if (base) await base.enviarTexto(telefone, texto)
   }
