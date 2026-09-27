@@ -869,11 +869,21 @@ export function TriScene() {
 
     const nova = createNova()
     scene.add(nova.object)
-    /* A supernova esquenta a interface: --nova no :root. Cada escrita é um
-       recálculo de estilo do documento, então só quando muda de verdade e no
-       máximo a cada 80ms. */
+    /* A supernova esquenta a interface: --nova em #contato e no rodapé, que
+       são quem a lê. Não no :root — uma variável no :root invalida o estilo
+       da página inteira a cada escrita. E só quando muda de verdade, no
+       máximo a cada 80ms. Os alvos já existem quando a cena monta (ela
+       chega depois da página), mas a busca fica para a primeira escrita. */
     let novaCss = -1
     let novaCssAt = 0
+    let novaAlvos: HTMLElement[] | null = null
+    const escreverNova = (valor: string | null) => {
+      novaAlvos ??= Array.from(document.querySelectorAll<HTMLElement>('#contato, footer'))
+      for (const alvo of novaAlvos) {
+        if (valor === null) alvo.style.removeProperty('--nova')
+        else alvo.style.setProperty('--nova', valor)
+      }
+    }
 
     /* A altura da página fica em cache: ler scrollHeight dentro do loop força
        um layout a cada frame, que era o que travava o scroll em máquina lenta.
@@ -1238,7 +1248,7 @@ export function TriScene() {
       if (Math.abs(novaLevel - novaCss) > 0.04 && now - novaCssAt > 80) {
         novaCss = novaLevel
         novaCssAt = now
-        document.documentElement.style.setProperty('--nova', novaLevel.toFixed(2))
+        escreverNova(novaLevel.toFixed(2))
       }
 
       /* Meia altura visível de verdade: com o palco maior que a base, o FOV
@@ -1775,7 +1785,7 @@ export function TriScene() {
       satellites.dispose()
       blackHole.dispose()
       nova.dispose()
-      document.documentElement.style.removeProperty('--nova')
+      escreverNova(null)
       environmentTarget?.dispose()
       postfx?.dispose()
       glareTexture.dispose()

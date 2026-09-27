@@ -90,3 +90,23 @@ export function scrollToHash(hash: string, immediate = false) {
   if (lenis) lenis.scrollTo(element as HTMLElement, { offset: -88, immediate })
   else element.scrollIntoView({ behavior: immediate ? 'auto' : 'smooth', block: 'start' })
 }
+
+/**
+ * Velocidade da rolagem suave em pixels por segundo. O Lenis já sabe quanto
+ * a página andou a cada quadro, então quem reage à velocidade (a faixa de
+ * capacidades, que inclina) não precisa medir nada nem ouvir o scroll. Sem
+ * Lenis — quem pediu menos movimento — ninguém é avisado, e a faixa fica
+ * reta, que é o que essa preferência pede.
+ */
+export function onVelocidade(ouvinte: (pixelsPorSegundo: number) => void): () => void {
+  if (!lenis) return () => {}
+  let antes = performance.now()
+  return lenis.on('scroll', ({ velocity }) => {
+    /* `velocity` é por quadro; dividir pelo intervalo real deixa o número
+       igual num monitor de 60Hz e num de 120Hz. */
+    const agora = performance.now()
+    const intervalo = Math.min(Math.max(agora - antes, 4), 50)
+    antes = agora
+    ouvinte((velocity / intervalo) * 1000)
+  })
+}

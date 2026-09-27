@@ -1,6 +1,7 @@
-import { useRef } from 'react'
+import { useRef, type ReactNode, type RefObject } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { ArrowGlyph, GhostButton, IrisButton, Label, RotatingWord, ScrambleReveal } from './ui/Primitives'
+import { rolagemNativa } from '../lib/rolagem'
 
 const rise = {
   hidden: { opacity: 0, y: 26 },
@@ -12,6 +13,9 @@ const stagger = {
   show: { transition: { staggerChildren: 0.1, delayChildren: 0.9 } },
 }
 
+/* O bloco de conteúdo, que recua e apaga enquanto o hero sai por cima. */
+const CONTEUDO = 'relative z-10 flex min-h-[100svh] items-center pt-24 pb-10 lg:pt-28 lg:pb-16'
+
 /**
  * Título gigante à esquerda; a metade direita é do objeto de partículas, que o
  * TriScene desenha atrás da página. Abaixo do título vêm o eyebrow, o texto e
@@ -19,17 +23,11 @@ const stagger = {
  */
 export function Hero() {
   const ref = useRef<HTMLElement>(null)
-  const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] })
-  const contentY = useTransform(scrollYProgress, [0, 1], ['0%', '-16%'])
-  const contentOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0])
 
   return (
-    <section ref={ref} id="topo" className="relative min-h-[100svh] overflow-hidden">
+    <section ref={ref} id="topo" className="palco-hero relative min-h-[100svh] overflow-hidden">
       <div className="aurora" aria-hidden="true" />
-      <motion.div
-        style={{ y: contentY, opacity: contentOpacity }}
-        className="relative z-10 flex min-h-[100svh] items-center pt-24 pb-10 lg:pt-28 lg:pb-16"
-      >
+      <Recuo alvo={ref}>
         <motion.div
           id="hero-copy"
           variants={stagger}
@@ -73,7 +71,7 @@ export function Hero() {
             <GhostButton href="#servicos">Conhecer os serviços</GhostButton>
           </motion.div>
         </motion.div>
-      </motion.div>
+      </Recuo>
 
       {/* Indicador de scroll: uma gota de luz descendo por um fio. */}
       <motion.a
@@ -90,5 +88,34 @@ export function Hero() {
         </span>
       </motion.a>
     </section>
+  )
+}
+
+/**
+ * O recuo do conteúdo: 16% para cima e opacidade a zero enquanto o hero sai
+ * por cima. Com animação guiada pela rolagem é uma classe (.rola-hero, no
+ * index.css), sem JavaScript medindo a seção a cada quadro; sem o recurso,
+ * o framer-motion mede e escreve o estilo, como antes.
+ */
+function Recuo({ alvo, children }: { alvo: RefObject<HTMLElement | null>; children: ReactNode }) {
+  if (rolagemNativa) return <div className={`${CONTEUDO} rola-hero`}>{children}</div>
+  return <RecuoComMola alvo={alvo}>{children}</RecuoComMola>
+}
+
+function RecuoComMola({
+  alvo,
+  children,
+}: {
+  alvo: RefObject<HTMLElement | null>
+  children: ReactNode
+}) {
+  const { scrollYProgress } = useScroll({ target: alvo, offset: ['start start', 'end start'] })
+  const contentY = useTransform(scrollYProgress, [0, 1], ['0%', '-16%'])
+  const contentOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0])
+
+  return (
+    <motion.div style={{ y: contentY, opacity: contentOpacity }} className={CONTEUDO}>
+      {children}
+    </motion.div>
   )
 }

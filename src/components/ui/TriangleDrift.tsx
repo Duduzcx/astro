@@ -77,7 +77,12 @@ export function TriangleDrift({ className = '' }: { className?: string }) {
       const count = Math.round(width / (mobile ? 36 : 26))
       tris = Array.from({ length: count }, () => spawn(Math.random() * width))
     }
-    resize()
+    /* A primeira medida vem do ResizeObserver lá embaixo, e não daqui: ler
+       `clientWidth` no mount, com a página recém-montada, obriga o navegador
+       a fechar o layout na hora — e como cada canvas muda o próprio tamanho
+       logo depois, os seis forçavam seis layouts da página inteira na
+       abertura (medido: 300ms). O observador entrega o tamanho depois do
+       layout que já ia acontecer. */
 
     let frame = 0
     let running = false
@@ -173,7 +178,6 @@ export function TriangleDrift({ className = '' }: { className?: string }) {
       if (reduced) draw(performance.now())
     })
     ro.observe(canvas)
-    if (reduced) draw(performance.now())
 
     return () => {
       stop()

@@ -76,7 +76,7 @@ export function Projects() {
     <section
       id="projetos"
       aria-label="Projetos"
-      className="relative z-10 overflow-hidden py-24 md:py-32"
+      className="relative z-10 overflow-clip py-24 md:py-32"
     >
       <GiantWord word="Projetos" className="opacity-60" />
 

@@ -39,6 +39,16 @@
   initial-value: 0;
 }
 
+/* Fronteira do texto que acende (ver texto-acende), de 0% a 100% da altura
+   do bloco. Registrada para a animação guiada pela rolagem interpolar: uma
+   variável sem @property salta entre os dois valores em vez de andar. Não
+   herda: quem a lê é o próprio bloco de texto. */
+@property --acesa {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 100%;
+}
+
 @layer base {
   * {
     border-color: color-mix(in srgb, var(--color-slate) 32%, transparent);
@@ -125,16 +135,6 @@
       opacity: 0.07;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
     }
-  }
-
-  .astro-grain-unused::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    z-index: 2;
-    pointer-events: none;
-    opacity: 0.05;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 
   ::selection {
@@ -245,11 +245,21 @@
     transition: opacity 420ms ease;
   }
 
-  /* Faixa de brilho que desliza pelo vidro no hover. */
+  /* Faixa de brilho que desliza pelo vidro no hover e, uma vez, na entrada.
+
+     A faixa é um pseudo-elemento 2,8 vezes mais largo que o cartão que anda
+     por `transform`, e não um fundo de 280% andando por
+     `background-position`: mover o fundo repinta o cartão inteiro — com o
+     texto e as sombras dele — a cada quadro, por 1,3s, em cada cartão que
+     entra na tela; mover a caixa é só compositor. A geometria é a mesma da
+     versão antiga: começa com a ponta direita alinhada à do cartão e anda
+     1,8 largura para a direita, que é 64,2857% da própria largura. O
+     `overflow: clip` do cartão é o que corta a sobra. */
+  overflow: clip;
   &::after {
     content: '';
     position: absolute;
-    inset: 0;
+    inset: 0 0 0 -180%;
     border-radius: inherit;
     pointer-events: none;
     background: linear-gradient(
@@ -258,11 +268,10 @@
       rgba(255, 255, 255, 0.09) 48%,
       transparent 62%
     );
-    background-size: 280% 100%;
-    background-position: 100% 0;
+    transform: translateX(0);
     opacity: 0;
     transition:
-      background-position 900ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 900ms cubic-bezier(0.22, 1, 0.36, 1),
       opacity 320ms ease;
   }
 
@@ -279,7 +288,7 @@
     }
 
     &:hover::after {
-      background-position: 0 0;
+      transform: translateX(64.2857%);
       opacity: 1;
     }
   }
@@ -385,7 +394,8 @@
 }
 
 /* Texto que acende de cima para baixo com a rolagem (ver TextoQueAcende.tsx).
-   A fronteira vem de --acesa, escrita por quadro; a faixa de transição é o
+   A fronteira vem de --acesa, movida pela rolagem (.rola-acende, abaixo, ou o
+   framer-motion onde não há o recurso); a faixa de transição é o
    trecho entre os dois stops, e é ela que faz a luz "varrer" em vez de
    cortar. Sem a variável (JavaScript desligado, reduced-motion), o texto
    fica todo claro: é o padrão do primeiro stop.
@@ -461,6 +471,272 @@
   }
 }
 
+/* ------------------------------------------------------------------------
+   Rolagem guiada pelo navegador (ver src/lib/rolagem.ts).
+
+   Cada efeito preso ao scroll é uma animação comum, só que o relógio dela é
+   a posição de um elemento na tela (`view()`) ou da página (`scroll()`), e
+   não o tempo. O navegador amostra isso por quadro, no compositor quando a
+   propriedade é transform ou opacidade: nada de JavaScript medindo caixa,
+   nada de layout forçado no meio do quadro.
+
+   Os "palcos" declaram a linha do tempo e os "rola-*" a consomem. A linha
+   do tempo fica na SEÇÃO, e não no elemento animado, por dois motivos: o
+   progresso tem de ser o da seção (a foto do CTA é 24% mais alta que ela, o
+   trilho do processo é mais largo que a tela), e `overflow: hidden` faz da
+   seção um contêiner de rolagem — um `view()` solto lá dentro mediria a
+   rolagem DELA, que não rola, em vez da página. Pelo mesmo motivo as seções
+   que abrigam a palavra gigante usam `overflow: clip`, que corta sem virar
+   contêiner de rolagem.
+
+   As percentagens de `view-timeline-inset` são as dos antigos offsets do
+   framer-motion: `['start 85%', 'end 55%']` vira `55% 15%` — 55% tirados
+   do topo da tela, 15% do pé. `animation-range` com nome dá o resto: `exit`
+   é [topo no topo → pé no topo], `contain` é [topo no topo → pé no pé].
+
+   Só longhands, de propósito: o atalho `animation` zera `animation-timeline`
+   e `animation-range` quando vem depois deles, e a duração fica no `auto`
+   inicial, que é o que uma linha do tempo de rolagem pede. `linear` porque
+   a curva é a da mão da pessoa; `both` para o estado inicial e o final
+   valerem fora do trecho animado. */
+/* `view-timeline-inset: 0` em cada palco, e não o `auto` padrão: `auto`
+   usa o scroll-padding do rolador, e o html tem `scroll-padding-top: 96px`
+   para as âncoras pararem abaixo do menu. Medido: com `auto`, a linha do
+   tempo do hero já estava a 10% quando a página abria, e o trilho do
+   processo corria 96px adiantado. Os offsets do framer-motion contavam da
+   borda da tela, e é isso que o zero reproduz. */
+.palco-hero {
+  view-timeline: --hero block;
+  view-timeline-inset: 0;
+}
+.palco-cta {
+  view-timeline: --cta block;
+  view-timeline-inset: 0;
+}
+.palco-filme {
+  view-timeline: --filme block;
+  view-timeline-inset: 0;
+}
+.palco-processo {
+  view-timeline: --processo block;
+  view-timeline-inset: 0;
+}
+.palco-deriva {
+  view-timeline: --deriva block;
+  view-timeline-inset: 0;
+}
+.palco-trilha {
+  view-timeline: --trilha block;
+  view-timeline-inset: 45% 22%;
+}
+
+/* O hero recua e apaga enquanto sai por cima: 16% para cima ao longo da
+   saída inteira, opacidade a zero nos primeiros 60%. */
+.rola-hero {
+  animation-name: hero-recua;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+  animation-timeline: --hero;
+  animation-range: exit 0% exit 100%;
+}
+@keyframes hero-recua {
+  0% {
+    translate: 0 0;
+    opacity: 1;
+  }
+  60% {
+    opacity: 0;
+  }
+  100% {
+    translate: 0 -16%;
+    opacity: 0;
+  }
+}
+
+/* Paralaxe: a foto do CTA e o vídeo andam mais devagar que a página. */
+.rola-cta {
+  animation-name: cta-flutua;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+  animation-timeline: --cta;
+}
+@keyframes cta-flutua {
+  from {
+    translate: 0 -12%;
+  }
+  to {
+    translate: 0 12%;
+  }
+}
+.rola-filme {
+  animation-name: filme-flutua;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+  animation-timeline: --filme;
+}
+@keyframes filme-flutua {
+  from {
+    translate: 0 -10%;
+    scale: 1.15;
+  }
+  to {
+    translate: 0 10%;
+    scale: 1.02;
+  }
+}
+
+/* O trilho do processo: parado nos primeiros 12% da seção travada, corre
+   até os 92%. O curso é a largura do trilho menos a tela, com 24px de
+   folga — as percentagens de `translate` são da própria caixa, então a
+   conta é do CSS e vale em qualquer largura, sem medir. */
+.rola-processo {
+  animation-name: processo-corre;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+  animation-timeline: --processo;
+  animation-range: contain 12% contain 92%;
+}
+@keyframes processo-corre {
+  from {
+    translate: 0 0;
+  }
+  to {
+    translate: calc(-100% + 100vw - 24px) 0;
+  }
+}
+
+/* A palavra gigante deriva 14% do próprio tamanho enquanto a seção
+   atravessa a tela; 6% no celular, onde a mesma fração é muito mais tela. */
+.rola-deriva {
+  animation-name: deriva-larga;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+  animation-timeline: --deriva;
+}
+.rola-deriva-processo {
+  animation-timeline: --processo;
+}
+@media (max-width: 1023px) {
+  .rola-deriva {
+    animation-name: deriva-curta;
+  }
+}
+@keyframes deriva-larga {
+  from {
+    translate: 0 14%;
+  }
+  to {
+    translate: 0 -14%;
+  }
+}
+@keyframes deriva-curta {
+  from {
+    translate: 0 6%;
+  }
+  to {
+    translate: 0 -6%;
+  }
+}
+
+/* O fio de energia: a parte acesa cresce de cima para baixo (a origem vem
+   da classe `origin-top`) e o ponto de luz vai na frente. */
+.rola-trilha-acesa {
+  animation-name: trilha-acende;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+  animation-timeline: --trilha;
+}
+@keyframes trilha-acende {
+  from {
+    scale: 1 0;
+  }
+  to {
+    scale: 1 1;
+  }
+}
+.rola-trilha-cabeca {
+  animation-name: trilha-desce;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+  animation-timeline: --trilha;
+}
+@keyframes trilha-desce {
+  from {
+    translate: 0 -100%;
+  }
+  to {
+    translate: 0 0;
+  }
+}
+
+/* O texto que acende: a fronteira do gradiente (--acesa, ver texto-acende)
+   desce de 0 a 100% entre o topo do bloco chegar a 85% da tela e o pé dele
+   chegar a 55%. O sujeito é o próprio bloco: ele não mora em seção com
+   overflow. */
+.rola-acende {
+  animation-name: acende;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+  animation-timeline: view(block 55% 15%);
+}
+@keyframes acende {
+  from {
+    --acesa: 0%;
+  }
+  to {
+    --acesa: 100%;
+  }
+}
+
+/* A barra de progresso acima do menu segue a página inteira. */
+.rola-progresso {
+  animation-name: progresso-cresce;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+  animation-timeline: scroll(root block);
+}
+@keyframes progresso-cresce {
+  from {
+    scale: 0 1;
+  }
+  to {
+    scale: 1 1;
+  }
+}
+
+/* Camada própria só enquanto a entrada roda (ver usePromocaoNaEntrada em
+   Primitives.tsx). O framer-motion move `y`, `scale` e `rotate` por
+   JavaScript, um estilo inline por quadro, e um bloco sem camada própria
+   repinta inteiro a cada quadro — com as sombras de texto, que são o que
+   mais custa de raster nesta página (medido na rolagem: 217ms/s de raster
+   com sombra, 72 sem). Com a camada, o bloco é pintado uma vez e o
+   compositor o move. A classe sai quando a animação acaba: dezenas de
+   camadas vivas estrangulariam a memória de vídeo. */
+.revelando {
+  will-change: transform;
+}
+.revelando-palavras .palavra {
+  will-change: transform;
+}
+
+/* O desfoque de entrada dos reveals (ver desfoqueDeEntrada em
+   Primitives.tsx): `backwards` deixa o bloco desfocado enquanto espera o
+   atraso e não deixa filtro nenhum depois — é isso que evita a superfície
+   de composição residual que o framer-motion deixava. A curva é a mesma de
+   todo reveal do site, expo-out. */
+.revelando-foco {
+  animation: entra-foco var(--entra-duracao, 0.9s) cubic-bezier(0.16, 1, 0.3, 1)
+    var(--entra-atraso, 0s) backwards;
+}
+@keyframes entra-foco {
+  from {
+    filter: blur(var(--entra-desfoque, 8px));
+  }
+  to {
+    filter: blur(0px);
+  }
+}
+
 /* Esconde a barra de rolagem do carrossel da equipe sem tirar a rolagem. */
 @utility no-scrollbar {
   scrollbar-width: none;
@@ -526,25 +802,20 @@
    o mesmo brilho responde ao hover; no celular esta é a única chance dele. */
 @keyframes astro-sheen {
   from {
-    background-position: 100% 0;
+    transform: translateX(0);
     opacity: 0;
   }
   20% {
     opacity: 1;
   }
   to {
-    background-position: 0 0;
+    transform: translateX(64.2857%);
     opacity: 0;
   }
 }
 
-/* Ao entrar na tela a borda acende por um instante e assenta: o cartão avisa
-   que chegou sem precisar de movimento. A classe mora no invólucro do reveal,
-   não no cartão, por isso o seletor é descendente. */
-.is-entered .graphite-card::before {
-  animation: astro-edge 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
+/* A classe mora no invólucro do reveal, não no cartão, por isso o seletor é
+   descendente. */
 .is-entered .graphite-card::after {
   animation: astro-sheen 1.3s cubic-bezier(0.22, 1, 0.36, 1) 0.35s 1 both;
 }

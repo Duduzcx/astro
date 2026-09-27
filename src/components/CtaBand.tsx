@@ -1,23 +1,39 @@
-import { useRef } from 'react'
+import { useRef, type RefObject } from 'react'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { ArrowGlyph, BlurReveal, IrisButton } from './ui/Primitives'
+import { rolagemNativa } from '../lib/rolagem'
 
-/** Bloco de conversão no meio da página, com parallax na foto de fundo. */
+/* A foto é 24% mais alta que a seção e anda mais devagar que a página: 12%
+   para cada lado enquanto a seção atravessa a tela. */
+const IMAGEM =
+  'absolute inset-0 h-[124%] w-full object-cover opacity-50 [filter:saturate(0.55)_brightness(0.6)]'
+
+/**
+ * Bloco de conversão no meio da página, com parallax na foto de fundo. O
+ * parallax é uma animação guiada pela linha do tempo da seção (.palco-cta e
+ * .rola-cta, no index.css), sem JavaScript medindo nada; onde não há o
+ * recurso, o framer-motion mede a seção e move a foto, como antes.
+ */
 export function CtaBand() {
   const ref = useRef<HTMLElement>(null)
-  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] })
-  const imageY = useTransform(scrollYProgress, [0, 1], ['-12%', '12%'])
 
   return (
-    <section ref={ref} aria-label="Agendar diagnóstico" className="relative z-10 overflow-hidden">
-      <motion.img
-        style={{ y: imageY }}
-        src="/media/alpine.jpg"
-        alt=""
-        loading="lazy"
-        decoding="async"
-        className="absolute inset-0 h-[124%] w-full object-cover opacity-50 [filter:saturate(0.55)_brightness(0.6)]"
-      />
+    <section
+      ref={ref}
+      aria-label="Agendar diagnóstico"
+      className="palco-cta relative z-10 overflow-hidden"
+    >
+      {rolagemNativa ? (
+        <img
+          src="/media/alpine.jpg"
+          alt=""
+          loading="lazy"
+          decoding="async"
+          className={`${IMAGEM} rola-cta`}
+        />
+      ) : (
+        <FotoComMola alvo={ref} />
+      )}
       <div className="absolute inset-0 bg-gradient-to-b from-onyx via-onyx/40 to-onyx" />
 
       <div className="relative py-28 md:py-36">
@@ -40,5 +56,22 @@ export function CtaBand() {
         </div>
       </div>
     </section>
+  )
+}
+
+/** A foto medida por JavaScript, para navegadores sem animação guiada pela rolagem. */
+function FotoComMola({ alvo }: { alvo: RefObject<HTMLElement | null> }) {
+  const { scrollYProgress } = useScroll({ target: alvo, offset: ['start end', 'end start'] })
+  const imageY = useTransform(scrollYProgress, [0, 1], ['-12%', '12%'])
+
+  return (
+    <motion.img
+      style={{ y: imageY }}
+      src="/media/alpine.jpg"
+      alt=""
+      loading="lazy"
+      decoding="async"
+      className={IMAGEM}
+    />
   )
 }

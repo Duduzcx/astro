@@ -50,7 +50,7 @@ export function Deliverables() {
     <section
       id="entregaveis"
       aria-label="O que você recebe"
-      className="relative z-10 overflow-hidden py-24 md:py-32"
+      className="relative z-10 overflow-clip py-24 md:py-32"
     >
       <GiantWord word="Seu" className="opacity-60" />
       <div className="shell relative">

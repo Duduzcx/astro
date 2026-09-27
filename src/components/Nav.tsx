@@ -1,4 +1,4 @@
-import { useEffect, useState, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Logo } from './Logo'
 import { ArrowGlyph, IrisButton } from './ui/Primitives'
@@ -36,11 +36,18 @@ export function Nav() {
   const [menuOpen, setMenuOpen] = useState(false)
   const active = useActiveSection()
 
+  /* O fundo do menu aparece depois de 24px de rolagem. Quem avisa é um
+     IntersectionObserver numa sentinela de 24px no topo da página, e não um
+     ouvinte de scroll lendo `window.scrollY`: essa leitura obriga o
+     navegador a fechar o layout no meio do quadro, a cada evento de scroll
+     — medido, quatro segundos por minuto de rolagem no desktop. */
+  const sentinela = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24)
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+    const alvo = sentinela.current
+    if (!alvo) return
+    const observer = new IntersectionObserver(([entry]) => setScrolled(!entry.isIntersecting))
+    observer.observe(alvo)
+    return () => observer.disconnect()
   }, [])
 
   // A folha mobile cobre a página; a página atrás dela não pode rolar.
@@ -73,6 +80,7 @@ export function Nav() {
 
   return (
     <>
+    <div ref={sentinela} aria-hidden="true" className="pointer-events-none absolute top-0 left-0 h-6 w-px" />
     <motion.header
       initial={{ y: -24, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}

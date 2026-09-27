@@ -36,7 +36,7 @@ const cases = [
 
 export function Cases() {
   return (
-    <section id="resultados" aria-label="Resultados" className="relative z-10 overflow-hidden py-24 md:py-32">
+    <section id="resultados" aria-label="Resultados" className="relative z-10 overflow-clip py-24 md:py-32">
       <GiantWord word="Prova" className="opacity-70" />
       <div className="shell relative">
         <WordReveal text="O que a gente resolve" className="font-impact max-w-2xl text-[clamp(2.4rem,5.2vw,4.2rem)]" />

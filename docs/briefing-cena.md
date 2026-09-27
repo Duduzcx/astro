@@ -606,3 +606,98 @@ processo de GPU, onde mora o compositor do Chrome:
 - No trace, `Display::DrawAndSwap` (categoria `viz`) é o quadro apresentado
   de verdade; `Page.screencastFrame` passa pela thread principal do renderer
   e some quando ela trava, mesmo com o compositor vivo.
+
+## A rolagem fora da cena (26 de setembro de 2026)
+
+Com a cena a 60 quadros, o site continuava "lento" no desktop. A cena não
+era mais o gargalo: o perfil de uma rolagem inteira (63 s) tinha 1,3 ms de
+JavaScript da cena por quadro e, do lado do DOM, 4,0 s dentro do `onScroll`
+do menu (uma leitura de `window.scrollY` por evento, que obriga o navegador
+a fechar o layout no meio do quadro), 2,8 s no `measure` do `useScroll` do
+framer-motion (uma `getBoundingClientRect` por alvo por quadro, com mola em
+cima), e 95 tarefas acima de 50 ms. Medido depois, com a mesma rolagem
+(roda de 90 px a cada 150 ms, 1440×900 a 1,25, Iris Xe):
+
+| | antes | depois |
+| --- | --- | --- |
+| intervalo entre quadros, p90 / p99 | 50 / 83 ms | 34 / 50–66 ms |
+| quadros acima de 40 ms | 15% | 5–8% |
+| raster por segundo | 211–256 ms | 74 ms |
+| processo de GPU por segundo | 375 ms | 320 ms |
+| tarefas acima de 50 ms na rolagem inteira | 40–54 | 6–13 |
+| abertura quente até a cena pronta | 1,6–3,4 s | 1,5 s |
+
+### O que mudou
+
+- **Todo efeito preso ao scroll virou animação guiada pela rolagem em CSS**
+  (`animation-timeline`): o recuo do hero, a foto e o vídeo em paralaxe, a
+  palavra gigante, o trilho do processo, o fio de energia, o texto que
+  acende e a barra de progresso. O navegador amostra a posição por quadro,
+  no compositor quando é transform ou opacidade, sem medir caixa nenhuma.
+  As regras estão numa seção própria do `index.css`; os "palcos" declaram
+  a linha do tempo na seção e os `rola-*` a consomem. Onde não há o recurso
+  (Firefox, Safari antes do 26) e para quem pede menos movimento, cada
+  componente mantém a versão em framer-motion, idêntica à de antes — a
+  decisão é uma constante, `rolagemNativa`, em `src/lib/rolagem.ts`.
+- **O fundo do menu** vem de um IntersectionObserver numa sentinela de 24 px,
+  não de um ouvinte de scroll.
+- **A faixa de capacidades** inclina com a velocidade que o Lenis já
+  calcula (`onVelocidade` em `src/lib/scroll.ts`), num invólucro próprio.
+  Vale saber: a inclinação nunca tinha aparecido no ar. O `skewX` do framer
+  ia como estilo inline no mesmo elemento que corre por animação CSS de
+  `transform`, e animação vence estilo inline.
+- **Os reveals ganham camada própria só enquanto entram** (`.revelando` e
+  `.revelando-palavras .palavra`, por `usePromocaoNaEntrada`). O framer só
+  usa WAAPI para `opacity` e `filter`; `y`, `scale` e `rotate` são estilo
+  inline por quadro, e um bloco sem camada repinta inteiro a cada quadro —
+  com as sombras de texto, que são o que mais custa de raster nesta página.
+  O desfoque de entrada virou animação CSS (`.revelando-foco`): o framer
+  deixava `filter: blur(0px)` inline para sempre em cada bloco revelado, e
+  um filtro, mesmo nulo, é uma superfície de composição a mais por bloco.
+- **O brilho dos cartões** anda por `transform` num pseudo-elemento largo,
+  cortado por `overflow: clip`, em vez de `background-position` (repintura
+  do cartão inteiro a cada quadro por 1,3 s). A regra `astro-edge` saiu:
+  não existiam keyframes com esse nome, era uma animação que nunca rodou.
+- **`--nova`** é escrita em `#contato` e no rodapé, não no `:root`.
+- **O ruído do disco de acreção** é calculado num worker
+  (`scene/ruido.worker.ts`): 136 ms que ficavam no meio da montagem.
+- **Os canvases da costura** tiram o tamanho do ResizeObserver, sem ler
+  `clientWidth` no mount.
+
+### Medido e deixado como está
+
+A/B por CSS injetado, mesma rolagem, cada efeito desligado por vez: o vidro
+dos cartões (`backdrop-filter`), as manchas borradas do fundo, a transição
+de cor da tinta e o grão ficaram dentro do ruído entre execuções. A sombra
+de texto, que era o custo dominante de raster (217 → 72 ms/s sem ela),
+deixou de ser problema quando os reveals pararam de repintar por quadro
+(74 → 16 ms/s sem ela, agora): ela fica.
+
+### Armadilhas desta rodada
+
+- `view-timeline-inset` é `auto` por padrão, e `auto` usa o `scroll-padding`
+  do rolador — o html tem `scroll-padding-top: 96px` para as âncoras.
+  Medido: o hero já estava a 10% da saída na abertura e o trilho do
+  processo corria 96 px adiantado. Cada palco declara `0`.
+- `overflow: hidden` faz da seção um contêiner de rolagem: um `view()` solto
+  lá dentro mede a rolagem DELA, que não rola. Por isso a linha do tempo é
+  nomeada na seção, e as seções que abrigam a palavra gigante usam
+  `overflow: clip`.
+- O atalho `animation` zera `animation-timeline` e `animation-range` quando
+  vem depois deles. Só longhands.
+- A regra global de reduced-motion (`animation-duration: 0.01ms`) deixaria
+  uma animação guiada pela rolagem presa no estado final, com o hero
+  apagado: quem pede menos movimento fica na versão em JavaScript.
+- Chromium headless cai em WebGL por software nesta página e o rAF roda a
+  ~8 Hz: serve para conferir DOM, valores computados e capturas, nunca para
+  tempo. A rolagem por `page.mouse.wheel` espera cada evento e varia de
+  38 a 63 s; para medir, dispare a roda por CDP sem esperar
+  (`Input.dispatchMouseEvent`) numa cadência fixa, e compare variantes na
+  mesma execução, com a base repetida no fim.
+
+### Próxima alavanca
+
+A abertura quente gasta 450–560 ms numa tarefa só de montagem do React e
+170–280 ms no primeiro layout da página inteira. Montar as seções abaixo da
+dobra depois do hero (numa transição) cortaria as duas; o piso de 2 s da
+tela de entrada esconde isso hoje, então ficou para quando houver motivo.

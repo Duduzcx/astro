@@ -3,9 +3,11 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type MouseEventHandler,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
+  type RefObject,
 } from 'react'
 import {
   AnimatePresence,
@@ -18,6 +20,7 @@ import {
   useTransform,
 } from 'framer-motion'
 import { AstroStar } from '../brand/AstroMark'
+import { rolagemNativa } from '../../lib/rolagem'
 
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -35,6 +38,41 @@ const wide = () => typeof window !== 'undefined' && window.matchMedia('(min-widt
  * no lugar quando o olho o encontra, e o resto é só ganhar nitidez.
  */
 const REVEAL_EASE: [number, number, number, number] = [0.16, 1, 0.3, 1]
+
+/**
+ * Camada própria só enquanto a entrada roda (ver `.revelando` no index.css):
+ * o framer-motion move `y`, `scale` e `rotate` por JavaScript, e sem camada
+ * o bloco repinta inteiro a cada quadro, com as sombras de texto. Devolve a
+ * classe a pôr no elemento e a função que liga a promoção por `duracaoMs`;
+ * ligar de novo antes do fim só estende o prazo.
+ */
+function usePromocaoNaEntrada(classe: string, duracaoMs: number) {
+  const [ativa, setAtiva] = useState(false)
+  const temporizador = useRef(0)
+  useEffect(() => () => window.clearTimeout(temporizador.current), [])
+  const promover = () => {
+    setAtiva(true)
+    window.clearTimeout(temporizador.current)
+    temporizador.current = window.setTimeout(() => setAtiva(false), duracaoMs)
+  }
+  return [ativa ? classe : '', promover] as const
+}
+
+/**
+ * O desfoque de entrada dos reveals é uma animação CSS (`.revelando-foco`),
+ * e não um `filter` animado pelo framer-motion: o framer deixava
+ * `filter: blur(0px)` inline para sempre em cada bloco revelado, e um
+ * filtro, mesmo nulo, é uma superfície de composição a mais por bloco —
+ * medido na rolagem, 11% da GPU e um quarto dos quadros lentos. Aqui vão só
+ * os parâmetros; a classe entra junto com a promoção, no mesmo instante em
+ * que o framer começa a subir o bloco.
+ */
+const desfoqueDeEntrada = (pixels: number, duracao: number, atraso: number) =>
+  ({
+    '--entra-desfoque': `${pixels}px`,
+    '--entra-duracao': `${duracao}s`,
+    '--entra-atraso': `${atraso}s`,
+  }) as CSSProperties
 
 /** Eyebrow: pílula com borda, texto em mono e a estrela da marca. */
 export function Label({
@@ -100,10 +138,56 @@ export function DecodeText({ text }: { text: string }) {
   )
 }
 
-/** Palavra gigante vazada, derivando atrás do título da seção. */
-export function GiantWord({ word, className = '' }: { word: string; className?: string }) {
+/**
+ * Palavra gigante vazada, derivando atrás do título da seção.
+ *
+ * A deriva é uma animação CSS guiada pela linha do tempo deste invólucro
+ * (.palco-deriva e .rola-deriva, no index.css): 14% do próprio tamanho
+ * enquanto a seção atravessa a tela, sem JavaScript medindo nada. Dentro do
+ * Processo o invólucro mora num bloco `sticky`, que não atravessa a tela —
+ * ali a palavra segue a linha do tempo da própria seção (`linha`). Onde não
+ * há o recurso, o framer-motion mede o invólucro e move a palavra.
+ */
+export function GiantWord({
+  word,
+  className = '',
+  linha,
+}: {
+  word: string
+  className?: string
+  linha?: 'processo'
+}) {
   const ref = useRef<HTMLDivElement>(null)
-  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] })
+  const glifo = 'giant-outline text-[clamp(6rem,21vw,19rem)] leading-none whitespace-nowrap'
+
+  return (
+    <div
+      ref={ref}
+      aria-hidden="true"
+      className={`palco-deriva pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden ${className}`}
+    >
+      {rolagemNativa ? (
+        <span className={`${glifo} rola-deriva ${linha ? `rola-deriva-${linha}` : ''}`}>{word}</span>
+      ) : (
+        <PalavraComMola alvo={ref} className={glifo}>
+          {word}
+        </PalavraComMola>
+      )}
+    </div>
+  )
+}
+
+/** A deriva medida por JavaScript, para navegadores sem animação guiada pela rolagem. */
+function PalavraComMola({
+  alvo,
+  className,
+  children,
+}: {
+  alvo: RefObject<HTMLDivElement | null>
+  className: string
+  children: ReactNode
+}) {
+  const { scrollYProgress } = useScroll({ target: alvo, offset: ['start end', 'end start'] })
   /* Curso menor no celular: a mesma fração de 14% percorre proporcionalmente
      muito mais de uma tela estreita, e cada quadro repinta o contorno de um
      glifo de 19rem. */
@@ -111,24 +195,15 @@ export function GiantWord({ word, className = '' }: { word: string; className?: 
   const y = useTransform(scrollYProgress, [0, 1], [`${span}%`, `${-span}%`])
 
   return (
-    <div
-      ref={ref}
-      aria-hidden="true"
-      className={`pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden ${className}`}
-    >
-      {/* `will-change` aqui e não nos reveals: transform movido por JS não
-          promove camada sozinho, e este é um texto enorme com contorno, então
-          sem a promoção o navegador repinta o glifo inteiro a cada quadro.
-          São cinco na página, cada um numa seção diferente — espalhar isso
-          pelos reveals criaria dezenas de camadas e estrangularia a memória
-          de vídeo do aparelho, que é o efeito contrário. */}
-      <motion.span
-        style={{ y, willChange: 'transform' }}
-        className="giant-outline text-[clamp(6rem,21vw,19rem)] leading-none whitespace-nowrap"
-      >
-        {word}
-      </motion.span>
-    </div>
+    /* `will-change` aqui e não nos reveals: transform movido por JS não
+       promove camada sozinho, e este é um texto enorme com contorno, então
+       sem a promoção o navegador repinta o glifo inteiro a cada quadro.
+       São cinco na página, cada um numa seção diferente — espalhar isso
+       pelos reveals criaria dezenas de camadas e estrangularia a memória
+       de vídeo do aparelho, que é o efeito contrário. */
+    <motion.span style={{ y, willChange: 'transform' }} className={className}>
+      {children}
+    </motion.span>
   )
 }
 
@@ -219,12 +294,16 @@ export function BlurReveal({
   delay?: number
   className?: string
 }) {
+  const [promocao, promover] = usePromocaoNaEntrada('revelando', (delay + 1.0 + 0.15) * 1000)
+
   return (
     <motion.div
-      className={className}
-      initial={{ opacity: 0, y: 26, filter: wide() ? 'blur(10px)' : 'none' }}
-      whileInView={{ opacity: 1, y: 0, filter: wide() ? 'blur(0px)' : 'none' }}
+      className={`${className} ${promocao} ${promocao && wide() ? 'revelando-foco' : ''}`}
+      style={desfoqueDeEntrada(10, 1.0, delay)}
+      initial={{ opacity: 0, y: 26 }}
+      whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-90px' }}
+      onViewportEnter={promover}
       transition={{ duration: 1.0, delay, ease: REVEAL_EASE }}
     >
       {children}
@@ -363,14 +442,19 @@ export function Reveal({
   /* Chega desfocado e assenta nítido, só em tela larga: animar `filter`
      repinta o bloco a cada frame, e no celular isso pesa. */
   const soft = wide()
+  const [promocao, promover] = usePromocaoNaEntrada('revelando', (delay + 0.9 + 0.15) * 1000)
 
   return (
     <motion.div
-      className={`${className} ${entered ? 'is-entered' : ''}`}
-      initial={{ opacity: 0, y: 24, scale: 0.985, filter: soft ? 'blur(8px)' : 'none' }}
-      whileInView={{ opacity: 1, y: 0, scale: 1, filter: soft ? 'blur(0px)' : 'none' }}
+      className={`${className} ${entered ? 'is-entered' : ''} ${promocao} ${promocao && soft ? 'revelando-foco' : ''}`}
+      style={desfoqueDeEntrada(8, 0.9, delay)}
+      initial={{ opacity: 0, y: 24, scale: 0.985 }}
+      whileInView={{ opacity: 1, y: 0, scale: 1 }}
       viewport={{ once: true, margin: '-80px' }}
-      onViewportEnter={() => setEntered(true)}
+      onViewportEnter={() => {
+        setEntered(true)
+        promover()
+      }}
       transition={{ duration: 0.9, delay, ease: REVEAL_EASE }}
     >
       {children}
@@ -401,6 +485,10 @@ export function LineReveal({
 }) {
   const lines = text.split('\n')
   const MotionTag = motion[Tag]
+  const [promocao, promover] = usePromocaoNaEntrada(
+    'revelando-palavras',
+    (delay + lines.length * 0.09 + 0.9 + 0.15) * 1000,
+  )
 
   return (
     /**
@@ -416,16 +504,17 @@ export function LineReveal({
      * devolve o espaço para o layout não se mexer.
      */
     <MotionTag
-      className={className}
+      className={`${className} ${promocao}`}
       initial="hidden"
+      /* No hero a entrada é no mount: a promoção liga quando a animação começa. */
       {...(trigger === 'mount'
-        ? { animate: 'show' }
-        : { whileInView: 'show', viewport: { once: true, margin: '-12%' } })}
+        ? { animate: 'show', onAnimationStart: promover }
+        : { whileInView: 'show', viewport: { once: true, margin: '-12%' }, onViewportEnter: promover })}
     >
       {lines.map((line, index) => (
         <span key={line + index} className="block overflow-hidden pt-[0.16em] -mt-[0.16em] pb-[0.08em]">
           <motion.span
-            className="block"
+            className="palavra block"
             variants={{ hidden: { y: '110%' }, show: { y: '0%' } }}
             transition={{
               duration: 0.9,
@@ -460,14 +549,20 @@ export function WordReveal({
 }) {
   const MotionTag = motion[Tag]
   let wordIndex = 0
+  const palavras = text.split(/\s+/).length
+  const [promocao, promover] = usePromocaoNaEntrada(
+    'revelando-palavras',
+    (delay + palavras * 0.055 + 0.7 + 0.15) * 1000,
+  )
 
   return (
     <MotionTag
-      className={className}
+      className={`${className} ${promocao}`}
       initial="hidden"
+      /* No hero a entrada é no mount: a promoção liga quando a animação começa. */
       {...(trigger === 'mount'
-        ? { animate: 'show' }
-        : { whileInView: 'show', viewport: { once: true, margin: '-12%' } })}
+        ? { animate: 'show', onAnimationStart: promover }
+        : { whileInView: 'show', viewport: { once: true, margin: '-12%' }, onViewportEnter: promover })}
     >
       {text.split('\n').map((line, lineNumber) => (
         <span key={lineNumber} className="block">
@@ -478,7 +573,7 @@ export function WordReveal({
               <span key={`${word}-${wordNumber}`}>
                 <span className="inline-block overflow-hidden pt-[0.16em] -mt-[0.16em] pb-[0.08em] align-top">
                   <motion.span
-                    className="inline-block origin-bottom-left"
+                    className="palavra inline-block origin-bottom-left"
                     variants={{ hidden: { y: '112%', rotate: 6 }, show: { y: '0%', rotate: 0 } }}
                     transition={{
                       duration: 0.7,
