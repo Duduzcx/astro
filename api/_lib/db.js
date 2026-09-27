@@ -132,7 +132,15 @@ export async function diagnosticoBanco() {
 let preparado = false
 export async function prepararBanco() {
   if (preparado) return
-  const s = sql()
+  /* Tudo numa transação com trava consultiva: esta função roda em toda
+     invocação fria, e duas funções que acordam juntas (leads e resumo,
+     abrindo o painel) faziam o mesmo CREATE ao mesmo tempo. O IF NOT EXISTS
+     não protege disso — as duas passam pela checagem e a segunda cai com
+     "já existe" ou com chave duplicada no catálogo, e quem abriu o painel
+     via "falha 500". Com a trava, a segunda espera a primeira terminar e
+     encontra tudo pronto. */
+  await sql().begin(async (s) => {
+  await s`SELECT pg_advisory_xact_lock(202609)`
   await s`
     CREATE TABLE IF NOT EXISTS leads (
       id            BIGSERIAL PRIMARY KEY,
@@ -213,6 +221,7 @@ export async function prepararBanco() {
       sucesso   BOOLEAN NOT NULL DEFAULT false
     )`
   await s`CREATE INDEX IF NOT EXISTS tentativas_quando_idx ON tentativas_login (quando DESC)`
+  })
   preparado = true
 }
 

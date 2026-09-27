@@ -6,7 +6,7 @@ export function Manifesto() {
   return (
     <section id="manifesto" aria-label="Manifesto">
       <div className="relative z-10 flex items-center py-24 lg:min-h-[85svh] lg:py-16">
-        <GiantWord word="Manual" />
+        <GiantWord word="Manual" contorno="forte" />
         <div className="shell">
           <BlurReveal className="mx-auto max-w-4xl">
             {/* O destaque não é mais uma cor aplicada a meia frase: é a

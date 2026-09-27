@@ -230,6 +230,7 @@ async function pedir(caminho: string, opcoes: RequestInit = {}) {
 
 function Entrar({ aoEntrar, estado }: { aoEntrar: () => void; estado: Estado | null }) {
   const [senha, setSenha] = useState('')
+  const [mostrar, setMostrar] = useState(false)
   const [erro, setErro] = useState('')
   const [enviando, setEnviando] = useState(false)
 
@@ -262,15 +263,32 @@ function Entrar({ aoEntrar, estado }: { aoEntrar: () => void; estado: Estado | n
         <label className="sr-only" htmlFor="senha">
           Senha
         </label>
-        <input
-          id="senha"
-          type="password"
-          value={senha}
-          onChange={(evento) => setSenha(evento.target.value)}
-          autoComplete="current-password"
-          placeholder="Senha"
-          className="mt-6 w-full rounded-2xl bg-obsidian px-5 py-3.5 text-[15px] text-ivory outline-none placeholder:text-slate focus:shadow-[inset_0_0_0_1px_#4d84e0]"
-        />
+        <div className="relative mt-6">
+          <input
+            id="senha"
+            type={mostrar ? 'text' : 'password'}
+            value={senha}
+            onChange={(evento) => setSenha(evento.target.value)}
+            autoComplete="current-password"
+            placeholder="Senha"
+            className="w-full rounded-2xl bg-obsidian py-3.5 pr-14 pl-5 text-[15px] text-ivory outline-none placeholder:text-slate focus:shadow-[inset_0_0_0_1px_#4d84e0]"
+          />
+          {/* O olho: mostra a senha enquanto se digita. Botão de verdade, com
+              nome para o leitor de tela, fora da ordem do Enter. */}
+          <button
+            type="button"
+            onClick={() => setMostrar((atual) => !atual)}
+            aria-label={mostrar ? 'Esconder a senha' : 'Mostrar a senha'}
+            aria-pressed={mostrar}
+            className="absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-2 text-slate hover:text-ivory"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12Z" />
+              <circle cx="12" cy="12" r="2.8" />
+              {mostrar ? <path d="M4 4l16 16" /> : null}
+            </svg>
+          </button>
+        </div>
         {erro ? <p className="mt-3 text-[13px] text-[#ff9b9b]">{erro}</p> : null}
         <button
           type="submit"

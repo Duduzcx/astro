@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Logo } from './Logo'
 import { ArrowGlyph, IrisButton } from './ui/Primitives'
 import { navLinks, site } from '../lib/site'
-import { scrollToHash } from '../lib/scroll'
+import { scrollToHash, travarRolagem } from '../lib/scroll'
 
 /** Marca o item do menu cuja seção está ocupando a viewport. */
 function useActiveSection() {
@@ -53,8 +53,10 @@ export function Nav() {
   // A folha mobile cobre a página; a página atrás dela não pode rolar.
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : ''
+    travarRolagem(menuOpen)
     return () => {
       document.body.style.overflow = ''
+      travarRolagem(false)
     }
   }, [menuOpen])
 
@@ -173,6 +175,7 @@ export function Nav() {
               initial="hidden"
               animate="show"
               variants={{ show: { transition: { staggerChildren: 0.07, delayChildren: 0.08 } } }}
+              data-lenis-prevent
               className="relative flex-1 overflow-y-auto px-6 pt-4"
             >
               {navLinks.map((link, index) => (

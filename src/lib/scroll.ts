@@ -110,3 +110,16 @@ export function onVelocidade(ouvinte: (pixelsPorSegundo: number) => void): () =>
     ouvinte((velocity / intervalo) * 1000)
   })
 }
+
+/**
+ * Trava e destrava a rolagem da página, para quando uma folha cobre tudo (o
+ * menu do celular). `overflow: hidden` no body não basta: o Lenis intercepta
+ * o toque e rola a página por conta própria, e a folha aberta deixava o
+ * site andar por baixo dela. Parado, o Lenis engole o gesto; o que precisa
+ * rolar dentro da folha leva `data-lenis-prevent`.
+ */
+export function travarRolagem(travar: boolean) {
+  if (!lenis) return
+  if (travar) lenis.stop()
+  else lenis.start()
+}

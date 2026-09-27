@@ -70,17 +70,25 @@ const JANELA = '10 minutes'
 
 async function travas(de) {
   if (!temBanco()) return { porOrigem: false, global: false }
-  await prepararBanco()
-  const s = sql()
-  const [linha] = await s`
-    SELECT
-      count(*) FILTER (WHERE ${de} <> '' AND origem = ${de})::int AS daOrigem,
-      count(*)::int AS total
-    FROM tentativas_login
-    WHERE sucesso = false AND quando > now() - interval '${s.unsafe(JANELA)}'`
-  return {
-    porOrigem: (linha?.daorigem || 0) >= ERROS_ATE_TRAVAR,
-    global: (linha?.total || 0) >= ERROS_GLOBAIS_ATE_TRAVAR,
+  try {
+    await prepararBanco()
+    const s = sql()
+    const [linha] = await s`
+      SELECT
+        count(*) FILTER (WHERE ${de} <> '' AND origem = ${de})::int AS daOrigem,
+        count(*)::int AS total
+      FROM tentativas_login
+      WHERE sucesso = false AND quando > now() - interval '${s.unsafe(JANELA)}'`
+    return {
+      porOrigem: (linha?.daorigem || 0) >= ERROS_ATE_TRAVAR,
+      global: (linha?.total || 0) >= ERROS_GLOBAIS_ATE_TRAVAR,
+    }
+  } catch (erro) {
+    /* Banco fora do ar ou preparando o esquema: a porta continua exigindo a
+       senha, só fica sem a contagem de tentativas. Antes isto estourava como
+       "falha 500" na tela de entrar, sem dizer nada. */
+    console.error('trava de tentativas indisponível:', erro?.message)
+    return { porOrigem: false, global: false }
   }
 }
 

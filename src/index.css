@@ -319,6 +319,12 @@
   -webkit-text-stroke: 1.5px rgba(150, 170, 205, 0.16);
 }
 
+/* A mesma palavra, com o contorno mais presente: para onde ela é o único
+   ornamento da seção (o manifesto) e a pedido do cliente. */
+@utility giant-outline-forte {
+  -webkit-text-stroke-color: rgba(170, 190, 225, 0.4);
+}
+
 /* Banho de cor suave atrás de uma seção, em opacidade baixíssima. Nunca
    direto atrás de um texto: sempre atrás da seção inteira. */
 @utility aurora {
@@ -405,12 +411,17 @@
    Conferido em captura. O efeito é o texto CLAREANDO, nunca um texto que
    começa ilegível. */
 @utility texto-acende {
+  /* O trecho ainda não aceso é branco, opaco, um fio abaixo do branco
+     cheio: o cliente leu o cinza de antes como "sombra cinza" no texto, e
+     branco translúcido sobre a cena escura também vira cinza (medido em
+     captura). O efeito fica sutil de propósito — a leitura acende de um
+     branco quase cheio para o branco cheio. */
   background-image: linear-gradient(
     180deg,
-    var(--color-ivory) 0%,
-    var(--color-ivory) var(--acesa, 100%),
-    color-mix(in srgb, var(--color-ash) 88%, var(--color-onyx)) calc(var(--acesa, 100%) + 14%),
-    color-mix(in srgb, var(--color-ash) 88%, var(--color-onyx)) 100%
+    #ffffff 0%,
+    #ffffff var(--acesa, 100%),
+    color-mix(in srgb, var(--color-ivory) 90%, var(--color-slate)) calc(var(--acesa, 100%) + 14%),
+    color-mix(in srgb, var(--color-ivory) 90%, var(--color-slate)) 100%
   );
   -webkit-background-clip: text;
   background-clip: text;

@@ -152,13 +152,16 @@ export function GiantWord({
   word,
   className = '',
   linha,
+  contorno,
 }: {
   word: string
   className?: string
   linha?: 'processo'
+  /** `forte`: contorno mais presente, para onde a palavra é o único ornamento. */
+  contorno?: 'forte'
 }) {
   const ref = useRef<HTMLDivElement>(null)
-  const glifo = 'giant-outline text-[clamp(6rem,21vw,19rem)] leading-none whitespace-nowrap'
+  const glifo = `giant-outline ${contorno === 'forte' ? 'giant-outline-forte' : ''} text-[clamp(6rem,21vw,19rem)] leading-none whitespace-nowrap`
 
   return (
     <div
