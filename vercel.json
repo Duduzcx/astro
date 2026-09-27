@@ -3,6 +3,12 @@
   "framework": "vite",
   "outputDirectory": "dist",
   "trailingSlash": false,
+  "crons": [
+    {
+      "path": "/api/crm/cron/manter-vivo",
+      "schedule": "0 11 * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

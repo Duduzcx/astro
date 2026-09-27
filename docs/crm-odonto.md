@@ -112,6 +112,17 @@ para o plano Pro, o mesmo endpoint entra em `vercel.json`:
 
 (a Vercel roda em UTC; 11–20 UTC = 8–17 em São Paulo).
 
+## O Supabase não pausa (cron diário)
+
+O plano gratuito do Supabase pausa um projeto que passa uma semana sem
+consulta, e um projeto pausado derruba o CRM e o funil da agência juntos. O
+`vercel.json` agenda `GET /api/crm/cron/manter-vivo` todo dia às 11h UTC:
+uma contagem em `config_clinica` pela API do Supabase e um `SELECT now()`
+no Postgres da agência. A Vercel manda `CRON_SECRET` no cabeçalho, então a
+variável precisa existir (é a mesma do anti-faltas). A resposta diz o que
+tocou em cada banco; para conferir à mão:
+`curl -H "Authorization: Bearer CRON_SECRET" https://astrosolucoes.vercel.app/api/crm/cron/manter-vivo`.
+
 ## Checklist de uma clínica nova
 
 1. A clínica cria a conta em `/crm` (e-mail e senha) e cai no assistente de

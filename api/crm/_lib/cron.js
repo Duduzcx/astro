@@ -3,6 +3,39 @@ import { formatarVagaAmigavel } from './bot/util.js'
 import { segredoDoCron, supabaseAdmin } from './ambiente.js'
 import { dependencias, exigirSegredo } from './bot.js'
 import { paraClinica } from './clinica.js'
+import { sql, temBanco } from '../../_lib/db.js'
+
+/**
+ * Mantém o Supabase acordado. O plano gratuito pausa um projeto que passa
+ * uma semana sem nenhuma consulta, e um projeto pausado derruba o CRM das
+ * clínicas e o funil da agência de uma vez. Uma consulta mínima por dia em
+ * cada banco (a do CRM pela API do Supabase, a da agência pela conexão
+ * Postgres) conta como atividade e basta. Chamado pelo Vercel Cron
+ * (`crons` no vercel.json, diário no plano gratuito) com CRON_SECRET no
+ * cabeçalho, como o anti-faltas.
+ */
+export async function cronManterVivo(req     , res     ) {
+  exigirSegredo(req, segredoDoCron())
+  const toques                          = {}
+  try {
+    const { count, error } = await supabaseAdmin().from('config_clinica').select('id', { count: 'exact', head: true })
+    toques.supabase = error ? `erro: ${error.message}` : `ok, ${count ?? 0} clínicas`
+  } catch (erro) {
+    toques.supabase = `erro: ${(erro         )?.message}`
+  }
+  if (temBanco()) {
+    try {
+      const s = sql()
+      await s`SELECT now()`
+      toques.postgres = 'ok'
+    } catch (erro) {
+      toques.postgres = `erro: ${(erro         )?.message}`
+    }
+  } else {
+    toques.postgres = 'sem POSTGRES_URL'
+  }
+  return res.status(200).json({ ok: true, quando: new Date().toISOString(), toques })
+}
 
 /**
  * Anti-faltas. Chamado de hora em hora (Vercel Cron no plano pago; no plano

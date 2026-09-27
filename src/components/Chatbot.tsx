@@ -98,19 +98,23 @@ function pinta(elemento: Element): boolean {
   const estilo = getComputedStyle(elemento)
   if (estilo.visibility === 'hidden' || estilo.opacity === '0') return false
 
-  /* Cor de fundo e borda NÃO contam como informação.
-     Contavam, e no celular — onde o conteúdo ocupa a largura toda — o canto
-     quase sempre cai sobre o fundo de algum cartão: o botão não aparecia em
-     página nenhuma, medido. O que a pessoa precisa ler é texto, imagem e
-     coisa clicável; o canto vazio de um cartão não é informação. */
-
   /* Texto escrito NESTE elemento, não num filho: o filho já teria sido
      devolvido antes por elementsFromPoint, que entrega do mais fundo ao mais
      raso. */
   for (const no of elemento.childNodes) {
     if (no.nodeType === Node.TEXT_NODE && no.textContent && no.textContent.trim()) return true
   }
-  return false
+
+  /* Cartão, caixa com fundo ou com borda também contam. A versão anterior
+     só contava texto, imagem e coisa clicável, e o botão pousava no canto
+     vazio de um cartão — que lê como sobreposição do mesmo jeito, e foi a
+     reclamação. O preço é conhecido: no celular, onde os cartões ocupam a
+     largura toda, o botão só aparece nos vãos entre um bloco e outro. É o
+     pedido — aparecer só onde não cobre nada. */
+  if (elemento.closest('.graphite-card, article, figure, form, table')) return true
+  const temFundo = estilo.backgroundColor !== 'rgba(0, 0, 0, 0)' || estilo.backgroundImage !== 'none'
+  const temBorda = parseFloat(estilo.borderTopWidth) > 0 && estilo.borderTopStyle !== 'none'
+  return temFundo || temBorda
 }
 
 /**

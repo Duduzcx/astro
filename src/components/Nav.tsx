@@ -89,7 +89,11 @@ export function Nav() {
         scrolled ? 'bg-onyx/94' : ''
       }`}
     >
-      <nav className="shell flex h-14 items-center justify-between md:h-20" aria-label="Principal">
+      {/* A barra encolhe um pouco depois da primeira rolagem: o menu sai do caminho do conteúdo. */}
+      <nav
+        className={`shell flex h-14 items-center justify-between transition-[height] duration-300 ${scrolled ? 'md:h-16' : 'md:h-20'}`}
+        aria-label="Principal"
+      >
         {/* Só o símbolo: o nome já está no título da página e no rodapé, e
             repeti-lo no menu rouba altura da barra sem dizer nada de novo. */}
         <a href="#topo" className="shrink-0" aria-label="Astro Soluções — ir para o topo">
@@ -104,7 +108,7 @@ export function Nav() {
                 <a
                   href={link.href}
                   aria-current={isActive ? 'true' : undefined}
-                  className={`relative block pb-0.5 text-[15px] font-[420] transition-colors ${
+                  className={`link-menu relative block pb-0.5 text-[15px] font-[420] transition-colors ${
                     isActive ? 'text-ivory' : 'text-ash hover:text-ivory'
                   }`}
                 >

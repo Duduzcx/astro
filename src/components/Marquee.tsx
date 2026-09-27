@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react'
 import { AstroStar } from './brand/AstroMark'
-import { usePausedOffscreen } from '../lib/usePausedOffscreen'
 import { onVelocidade } from '../lib/scroll'
 
 /** Faixa infinita de capacidades embaixo do hero, em português comum. */
@@ -19,10 +18,6 @@ const INCLINACAO_MAXIMA = 6
 const VELOCIDADE_CHEIA = 1600
 
 export function Marquee() {
-  /* A faixa fica logo abaixo do hero e não está dentro de nenhuma seção, então
-     o `content-visibility` não a alcança: sem isto ela seguiria correndo a
-     página inteira, muito depois de ninguém mais poder vê-la. */
-  const bandRef = usePausedOffscreen<HTMLDivElement>()
   const inclinada = useRef<HTMLDivElement>(null)
 
   /* A inclinação vem da velocidade que o Lenis já calcula, e não de um
@@ -90,7 +85,8 @@ export function Marquee() {
       {/* `will-change`: com camada própria, a inclinação é só compositor,
           sem repintar a faixa que corre lá dentro. */}
       <div ref={inclinada} className="will-change-transform">
-        <div ref={bandRef} className="flex w-max animate-[astro-marquee_36s_linear_infinite]">
+        {/* Para fora da tela pelo observador global (usePausarAnimacoesForaDaTela). */}
+        <div className="flex w-max animate-[astro-marquee_36s_linear_infinite]">
           <div aria-hidden="true" className="flex">{row}</div>
           <div className="flex">{row}</div>
         </div>

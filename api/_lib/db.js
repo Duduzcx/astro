@@ -158,6 +158,17 @@ export async function prepararBanco() {
   await s`CREATE INDEX IF NOT EXISTS leads_criado_em_idx ON leads (criado_em DESC)`
   await s`CREATE INDEX IF NOT EXISTS leads_situacao_idx ON leads (situacao)`
   await s`CREATE INDEX IF NOT EXISTS leads_retorno_idx ON leads (retorno_em) WHERE retorno_em IS NOT NULL`
+  /* Prospecção pelo número pessoal (api/_lib/prospeccao.js): '' (não é),
+     'bot' (o robô conduz) ou 'pausado' (a mão humana assumiu). */
+  await s`ALTER TABLE leads ADD COLUMN IF NOT EXISTS prospeccao TEXT NOT NULL DEFAULT ''`
+  await s`CREATE INDEX IF NOT EXISTS leads_contato_idx ON leads (contato, criado_em DESC)`
+  /* A Evolution reentrega o que demora: cada mensagem da prospecção
+     responde uma vez só. */
+  await s`
+    CREATE TABLE IF NOT EXISTS prospeccao_mensagens (
+      wamid  TEXT PRIMARY KEY,
+      quando TIMESTAMPTZ NOT NULL DEFAULT now()
+    )`
 
   /* O histórico do relacionamento. É isto que separa um CRM de uma lista de
      contatos: saber o que já foi conversado, e quando. */

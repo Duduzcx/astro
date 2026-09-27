@@ -6,6 +6,7 @@ import { agenda, evolution, faq, supabaseAdmin, tokenDoWebhook } from './ambient
 import { corpo, ErroHttp, primeiro,                    } from './http.js'
 import { canalRegistrador, criarRepo, registrarMensagem } from './repo.js'
 import { clinicaPorInstancia } from './sessao.js'
+import { instanciaPessoal, webhookProspeccao } from '../../_lib/prospeccao.js'
 
 /** Sem Cal.com configurado o motor não pode marcar: a agenda avisa em vez de fingir. */
 const AGENDA_AUSENTE         = {
@@ -53,6 +54,19 @@ export async function webhookEvolution(req     , res     , instancia        ) {
   if (!autorizado) return res.status(401).json({ erro: 'não autorizado' })
 
   const evento = await corpo(req)
+
+  /* O número pessoal da agência usa a mesma Evolution e o mesmo webhook, mas
+     não é clínica: vai para a prospecção (api/_lib/prospeccao.js). */
+  if (instancia === instanciaPessoal()) {
+    res.status(200).json({ ok: true })
+    try {
+      await webhookProspeccao(evento)
+    } catch (erro) {
+      console.error('prospecção falhou:', (erro         )?.message)
+    }
+    return
+  }
+
   const clinica = await clinicaPorInstancia(instancia)
   if (!clinica) return res.status(404).json({ erro: 'instância desconhecida' })
 

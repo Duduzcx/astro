@@ -313,7 +313,17 @@ export function TriScene() {
        instantânea. Depois que ele clica em Entrar, não pode mais. Sem tela
        de entrada no documento, a cena já está à vista desde o começo. */
     let aVista = !document.getElementById('entrada')
-    window.addEventListener('astro:entrou', () => { aVista = true }, { once: true })
+    /* Quando a pessoa entrou: a fila de programas espera a saída da tela de
+       entrada terminar (ver warmNext). */
+    let entrouEm = 0
+    window.addEventListener(
+      'astro:entrou',
+      () => {
+        aVista = true
+        entrouEm = performance.now()
+      },
+      { once: true },
+    )
     /* Quanto os astros sobem para ficarem no meio da TELA, em unidades de
        mundo. Zero quando o palco tem a altura da tela. */
     let astroShiftY = 0
@@ -1586,6 +1596,18 @@ export function TriScene() {
          de programa (render target) que os astros vão usar. */
       if (wantsPostFx && !postfx) {
         window.setTimeout(warmNext, 60)
+        return
+      }
+      /* Com a tela de entrada à vista, a fila espera. Cada programa que o
+         driver liga segura o compositor por 40 a 110ms — medido nos quadros
+         apresentados —, e era isso que fazia o radar da tela de entrada
+         engasgar no meio da volta, já com o botão de entrar na tela. Retoma
+         um segundo e meio depois de entrar (a saída da tela é animada), ou
+         na primeira rolagem: quem já se mexe precisa dos programas mais do
+         que precisa de um radar liso. */
+      const saindo = aVista && performance.now() - entrouEm < 1500
+      if (!hurry && (!aVista || saindo)) {
+        window.setTimeout(warmNext, 250)
         return
       }
       const next = warmQueue.shift()

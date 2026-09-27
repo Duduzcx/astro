@@ -58,14 +58,17 @@ export function Insights() {
           {posts.map((post, index) => (
             <Reveal key={post.title} delay={0.08 * index}>
               <article className="graphite-card group h-full !p-0">
-                <div className="overflow-hidden rounded-t-xl">
+                <div className="relative aspect-[3/2] overflow-clip rounded-t-xl">
+                  {/* A moldura desliza ao contrário da página (ver .rola-moldura). */}
+                  <div className="rola-moldura absolute inset-x-0 -top-[7%] -bottom-[7%]">
                   <img
                     src={post.image}
                     alt={post.alt}
                     loading="lazy"
                     decoding="async"
-                    className="aspect-[3/2] w-full object-cover opacity-80 [filter:saturate(0.55)_brightness(0.75)] transition-transform duration-500 group-hover:scale-[1.04]"
+                    className="h-full w-full object-cover opacity-80 [filter:saturate(0.55)_brightness(0.75)] transition-transform duration-500 group-hover:scale-[1.04]"
                   />
+                  </div>
                 </div>
                 <div className="p-6">
                   <p className="flex items-center gap-3 text-[11px] text-slate">

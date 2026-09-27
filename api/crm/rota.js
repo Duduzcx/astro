@@ -1,5 +1,5 @@
 import { webhookEvolution } from './_lib/bot.js'
-import { cronLembretes } from './_lib/cron.js'
+import { cronLembretes, cronManterVivo } from './_lib/cron.js'
 import { ErroHttp, primeiro,                    } from './_lib/http.js'
 import { rotasPainel } from './_lib/painel.js'
 
@@ -10,6 +10,7 @@ import { rotasPainel } from './_lib/painel.js'
  *
  *   whatsapp/webhook/{instancia}   o que a Evolution API entrega
  *   cron/lembretes                 o anti-faltas, com CRON_SECRET
+ *   cron/manter-vivo               a consulta diária que impede o Supabase de pausar
  *   (o resto)                      o painel, com a sessão do Supabase Auth
  *
  * O caminho chega em `?p=`, escrito pelo rewrite do vercel.json, e não pelo
@@ -28,6 +29,7 @@ export default async function handler(req     , res     ) {
   try {
     if (partes[0] === 'whatsapp' && partes[1] === 'webhook' && partes[2]) return await webhookEvolution(req, res, partes[2])
     if (partes[0] === 'cron' && partes[1] === 'lembretes') return await cronLembretes(req, res)
+    if (partes[0] === 'cron' && partes[1] === 'manter-vivo') return await cronManterVivo(req, res)
     return await rotasPainel(partes, req, res)
   } catch (erro) {
     if (erro instanceof ErroHttp) return res.status(erro.codigo).json({ erro: erro.message })

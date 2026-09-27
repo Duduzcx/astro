@@ -91,7 +91,7 @@ export function ServiceBlocks() {
                 </ul>
               </Reveal>
             </div>
-            <Reveal delay={0.15} className={index % 2 === 1 ? 'lg:order-1' : ''}>
+            <Reveal delay={0.15} className={`rola-vitrine ${index % 2 === 1 ? 'lg:order-1' : ''}`}>
               <Tilt>{service.panel}</Tilt>
             </Reveal>
           </div>

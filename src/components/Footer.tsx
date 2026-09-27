@@ -1,4 +1,4 @@
-import { ArrowGlyph, BlurReveal, IrisButton } from './ui/Primitives'
+import { ArrowGlyph, BlurReveal, GiantWord, IrisButton } from './ui/Primitives'
 import { Logo } from './Logo'
 import { AstroMark } from './brand/AstroMark'
 import { footerLinks, site } from '../lib/site'
@@ -13,6 +13,8 @@ export function Footer() {
   return (
     <footer className="relative z-10">
       <div className="relative flex min-h-[80svh] items-center">
+        {/* A marca em palavra, gigante e vazada, derivando atrás do fecho. */}
+        <GiantWord word="Astro" className="opacity-50" />
         <AstroMark
           className="pointer-events-none absolute top-1/2 left-1/2 h-[62vmin] w-[62vmin] -translate-x-1/2 -translate-y-1/2 opacity-[0.045]"
           tone="negative"

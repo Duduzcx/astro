@@ -109,6 +109,24 @@ export function criarEvolution(env                                              
 
     enviarTexto,
 
+    /** As conversas que existem no aparelho, como a Evolution as devolve. */
+    async conversas(nome) {
+      const corpo = await pedir(`/chat/findChats/${encodeURIComponent(nome)}`, { method: 'POST', body: '{}' })
+      if (Array.isArray(corpo)) return corpo
+      return Array.isArray(corpo?.chats) ? corpo.chats : []
+    },
+
+    /** As últimas mensagens de uma conversa (o formato varia entre versões da Evolution; aceita os dois). */
+    async mensagens(nome, jid, limite = 40) {
+      const corpo = await pedir(`/chat/findMessages/${encodeURIComponent(nome)}`, {
+        method: 'POST',
+        body: JSON.stringify({ where: { key: { remoteJid: jid } }, limit: limite }),
+      })
+      if (Array.isArray(corpo)) return corpo
+      const registros = corpo?.messages?.records ?? corpo?.messages
+      return Array.isArray(registros) ? registros : []
+    },
+
     canal(nome) {
       return {
         enviarTexto: (numero, texto) => enviarTexto(nome, numero, texto),

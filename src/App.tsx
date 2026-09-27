@@ -23,6 +23,7 @@ import { Faq } from './components/Faq'
 import { Contact } from './components/Contact'
 import { Footer } from './components/Footer'
 import { TriangleDrift } from './components/ui/TriangleDrift'
+import { usePausarAnimacoesForaDaTela } from './lib/usePausarForaDaTela'
 
 /** three.js pesa ~500kB minificado, então a cena vem num chunk separado. */
 /* O chunk da cena (three.js) começa a baixar já, junto com o resto: o lazy
@@ -39,6 +40,8 @@ const TriScene = lazy(() =>
  * refaça as medidas da outra.
  */
 export default function App() {
+  usePausarAnimacoesForaDaTela()
+
   return (
     <>
       <TintLayer />

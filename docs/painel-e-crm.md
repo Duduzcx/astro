@@ -208,3 +208,9 @@ Abra *Logs* no painel da Vercel e filtre pela rota:
 
 O widget do chat, a ponte da inteligência e as proteções de custo estão em
 `docs/chat-inteligente.md`.
+
+## Prospecção pelo número pessoal
+
+A aba **Prospecção** do painel conecta o WhatsApp pessoal por QR code (Evolution
+API), lista as conversas do aparelho e deixa o robô assumir as escolhidas. Como
+funciona, o que é preciso e o que o robô nunca faz: `docs/prospeccao-whatsapp.md`.

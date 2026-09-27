@@ -728,15 +728,20 @@ export function ScrambleReveal({
 /** Uma palavra que fica trocando: sobe, desfoca e a próxima chega. */
 export function RotatingWord({ words, className = '' }: { words: readonly string[]; className?: string }) {
   const [index, setIndex] = useState(0)
+  const ref = useRef<HTMLSpanElement>(null)
+  /* Só troca de palavra com o hero na tela: fora dela a troca animava
+     letras que ninguém via, e cada troca é uma entrada e uma saída com
+     desfoque, escritas no DOM por quadro. */
+  const visivel = useInView(ref, { margin: '10%' })
 
   useEffect(() => {
-    if (prefersReducedMotion()) return
+    if (prefersReducedMotion() || !visivel) return
     const id = setInterval(() => setIndex((current) => (current + 1) % words.length), 2300)
     return () => clearInterval(id)
-  }, [words.length])
+  }, [words.length, visivel])
 
   return (
-    <span className={`inline-block ${className}`}>
+    <span ref={ref} className={`inline-block ${className}`}>
       <AnimatePresence mode="popLayout" initial={false}>
         <motion.span
           key={words[index]}

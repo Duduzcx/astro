@@ -563,10 +563,96 @@
 @keyframes cta-flutua {
   from {
     translate: 0 -12%;
+    scale: 1.14;
   }
   to {
     translate: 0 12%;
+    scale: 1;
   }
+}
+
+/* As vitrines de serviço (os painéis de produto) flutuam mais devagar que o
+   texto ao lado: 6% do próprio tamanho enquanto atravessam a tela. */
+.rola-vitrine {
+  animation-name: vitrine-flutua;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+  animation-timeline: view();
+}
+@keyframes vitrine-flutua {
+  from {
+    translate: 0 6%;
+  }
+  to {
+    translate: 0 -6%;
+  }
+}
+
+/* Paralaxe dentro da moldura: a imagem de um cartão (projetos, insights) é
+   um pouco mais alta que a moldura e desliza ao contrário da página, dando
+   profundidade ao cartão sem mexer no layout. O zoom do hover fica na
+   própria imagem, em `scale`, e não briga com o `translate` daqui. */
+.rola-moldura {
+  animation-name: moldura-desliza;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+  animation-timeline: view();
+}
+@keyframes moldura-desliza {
+  from {
+    translate: 0 -7%;
+  }
+  to {
+    translate: 0 7%;
+  }
+}
+
+/* O carrossel da equipe: o cartão no centro do trilho vale inteiro, os das
+   pontas recuam um pouco e apagam. A linha do tempo é a rolagem HORIZONTAL
+   do próprio trilho (`view(inline)`), então o efeito segue o dedo e a roda
+   igualmente. */
+.rola-foco {
+  animation-name: foco-carrossel;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+  animation-timeline: view(inline);
+}
+@keyframes foco-carrossel {
+  0% {
+    scale: 0.94;
+    opacity: 0.55;
+  }
+  32% {
+    scale: 1;
+    opacity: 1;
+  }
+  68% {
+    scale: 1;
+    opacity: 1;
+  }
+  100% {
+    scale: 0.94;
+    opacity: 0.55;
+  }
+}
+
+/* Sublinhado que corre da esquerda no hover dos itens do menu. */
+.link-menu::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: -2px;
+  left: 0;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.6;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 380ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.link-menu:hover::after,
+.link-menu:focus-visible::after {
+  transform: scaleX(1);
 }
 .rola-filme {
   animation-name: filme-flutua;

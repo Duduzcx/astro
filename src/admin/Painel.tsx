@@ -1,3 +1,4 @@
+import { AbaProspeccao } from './Prospeccao'
 import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react'
 
 /**
@@ -43,6 +44,8 @@ type Lead = {
   anotacoes: string
   retorno_em: string | null
   responsavel: string
+  /* '' (não é prospecção), 'bot' (o robô conduz) ou 'pausado' (sua mão assumiu). */
+  prospeccao?: string
 }
 
 type Atividade = { id: number; quando: string; tipo: string; texto: string }
@@ -383,7 +386,14 @@ function Cartao({
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[1.05rem] text-ivory">{lead.nome || 'Sem nome'}</p>
+          <p className="flex flex-wrap items-center gap-2 text-[1.05rem] text-ivory">
+            {lead.nome || 'Sem nome'}
+            {lead.prospeccao === 'bot' ? (
+              <span className="rounded-full bg-[#86e8a8]/15 px-2 py-0.5 text-[10px] text-[#86e8a8]">robô</span>
+            ) : lead.prospeccao === 'pausado' ? (
+              <span className="rounded-full bg-[#ffd479]/15 px-2 py-0.5 text-[10px] text-[#ffd479]">pausado</span>
+            ) : null}
+          </p>
           <p className="mt-1 text-[13px] text-slate">
             {[lead.empresa, lead.contato].filter(Boolean).join(' · ') || 'sem contato'}
           </p>
@@ -495,6 +505,19 @@ function Cartao({
  */
 function Gaveta({ id, deLista, aoMudar, aoFechar }: { id: number; deLista: Lead | null; aoMudar: (campos: Partial<Lead>) => void; aoFechar: () => void }) {
   const [lead, setLead] = useState<Lead | null>(deLista)
+  const [avisoRobo, setAvisoRobo] = useState('')
+  /* Pausar ou devolver o robô de prospecção deste lead (ver api/_lib/prospeccao.js). */
+  const alternarRobo = async () => {
+    if (!lead) return
+    const prospeccao = lead.prospeccao === 'bot' ? 'pausado' : 'bot'
+    try {
+      const r = await pedir('/api/admin/prospeccao', { method: 'PATCH', body: JSON.stringify({ lead: lead.id, prospeccao }) })
+      setLead(r.lead)
+      setAvisoRobo('')
+    } catch (falha) {
+      setAvisoRobo(falha instanceof Error ? falha.message : 'não foi possível mudar')
+    }
+  }
   const [atividades, setAtividades] = useState<Atividade[] | null>(null)
   const [nova, setNova] = useState('')
   const [anotacoes, setAnotacoes] = useState(deLista?.anotacoes ?? '')
@@ -568,6 +591,16 @@ function Gaveta({ id, deLista, aoMudar, aoFechar }: { id: number; deLista: Lead 
             <p className="mt-1 text-[11px] text-slate uppercase">
               {lead.canal} · entrou em {quando(lead.criado_em)}
             </p>
+            {lead.canal === 'prospeccao' || lead.prospeccao ? (
+              <button
+                type="button"
+                onClick={() => void alternarRobo()}
+                className={`mt-2 rounded-full border px-3 py-1 text-[12px] ${lead.prospeccao === 'bot' ? 'border-[#86e8a8]/40 text-[#86e8a8]' : 'border-[#ffd479]/40 text-[#ffd479]'}`}
+              >
+                {lead.prospeccao === 'bot' ? '● Robô prospectando — pausar' : '○ Robô pausado — devolver ao robô'}
+              </button>
+            ) : null}
+            {avisoRobo ? <p className="mt-1 text-[11px] text-[#ff9b9b]">{avisoRobo}</p> : null}
           </div>
           <button type="button" onClick={aoFechar} className="rounded-full border border-white/12 px-3 py-1 text-[12px] text-ash hover:text-ivory">
             Fechar
@@ -1073,7 +1106,7 @@ export function Painel() {
   const [estado, setEstado] = useState<Estado | null>(null)
   const [leads, setLeads] = useState<Lead[]>([])
   const [resumo, setResumo] = useState<Resumo | null>(null)
-  const [aba, setAba] = useState<'funil' | 'lista' | 'robo'>('funil')
+  const [aba, setAba] = useState<'funil' | 'lista' | 'robo' | 'prospeccao'>('funil')
   const [filtro, setFiltro] = useState<'' | Situacao>('')
   const [busca, setBusca] = useState('')
   const [soAtrasados, setSoAtrasados] = useState(false)
@@ -1202,6 +1235,7 @@ export function Painel() {
           ['funil', 'Funil'],
           ['lista', 'Leads'],
           ['robo', 'Automação WhatsApp'],
+          ['prospeccao', 'Prospecção'],
         ].map(([chave, rotulo]) => (
           <button
             key={chave}
@@ -1219,6 +1253,8 @@ export function Painel() {
       <div className="mt-6">
         {aba === 'robo' ? (
           <AbaRobo />
+        ) : aba === 'prospeccao' ? (
+          <AbaProspeccao />
         ) : (
           <>
             {demonstracao ? (

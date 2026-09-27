@@ -104,8 +104,10 @@ export function Projects() {
         <div className="mt-14 grid max-w-5xl gap-5 md:grid-cols-2">
           {projects.map((project, index) => (
             <Reveal key={project.name} delay={0.06 * index}>
-              <article className="graphite-card group/card relative flex h-full flex-col overflow-hidden">
-                <div className="relative -mx-7 -mt-7 mb-6 h-44 overflow-hidden border-b border-white/8 bg-gradient-to-br from-[#16233d] to-[#0d1526] lg:-mx-8 lg:-mt-8 lg:h-56">
+              <article className="graphite-card group/card relative flex h-full flex-col overflow-clip">
+                <div className="relative -mx-7 -mt-7 mb-6 h-44 overflow-clip border-b border-white/8 bg-gradient-to-br from-[#16233d] to-[#0d1526] lg:-mx-8 lg:-mt-8 lg:h-56">
+                  {/* A moldura desliza ao contrário da página (ver .rola-moldura). */}
+                  <div className="rola-moldura absolute inset-x-0 -top-[7%] -bottom-[7%]">
                   <img
                     src={project.shot}
                     alt={`Tela inicial do site ${project.name}`}
@@ -115,6 +117,7 @@ export function Projects() {
                     decoding="async"
                     className="h-full w-full object-cover object-top opacity-85 transition duration-700 group-hover/card:scale-[1.04] group-hover/card:opacity-100"
                   />
+                  </div>
                   {/* Escurece o pé do print para o selo e a borda não brigarem
                       com o conteúdo da imagem. */}
                   <div
