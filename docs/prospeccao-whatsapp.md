@@ -64,3 +64,29 @@ instrução mestre de prospecção, e conduz até o diagnóstico gratuito.
 - Um lead que já existia (veio do site ou do número da agência) mantém a
   conversa que tinha; o histórico do aparelho só entra quando o lead é
   criado pela prospecção.
+
+## Por que não dá para pôr o número pessoal na Cloud API da Meta
+
+A Cloud API só aceita um número que NÃO esteja registrado no aplicativo do
+WhatsApp: ao cadastrar, a Meta responde "já está registrado em uma conta do
+WhatsApp" e pede para desconectar do aplicativo. Não há contorno. O número da
+Cloud API (`api/whatsapp.js`, a linha oficial da agência) precisa ser um
+número só dela — um chip novo ou, para testar, o número de teste que a Meta
+dá no painel do desenvolvedor.
+
+Para "meu número, minhas conversas, o robô assumindo", os dois caminhos são:
+
+1. **Este módulo** (Evolution API, QR code como o WhatsApp Web): não mexe no
+   aplicativo, não desconecta nada, lista as conversas do aparelho. Precisa
+   de um servidor com a Evolution (`docs/crm-odonto.md`, Oracle Always Free).
+   É não oficial: a Meta pode bloquear números que disparam em massa; aqui o
+   robô só escreve para conversas que já existem e que você escolheu.
+2. **Coexistência oficial da Meta** (desde maio de 2025): o mesmo número no
+   aplicativo **WhatsApp Business** e na Cloud API, com as conversas
+   espelhadas por webhook e os últimos seis meses sincronizados. Exige migrar
+   o número do WhatsApp comum para o WhatsApp Business (o próprio app faz,
+   mantendo as conversas), uma conta com algum tempo de uso, e a ligação
+   feita por Embedded Signup (uma página nossa com o SDK da Meta). Não está
+   construído: seria uma página de conexão no painel, a troca do código pelo
+   token no servidor, e a leitura dos webhooks de histórico para montar a
+   lista de conversas no banco.
