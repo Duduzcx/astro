@@ -51,7 +51,8 @@ export default async function handler(req, res) {
         /* O lead vem junto do histórico, e não só as atividades: enquanto a
            gaveta está aberta, o robô pode ter respondido no WhatsApp, e a
            conversa da lista já estaria velha. */
-        const [atividades, lead] = await Promise.all([listarAtividades(req.query.lead), lerLead(req.query.lead)])
+        const atividades = await listarAtividades(req.query.lead)
+        const lead = await lerLead(req.query.lead)
         return res.status(200).json({ atividades, lead })
       }
       const leads = await listarLeads({ situacao: req.query.situacao, busca: req.query.busca })

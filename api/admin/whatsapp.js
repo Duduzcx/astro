@@ -93,12 +93,10 @@ export default async function handler(req, res) {
     if (req.query.logs) {
       return res.status(200).json({ logs: await listarLogs(100) })
     }
-    const [textos, instrucao, ativo, conexao] = await Promise.all([
-      lerConfig('whatsapp_textos', TEXTOS_PADRAO),
-      lerConfig('bot_instrucao', INSTRUCAO_PADRAO),
-      botAtivo(),
-      conferirConexao(),
-    ])
+    const textos = await lerConfig('whatsapp_textos', TEXTOS_PADRAO)
+    const instrucao = await lerConfig('bot_instrucao', INSTRUCAO_PADRAO)
+    const ativo = await botAtivo()
+    const conexao = await conferirConexao()
     return res.status(200).json({
       textos: { ...TEXTOS_PADRAO, ...textos },
       padrao: TEXTOS_PADRAO,

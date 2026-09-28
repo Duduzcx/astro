@@ -155,10 +155,18 @@ export async function apagarLead(id) {
  * Os números do painel. Tudo numa consulta só por assunto — são poucas
  * linhas, e é melhor o Postgres contar do que trazer a tabela inteira.
  */
+/** Espera uma consulta de cada vez: as consultas do postgres.js só rodam quando aguardadas. */
+async function emSequencia(consultas) {
+  const saida = []
+  for (const consulta of consultas) saida.push(await consulta)
+  return saida
+}
+
 export async function resumo() {
   await prepararBanco()
   const s = sql()
-  const [porSituacao, porSemana, porCanal, totais] = await Promise.all([
+  /* Em sequência, não em paralelo: ver o comentário de `max` em db.js. */
+  const [porSituacao, porSemana, porCanal, totais] = await emSequencia([
     s`SELECT situacao, count(*)::int AS quantos, sum(valor_centavos)::bigint AS valor
         FROM leads GROUP BY situacao`,
     s`SELECT to_char(date_trunc('week', criado_em), 'YYYY-MM-DD') AS semana, count(*)::int AS quantos

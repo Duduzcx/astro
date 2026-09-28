@@ -32,11 +32,11 @@ export function criarEvolution(env                                              
   const chave = env.EVOLUTION_API_KEY || ''
   if (!base || !chave) return null
 
-  const pedir = async (caminho        , opcoes              = {}) => {
+  const pedir = async (caminho        , opcoes              = {}, prazo = 15000) => {
     const r = await fetch(`${base}${caminho}`, {
       ...opcoes,
       headers: { apikey: chave, 'Content-Type': 'application/json', ...(opcoes.headers || {}) },
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(prazo),
     })
     const texto = await r.text()
     let corpo          = null
@@ -87,7 +87,9 @@ export function criarEvolution(env                                              
     },
 
     async estado(nome) {
-      const corpo = await pedir(`/instance/connectionState/${encodeURIComponent(nome)}`)
+      /* Seis segundos: é a pergunta que o painel faz a toda abertura, e com
+         a ponte fora do ar o túnel da Cloudflare demora a desistir. */
+      const corpo = await pedir(`/instance/connectionState/${encodeURIComponent(nome)}`, {}, 6000)
       const instancia = (corpo?.instance || corpo)
       let numero                = numeroDoJid(instancia?.ownerJid || instancia?.wuid)
       if (!numero) {

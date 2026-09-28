@@ -72,7 +72,13 @@ export function sql() {
        pooler as preparadas valem a pena e ficam ligadas. */
     const pelaPonte = /pooler\.|pgbouncer|:6543/i.test(url)
     sqlCache = postgres(url, {
-      max: 1,
+      /* Dez conexões, não uma. Com uma só, consultas disparadas juntas
+         (Promise.all no resumo do painel) iam na mesma conexão em fila, e o
+         pooler do Supabase em modo transação não responde a isso: a conexão
+         ficava pendurada para sempre e a função inteira com ela — o painel
+         em "Atualizando…" sem fim, medido com a sonda. Com uma conexão por
+         consulta em voo, cada uma é uma transação sozinha no pooler. */
+      max: 10,
       idle_timeout: 20,
       connect_timeout: 10,
       prepare: !pelaPonte,

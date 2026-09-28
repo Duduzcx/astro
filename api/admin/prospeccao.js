@@ -37,7 +37,9 @@ export default async function handler(req, res) {
         await desconectarNumero()
         return res.status(200).json({ ok: true })
       }
-      const [estado, instrucao, ponte] = await Promise.all([estadoDoNumero(), instrucaoDeProspeccao(), ponteRegistrada()])
+      const estado = await estadoDoNumero()
+      const instrucao = await instrucaoDeProspeccao()
+      const ponte = await ponteRegistrada()
       const conversas = estado.estado === 'conectado' ? await conversasDoAparelho().catch(() => []) : []
       return res.status(200).json({
         estado,
