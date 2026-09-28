@@ -119,6 +119,7 @@ export async function registrarPonte(req, res) {
         EVOLUTION_API_URL: process.env.EVOLUTION_API_URL ? 'definida' : 'ausente',
         EVOLUTION_API_KEY: process.env.EVOLUTION_API_KEY ? `${process.env.EVOLUTION_API_KEY.length} caracteres` : 'ausente',
         ponteRegistrada: await ponteRegistrada().catch((erro) => `erro: ${erro?.message}`),
+        configPonteCru: typeof (await lerConfig('ponte', null)),
         estado: await estadoDoNumero().catch((erro) => `erro: ${erro?.message}`),
       }
     }

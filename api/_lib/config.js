@@ -14,7 +14,19 @@ export async function lerConfig(chave, padrao) {
     await prepararBanco()
     const s = sql()
     const [linha] = await s`SELECT valor FROM config WHERE chave = ${chave}`
-    return linha?.valor ?? padrao
+    const valor = linha?.valor
+    if (valor === undefined || valor === null) return padrao
+    /* Linhas antigas foram gravadas com JSON dentro de JSON (o driver
+       serializava de novo o que já vinha em texto): o que volta é uma string
+       com um documento dentro. Desembrulha, para o painel ler o objeto. */
+    if (typeof valor === 'string' && /^[{["]/.test(valor.trim())) {
+      try {
+        return JSON.parse(valor)
+      } catch {
+        return valor
+      }
+    }
+    return valor
   } catch (erro) {
     console.error('leitura de config falhou:', erro?.message)
     return padrao
@@ -36,7 +48,7 @@ export async function gravarConfig(chave, valor) {
   await prepararBanco()
   const s = sql()
   await s`
-    INSERT INTO config ${s({ chave, valor: JSON.stringify(valor) })}
+    INSERT INTO config ${s({ chave, valor: s.json(valor) })}
     ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor, atualizado_em = now()`
   return true
 }
