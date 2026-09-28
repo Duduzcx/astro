@@ -75,6 +75,9 @@ export async function instrucaoAtual() {
  */
 export async function dentroDoTeto() {
   if (!temBanco()) return true
+  /* O teto existe para proteger gasto de API paga. A Groq é grátis: sem
+     gasto, sem teto (a não ser que alguém fixe BOT_TETO_DIARIO de propósito). */
+  if (qualInteligencia() === 'groq' && !process.env.BOT_TETO_DIARIO) return true
   const teto = Number(process.env.BOT_TETO_DIARIO || TETO_PADRAO)
   if (!Number.isFinite(teto) || teto <= 0) return false
   const hoje = new Date().toISOString().slice(0, 10)
