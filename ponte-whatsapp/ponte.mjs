@@ -127,8 +127,28 @@ function simplificar(m) {
   return plana
 }
 
+/* Só a FORMA das últimas mensagens (o sufixo do id e quais campos existem),
+   nunca número nem texto: é o que diz por que jidDePessoa rejeitou. */
+const estruturas = []
+function anotarEstrutura(m, aceito) {
+  const jid = String(m?.key?.remoteJid || '')
+  const sufixo = jid.includes('@') ? '@' + jid.split('@')[1] : '(sem @)'
+  estruturas.push({
+    sufixo,
+    temAlt: Boolean(m?.key?.remoteJidAlt),
+    temSenderPn: Boolean(m?.key?.senderPn),
+    temParticipant: Boolean(m?.key?.participant),
+    temParticipantPn: Boolean(m?.key?.participantPn),
+    fromMe: Boolean(m?.key?.fromMe),
+    tipos: Object.keys(m?.message || {}).slice(0, 3),
+    aceito,
+  })
+  if (estruturas.length > 20) estruturas.shift()
+}
+
 function guardarMensagem(m, avisar) {
   const jid = jidDePessoa(m.key)
+  anotarEstrutura(m, Boolean(jid && m.message))
   if (!jid || !m.message) return
   const plana = { ...simplificar(m), key: { ...simplificar(m).key, remoteJid: jid } }
   const lista = loja.mensagens.get(jid) || []
@@ -413,6 +433,7 @@ async function tratar(req, res) {
         conversas: loja.conversas.size,
         mensagens: [...loja.mensagens.values()].reduce((n, l) => n + l.length, 0),
         idsTraduzidos: lidParaTelefone.size,
+        estruturas,
         eventos: eventos.slice(-40),
       })
     }

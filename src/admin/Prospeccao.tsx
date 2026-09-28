@@ -78,6 +78,19 @@ export function AbaProspeccao() {
     void carregar()
   }, [carregar])
 
+  /* Conectado, relê a cada quinze segundos: as conversas do aparelho podem
+     chegar depois de abrir a tela (o histórico do WhatsApp vem em pacotes), e
+     o endereço do túnel muda a cada reinício da ponte — sem isto a lista
+     ficava em zero até alguém clicar em Atualizar. Não relê com o QR na
+     tela (aquele efeito já cuida) nem no meio de uma ação. */
+  useEffect(() => {
+    if (dados?.estado.estado !== 'conectado' || qr) return
+    const id = window.setInterval(() => {
+      if (!ocupado) void carregar()
+    }, 15000)
+    return () => window.clearInterval(id)
+  }, [dados?.estado.estado, qr, ocupado, carregar])
+
   /* A ponte está esperando um QR (o número saiu, ou nunca entrou): busca e
      mostra sem pedir clique. Pela referência, para o efeito não depender da
      função que muda a cada render. */
