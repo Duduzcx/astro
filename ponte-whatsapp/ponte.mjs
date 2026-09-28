@@ -60,7 +60,10 @@ const env = { ...lerEnv(path.join(RAIZ, '.env')), ...process.env }
 const SITE = (env.SITE_URL || 'https://astrosolucoes.vercel.app').replace(/\/+$/, '')
 const CHAVE = env.PONTE_CHAVE || ''
 const INSTANCIA = env.INSTANCIA || 'astro-pessoal'
-const PORTA = Number(env.PORTA || 3777)
+/* PORT (maiúsculo) é o que os hospedeiros injetam (Fly, Render, Railway);
+   PORTA é o nome local. No servidor, o próprio host dá o endereço público,
+   então URL_PUBLICA é definida e o túnel não sobe. */
+const PORTA = Number(env.PORT || env.PORTA || 3777)
 const SEM_TUNEL = env.SEM_TUNEL === '1'
 const URL_FIXA = (env.URL_PUBLICA || '').replace(/\/+$/, '')
 /* PASTA_DADOS: outra pasta de sessão, para testar sem mexer na sessão de verdade. */
@@ -518,7 +521,7 @@ async function tratar(req, res) {
 /* ------------------------------------------------------------------------
    Sobe tudo: o servidor, o WhatsApp, o túnel e o registro. */
 const servidor = http.createServer((req, res) => void tratar(req, res))
-servidor.listen(PORTA, async () => {
+servidor.listen(PORTA, '0.0.0.0', async () => {
   console.log(`ponte na porta ${PORTA}; instância ${INSTANCIA}; site ${SITE}`)
   void ligar()
   if (SEM_TUNEL) return

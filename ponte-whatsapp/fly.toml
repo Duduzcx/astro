@@ -1,0 +1,25 @@
+# Fly.io: um app sempre ligado, com um disco que guarda a sessão do WhatsApp.
+# Troque "astro-ponte-SEUNOME" por um nome único (letras, números e hífen).
+app = "astro-ponte-SEUNOME"
+primary_region = "gru"
+
+[build]
+
+[env]
+  URL_PUBLICA = "https://astro-ponte-SEUNOME.fly.dev"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Nunca dorme: o WhatsApp precisa da conexão viva o tempo todo.
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[mounts]]
+  source = "dados"
+  destination = "/dados"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
