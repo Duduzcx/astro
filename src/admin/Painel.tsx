@@ -219,9 +219,14 @@ const atrasado = (lead: Lead) =>
   lead.situacao !== 'perdido'
 
 async function pedir(caminho: string, opcoes: RequestInit = {}) {
+  /* Vinte e cinco segundos e desiste, com aviso: um banco travado deixava o
+     painel em "Atualizando…" para sempre, sem dizer nada. */
   const resposta = await fetch(caminho, {
     ...opcoes,
     headers: { 'Content-Type': 'application/json', ...(opcoes.headers || {}) },
+    signal: AbortSignal.timeout(25000),
+  }).catch((falha) => {
+    throw new Error(falha?.name === 'TimeoutError' ? 'o servidor não respondeu em 25 s (banco travado?)' : 'sem conexão com o servidor')
   })
   const corpo = await resposta.json().catch(() => ({}))
   if (!resposta.ok) throw new Error(corpo?.erro || `falha ${resposta.status}`)

@@ -178,9 +178,30 @@ export async function prepararBanco() {
 }
 
 async function criarEsquema() {
+  /* Um pedido só, com BEGIN e COMMIT dentro do mesmo texto: o servidor
+     executa tudo de uma vez e o cliente só espera o resultado, então uma
+     função congelada pela Vercel no meio do caminho não deixa transação
+     aberta segurando bloqueio. O lock_timeout é LOCAL à transação (não vaza
+     para o pooler) e derruba o pedido em três segundos se outra sessão
+     estiver segurando a tabela — melhor um erro claro do que o painel
+     inteiro parado atrás de um ALTER. */
   const s = sql()
-  await s`
-    CREATE TABLE IF NOT EXISTS leads (
+  await s.unsafe(
+    [
+      'BEGIN',
+      "SET LOCAL lock_timeout = '3s'",
+      ...ESQUEMA,
+      'COMMIT',
+    ].join(';\n'),
+  )
+}
+
+/* O esquema, na ordem. Leads, atividades (o histórico do relacionamento),
+   configuração editável pelo painel, o diário do robô, as tentativas de
+   login (trava de força bruta sem Redis) e a prospecção. Colunas
+   acrescentadas depois da primeira versão vêm como ALTER … IF NOT EXISTS. */
+const ESQUEMA = [
+  `CREATE TABLE IF NOT EXISTS leads (
       id            BIGSERIAL PRIMARY KEY,
       criado_em     TIMESTAMPTZ NOT NULL DEFAULT now(),
       atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -196,51 +217,32 @@ async function criarEsquema() {
       situacao      TEXT NOT NULL DEFAULT 'novo',
       valor_centavos BIGINT NOT NULL DEFAULT 0,
       anotacoes     TEXT NOT NULL DEFAULT ''
-    )`
-  /* Colunas acrescentadas depois da primeira versão. IF NOT EXISTS porque
-     esta função roda em toda invocação fria, e em paralelo. */
-  await s`ALTER TABLE leads ADD COLUMN IF NOT EXISTS retorno_em DATE`
-  await s`ALTER TABLE leads ADD COLUMN IF NOT EXISTS responsavel TEXT NOT NULL DEFAULT ''`
-  await s`CREATE INDEX IF NOT EXISTS leads_criado_em_idx ON leads (criado_em DESC)`
-  await s`CREATE INDEX IF NOT EXISTS leads_situacao_idx ON leads (situacao)`
-  await s`CREATE INDEX IF NOT EXISTS leads_retorno_idx ON leads (retorno_em) WHERE retorno_em IS NOT NULL`
-  /* Prospecção pelo número pessoal (api/_lib/prospeccao.js): '' (não é),
-     'bot' (o robô conduz) ou 'pausado' (a mão humana assumiu). */
-  await s`ALTER TABLE leads ADD COLUMN IF NOT EXISTS prospeccao TEXT NOT NULL DEFAULT ''`
-  await s`CREATE INDEX IF NOT EXISTS leads_contato_idx ON leads (contato, criado_em DESC)`
-  /* A Evolution reentrega o que demora: cada mensagem da prospecção
-     responde uma vez só. */
-  await s`
-    CREATE TABLE IF NOT EXISTS prospeccao_mensagens (
+    )`,
+  `ALTER TABLE leads ADD COLUMN IF NOT EXISTS retorno_em DATE`,
+  `ALTER TABLE leads ADD COLUMN IF NOT EXISTS responsavel TEXT NOT NULL DEFAULT ''`,
+  `CREATE INDEX IF NOT EXISTS leads_criado_em_idx ON leads (criado_em DESC)`,
+  `CREATE INDEX IF NOT EXISTS leads_situacao_idx ON leads (situacao)`,
+  `CREATE INDEX IF NOT EXISTS leads_retorno_idx ON leads (retorno_em) WHERE retorno_em IS NOT NULL`,
+  `ALTER TABLE leads ADD COLUMN IF NOT EXISTS prospeccao TEXT NOT NULL DEFAULT ''`,
+  `CREATE INDEX IF NOT EXISTS leads_contato_idx ON leads (contato, criado_em DESC)`,
+  `CREATE TABLE IF NOT EXISTS prospeccao_mensagens (
       wamid  TEXT PRIMARY KEY,
       quando TIMESTAMPTZ NOT NULL DEFAULT now()
-    )`
-
-  /* O histórico do relacionamento. É isto que separa um CRM de uma lista de
-     contatos: saber o que já foi conversado, e quando. */
-  await s`
-    CREATE TABLE IF NOT EXISTS atividades (
+    )`,
+  `CREATE TABLE IF NOT EXISTS atividades (
       id      BIGSERIAL PRIMARY KEY,
       lead_id BIGINT NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
       quando  TIMESTAMPTZ NOT NULL DEFAULT now(),
       tipo    TEXT NOT NULL DEFAULT 'nota',
       texto   TEXT NOT NULL DEFAULT ''
-    )`
-  await s`CREATE INDEX IF NOT EXISTS atividades_lead_idx ON atividades (lead_id, quando DESC)`
-
-  /* Configuração editável pelo painel — hoje os textos do robô do WhatsApp.
-     Ficam no banco para a equipe mudar sem mexer em código nem republicar. */
-  await s`
-    CREATE TABLE IF NOT EXISTS config (
+    )`,
+  `CREATE INDEX IF NOT EXISTS atividades_lead_idx ON atividades (lead_id, quando DESC)`,
+  `CREATE TABLE IF NOT EXISTS config (
       chave TEXT PRIMARY KEY,
       valor JSONB NOT NULL,
       atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now()
-    )`
-  /* O diário do robô: cada mensagem que entrou (WhatsApp ou chat do site)
-     e o que saiu. É o que o painel mostra como interações em tempo real.
-     Podado a duas mil linhas por quem grava. */
-  await s`
-    CREATE TABLE IF NOT EXISTS bot_logs (
+    )`,
+  `CREATE TABLE IF NOT EXISTS bot_logs (
       id      BIGSERIAL PRIMARY KEY,
       quando  TIMESTAMPTZ NOT NULL DEFAULT now(),
       canal   TEXT NOT NULL DEFAULT '',
@@ -248,18 +250,15 @@ async function criarEsquema() {
       entrada TEXT NOT NULL DEFAULT '',
       saida   TEXT NOT NULL DEFAULT '',
       modo    TEXT NOT NULL DEFAULT ''
-    )`
-  /* Tentativas de entrar no painel. Serve para travar força bruta sem
-     precisar de um Redis só para isso. */
-  await s`
-    CREATE TABLE IF NOT EXISTS tentativas_login (
+    )`,
+  `CREATE TABLE IF NOT EXISTS tentativas_login (
       id        BIGSERIAL PRIMARY KEY,
       quando    TIMESTAMPTZ NOT NULL DEFAULT now(),
       origem    TEXT NOT NULL DEFAULT '',
       sucesso   BOOLEAN NOT NULL DEFAULT false
-    )`
-  await s`CREATE INDEX IF NOT EXISTS tentativas_quando_idx ON tentativas_login (quando DESC)`
-}
+    )`,
+  `CREATE INDEX IF NOT EXISTS tentativas_quando_idx ON tentativas_login (quando DESC)`,
+]
 
 /** As situações do funil, na ordem em que um negócio anda. */
 export const SITUACOES = ['novo', 'contatado', 'proposta', 'fechado', 'perdido']
