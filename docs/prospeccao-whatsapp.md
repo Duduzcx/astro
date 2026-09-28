@@ -42,6 +42,15 @@ O endereço do túnel muda a cada subida, por isso a ponte se registra
 sozinha (`POST /api/crm/ponte/registrar`, com a chave) na subida e de dez
 em dez minutos; o painel mostra "ponte em … · registrada há …".
 
+**A lista de conversas chega na hora de ligar o aparelho**, e só nessa hora:
+é o pacote inicial que o telefone manda ao novo aparelho conectado. Se a
+lista ficar vazia (a ponte subiu depois, ou a primeira ligação veio sem o
+pacote), no painel clique em *Desconectar* e depois em *Conectar número*, e
+leia o QR de novo. O que a ponte recebeu está em
+`http://localhost:3777/diagnostico` (com o cabeçalho `apikey`) e em
+`dados/eventos.log`: conexões, pacotes de histórico com as contagens,
+mensagens, webhooks e o registro no site.
+
 ## Como usar
 
 1. `/admin` → aba **Prospecção** → *Conectar número*. Aparece um QR code;

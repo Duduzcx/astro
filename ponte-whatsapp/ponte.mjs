@@ -38,7 +38,6 @@ import QRCode from 'qrcode'
 import { Tunnel, bin, install } from 'cloudflared'
 
 const RAIZ = path.dirname(fileURLToPath(import.meta.url))
-const DADOS = path.join(RAIZ, 'dados')
 
 /** Lê o .env ao lado, sem dependência: CHAVE=valor por linha, # comenta. */
 function lerEnv(caminho) {
@@ -64,12 +63,28 @@ const INSTANCIA = env.INSTANCIA || 'astro-pessoal'
 const PORTA = Number(env.PORTA || 3777)
 const SEM_TUNEL = env.SEM_TUNEL === '1'
 const URL_FIXA = (env.URL_PUBLICA || '').replace(/\/+$/, '')
+/* PASTA_DADOS: outra pasta de sessão, para testar sem mexer na sessão de verdade. */
+const DADOS = env.PASTA_DADOS || path.join(RAIZ, 'dados')
 
 if (CHAVE.length < 16) {
   console.error('PONTE_CHAVE ausente ou curta demais no .env (mínimo 16 caracteres). Veja .env.exemplo.')
   process.exit(1)
 }
 fs.mkdirSync(DADOS, { recursive: true })
+
+/* O diário: cada evento que importa vai para o terminal e para
+   dados/eventos.log, e as últimas linhas saem em GET /diagnostico. Sem isto a
+   primeira ligação não recebeu a lista de conversas e não havia como saber
+   por quê. */
+const ARQUIVO_EVENTOS = path.join(DADOS, 'eventos.log')
+const eventos = []
+function registrarEvento(texto) {
+  const linha = `${new Date().toISOString()} ${texto}`
+  console.log(linha)
+  eventos.push(linha)
+  if (eventos.length > 300) eventos.shift()
+  fs.appendFile(ARQUIVO_EVENTOS, linha + '\n', () => undefined)
+}
 
 /* ------------------------------------------------------------------------
    A loja: conversas, nomes e as últimas mensagens de cada conversa. Vive em
@@ -82,10 +97,25 @@ const loja = { conversas: new Map(), nomes: new Map(), mensagens: new Map() }
 const numero = (valor) =>
   typeof valor === 'number' ? valor : valor && typeof valor === 'object' ? Number(valor.low ?? valor) || 0 : Number(valor) || 0
 
+/* O WhatsApp passou a identificar contatos por um id próprio (@lid) além do
+   telefone. A ponte aprende o par lid → telefone com o que chega (contatos
+   do histórico e chaves de mensagem com o telefone ao lado) e traduz na
+   hora de guardar. Um @lid ainda sem tradução fica de fora até aparecer. */
+const lidParaTelefone = new Map()
+const aprenderLid = (lid, telefone) => {
+  if (lid && telefone && String(lid).endsWith('@lid') && String(telefone).endsWith('@s.whatsapp.net')) {
+    lidParaTelefone.set(String(lid), String(telefone))
+  }
+}
+
 /** Um jid de pessoa, no formato de telefone. Grupos e avisos ficam de fora. */
 function jidDePessoa(chave) {
   let jid = String(chave?.remoteJid || '')
-  if (jid.endsWith('@lid')) jid = String(chave?.remoteJidAlt || chave?.senderPn || '')
+  if (jid.endsWith('@lid')) {
+    const alternativo = String(chave?.remoteJidAlt || chave?.senderPn || '')
+    if (alternativo.endsWith('@s.whatsapp.net')) aprenderLid(jid, alternativo)
+    jid = alternativo || lidParaTelefone.get(jid) || ''
+  }
   if (!jid.endsWith('@s.whatsapp.net')) return null
   return jid
 }
@@ -153,12 +183,13 @@ async function avisarSite(evento, data) {
       body: JSON.stringify({ event: evento, instance: INSTANCIA, data }),
       signal: AbortSignal.timeout(15000),
     })
-    if (!r.ok) console.warn(`webhook do site respondeu ${r.status}`)
+    if (!r.ok) registrarEvento(`webhook do site respondeu ${r.status}`)
   } catch (erro) {
-    console.warn('webhook do site falhou:', erro?.message)
+    registrarEvento(`webhook do site falhou: ${erro?.message}`)
   }
 }
 
+let registrada = false
 async function registrarNoSite() {
   if (!urlPublica) return
   try {
@@ -169,10 +200,12 @@ async function registrarNoSite() {
       signal: AbortSignal.timeout(15000),
     })
     const corpo = await r.json().catch(() => ({}))
-    if (r.ok) console.log(`registrada no site: ${urlPublica}`)
-    else console.warn(`o site recusou o registro (${r.status}): ${corpo?.erro || ''}`)
+    registrada = r.ok
+    if (r.ok) registrarEvento(`registrada no site: ${urlPublica}`)
+    else registrarEvento(`o site recusou o registro (${r.status}): ${corpo?.erro || ''} — confira EVOLUTION_API_KEY na Vercel`)
   } catch (erro) {
-    console.warn('registro no site falhou:', erro?.message)
+    registrada = false
+    registrarEvento(`registro no site falhou: ${erro?.message}`)
   }
 }
 
@@ -194,8 +227,16 @@ async function ligar() {
       version,
       auth: state,
       logger: pino({ level: 'silent' }),
-      browser: Browsers.macOS('Chrome'),
-      syncFullHistory: false,
+      /* Medido em sessão nova: com `syncFullHistory: true` o WhatsApp derruba
+         a conexão antes do QR (428 em loop), com qualquer identidade. Com
+         `false` o QR aparece, e a lista de conversas vem no pacote inicial
+         que o telefone manda ao ligar o aparelho — só nessa hora: se a lista
+         ficar vazia, desconecte e leia o QR de novo. NAVEGADOR=desktop no
+         .env troca a identidade para o aplicativo de computador;
+         HISTORICO_COMPLETO=1 liga o histórico inteiro, para quando o
+         WhatsApp voltar a aceitar. */
+      browser: env.NAVEGADOR === 'desktop' ? Browsers.macOS('Desktop') : Browsers.macOS('Chrome'),
+      syncFullHistory: env.HISTORICO_COMPLETO === '1',
       markOnlineOnConnect: false,
       generateHighQualityLinkPreview: false,
     })
@@ -205,14 +246,14 @@ async function ligar() {
       if (qr) {
         qrAtual = await QRCode.toDataURL(qr)
         estado = 'aguardando_qr'
-        console.log('\nQR code novo. Leia no celular (WhatsApp → Aparelhos conectados) ou abra o painel do site.')
+        registrarEvento('QR code novo. Leia no celular (WhatsApp → Aparelhos conectados) ou abra o painel do site.')
         console.log(await QRCode.toString(qr, { type: 'terminal', small: true }))
       }
       if (connection === 'open') {
         qrAtual = null
         estado = 'conectado'
         meuNumero = `+${String(sock.user?.id || '').split('@')[0].split(':')[0].replace(/\D/g, '')}`
-        console.log(`conectado como ${meuNumero}`)
+        registrarEvento(`conectado como ${meuNumero}`)
       }
       if (connection === 'close') {
         const codigo = lastDisconnect?.error?.output?.statusCode
@@ -221,10 +262,10 @@ async function ligar() {
           estado = 'desconectado'
           meuNumero = null
           fs.rmSync(path.join(DADOS, 'auth'), { recursive: true, force: true })
-          console.log('o número saiu (desconectado pelo celular ou pelo painel)')
+          registrarEvento('o número saiu (desconectado pelo celular ou pelo painel)')
         } else {
           estado = 'conectando'
-          console.log(`conexão caiu (${codigo || 'sem código'}); tentando de novo em 3s`)
+          registrarEvento(`conexão caiu (${codigo || 'sem código'}); tentando de novo em 3s`)
           setTimeout(() => {
             ligando = false
             void ligar()
@@ -233,8 +274,11 @@ async function ligar() {
         }
       }
     })
-    sock.ev.on('messaging-history.set', ({ chats, contacts, messages }) => {
+    sock.ev.on('messaging-history.set', ({ chats, contacts, messages, isLatest, progress }) => {
+      registrarEvento(`histórico: ${(chats || []).length} conversas, ${(contacts || []).length} contatos, ${(messages || []).length} mensagens${isLatest ? ' (último pacote)' : ''}${progress != null ? ` ${progress}%` : ''}`)
+      for (const c of contacts || []) aprenderLid(c.lid, c.id)
       for (const c of chats || []) {
+        aprenderLid(c.lidJid || c.lid, c.pnJid || c.id)
         const jid = jidDePessoa({ remoteJid: c.id })
         if (!jid) continue
         const atual = loja.conversas.get(jid) || { id: jid }
@@ -245,12 +289,26 @@ async function ligar() {
       for (const c of contacts || []) if (c.id && (c.name || c.notify)) loja.nomes.set(c.id, c.name || c.notify)
       for (const m of messages || []) guardarMensagem(m, false)
       agendarGravacao()
+      registrarEvento(`na loja agora: ${loja.conversas.size} conversas com telefone, ${lidParaTelefone.size} ids traduzidos`)
     })
     sock.ev.on('contacts.upsert', (lista) => {
       for (const c of lista || []) if (c.id && (c.name || c.notify)) loja.nomes.set(c.id, c.name || c.notify)
     })
     sock.ev.on('messages.upsert', ({ messages, type }) => {
+      registrarEvento(`mensagens: ${(messages || []).length} (${type})`)
       for (const m of messages || []) guardarMensagem(m, type === 'notify')
+    })
+    sock.ev.on('chats.upsert', (lista) => {
+      for (const c of lista || []) {
+        aprenderLid(c.lidJid || c.lid, c.pnJid || c.id)
+        const jid = jidDePessoa({ remoteJid: c.id })
+        if (!jid) continue
+        const atual = loja.conversas.get(jid) || { id: jid }
+        if (c.name) atual.nome = c.name
+        atual.quando = Math.max(atual.quando || 0, numero(c.conversationTimestamp))
+        loja.conversas.set(jid, atual)
+      }
+      agendarGravacao()
     })
   } finally {
     ligando = false
@@ -322,6 +380,19 @@ async function tratar(req, res) {
 
   const [a, b] = partes
   try {
+    if (a === 'diagnostico') {
+      return responder(res, 200, {
+        estado,
+        numero: meuNumero,
+        publica: urlPublica || null,
+        registradaNoSite: registrada,
+        webhook,
+        conversas: loja.conversas.size,
+        mensagens: [...loja.mensagens.values()].reduce((n, l) => n + l.length, 0),
+        idsTraduzidos: lidParaTelefone.size,
+        eventos: eventos.slice(-40),
+      })
+    }
     if (a === 'instance' && b === 'create' && req.method === 'POST') {
       const dados = await corpo(req)
       if (dados?.webhook?.url) webhook = String(dados.webhook.url)
@@ -409,5 +480,10 @@ servidor.listen(PORTA, async () => {
   } else {
     void registrarNoSite()
   }
+  /* Insiste a cada 30s até o site aceitar (a variável na Vercel pode ter
+     entrado depois de a ponte subir); aceito, confirma de dez em dez minutos. */
+  setInterval(() => {
+    if (!registrada) void registrarNoSite()
+  }, 30 * 1000)
   setInterval(() => void registrarNoSite(), 10 * 60 * 1000)
 })
