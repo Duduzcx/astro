@@ -58,13 +58,17 @@ export async function webhookEvolution(req     , res     , instancia        ) {
   /* O número pessoal da agência usa a mesma Evolution e o mesmo webhook, mas
      não é clínica: vai para a prospecção (api/_lib/prospeccao.js). */
   if (instancia === instanciaPessoal()) {
-    res.status(200).json({ ok: true })
+    /* Processa ANTES de responder. Responder primeiro e trabalhar depois
+       (`res.json()` seguido de `await`) não funciona na Vercel: a função
+       congela ao responder e o await morre no meio — era por isso que a
+       réplica não continuava e não deixava nem rastro. A ponte espera até
+       15s; a IA e o envio levam uns 3s. */
     try {
       await webhookProspeccao(evento)
     } catch (erro) {
       console.error('prospecção falhou:', (erro         )?.message)
     }
-    return
+    return res.status(200).json({ ok: true })
   }
 
   const clinica = await clinicaPorInstancia(instancia)
