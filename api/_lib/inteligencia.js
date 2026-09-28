@@ -44,6 +44,9 @@ export const INSTRUCAO_PADRAO = [
 /** Qual inteligência está ligada: 'claude', 'openai' ou '' (nenhuma). */
 export function qualInteligencia() {
   if (process.env.ANTHROPIC_API_KEY) return 'claude'
+  /* Groq (Llama) vem antes da OpenAI: é grátis, e é o caminho para não gastar
+     nada. console.groq.com dá a chave sem cartão. */
+  if (process.env.GROQ_API_KEY) return 'groq'
   if (process.env.OPENAI_API_KEY) return 'openai'
   return ''
 }
@@ -144,8 +147,35 @@ async function comOpenAI(instrucao, mensagens) {
 export async function responderComIA(instrucao, mensagens) {
   const qual = qualInteligencia()
   if (!qual) return ''
-  const texto = qual === 'claude' ? await comClaude(instrucao, mensagens) : await comOpenAI(instrucao, mensagens)
+  const texto =
+    qual === 'claude'
+      ? await comClaude(instrucao, mensagens)
+      : qual === 'groq'
+        ? await comGroq(instrucao, mensagens)
+        : await comOpenAI(instrucao, mensagens)
   return limpar(texto, 1500)
+}
+
+/**
+ * Groq: a API grátis (Llama). É compatível com o formato da OpenAI, só muda o
+ * endereço, a chave e o modelo. console.groq.com dá a chave sem cartão.
+ */
+async function comGroq(instrucao, mensagens) {
+  const resposta = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: process.env.BOT_MODELO || process.env.GROQ_MODELO || 'llama-3.3-70b-versatile',
+      max_tokens: 400,
+      messages: [{ role: 'system', content: instrucao }, ...mensagens],
+    }),
+  })
+  if (!resposta.ok) throw new Error(`groq ${resposta.status}: ${(await resposta.text()).slice(0, 200)}`)
+  const dados = await resposta.json()
+  return dados?.choices?.[0]?.message?.content || ''
 }
 
 /** Uma conversa guardada ({ de, texto }) vira o formato que o modelo lê. */

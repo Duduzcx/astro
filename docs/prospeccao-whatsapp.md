@@ -16,7 +16,7 @@ instrução mestre de prospecção, e conduz até o diagnóstico gratuito.
 | `EVOLUTION_INSTANCIA_PESSOAL` | opcional; o nome da instância. Padrão `astro-pessoal` |
 | `CRON_SECRET` (ou `CRM_WEBHOOK_TOKEN`) | o token que protege o webhook, já usado pelo CRM |
 | `POSTGRES_URL` | o banco do funil: cada conversa assumida vira um lead |
-| `ANTHROPIC_API_KEY` ou `OPENAI_API_KEY` | a inteligência que escreve pelo número |
+| `GROQ_API_KEY` | a inteligência **grátis** que escreve pelo número (console.groq.com, sem cartão). Ou `ANTHROPIC_API_KEY`, ou `OPENAI_API_KEY` — nesta ordem de preferência |
 
 ## A ponte: o número entra como no WhatsApp Web
 
