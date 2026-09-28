@@ -261,10 +261,24 @@ async function ligar() {
         if (codigo === DisconnectReason.loggedOut) {
           estado = 'desconectado'
           meuNumero = null
-          fs.rmSync(path.join(DADOS, 'auth'), { recursive: true, force: true })
-          registrarEvento('o número saiu (desconectado pelo celular ou pelo painel)')
+          registrarEvento('o número saiu (desconectado pelo celular ou pelo painel); preparando um QR novo')
+          /* Sessão encerrada do outro lado: liga de novo, do zero, para o QR
+             já estar pronto quando alguém abrir o painel. A ordem importa:
+             primeiro solta o soquete velho e o seu gravador de credenciais,
+             só depois apaga a pasta — senão a gravação atrasada das
+             credenciais mortas ressuscitava a sessão encerrada, e a ponte
+             entrava em círculo de "o número saiu" a cada três segundos. */
+          const velho = sock
+          sock = null
+          velho?.ev.removeAllListeners('creds.update')
+          setTimeout(() => {
+            fs.rmSync(path.join(DADOS, 'auth'), { recursive: true, force: true })
+            void ligar()
+          }, 1500)
+          return
         } else {
           estado = 'conectando'
+          sock = null
           registrarEvento(`conexão caiu (${codigo || 'sem código'}); tentando de novo em 3s`)
           setTimeout(() => {
             ligando = false
@@ -427,15 +441,23 @@ async function tratar(req, res) {
       return responder(res, 200, [{ instance: { instanceName: INSTANCIA, ownerJid: meuNumero ? `${meuNumero.slice(1)}@s.whatsapp.net` : undefined } }])
     }
     if (a === 'instance' && (b === 'logout' || b === 'delete')) {
-      if (sock) await sock.logout().catch(() => undefined)
+      const velho = sock
       sock = null
       estado = 'desconectado'
       meuNumero = null
       qrAtual = null
-      fs.rmSync(path.join(DADOS, 'auth'), { recursive: true, force: true })
+      if (velho) {
+        velho.ev.removeAllListeners('creds.update')
+        await velho.logout().catch(() => undefined)
+      }
       registrarEvento('número desconectado pelo painel; preparando um QR novo')
-      /* Já liga de novo: o QR fica pronto para o próximo clique em Conectar. */
-      setTimeout(() => void ligar(), 500)
+      /* Já liga de novo: o QR fica pronto para o próximo clique em Conectar.
+         A pasta só é apagada depois de o soquete velho sair, pelo mesmo
+         motivo do desligamento pelo celular. */
+      setTimeout(() => {
+        fs.rmSync(path.join(DADOS, 'auth'), { recursive: true, force: true })
+        void ligar()
+      }, 1500)
       return responder(res, 200, { ok: true })
     }
     if (a === 'message' && b === 'sendText' && req.method === 'POST') {

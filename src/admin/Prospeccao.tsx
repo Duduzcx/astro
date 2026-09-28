@@ -110,7 +110,7 @@ export function AbaProspeccao() {
       /* O QR pode demorar uns segundos para nascer na ponte: insiste até
          seis vezes antes de desistir, senão o clique parece não fazer nada. */
       let r = await pedir('/api/admin/prospeccao?qr=1')
-      for (let tentativa = 0; !r.qr && r.estado !== 'conectado' && tentativa < 6; tentativa += 1) {
+      for (let tentativa = 0; !r.qr && r.estado !== 'conectado' && tentativa < 3; tentativa += 1) {
         await new Promise((resolver) => setTimeout(resolver, 2000))
         r = await pedir('/api/admin/prospeccao?qr=1')
       }

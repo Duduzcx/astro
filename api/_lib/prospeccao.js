@@ -121,6 +121,7 @@ export async function registrarPonte(req, res) {
         ponteRegistrada: await ponteRegistrada().catch((erro) => `erro: ${erro?.message}`),
         configPonteCru: typeof (await lerConfig('ponte', null)),
         conversas: await conversasDoAparelho().then((l) => `${l.length} conversas`).catch((erro) => `erro: ${erro?.message}`),
+        conectar: await conectarNumero().then((r) => `${r.estado}${r.qr ? ` com QR de ${r.qr.length} caracteres` : ' sem QR'}`).catch((erro) => `erro: ${erro?.message}`),
         estado: await estadoDoNumero().catch((erro) => `erro: ${erro?.message}`),
       }
     }
