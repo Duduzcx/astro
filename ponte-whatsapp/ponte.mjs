@@ -254,6 +254,15 @@ async function ligar() {
         estado = 'conectado'
         meuNumero = `+${String(sock.user?.id || '').split('@')[0].split(':')[0].replace(/\D/g, '')}`
         registrarEvento(`conectado como ${meuNumero}`)
+        /* Se o pacote de histórico não vier em meio minuto, o diário diz —
+           é o sintoma de "lista vazia", e a saída é desconectar e ligar de
+           novo, ou mandar uma mensagem (a conversa entra ao chegar). */
+        const conversasAntes = loja.conversas.size
+        setTimeout(() => {
+          if (estado === 'conectado' && loja.conversas.size === conversasAntes) {
+            registrarEvento(`aviso: nenhum pacote de histórico em 30 s (${loja.conversas.size} conversas na loja). Se a lista ficar vazia, desconecte e leia o QR de novo.`)
+          }
+        }, 30000)
       }
       if (connection === 'close') {
         const codigo = lastDisconnect?.error?.output?.statusCode
@@ -498,17 +507,38 @@ servidor.listen(PORTA, async () => {
         console.log('baixando o cloudflared (uma vez só)…')
         await install(bin)
       }
-      const tunel = Tunnel.quick(`http://localhost:${PORTA}`)
-      tunel.on('url', (url) => {
-        urlPublica = String(url).replace(/\/+$/, '')
-        console.log(`túnel aberto: ${urlPublica}`)
-        void registrarNoSite()
-      })
-      tunel.on('error', (erro) => console.warn('túnel:', erro?.message))
-      tunel.on('exit', () => console.warn('o túnel fechou; reinicie a ponte para abrir outro'))
     } catch (erro) {
-      console.warn('não foi possível abrir o túnel:', erro?.message, '— defina URL_PUBLICA no .env se a ponte já tem endereço.')
+      registrarEvento(`não foi possível baixar o cloudflared: ${erro?.message} — defina URL_PUBLICA no .env se a ponte já tem endereço.`)
     }
+    /* O túnel rápido cai de vez em quando (rede, PC dormindo). Reabre com
+       espera crescente e registra o endereço novo; sem isto a ponte ficava
+       viva mas inalcançável até alguém reiniciá-la. */
+    let espera = 5000
+    const abrirTunel = () => {
+      try {
+        const tunel = Tunnel.quick(`http://localhost:${PORTA}`)
+        tunel.on('url', (url) => {
+          urlPublica = String(url).replace(/\/+$/, '')
+          registrada = false
+          espera = 5000
+          registrarEvento(`túnel aberto: ${urlPublica}`)
+          void registrarNoSite()
+        })
+        tunel.on('error', (erro) => registrarEvento(`túnel: ${erro?.message}`))
+        tunel.on('exit', () => {
+          urlPublica = ''
+          registrada = false
+          registrarEvento(`o túnel fechou; reabrindo em ${espera / 1000}s`)
+          setTimeout(abrirTunel, espera)
+          espera = Math.min(espera * 2, 120000)
+        })
+      } catch (erro) {
+        registrarEvento(`não foi possível abrir o túnel: ${erro?.message}; tentando em ${espera / 1000}s`)
+        setTimeout(abrirTunel, espera)
+        espera = Math.min(espera * 2, 120000)
+      }
+    }
+    abrirTunel()
   } else {
     void registrarNoSite()
   }
