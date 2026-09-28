@@ -94,7 +94,26 @@ export async function registrarPonte(req, res) {
           AND (a.state LIKE 'idle in transaction%' OR a.wait_event_type = 'Lock'
                OR cardinality(pg_blocking_pids(a.pid)) > 0 OR a.query ILIKE '%leads%')`
     }
-    return res.status(200).json({ ok: true, sessoes, bloqueios, derrubadas })
+    /* { testar: true } roda as mesmas consultas do painel com cronômetro e
+       teto de vinte segundos cada, para achar qual delas pendura. */
+    const testes = {}
+    if (dados?.testar) {
+      const { listarLeads, resumo } = await import('./leads.js')
+      const medir = async (nome, fn) => {
+        const inicio = Date.now()
+        try {
+          const valor = await Promise.race([fn(), new Promise((_, rejeitar) => setTimeout(() => rejeitar(new Error('20s sem resposta')), 20000))])
+          testes[nome] = `${Date.now() - inicio}ms${Array.isArray(valor) ? ` (${valor.length} linhas)` : ''}`
+        } catch (erro) {
+          testes[nome] = `ERRO após ${Date.now() - inicio}ms: ${erro?.message}`
+        }
+      }
+      await medir('prepararBanco', () => prepararBanco())
+      await medir('listarLeads', () => listarLeads({ situacao: '', busca: '' }))
+      await medir('resumo', () => resumo())
+      await medir('estadoDoNumero', () => estadoDoNumero())
+    }
+    return res.status(200).json({ ok: true, sessoes, bloqueios, derrubadas, testes })
   }
 
   const url = String(dados?.url || '').replace(/\/+$/, '')
