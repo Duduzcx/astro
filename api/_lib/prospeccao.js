@@ -131,6 +131,16 @@ export async function registrarPonte(req, res) {
       testes.ia = await responderComIA('Responda apenas: pronto.', [{ role: 'user', content: 'diga pronto' }])
         .then((t) => (t ? `respondeu (${t.length} caracteres): ${t.slice(0, 60)}` : 'voltou VAZIA'))
         .catch((erro) => `erro: ${erro?.message}`)
+      /* Os modelos de chat que a chave da Groq realmente tem: o padrão pode
+         ter saído de linha, e é isto que aponta o certo. */
+      if (process.env.GROQ_API_KEY) {
+        testes.groqModelos = await fetch('https://api.groq.com/openai/v1/models', {
+          headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
+        })
+          .then((r) => r.json())
+          .then((d) => (Array.isArray(d?.data) ? d.data.map((m) => m.id).filter((id) => /llama|gemma|mixtral|qwen/i.test(id)).slice(0, 20) : d))
+          .catch((erro) => `erro: ${erro?.message}`)
+      }
       /* Envia um teste para o PRÓPRIO número conectado (mensagem para si
          mesmo, inofensiva): prova o caminho do envio pela ponte. */
       if (dados?.envio) {
