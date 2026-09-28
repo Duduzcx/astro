@@ -161,6 +161,30 @@ export async function registrarPonte(req, res) {
     if (dados?.logs) {
       logs = await s2`SELECT quando, canal, de, left(entrada, 50) AS entrada, left(saida, 50) AS saida, modo FROM bot_logs ORDER BY quando DESC LIMIT 20`
     }
+    /* Migra os leads gravados com a conversa em JSON duplo: desembrulha a
+       string para array e tira as falas de texto vazio (lixo da versão que
+       espalhava a string em caracteres). Roda uma vez. */
+    if (dados?.migrarConversas) {
+      const linhas = await s2`SELECT id, conversa FROM leads`
+      let arrumados = 0
+      for (const linha of linhas) {
+        let arr = linha.conversa
+        if (typeof arr === 'string') {
+          try {
+            arr = JSON.parse(arr)
+          } catch {
+            arr = []
+          }
+        }
+        if (!Array.isArray(arr)) arr = []
+        const limpa = arr
+          .filter((f) => f && typeof f.texto === 'string' && f.texto.trim())
+          .map((f) => ({ de: f.de === 'pessoa' ? 'pessoa' : 'robo', texto: String(f.texto).slice(0, 800) }))
+        await s2`UPDATE leads SET conversa = ${s2.json(limpa)} WHERE id = ${linha.id}`
+        arrumados += 1
+      }
+      return res.status(200).json({ ok: true, arrumados })
+    }
     if (dados?.todosLeads) {
       leadsDoContato = await s2`SELECT id, contato, prospeccao, situacao, canal, pg_typeof(conversa)::text AS tipo_conversa, left(conversa::text, 40) AS conversa_amostra FROM leads ORDER BY criado_em DESC LIMIT 30`
     }

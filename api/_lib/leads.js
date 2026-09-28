@@ -21,12 +21,29 @@ export function texto(valor, limite = 500) {
  * A conversa vem do navegador, então é dado de terceiro: entra com tamanho
  * limitado, campos conhecidos e nada mais. O painel a exibe como texto.
  */
+/* A conversa pode voltar do banco como array (certo) ou como uma string com
+   JSON dentro (leads gravados pela versão que serializava duas vezes). Aceita
+   os dois, para não perder o histórico dos leads antigos. */
+export function paraArray(valor) {
+  if (Array.isArray(valor)) return valor
+  if (typeof valor === 'string' && valor.trim()) {
+    try {
+      const v = JSON.parse(valor)
+      return Array.isArray(v) ? v : []
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
 export function limparConversa(bruta) {
-  if (!Array.isArray(bruta)) return []
-  return bruta.slice(-FALAS_GUARDADAS).map((passo) => ({
-    de: passo?.de === 'pessoa' ? 'pessoa' : 'robo',
-    texto: texto(passo?.texto, 800),
-  }))
+  return paraArray(bruta)
+    .slice(-FALAS_GUARDADAS)
+    .map((passo) => ({
+      de: passo?.de === 'pessoa' ? 'pessoa' : 'robo',
+      texto: texto(passo?.texto, 800),
+    }))
 }
 
 export async function criarLead(dados) {
@@ -42,7 +59,7 @@ export async function criarLead(dados) {
       urgencia: texto(dados.urgencia, 60),
       orcamento: texto(dados.orcamento, 60),
       resumo: texto(dados.resumo, 1500),
-      conversa: JSON.stringify(limparConversa(dados.conversa)),
+      conversa: s.json(limparConversa(dados.conversa)),
     })}
     RETURNING *`
   return linha
@@ -59,7 +76,7 @@ export async function acharLeadPorContato(contato) {
   const [linha] = await s`
     SELECT * FROM leads WHERE contato = ${texto(contato, 160)}
     ORDER BY criado_em DESC LIMIT 1`
-  return linha || null
+  return linha ? { ...linha, conversa: paraArray(linha.conversa) } : null
 }
 
 /** Guarda as falas mais recentes, e devolve a conversa já com a nova. */
@@ -68,9 +85,9 @@ export async function acrescentarFala(id, fala) {
   const s = sql()
   const [atual] = await s`SELECT conversa FROM leads WHERE id = ${Number(id)}`
   if (!atual) return []
-  const conversa = limparConversa([...(atual.conversa || []), fala]).slice(-FALAS_GUARDADAS)
+  const conversa = limparConversa([...paraArray(atual.conversa), fala]).slice(-FALAS_GUARDADAS)
   await s`
-    UPDATE leads SET conversa = ${JSON.stringify(conversa)}::jsonb, atualizado_em = now()
+    UPDATE leads SET conversa = ${s.json(conversa)}, atualizado_em = now()
     WHERE id = ${Number(id)}`
   return conversa
 }
@@ -94,7 +111,7 @@ export async function lerLead(id) {
   await prepararBanco()
   const s = sql()
   const [linha] = await s`SELECT * FROM leads WHERE id = ${Number(id)}`
-  return linha || null
+  return linha ? { ...linha, conversa: paraArray(linha.conversa) } : null
 }
 
 export async function atualizarLead(id, campos) {
