@@ -162,11 +162,11 @@ export async function registrarPonte(req, res) {
       logs = await s2`SELECT quando, canal, de, left(entrada, 50) AS entrada, left(saida, 50) AS saida, modo FROM bot_logs ORDER BY quando DESC LIMIT 20`
     }
     if (dados?.todosLeads) {
-      leadsDoContato = await s2`SELECT id, contato, prospeccao, situacao, canal, jsonb_array_length(conversa) AS falas FROM leads ORDER BY criado_em DESC LIMIT 30`
+      leadsDoContato = await s2`SELECT id, contato, prospeccao, situacao, canal, pg_typeof(conversa)::text AS tipo_conversa, left(conversa::text, 40) AS conversa_amostra FROM leads ORDER BY criado_em DESC LIMIT 30`
     }
     if (dados?.leadDe) {
       const contato = `+${String(dados.leadDe).replace(/\D/g, '')}`
-      leadsDoContato = await s2`SELECT id, contato, prospeccao, situacao, canal, criado_em, jsonb_array_length(conversa) AS falas FROM leads WHERE contato = ${contato} ORDER BY criado_em DESC`
+      leadsDoContato = await s2`SELECT id, contato, prospeccao, situacao, canal FROM leads WHERE contato = ${contato} ORDER BY criado_em DESC`
     }
     return res.status(200).json({ ok: true, sessoes, bloqueios, derrubadas, testes, logs, leadsDoContato })
   }
