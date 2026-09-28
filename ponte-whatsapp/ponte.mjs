@@ -250,16 +250,15 @@ async function ligar() {
       version,
       auth: state,
       logger: pino({ level: 'silent' }),
-      /* Medido em sessão nova: com `syncFullHistory: true` o WhatsApp derruba
-         a conexão antes do QR (428 em loop), com qualquer identidade. Com
-         `false` o QR aparece, e a lista de conversas vem no pacote inicial
-         que o telefone manda ao ligar o aparelho — só nessa hora: se a lista
-         ficar vazia, desconecte e leia o QR de novo. NAVEGADOR=desktop no
-         .env troca a identidade para o aplicativo de computador;
-         HISTORICO_COMPLETO=1 liga o histórico inteiro, para quando o
-         WhatsApp voltar a aceitar. */
-      browser: env.NAVEGADOR === 'desktop' ? Browsers.macOS('Desktop') : Browsers.macOS('Chrome'),
-      syncFullHistory: env.HISTORICO_COMPLETO === '1',
+      /* Identidade de aplicativo de computador e histórico completo LIGADO:
+         é assim que o telefone empurra a lista de conversas e as mensagens
+         ao parear. Sem isso a loja nascia vazia e só enchia quando alguém
+         mandava mensagem nova. O pacote vem UMA vez, no pareamento: se você
+         ligar a ponte numa sessão que já existia (sem reparear), o histórico
+         não vem de novo — para forçar, desconecte e leia o QR outra vez.
+         HISTORICO_COMPLETO=0 no ambiente desliga, se algum dia atrapalhar. */
+      browser: env.NAVEGADOR === 'chrome' ? Browsers.macOS('Chrome') : Browsers.macOS('Desktop'),
+      syncFullHistory: env.HISTORICO_COMPLETO !== '0',
       markOnlineOnConnect: false,
       generateHighQualityLinkPreview: false,
     })
@@ -382,7 +381,10 @@ function listaDeConversas() {
         updatedAt: new Date((c.quando || ultima?.messageTimestamp || 0) * 1000).toISOString(),
       }
     })
-    .filter((c) => c.lastMessage && textoDaMensagem(c.lastMessage))
+    /* Mostra a conversa se ela tem um nome OU uma última mensagem de texto:
+       o pareamento pode trazer a conversa (com nome) antes de qualquer
+       mensagem, e exigir texto a escondia. */
+    .filter((c) => c.name || (c.lastMessage && textoDaMensagem(c.lastMessage)))
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
 }
 
