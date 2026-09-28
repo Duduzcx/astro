@@ -471,15 +471,22 @@ async function inedita(id) {
  * leads marcados como `bot` recebem alguma coisa; o resto é silêncio.
  */
 export async function webhookProspeccao(evento) {
+  /* AWAIT no registro (não `void`): na Vercel a função congela ao responder,
+     e um log disparado sem espera se perdia. Cada passo deixa rastro, para
+     achar por que a réplica não continua. */
+  const rastro = (modo, entrada, saida) =>
+    registrarLog({ canal: 'prospeccao', de: 'webhook', entrada: String(entrada).slice(0, 90), saida: String(saida).slice(0, 90), modo }).catch(() => {})
+
   const tipo = String(evento?.event || '')
     .toLowerCase()
     .replace(/_/g, '.')
-  if (tipo !== 'messages.upsert' || !temBanco()) return
+  if (tipo !== 'messages.upsert' || !temBanco()) return await rastro('debug', `tipo=${tipo}`, `banco=${temBanco()}`)
   const mensagem = lerMensagemDoWebhook(evento)
-  if (!mensagem || !mensagem.texto) return
+  if (!mensagem || !mensagem.texto) return await rastro('debug', 'sem mensagem/texto', evento?.data?.key?.remoteJid || '')
   const lead = await acharLeadPorContato(mensagem.telefone)
-  if (!lead || lead.prospeccao !== 'bot') return
-  if (mensagem.id && !(await inedita(mensagem.id))) return
+  if (!lead) return await rastro('debug', `lead nao achado: ${mensagem.telefone}`, mensagem.texto)
+  if (lead.prospeccao !== 'bot') return await rastro('debug', `lead ${lead.id} prospeccao=${lead.prospeccao}`, mensagem.telefone)
+  if (mensagem.id && !(await inedita(mensagem.id))) return await rastro('debug', `duplicada ${mensagem.id}`, mensagem.telefone)
 
   const conversa = Array.isArray(lead.conversa) ? lead.conversa : []
   if (mensagem.deMim) {
@@ -492,14 +499,20 @@ export async function webhookProspeccao(evento) {
   }
 
   const atual = await acrescentarFala(lead.id, { de: 'pessoa', texto: mensagem.texto })
-  if (!temInteligencia() || !(await dentroDoTeto())) {
-    void registrarLog({ canal: 'prospeccao', de: mensagem.telefone, entrada: mensagem.texto, saida: '', modo: 'silencio' })
-    return
+  if (!temInteligencia() || !(await dentroDoTeto())) return await rastro('silencio', mensagem.texto, 'sem IA/teto')
+  let resposta = ''
+  try {
+    resposta = await falarComIA(lead, atual)
+  } catch (erro) {
+    return await rastro('debug', 'IA falhou', erro?.message || '')
   }
-  const resposta = await falarComIA(lead, atual)
-  if (!resposta) return
-  const evo = await evolucaoDaProspeccao()
-  await evo?.enviarTexto(instanciaPessoal(), mensagem.telefone, resposta)
+  if (!resposta) return await rastro('debug', 'IA vazia', mensagem.texto)
+  try {
+    const evo = await evolucaoDaProspeccao()
+    await evo?.enviarTexto(instanciaPessoal(), mensagem.telefone, resposta)
+  } catch (erro) {
+    return await rastro('debug', 'envio falhou', erro?.message || '')
+  }
   await acrescentarFala(lead.id, { de: 'robo', texto: resposta })
-  void registrarLog({ canal: 'prospeccao', de: mensagem.telefone, entrada: mensagem.texto, saida: resposta, modo: 'ia' })
+  await rastro('ia', mensagem.texto, resposta)
 }
