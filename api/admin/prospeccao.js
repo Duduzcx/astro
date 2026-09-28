@@ -22,6 +22,7 @@ import {
   estadoDoNumero,
   instrucaoDeProspeccao,
   marcarProspeccao,
+  mensagensDaConversa,
   ponteRegistrada,
 } from '../_lib/prospeccao.js'
 import { corpo, ErroHttp } from '../crm/_lib/http.js'
@@ -36,6 +37,11 @@ export default async function handler(req, res) {
       if (req.query.desconectar) {
         await desconectarNumero()
         return res.status(200).json({ ok: true })
+      }
+      /* ?conversa=<jid> devolve as mensagens daquela conversa, para o painel
+         abrir e ler antes de o robô assumir. */
+      if (req.query.conversa) {
+        return res.status(200).json({ mensagens: await mensagensDaConversa(String(req.query.conversa)) })
       }
       const estado = await estadoDoNumero()
       const instrucao = await instrucaoDeProspeccao()

@@ -61,6 +61,18 @@ export function AbaProspeccao() {
   const [ocupado, setOcupado] = useState(false)
   const [resultados, setResultados] = useState<Resultado[]>([])
   const [lidoEm, setLidoEm] = useState('')
+  /* A conversa aberta para leitura, com as mensagens que a ponte devolve. */
+  const [lendo, setLendo] = useState<{ conversa: Conversa; falas: { de: string; texto: string }[] | null } | null>(null)
+
+  async function abrirConversa(conversa: Conversa) {
+    setLendo({ conversa, falas: null })
+    try {
+      const r = await pedir(`/api/admin/prospeccao?conversa=${encodeURIComponent(conversa.jid)}`)
+      setLendo({ conversa, falas: r.mensagens || [] })
+    } catch {
+      setLendo({ conversa, falas: [] })
+    }
+  }
 
   const carregar = useCallback(async () => {
     try {
@@ -294,6 +306,15 @@ export function AbaProspeccao() {
             {ocupado ? 'Escrevendo…' : `O robô assume ${escolhidas.size ? `${escolhidas.size} conversa${escolhidas.size > 1 ? 's' : ''}` : ''}`}
           </button>
         </div>
+        {/* Diz por que o botão não liga, em vez de deixar a pessoa adivinhar. */}
+        {!dados.inteligencia || !dados.banco ? (
+          <p className="mt-2 text-[12px] text-[#ffd479]">
+            {!dados.banco ? 'Cadastre POSTGRES_URL na Vercel. ' : ''}
+            {!dados.inteligencia ? 'Cadastre ANTHROPIC_API_KEY (ou OPENAI_API_KEY) na Vercel para o robô ter com que escrever.' : ''}
+          </p>
+        ) : escolhidas.size === 0 && conectado && dados.conversas.length ? (
+          <p className="mt-2 text-[12px] text-slate">Marque uma ou mais conversas na lista para o robô assumir.</p>
+        ) : null}
         {!conectado ? (
           <p className="mt-3 text-[13px] text-slate">Conecte o número para ver as conversas.</p>
         ) : dados.conversas.length === 0 ? (
@@ -302,45 +323,65 @@ export function AbaProspeccao() {
           <ul className="mt-3 divide-y divide-white/8">
             {dados.conversas.map((conversa) => {
               const modo = conversa.lead?.prospeccao || ''
+              const marcada = escolhidas.has(conversa.jid)
               return (
                 <li key={conversa.jid} className="flex items-start gap-3 py-3">
-                  <input
-                    type="checkbox"
+                  {/* A linha inteira marca e desmarca: a caixa sozinha era um
+                      alvo pequeno demais. O botão do robô e o de ler a
+                      conversa ficam fora deste clique. */}
+                  <button
+                    type="button"
                     aria-label={`Escolher ${nomeDe(conversa)}`}
-                    checked={escolhidas.has(conversa.jid)}
+                    aria-pressed={marcada}
                     disabled={modo === 'bot'}
-                    onChange={() => alternar(conversa.jid)}
-                    className="mt-1 h-4 w-4 accent-[#4d84e0]"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="flex flex-wrap items-center gap-2 text-[14px] text-ivory">
-                      {nomeDe(conversa)}
-                      {conversa.nome ? <span className="text-[12px] text-slate">{conversa.telefone}</span> : null}
-                      {modo === 'bot' ? (
-                        <span className="rounded-full bg-[#86e8a8]/15 px-2 py-0.5 text-[11px] text-[#86e8a8]">robô prospectando</span>
-                      ) : modo === 'pausado' ? (
-                        <span className="rounded-full bg-[#ffd479]/15 px-2 py-0.5 text-[11px] text-[#ffd479]">pausado, sua mão</span>
-                      ) : conversa.lead ? (
-                        <span className="rounded-full bg-white/8 px-2 py-0.5 text-[11px] text-slate">lead · {conversa.lead.situacao}</span>
+                    onClick={() => alternar(conversa.jid)}
+                    className="flex min-w-0 flex-1 items-start gap-3 text-left disabled:opacity-60"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded border ${marcada ? 'border-cobalt bg-cobalt text-white' : 'border-white/25'}`}
+                    >
+                      {marcada ? '✓' : ''}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex flex-wrap items-center gap-2 text-[14px] text-ivory">
+                        {nomeDe(conversa)}
+                        {conversa.nome ? <span className="text-[12px] text-slate">{conversa.telefone}</span> : null}
+                        {modo === 'bot' ? (
+                          <span className="rounded-full bg-[#86e8a8]/15 px-2 py-0.5 text-[11px] text-[#86e8a8]">robô prospectando</span>
+                        ) : modo === 'pausado' ? (
+                          <span className="rounded-full bg-[#ffd479]/15 px-2 py-0.5 text-[11px] text-[#ffd479]">pausado, sua mão</span>
+                        ) : conversa.lead ? (
+                          <span className="rounded-full bg-white/8 px-2 py-0.5 text-[11px] text-slate">lead · {conversa.lead.situacao}</span>
+                        ) : null}
+                      </span>
+                      {conversa.ultima ? (
+                        <span className="mt-0.5 block truncate text-[12px] text-slate">
+                          {conversa.ultima.de === 'robo' ? 'você: ' : ''}
+                          {conversa.ultima.texto}
+                        </span>
                       ) : null}
-                    </p>
-                    {conversa.ultima ? (
-                      <p className="mt-0.5 truncate text-[12px] text-slate">
-                        {conversa.ultima.de === 'robo' ? 'você: ' : ''}
-                        {conversa.ultima.texto}
-                      </p>
-                    ) : null}
-                    <p className="mt-0.5 text-[11px] text-slate">{quando(conversa.quando)}</p>
-                  </div>
-                  {conversa.lead && modo ? (
+                      <span className="mt-0.5 block text-[11px] text-slate">{quando(conversa.quando)}</span>
+                    </span>
+                  </button>
+                  <div className="flex shrink-0 flex-col items-end gap-2">
                     <button
                       type="button"
-                      onClick={() => void mudar(conversa.lead!.id, modo === 'bot' ? 'pausado' : 'bot')}
+                      onClick={() => void abrirConversa(conversa)}
                       className="rounded-full border border-white/12 px-3 py-1 text-[12px] text-ash hover:text-ivory"
                     >
-                      {modo === 'bot' ? 'Pausar' : 'Devolver ao robô'}
+                      Ler
                     </button>
-                  ) : null}
+                    {conversa.lead && modo ? (
+                      <button
+                        type="button"
+                        onClick={() => void mudar(conversa.lead!.id, modo === 'bot' ? 'pausado' : 'bot')}
+                        className="rounded-full border border-white/12 px-3 py-1 text-[12px] text-ash hover:text-ivory"
+                      >
+                        {modo === 'bot' ? 'Pausar' : 'Devolver ao robô'}
+                      </button>
+                    ) : null}
+                  </div>
                 </li>
               )
             })}
@@ -356,6 +397,50 @@ export function AbaProspeccao() {
           </ul>
         ) : null}
       </div>
+
+      {/* A gaveta de leitura: a conversa inteira, do jeito que a ponte tem. */}
+      {lendo ? (
+        <div className="fixed inset-0 z-[80] flex justify-end">
+          <button
+            type="button"
+            aria-label="Fechar"
+            onClick={() => setLendo(null)}
+            className="absolute inset-0 cursor-default bg-onyx/65 backdrop-blur-[2px]"
+          />
+          <aside className="relative z-10 flex w-full max-w-[460px] flex-col border-l border-white/10 bg-graphite">
+            <header className="flex items-center justify-between gap-3 border-b border-white/8 px-5 py-4">
+              <div className="min-w-0">
+                <p className="truncate text-[15px] text-ivory">{lendo.conversa.nome || lendo.conversa.telefone}</p>
+                <p className="text-[12px] text-slate">{lendo.conversa.telefone}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLendo(null)}
+                className="rounded-full border border-white/12 px-3 py-1 text-[12px] text-ash hover:text-ivory"
+              >
+                Fechar
+              </button>
+            </header>
+            <div className="flex-1 space-y-2 overflow-y-auto p-4">
+              {lendo.falas === null ? (
+                <p className="text-[13px] text-slate">Carregando a conversa…</p>
+              ) : lendo.falas.length === 0 ? (
+                <p className="text-[13px] text-slate">Sem mensagens de texto guardadas nesta conversa ainda.</p>
+              ) : (
+                lendo.falas.map((fala, i) => (
+                  <div
+                    key={i}
+                    className={`max-w-[85%] rounded-2xl px-3 py-2 text-[13px] ${fala.de === 'robo' ? 'ml-auto bg-cobalt/25 text-ivory' : 'bg-obsidian text-ash'}`}
+                  >
+                    <span className="mb-1 block text-[10px] uppercase opacity-60">{fala.de === 'robo' ? 'você' : 'pessoa'}</span>
+                    {fala.texto}
+                  </div>
+                ))
+              )}
+            </div>
+          </aside>
+        </div>
+      ) : null}
     </div>
   )
 }

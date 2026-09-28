@@ -284,6 +284,14 @@ export async function conversasDoAparelho(limite = 150) {
   })
 }
 
+/** As mensagens de uma conversa do aparelho, já no formato { de, texto }, para o painel ler. */
+export async function mensagensDaConversa(jid) {
+  const evo = await evolucaoDaProspeccao()
+  if (!evo) return []
+  const registros = await evo.mensagens(instanciaPessoal(), String(jid), 60).catch(() => [])
+  return falasDoHistorico(registros, 60)
+}
+
 /** O que o modelo precisa saber além da instrução mestre: os campos do próprio lead. */
 function contextoDoLead(lead) {
   const sabido = [
