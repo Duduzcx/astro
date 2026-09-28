@@ -69,6 +69,8 @@ export function AbaProspeccao() {
       setInstrucao((atual) => atual || r.instrucao)
       setLidoEm(new Date().toLocaleTimeString('pt-BR'))
       setAviso('')
+      /* A ponte está esperando um QR (número saiu ou nunca entrou): busca e mostra sem pedir clique. */
+      if (r.estado.estado === 'aguardando_qr') void conectar()
     } catch (falha) {
       setAviso(mensagemDe(falha))
     }
@@ -99,9 +101,16 @@ export function AbaProspeccao() {
     setOcupado(true)
     setAviso('')
     try {
-      const r = await pedir('/api/admin/prospeccao?qr=1')
+      /* O QR pode demorar uns segundos para nascer na ponte: insiste até
+         seis vezes antes de desistir, senão o clique parece não fazer nada. */
+      let r = await pedir('/api/admin/prospeccao?qr=1')
+      for (let tentativa = 0; !r.qr && r.estado !== 'conectado' && tentativa < 6; tentativa += 1) {
+        await new Promise((resolver) => setTimeout(resolver, 2000))
+        r = await pedir('/api/admin/prospeccao?qr=1')
+      }
       if (r.qr) setQr(r.qr)
-      else await carregar()
+      else if (r.estado === 'conectado') await carregar()
+      else setAviso('A ponte não gerou o QR. Ela está rodando? Veja o terminal dela.')
     } catch (falha) {
       setAviso(mensagemDe(falha))
     } finally {

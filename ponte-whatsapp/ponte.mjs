@@ -407,6 +407,13 @@ async function tratar(req, res) {
     if (a === 'instance' && b === 'connect') {
       if (estado === 'conectado') return responder(res, 200, { instance: { state: 'open' } })
       if (!sock) void ligar()
+      /* Espera o QR nascer (uns dois segundos depois de ligar), até oito:
+         responder "conectando" sem QR fazia o painel voltar sem nada, e o
+         clique em Conectar parecia não fazer nada. */
+      for (let espera = 0; !qrAtual && estado !== 'conectado' && espera < 32; espera += 1) {
+        await new Promise((r) => setTimeout(r, 250))
+      }
+      if (estado === 'conectado') return responder(res, 200, { instance: { state: 'open' } })
       if (qrAtual) return responder(res, 200, { base64: qrAtual, code: 'qr' })
       return responder(res, 200, { instance: { state: 'connecting' } })
     }
@@ -426,6 +433,9 @@ async function tratar(req, res) {
       meuNumero = null
       qrAtual = null
       fs.rmSync(path.join(DADOS, 'auth'), { recursive: true, force: true })
+      registrarEvento('número desconectado pelo painel; preparando um QR novo')
+      /* Já liga de novo: o QR fica pronto para o próximo clique em Conectar. */
+      setTimeout(() => void ligar(), 500)
       return responder(res, 200, { ok: true })
     }
     if (a === 'message' && b === 'sendText' && req.method === 'POST') {
