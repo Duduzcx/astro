@@ -112,6 +112,15 @@ export async function registrarPonte(req, res) {
       await medir('listarLeads', () => listarLeads({ situacao: '', busca: '' }))
       await medir('resumo', () => resumo())
       await medir('estadoDoNumero', () => estadoDoNumero())
+      /* O que cada peça vê: sem isso não dá para saber por que o painel diz
+         "a ponte ainda não avisou" com o registro aceito. */
+      testes.ambiente = {
+        temBanco: temBanco(),
+        EVOLUTION_API_URL: process.env.EVOLUTION_API_URL ? 'definida' : 'ausente',
+        EVOLUTION_API_KEY: process.env.EVOLUTION_API_KEY ? `${process.env.EVOLUTION_API_KEY.length} caracteres` : 'ausente',
+        ponteRegistrada: await ponteRegistrada().catch((erro) => `erro: ${erro?.message}`),
+        estado: await estadoDoNumero().catch((erro) => `erro: ${erro?.message}`),
+      }
     }
     return res.status(200).json({ ok: true, sessoes, bloqueios, derrubadas, testes })
   }
