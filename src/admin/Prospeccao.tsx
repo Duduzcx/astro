@@ -60,12 +60,15 @@ export function AbaProspeccao() {
   const [aviso, setAviso] = useState('')
   const [ocupado, setOcupado] = useState(false)
   const [resultados, setResultados] = useState<Resultado[]>([])
+  const [lidoEm, setLidoEm] = useState('')
 
   const carregar = useCallback(async () => {
     try {
       const r: Dados = await pedir('/api/admin/prospeccao')
       setDados(r)
       setInstrucao((atual) => atual || r.instrucao)
+      setLidoEm(new Date().toLocaleTimeString('pt-BR'))
+      setAviso('')
     } catch (falha) {
       setAviso(mensagemDe(falha))
     }
@@ -191,7 +194,7 @@ export function AbaProspeccao() {
             {conectado ? `Conectado${dados.estado.numero ? ` · ${dados.estado.numero}` : ''}` : qr ? 'Aguardando o QR code' : 'Desconectado'}
           </p>
           <p className="mt-1 text-[12px] text-slate">
-            instância {dados.estado.instancia}
+            {lidoEm ? `lido às ${lidoEm} · ` : ''}instância {dados.estado.instancia}
             {dados.ponte
               ? ` · ponte em ${dados.ponte.url.replace('https://', '').replace('http://', '')} · registrada ${quando(dados.ponte.quando)}`
               : ''}
