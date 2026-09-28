@@ -275,6 +275,15 @@ async function ligar() {
         estado = 'conectado'
         meuNumero = `+${String(sock.user?.id || '').split('@')[0].split(':')[0].replace(/\D/g, '')}`
         registrarEvento(`conectado como ${meuNumero}`)
+        /* Puxa o estado do app (a lista de conversas e contatos) do telefone,
+           já que o pacote de histórico automático não vem nesta conta. Cada
+           faixa que volta vira `messaging-history.set`. Falhar não atrapalha. */
+        setTimeout(() => {
+          sock
+            ?.resyncAppState(['critical_unblock_low', 'regular_high', 'regular_low', 'regular'], true)
+            .then(() => registrarEvento('sincronia de conversas pedida ao telefone'))
+            .catch((erro) => registrarEvento(`sincronia de conversas falhou: ${erro?.message}`))
+        }, 4000)
         /* Se o pacote de histórico não vier em meio minuto, o diário diz —
            é o sintoma de "lista vazia", e a saída é desconectar e ligar de
            novo, ou mandar uma mensagem (a conversa entra ao chegar). */

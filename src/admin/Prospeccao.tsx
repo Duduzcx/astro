@@ -56,6 +56,29 @@ export function AbaProspeccao() {
   const [dados, setDados] = useState<Dados | null>(null)
   const [qr, setQr] = useState<string | null>(null)
   const [escolhidas, setEscolhidas] = useState<Set<string>>(() => new Set())
+  const [numeroNovo, setNumeroNovo] = useState('')
+
+  async function assumirNumero() {
+    const numero = numeroNovo.replace(/\D/g, '')
+    if (numero.length < 10) {
+      setAviso('Digite o número com DDD (ex.: 11984680317).')
+      return
+    }
+    setOcupado(true)
+    setAviso('')
+    try {
+      const r = await pedir('/api/admin/prospeccao', { method: 'POST', body: JSON.stringify({ numero }) })
+      setResultados(r.resultados)
+      const falha = (r.resultados || []).find((x: Resultado) => x.erro)
+      if (falha) setAviso(falha.erro || 'falhou')
+      else setNumeroNovo('')
+      await carregar()
+    } catch (falha) {
+      setAviso(mensagemDe(falha))
+    } finally {
+      setOcupado(false)
+    }
+  }
   const [instrucao, setInstrucao] = useState('')
   const [aviso, setAviso] = useState('')
   const [ocupado, setOcupado] = useState(false)
@@ -301,6 +324,28 @@ export function AbaProspeccao() {
       <div className="graphite-card">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="label-voice text-[10px]">Conversas do aparelho {conectado ? `(${dados.conversas.length})` : ''}</p>
+          {/* Prospectar quem não está na lista: digita o número e o robô
+              aborda. Não depende do histórico do aparelho. */}
+          {conectado && dados.inteligencia && dados.banco ? (
+            <div className="flex w-full items-center gap-2 sm:w-auto">
+              <input
+                type="tel"
+                inputMode="numeric"
+                value={numeroNovo}
+                onChange={(e) => setNumeroNovo(e.target.value)}
+                placeholder="Prospectar um número (DDD + número)"
+                className="min-w-0 flex-1 rounded-full border border-white/12 bg-onyx/60 px-4 py-2 text-[13px] text-ivory outline-none placeholder:text-slate focus:border-[#8db4f5]/50 sm:w-64"
+              />
+              <button
+                type="button"
+                disabled={ocupado || numeroNovo.replace(/\D/g, '').length < 10}
+                onClick={() => void assumirNumero()}
+                className="shrink-0 rounded-full border border-cobalt/50 px-4 py-2 text-[13px] text-ivory hover:bg-cobalt/15 disabled:opacity-50"
+              >
+                Abordar
+              </button>
+            </div>
+          ) : null}
           <button
             type="button"
             disabled={ocupado || escolhidas.size === 0 || !dados.inteligencia || !dados.banco}

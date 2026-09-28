@@ -59,8 +59,16 @@ export default async function handler(req, res) {
     }
     if (req.method === 'POST') {
       const dados = await corpo(req)
+      /* Aceita as conversas marcadas (jids) e/ou um número digitado à mão,
+         para prospectar quem não está na lista. O número vira o jid do
+         WhatsApp; DDI 55 é assumido quando vêm só 10 ou 11 dígitos. */
       const jids = Array.isArray(dados?.jids) ? dados.jids.map(String) : []
-      if (jids.length === 0) return res.status(400).json({ erro: 'escolha ao menos uma conversa' })
+      if (dados?.numero) {
+        let d = String(dados.numero).replace(/\D/g, '')
+        if (d.length >= 10 && d.length <= 11) d = `55${d}`
+        if (d.length >= 12) jids.push(`${d}@s.whatsapp.net`)
+      }
+      if (jids.length === 0) return res.status(400).json({ erro: 'escolha uma conversa ou digite um número' })
       return res.status(200).json({ resultados: await assumirConversas(jids) })
     }
     if (req.method === 'PATCH') {
