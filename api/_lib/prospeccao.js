@@ -16,9 +16,10 @@
  * mensagem `fromMe` que não saiu do robô denuncia a mão humana, e o lead
  * fica `pausado` até o painel devolver.
  */
-import { evolution, tokenDoWebhook, urlPublica } from '../crm/_lib/ambiente.js'
-import { lerMensagemDoWebhook } from '../crm/_lib/evolution.js'
-import { lerConfig } from './config.js'
+import { tokenDoWebhook, urlPublica } from '../crm/_lib/ambiente.js'
+import { criarEvolution, lerMensagemDoWebhook } from '../crm/_lib/evolution.js'
+import { corpo } from '../crm/_lib/http.js'
+import { gravarConfig, lerConfig } from './config.js'
 import { prepararBanco, sql, temBanco } from './db.js'
 import { conversaParaMensagens, dentroDoTeto, limpar, responderComIA, temInteligencia } from './inteligencia.js'
 import { acharLeadPorContato, acrescentarFala, criarLead, texto as limparTexto } from './leads.js'
@@ -29,6 +30,48 @@ export const instanciaPessoal = () => process.env.EVOLUTION_INSTANCIA_PESSOAL ||
 
 /** Os três estados de um lead diante do robô de prospecção. */
 export const MODOS = ['', 'bot', 'pausado']
+
+/**
+ * O cliente da ponte (ponte-whatsapp/, no PC ou num servidor) ou de uma
+ * Evolution de verdade — a API é a mesma. O endereço vem de
+ * EVOLUTION_API_URL quando existe; senão, do registro que a ponte faz ao
+ * subir (`registrarPonte`), porque o túnel dela muda de endereço a cada
+ * vez. A chave é sempre EVOLUTION_API_KEY.
+ */
+export async function evolucaoDaProspeccao() {
+  const ponte = await ponteRegistrada()
+  return criarEvolution({
+    EVOLUTION_API_URL: process.env.EVOLUTION_API_URL || ponte?.url || '',
+    EVOLUTION_API_KEY: process.env.EVOLUTION_API_KEY || '',
+  })
+}
+
+/** O que a ponte registrou: endereço, instância e quando. */
+export async function ponteRegistrada() {
+  const ponte = await lerConfig('ponte', null)
+  return ponte && typeof ponte === 'object' && ponte.url ? ponte : null
+}
+
+/**
+ * A ponte avisa onde está: POST /api/crm/ponte/registrar, cabeçalho
+ * `apikey` igual a EVOLUTION_API_KEY, corpo { url, instancia }. Sem a chave
+ * cadastrada não há como saber quem chama, e nada é gravado.
+ */
+export async function registrarPonte(req, res) {
+  const chave = process.env.EVOLUTION_API_KEY || ''
+  if (!chave) return res.status(503).json({ erro: 'cadastre EVOLUTION_API_KEY na Vercel, a mesma PONTE_CHAVE da ponte' })
+  if (String(req.headers.apikey || '') !== chave) return res.status(401).json({ erro: 'chave inválida' })
+  if (!temBanco()) return res.status(503).json({ erro: 'sem banco (POSTGRES_URL) não há onde guardar o endereço' })
+  const dados = await corpo(req)
+  const url = String(dados?.url || '').replace(//+$/, '')
+  if (!/^https?://[w.-]+(:d+)?$/.test(url)) return res.status(400).json({ erro: 'url inválida' })
+  await gravarConfig('ponte', {
+    url,
+    instancia: String(dados?.instancia || instanciaPessoal()).slice(0, 60),
+    quando: new Date().toISOString(),
+  })
+  return res.status(200).json({ ok: true })
+}
 
 export const INSTRUCAO_PROSPECCAO_PADRAO = [
   'Você escreve pelo WhatsApp pessoal do fundador da Astro Soluções, uma agência brasileira de tecnologia sob medida: sites, sistemas web, automações de processo e integrações.',
@@ -126,7 +169,7 @@ export async function marcarProspeccao(id, modo) {
 
 export async function estadoDoNumero() {
   const instancia = instanciaPessoal()
-  const evo = evolution()
+  const evo = await evolucaoDaProspeccao()
   if (!evo) return { configurado: false, estado: 'desconectado', numero: null, instancia }
   try {
     const estado = await evo.estado(instancia)
@@ -138,7 +181,7 @@ export async function estadoDoNumero() {
 
 /** Cria a instância se não existir, aponta o webhook para cá e devolve o QR (ou "conectado"). */
 export async function conectarNumero() {
-  const evo = evolution()
+  const evo = await evolucaoDaProspeccao()
   if (!evo) throw new Error('faltam EVOLUTION_API_URL e EVOLUTION_API_KEY na Vercel')
   const nome = instanciaPessoal()
   const webhook = `${urlPublica()}/api/crm/whatsapp/webhook/${encodeURIComponent(nome)}?token=${encodeURIComponent(tokenDoWebhook())}`
@@ -147,13 +190,13 @@ export async function conectarNumero() {
 }
 
 export async function desconectarNumero() {
-  const evo = evolution()
+  const evo = await evolucaoDaProspeccao()
   if (evo) await evo.desconectar(instanciaPessoal())
 }
 
 /** As conversas do aparelho, da mais recente para a mais antiga, com o lead de cada uma quando existe. */
 export async function conversasDoAparelho(limite = 150) {
-  const evo = evolution()
+  const evo = await evolucaoDaProspeccao()
   if (!evo) return []
   const brutas = await evo.conversas(instanciaPessoal())
   const chats = brutas
@@ -215,7 +258,7 @@ async function falarComIA(lead, conversa) {
  * manda a mensagem de abordagem. Devolve um resultado por conversa.
  */
 export async function assumirConversas(jids) {
-  const evo = evolution()
+  const evo = await evolucaoDaProspeccao()
   if (!evo) throw new Error('faltam EVOLUTION_API_URL e EVOLUTION_API_KEY na Vercel')
   if (!temBanco()) throw new Error('a prospecção precisa do banco (POSTGRES_URL)')
   if (!temInteligencia()) throw new Error('a prospecção precisa de uma inteligência (ANTHROPIC_API_KEY ou OPENAI_API_KEY)')
@@ -306,7 +349,8 @@ export async function webhookProspeccao(evento) {
   }
   const resposta = await falarComIA(lead, atual)
   if (!resposta) return
-  await evolution()?.enviarTexto(instanciaPessoal(), mensagem.telefone, resposta)
+  const evo = await evolucaoDaProspeccao()
+  await evo?.enviarTexto(instanciaPessoal(), mensagem.telefone, resposta)
   await acrescentarFala(lead.id, { de: 'robo', texto: resposta })
   void registrarLog({ canal: 'prospeccao', de: mensagem.telefone, entrada: mensagem.texto, saida: resposta, modo: 'ia' })
 }

@@ -1,0 +1,19 @@
+{
+  "name": "ponte-whatsapp",
+  "private": true,
+  "version": "1.0.0",
+  "description": "A ponte do WhatsApp pessoal da Astro Soluções: liga o número pelo QR code (como o WhatsApp Web) e fala com o painel do site.",
+  "type": "module",
+  "scripts": {
+    "start": "node ponte.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.24",
+    "cloudflared": "^0.7.3",
+    "pino": "^9.6.0",
+    "qrcode": "^1.5.4"
+  }
+}

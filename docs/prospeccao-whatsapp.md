@@ -11,11 +11,36 @@ instrução mestre de prospecção, e conduz até o diagnóstico gratuito.
 
 | Variável (Vercel) | O que é |
 | --- | --- |
-| `EVOLUTION_API_URL`, `EVOLUTION_API_KEY` | a Evolution API, a mesma do CRM (`docs/crm-odonto.md` explica como subir de graça) |
+| `EVOLUTION_API_KEY` | a chave que a ponte e o site compartilham (invente uma: `openssl rand -hex 24`); na ponte é `PONTE_CHAVE` |
+| `EVOLUTION_API_URL` | só se você tiver uma Evolution API ou a ponte num servidor com domínio fixo; sem ela, o site usa o endereço que a ponte registra sozinha |
 | `EVOLUTION_INSTANCIA_PESSOAL` | opcional; o nome da instância. Padrão `astro-pessoal` |
 | `CRON_SECRET` (ou `CRM_WEBHOOK_TOKEN`) | o token que protege o webhook, já usado pelo CRM |
 | `POSTGRES_URL` | o banco do funil: cada conversa assumida vira um lead |
 | `ANTHROPIC_API_KEY` ou `OPENAI_API_KEY` | a inteligência que escreve pelo número |
+
+## A ponte: o número entra como no WhatsApp Web
+
+Nada de Meta, nada de Docker, nada de banco. A pasta `ponte-whatsapp/` é um
+programa Node que liga o número pelo QR code (o protocolo de aparelho
+conectado, o mesmo do WhatsApp Web), guarda as conversas em `dados/` e
+atende o site no formato da Evolution. No seu PC:
+
+1. Na Vercel, cadastre `EVOLUTION_API_KEY` com uma chave inventada (16 ou
+   mais caracteres) e republique (ou espere o próximo deploy).
+2. No PC: `cd ponte-whatsapp`, `npm install`, copie `.env.exemplo` para
+   `.env` e ponha a mesma chave em `PONTE_CHAVE`.
+3. `npm start`. A ponte baixa o `cloudflared` uma vez, abre um túnel público
+   (endereço `*.trycloudflare.com`, sem conta) e se registra no site. O QR
+   aparece no terminal e no painel.
+4. Enquanto a ponte roda, o robô trabalha. PC desligado, ponte parada: as
+   mensagens ficam no celular e o robô só volta quando a ponte voltar. Para
+   ficar ligada o dia inteiro, a mesma pasta roda em qualquer servidor com
+   Node (Oracle Always Free, por exemplo); com domínio fixo, `URL_PUBLICA`
+   no `.env` dispensa o túnel.
+
+O endereço do túnel muda a cada subida, por isso a ponte se registra
+sozinha (`POST /api/crm/ponte/registrar`, com a chave) na subida e de dez
+em dez minutos; o painel mostra "ponte em … · registrada há …".
 
 ## Como usar
 
@@ -49,7 +74,9 @@ instrução mestre de prospecção, e conduz até o diagnóstico gratuito.
 | --- | --- |
 | a lógica (assumir, abordar, responder, pausar) | `api/_lib/prospeccao.js` |
 | a rota do painel | `api/admin/prospeccao.js` |
+| a ponte (o número pelo QR, as conversas, o envio) | `ponte-whatsapp/ponte.mjs` |
 | o webhook | o mesmo do CRM, `api/crm/rota.js` → `bot.js`, que desvia a instância pessoal para a prospecção |
+| o registro do endereço da ponte | `registrarPonte` em `api/_lib/prospeccao.js`, rota `ponte/registrar` |
 | a lista de conversas e o histórico | `conversas()` e `mensagens()` em `api/crm/_lib/evolution.js` |
 | a coluna `leads.prospeccao` e a tabela `prospeccao_mensagens` | `api/_lib/db.js` |
 | testes das regras puras | `tests/prospeccao.test.ts` |

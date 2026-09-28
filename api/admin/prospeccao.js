@@ -22,6 +22,7 @@ import {
   estadoDoNumero,
   instrucaoDeProspeccao,
   marcarProspeccao,
+  ponteRegistrada,
 } from '../_lib/prospeccao.js'
 import { corpo, ErroHttp } from '../crm/_lib/http.js'
 
@@ -36,13 +37,14 @@ export default async function handler(req, res) {
         await desconectarNumero()
         return res.status(200).json({ ok: true })
       }
-      const [estado, instrucao] = await Promise.all([estadoDoNumero(), instrucaoDeProspeccao()])
+      const [estado, instrucao, ponte] = await Promise.all([estadoDoNumero(), instrucaoDeProspeccao(), ponteRegistrada()])
       const conversas = estado.estado === 'conectado' ? await conversasDoAparelho().catch(() => []) : []
       return res.status(200).json({
         estado,
         instrucao,
         instrucaoPadrao: INSTRUCAO_PROSPECCAO_PADRAO,
         conversas,
+        ponte,
         inteligencia: temInteligencia(),
         banco: temBanco(),
       })

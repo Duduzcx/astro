@@ -25,6 +25,7 @@ type Dados = {
   instrucao: string
   instrucaoPadrao: string
   conversas: Conversa[]
+  ponte: { url: string; instancia: string; quando: string } | null
   inteligencia: boolean
   banco: boolean
 }
@@ -165,8 +166,9 @@ export function AbaProspeccao() {
     <div className="flex flex-col gap-4">
       {!dados.estado.configurado ? (
         <p className="rounded-xl border border-[#ffd479]/30 bg-[#ffd479]/5 px-4 py-3 text-[13px] text-[#ffd479]">
-          Faltam EVOLUTION_API_URL e EVOLUTION_API_KEY na Vercel. Como subir a Evolution de graça está em
-          docs/crm-odonto.md; a prospecção usa a mesma.
+          A ponte ainda não avisou onde está. No seu PC: entre em ponte-whatsapp, rode npm install, copie
+          .env.exemplo para .env com a mesma chave cadastrada na Vercel como EVOLUTION_API_KEY, e rode npm start.
+          Ela abre o túnel e se registra aqui sozinha (docs/prospeccao-whatsapp.md).
         </p>
       ) : null}
       {!dados.inteligencia || !dados.banco ? (
@@ -183,7 +185,12 @@ export function AbaProspeccao() {
             <span aria-hidden="true">{conectado ? '●' : '○'}</span>
             {conectado ? `Conectado${dados.estado.numero ? ` · ${dados.estado.numero}` : ''}` : qr ? 'Aguardando o QR code' : 'Desconectado'}
           </p>
-          <p className="mt-1 text-[12px] text-slate">instância {dados.estado.instancia}</p>
+          <p className="mt-1 text-[12px] text-slate">
+            instância {dados.estado.instancia}
+            {dados.ponte
+              ? ` · ponte em ${dados.ponte.url.replace('https://', '').replace('http://', '')} · registrada ${quando(dados.ponte.quando)}`
+              : ''}
+          </p>
           {qr ? (
             <div className="mt-4">
               <img src={`data:image/png;base64,${qr}`} alt="QR code para conectar o WhatsApp" className="h-56 w-56 rounded-lg bg-white p-2" />
