@@ -132,6 +132,28 @@ export async function diagnosticoBanco() {
 let preparado = false
 export async function prepararBanco() {
   if (preparado) return
+  /* Primeiro pergunta ao catálogo se falta alguma coisa. Só então roda o
+     CREATE/ALTER. Antes, cada invocação fria rodava o ALTER TABLE mesmo sem
+     nada a mudar, e um ALTER pede bloqueio exclusivo da tabela: bastava uma
+     consulta presa (uma função congelada pela Vercel no meio de um SELECT)
+     para o ALTER esperar, e todo SELECT novo esperar atrás do ALTER — o
+     painel inteiro parado em "Atualizando…". Uma leitura de catálogo não
+     bloqueia ninguém. */
+  const s = sql()
+  const [existe] = await s`
+    SELECT
+      to_regclass('public.leads') IS NOT NULL AS leads,
+      to_regclass('public.atividades') IS NOT NULL AS atividades,
+      to_regclass('public.config') IS NOT NULL AS config,
+      to_regclass('public.bot_logs') IS NOT NULL AS bot_logs,
+      to_regclass('public.tentativas_login') IS NOT NULL AS tentativas,
+      to_regclass('public.prospeccao_mensagens') IS NOT NULL AS prospeccao_mensagens,
+      EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'leads' AND column_name = 'prospeccao') AS coluna_prospeccao,
+      EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'leads_contato_idx') AS indice_contato`
+  if (existe && Object.values(existe).every(Boolean)) {
+    preparado = true
+    return
+  }
   try {
     await criarEsquema()
   } catch (erro) {
