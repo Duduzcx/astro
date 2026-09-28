@@ -21,7 +21,7 @@ import { criarEvolution, lerMensagemDoWebhook } from '../crm/_lib/evolution.js'
 import { corpo } from '../crm/_lib/http.js'
 import { gravarConfig, lerConfig } from './config.js'
 import { prepararBanco, sql, temBanco } from './db.js'
-import { conversaParaMensagens, dentroDoTeto, limpar, responderComIA, temInteligencia } from './inteligencia.js'
+import { conversaParaMensagens, dentroDoTeto, limpar, qualInteligencia, responderComIA, temInteligencia } from './inteligencia.js'
 import { acharLeadPorContato, acrescentarFala, criarLead, texto as limparTexto } from './leads.js'
 import { registrarLog } from './logs.js'
 
@@ -123,6 +123,24 @@ export async function registrarPonte(req, res) {
         conversas: await conversasDoAparelho().then((l) => `${l.length} conversas`).catch((erro) => `erro: ${erro?.message}`),
         conectar: await conectarNumero().then((r) => `${r.estado}${r.qr ? ` com QR de ${r.qr.length} caracteres` : ' sem QR'}`).catch((erro) => `erro: ${erro?.message}`),
         estado: await estadoDoNumero().catch((erro) => `erro: ${erro?.message}`),
+        inteligencia: qualInteligencia() || 'nenhuma',
+        modelo: process.env.BOT_MODELO || (qualInteligencia() === 'claude' ? 'claude-sonnet-5 (padrão)' : 'padrão'),
+      }
+      /* Testa a IA de verdade, com um pedido fixo: é o passo do "assumir" que
+         pode estar falando vazio. */
+      testes.ia = await responderComIA('Responda apenas: pronto.', [{ role: 'user', content: 'diga pronto' }])
+        .then((t) => (t ? `respondeu (${t.length} caracteres): ${t.slice(0, 60)}` : 'voltou VAZIA'))
+        .catch((erro) => `erro: ${erro?.message}`)
+      /* Envia um teste para o PRÓPRIO número conectado (mensagem para si
+         mesmo, inofensiva): prova o caminho do envio pela ponte. */
+      if (dados?.envio) {
+        const meu = (await estadoDoNumero()).numero
+        testes.envio = meu
+          ? await (await evolucaoDaProspeccao())
+              ?.enviarTexto(instanciaPessoal(), meu, 'Teste da ponte da Astro ✅ (mensagem automática de verificação)')
+              .then(() => `enviado para ${meu}`)
+              .catch((erro) => `erro: ${erro?.message}`)
+          : 'sem número conectado'
       }
     }
     return res.status(200).json({ ok: true, sessoes, bloqueios, derrubadas, testes })
