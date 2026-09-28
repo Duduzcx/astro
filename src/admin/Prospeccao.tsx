@@ -177,6 +177,10 @@ export function AbaProspeccao() {
       const r = await pedir('/api/admin/prospeccao', { method: 'POST', body: JSON.stringify({ jids }) })
       setResultados(r.resultados)
       setEscolhidas(new Set())
+      /* Se todas falharam, joga o motivo da primeira no aviso do topo, para
+         não passar despercebido na lista lá embaixo. */
+      const falhas = (r.resultados || []).filter((x: Resultado) => x.erro)
+      if (falhas.length && falhas.length === r.resultados.length) setAviso(falhas[0].erro || 'falhou')
       await carregar()
     } catch (falha) {
       setAviso(mensagemDe(falha))

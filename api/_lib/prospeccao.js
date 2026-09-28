@@ -375,17 +375,26 @@ export async function assumirConversas(jids) {
           conversa: falasDoHistorico(registros),
         })
       }
-      lead = await marcarProspeccao(lead.id, 'bot')
+      /* Só marca 'bot' DEPOIS que a abordagem foi enviada. Antes o lead ficava
+         "prospectando" mesmo quando a IA falhava (chave sem crédito) ou o
+         envio caía, e nada saía — sem mensagem e sem explicação. */
       if (!(await dentroDoTeto())) {
         resultados.push({ jid, lead: lead.id, erro: 'teto diário da inteligência atingido' })
         continue
       }
-      const resposta = await falarComIA(lead, Array.isArray(lead.conversa) ? lead.conversa : [])
+      let resposta = ''
+      try {
+        resposta = await falarComIA(lead, Array.isArray(lead.conversa) ? lead.conversa : [])
+      } catch (erro) {
+        resultados.push({ jid, lead: lead.id, erro: `a inteligência falhou: ${(erro?.message || '').slice(0, 160)}` })
+        continue
+      }
       if (!resposta) {
-        resultados.push({ jid, lead: lead.id, erro: 'a inteligência não respondeu' })
+        resultados.push({ jid, lead: lead.id, erro: 'a inteligência voltou vazia' })
         continue
       }
       await evo.enviarTexto(nome, telefone, resposta)
+      lead = await marcarProspeccao(lead.id, 'bot')
       await acrescentarFala(lead.id, { de: 'robo', texto: resposta })
       void registrarLog({ canal: 'prospeccao', de: telefone, entrada: '(abordagem)', saida: resposta, modo: 'ia' })
       resultados.push({ jid, lead: lead.id, enviado: true })
