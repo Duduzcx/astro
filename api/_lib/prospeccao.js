@@ -63,6 +63,40 @@ export async function registrarPonte(req, res) {
   if (String(req.headers.apikey || '') !== chave) return res.status(401).json({ erro: 'chave inválida' })
   if (!temBanco()) return res.status(503).json({ erro: 'sem banco (POSTGRES_URL) não há onde guardar o endereço' })
   const dados = await corpo(req)
+
+  /* Manutenção pela mesma chave, para quem administra a ponte.
+     { olhar: true } mostra as sessões do banco e os bloqueios na tabela de
+     leads; { destravar: true } derruba as conexões presas DO NOSSO usuário
+     (transação aberta, esperando bloqueio, bloqueando alguém ou parada numa
+     consulta em leads). Existe porque uma função congelada pela Vercel
+     segurou a tabela de leads por horas, e o editor SQL do Supabase se
+     recusa a derrubar sessões quando há sessões de superusuário na lista.
+     Nunca toca em sessão de outro usuário. */
+  if (dados?.olhar || dados?.destravar) {
+    const s = sql()
+    const sessoes = await s`
+      SELECT a.pid, a.usename, a.state, a.wait_event_type, a.wait_event,
+             (now() - a.xact_start)::text AS em_transacao_ha, left(a.query, 90) AS consulta
+      FROM pg_stat_activity a
+      WHERE a.pid <> pg_backend_pid() AND a.backend_type = 'client backend'
+      ORDER BY a.xact_start NULLS LAST`
+    const bloqueios = await s`
+      SELECT l.pid, l.mode, l.granted, a.state, left(a.query, 60) AS consulta
+      FROM pg_locks l JOIN pg_stat_activity a USING (pid)
+      WHERE l.relation = 'public.leads'::regclass`
+    let derrubadas = []
+    if (dados?.destravar) {
+      derrubadas = await s`
+        SELECT a.pid, a.state, left(a.query, 60) AS consulta, pg_terminate_backend(a.pid) AS derrubada
+        FROM pg_stat_activity a
+        WHERE a.pid <> pg_backend_pid() AND a.backend_type = 'client backend'
+          AND a.usename = current_user
+          AND (a.state LIKE 'idle in transaction%' OR a.wait_event_type = 'Lock'
+               OR cardinality(pg_blocking_pids(a.pid)) > 0 OR a.query ILIKE '%leads%')`
+    }
+    return res.status(200).json({ ok: true, sessoes, bloqueios, derrubadas })
+  }
+
   const url = String(dados?.url || '').replace(/\/+$/, '')
   if (!/^https?:\/\/[\w.-]+(:\d+)?$/.test(url)) return res.status(400).json({ erro: 'url inválida' })
   await gravarConfig('ponte', {
