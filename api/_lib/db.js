@@ -132,15 +132,31 @@ export async function diagnosticoBanco() {
 let preparado = false
 export async function prepararBanco() {
   if (preparado) return
-  /* Tudo numa transação com trava consultiva: esta função roda em toda
-     invocação fria, e duas funções que acordam juntas (leads e resumo,
-     abrindo o painel) faziam o mesmo CREATE ao mesmo tempo. O IF NOT EXISTS
-     não protege disso — as duas passam pela checagem e a segunda cai com
-     "já existe" ou com chave duplicada no catálogo, e quem abriu o painel
-     via "falha 500". Com a trava, a segunda espera a primeira terminar e
-     encontra tudo pronto. */
-  await sql().begin(async (s) => {
-  await s`SELECT pg_advisory_xact_lock(202609)`
+  try {
+    await criarEsquema()
+  } catch (erro) {
+    /* Esta função roda em toda invocação fria, e duas funções que acordam
+       juntas (leads e resumo, abrindo o painel) fazem o mesmo CREATE ao
+       mesmo tempo. O IF NOT EXISTS não protege disso: as duas passam pela
+       checagem e a segunda cai com "já existe" ou chave duplicada no
+       catálogo. Quem perde a corrida espera um instante e tenta de novo, e
+       encontra tudo pronto.
+
+       NÃO é uma transação com trava, e isso é medido: a versão com
+       pg_advisory_xact_lock travou o painel inteiro. A Vercel congela a
+       função assim que a resposta sai, e um registro de log disparado sem
+       espera (`void registrarLog`) ficava congelado no meio da transação,
+       segurando a trava e o bloqueio exclusivo da tabela de leads para
+       todo mundo. Com autocommit, uma função congelada não segura nada. */
+    if (!/already exists|já existe|duplicate|duplicada/i.test(erro?.message || '')) throw erro
+    await new Promise((r) => setTimeout(r, 300))
+    await criarEsquema()
+  }
+  preparado = true
+}
+
+async function criarEsquema() {
+  const s = sql()
   await s`
     CREATE TABLE IF NOT EXISTS leads (
       id            BIGSERIAL PRIMARY KEY,
@@ -221,8 +237,6 @@ export async function prepararBanco() {
       sucesso   BOOLEAN NOT NULL DEFAULT false
     )`
   await s`CREATE INDEX IF NOT EXISTS tentativas_quando_idx ON tentativas_login (quando DESC)`
-  })
-  preparado = true
 }
 
 /** As situações do funil, na ordem em que um negócio anda. */
