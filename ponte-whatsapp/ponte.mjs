@@ -239,6 +239,7 @@ let estado = 'desconectado'
 let qrAtual = null
 let meuNumero = null
 let ligando = false
+let reconectando = false
 
 async function ligar() {
   if (ligando) return
@@ -250,15 +251,13 @@ async function ligar() {
       version,
       auth: state,
       logger: pino({ level: 'silent' }),
-      /* Identidade de aplicativo de computador e histórico completo LIGADO:
-         é assim que o telefone empurra a lista de conversas e as mensagens
-         ao parear. Sem isso a loja nascia vazia e só enchia quando alguém
-         mandava mensagem nova. O pacote vem UMA vez, no pareamento: se você
-         ligar a ponte numa sessão que já existia (sem reparear), o histórico
-         não vem de novo — para forçar, desconecte e leia o QR outra vez.
-         HISTORICO_COMPLETO=0 no ambiente desliga, se algum dia atrapalhar. */
-      browser: env.NAVEGADOR === 'chrome' ? Browsers.macOS('Chrome') : Browsers.macOS('Desktop'),
-      syncFullHistory: env.HISTORICO_COMPLETO !== '0',
+      /* Histórico completo DESLIGADO: medido duas vezes nesta conta, ligá-lo
+         faz o WhatsApp derrubar a conexão com 428 em loop, sem nunca chegar
+         ao QR. Desligado, o pareamento conecta e o telefone ainda manda um
+         pacote com as conversas recentes (que é o que interessa para
+         prospectar). HISTORICO_COMPLETO=1 religa, por sua conta e risco. */
+      browser: env.NAVEGADOR === 'desktop' ? Browsers.macOS('Desktop') : Browsers.macOS('Chrome'),
+      syncFullHistory: env.HISTORICO_COMPLETO === '1',
       markOnlineOnConnect: false,
       generateHighQualityLinkPreview: false,
     })
@@ -309,12 +308,22 @@ async function ligar() {
           return
         } else {
           estado = 'conectando'
+          const velho = sock
           sock = null
-          registrarEvento(`conexão caiu (${codigo || 'sem código'}); tentando de novo em 3s`)
-          setTimeout(() => {
-            ligando = false
-            void ligar()
-          }, 3000)
+          velho?.ev.removeAllListeners()
+          /* Uma reconexão pendente por vez: o 428 chega em rajada (vários
+             "close" por segundo), e sem esta trava cada um agendava um
+             `ligar()`, empilhando dezenas de tentativas que martelavam o
+             WhatsApp e realimentavam o próprio 428. */
+          if (!reconectando) {
+            reconectando = true
+            registrarEvento(`conexão caiu (${codigo || 'sem código'}); tentando de novo em 5s`)
+            setTimeout(() => {
+              reconectando = false
+              ligando = false
+              void ligar()
+            }, 5000)
+          }
           return
         }
       }
