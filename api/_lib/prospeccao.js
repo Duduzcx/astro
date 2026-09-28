@@ -63,8 +63,8 @@ export async function registrarPonte(req, res) {
   if (String(req.headers.apikey || '') !== chave) return res.status(401).json({ erro: 'chave inválida' })
   if (!temBanco()) return res.status(503).json({ erro: 'sem banco (POSTGRES_URL) não há onde guardar o endereço' })
   const dados = await corpo(req)
-  const url = String(dados?.url || '').replace(//+$/, '')
-  if (!/^https?://[w.-]+(:d+)?$/.test(url)) return res.status(400).json({ erro: 'url inválida' })
+  const url = String(dados?.url || '').replace(/\/+$/, '')
+  if (!/^https?:\/\/[\w.-]+(:\d+)?$/.test(url)) return res.status(400).json({ erro: 'url inválida' })
   await gravarConfig('ponte', {
     url,
     instancia: String(dados?.instancia || instanciaPessoal()).slice(0, 60),

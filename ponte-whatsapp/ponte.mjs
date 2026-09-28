@@ -29,7 +29,9 @@ import makeWASocket, {
   Browsers,
   DisconnectReason,
   fetchLatestBaileysVersion,
-  useMultiFileAuthState,
+  /* Apelidada: o nome original começa com "use" e o lint a confunde com um
+     hook do React, que ela não é. */
+  useMultiFileAuthState as estadoDeAutenticacao,
 } from '@whiskeysockets/baileys'
 import pino from 'pino'
 import QRCode from 'qrcode'
@@ -186,7 +188,7 @@ async function ligar() {
   if (ligando) return
   ligando = true
   try {
-    const { state, saveCreds } = await useMultiFileAuthState(path.join(DADOS, 'auth'))
+    const { state, saveCreds } = await estadoDeAutenticacao(path.join(DADOS, 'auth'))
     const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: undefined }))
     sock = makeWASocket({
       version,
