@@ -86,22 +86,26 @@ export function AbaProspeccao() {
     if (dados?.estado.estado === 'aguardando_qr' && !qr && !ocupado) void conectarRef.current()
   }, [dados?.estado.estado, qr, ocupado])
 
-  /* Com o QR na tela, pergunta a cada três segundos se o celular já leu. */
+  /* Com o QR na tela, a cada cinco segundos pede o QR de novo: o WhatsApp
+     troca o código a cada vinte segundos e um QR velho não lê. A mesma
+     resposta diz quando o celular entrou. */
   useEffect(() => {
     if (!qr) return
     const id = window.setInterval(async () => {
       try {
-        const r: Dados = await pedir('/api/admin/prospeccao')
-        if (r.estado.estado === 'conectado') {
+        const r = await pedir('/api/admin/prospeccao?qr=1')
+        if (r.estado === 'conectado') {
           setQr(null)
-          setDados(r)
+          await carregar()
+        } else if (r.qr) {
+          setQr((atual) => (atual === r.qr ? atual : r.qr))
         }
       } catch {
         /* Tenta de novo no próximo tique. */
       }
-    }, 3000)
+    }, 5000)
     return () => window.clearInterval(id)
-  }, [qr])
+  }, [qr, carregar])
 
   async function conectar() {
     setOcupado(true)

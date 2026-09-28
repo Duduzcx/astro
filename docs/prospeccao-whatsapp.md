@@ -42,6 +42,16 @@ O endereço do túnel muda a cada subida, por isso a ponte se registra
 sozinha (`POST /api/crm/ponte/registrar`, com a chave) na subida e de dez
 em dez minutos; o painel mostra "ponte em … · registrada há …".
 
+**Desconectar e reconectar.** Ao clicar em *Desconectar* (ou ao remover o
+aparelho pelo celular), a ponte encerra a sessão, apaga `dados/auth` e já
+oferece um QR novo; o painel busca e mostra o QR sozinho quando a ponte está
+esperando. *Conectar número* espera o QR nascer (até oito segundos na ponte,
+três tentativas no painel) antes de desistir com aviso.
+
+**Rodando sem terminal.** `node ponte.mjs > dados/saida.log 2>&1 &` deixa a
+ponte em segundo plano; para parar, encerre o processo `node ponte.mjs`
+(no Windows: `taskkill /F /IM node.exe` derruba todos os node, cuidado).
+
 **A lista de conversas chega na hora de ligar o aparelho**, e só nessa hora:
 é o pacote inicial que o telefone manda ao novo aparelho conectado. Se a
 lista ficar vazia (a ponte subiu depois, ou a primeira ligação veio sem o
