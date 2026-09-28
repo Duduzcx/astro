@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 /**
  * A aba de prospecção do painel: o número pessoal conectado por QR code, a
@@ -69,8 +69,6 @@ export function AbaProspeccao() {
       setInstrucao((atual) => atual || r.instrucao)
       setLidoEm(new Date().toLocaleTimeString('pt-BR'))
       setAviso('')
-      /* A ponte está esperando um QR (número saiu ou nunca entrou): busca e mostra sem pedir clique. */
-      if (r.estado.estado === 'aguardando_qr') void conectar()
     } catch (falha) {
       setAviso(mensagemDe(falha))
     }
@@ -79,6 +77,14 @@ export function AbaProspeccao() {
   useEffect(() => {
     void carregar()
   }, [carregar])
+
+  /* A ponte está esperando um QR (o número saiu, ou nunca entrou): busca e
+     mostra sem pedir clique. Pela referência, para o efeito não depender da
+     função que muda a cada render. */
+  const conectarRef = useRef<() => Promise<void>>(async () => undefined)
+  useEffect(() => {
+    if (dados?.estado.estado === 'aguardando_qr' && !qr && !ocupado) void conectarRef.current()
+  }, [dados?.estado.estado, qr, ocupado])
 
   /* Com o QR na tela, pergunta a cada três segundos se o celular já leu. */
   useEffect(() => {
@@ -117,6 +123,8 @@ export function AbaProspeccao() {
       setOcupado(false)
     }
   }
+
+  conectarRef.current = conectar
 
   async function desconectar() {
     setOcupado(true)
