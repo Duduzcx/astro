@@ -160,7 +160,36 @@ export async function responderComIA(instrucao, mensagens) {
  * Groq: a API grátis (Llama). É compatível com o formato da OpenAI, só muda o
  * endereço, a chave e o modelo. console.groq.com dá a chave sem cartão.
  */
+/* Não fixa um nome de modelo: o catálogo da Groq muda e um nome fixo quebra
+   (foi o 404 de `llama-3.3-70b-versatile`). Pergunta quais modelos a chave
+   tem, descarta os que não conversam (classificadores, transcrição, voz,
+   embeddings) e escolhe o melhor de chat, com preferência por família.
+   Guardado em memória entre chamadas quentes. */
+let modeloGroq = ''
+const NAO_CONVERSA = /guard|whisper|tts|embed|prompt-guard|moderation|vision-preview$/i
+const PREFERENCIA = [/llama-4/i, /llama-3\.[0-9]+-70b/i, /llama-3/i, /qwen/i, /gemma/i, /mixtral/i]
+
+async function escolherModeloGroq() {
+  if (process.env.BOT_MODELO || process.env.GROQ_MODELO) return process.env.BOT_MODELO || process.env.GROQ_MODELO
+  if (modeloGroq) return modeloGroq
+  const r = await fetch('https://api.groq.com/openai/v1/models', {
+    headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
+  })
+  if (!r.ok) throw new Error(`groq modelos ${r.status}: ${(await r.text()).slice(0, 160)}`)
+  const dados = await r.json()
+  const chat = (Array.isArray(dados?.data) ? dados.data : [])
+    .map((m) => String(m.id))
+    .filter((id) => !NAO_CONVERSA.test(id))
+  if (chat.length === 0) throw new Error('a chave da Groq não tem nenhum modelo de conversa')
+  for (const regra of PREFERENCIA) {
+    const achado = chat.find((id) => regra.test(id))
+    if (achado) return (modeloGroq = achado)
+  }
+  return (modeloGroq = chat[0])
+}
+
 async function comGroq(instrucao, mensagens) {
+  const model = await escolherModeloGroq()
   const resposta = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -168,12 +197,17 @@ async function comGroq(instrucao, mensagens) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: process.env.BOT_MODELO || process.env.GROQ_MODELO || 'llama-3.3-70b-versatile',
+      model,
       max_tokens: 400,
       messages: [{ role: 'system', content: instrucao }, ...mensagens],
     }),
   })
-  if (!resposta.ok) throw new Error(`groq ${resposta.status}: ${(await resposta.text()).slice(0, 200)}`)
+  if (!resposta.ok) {
+    /* Modelo saiu de linha entre a listagem e agora: esquece a escolha e a
+       próxima chamada relista. */
+    modeloGroq = ''
+    throw new Error(`groq ${resposta.status} (modelo ${model}): ${(await resposta.text()).slice(0, 160)}`)
+  }
   const dados = await resposta.json()
   return dados?.choices?.[0]?.message?.content || ''
 }
