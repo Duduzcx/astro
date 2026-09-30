@@ -283,6 +283,18 @@ export function bateGatilho(texto, gatilho) {
     .some((frase) => alvo.includes(frase))
 }
 
+/**
+ * Comandos que o dono manda pelo celular numa conversa do robô:
+ * "#pausa" desliga o robô nela; "#robo" religa. Qualquer outra mensagem
+ * sua entra na conversa como fala do robô e ele continua na próxima réplica.
+ */
+export function comandoDoDono(texto) {
+  const t = normalizarFrase(texto)
+  if (t === 'pausa' || t.startsWith('pausa ')) return 'pausa'
+  if (t === 'robo' || t.startsWith('robo ')) return 'robo'
+  return ''
+}
+
 export async function gatilhoDeProspeccao() {
   const salvo = await lerConfig('prospeccao_gatilho', null)
   return typeof salvo === 'string' && salvo.trim() ? salvo : GATILHO_PADRAO
@@ -580,11 +592,21 @@ export async function webhookProspeccao(evento) {
   const conversa = Array.isArray(lead.conversa) ? lead.conversa : []
   if (mensagem.deMim) {
     if (ehDoRobo(mensagem.texto, conversa)) return
-    /* O dono escreveu pelo celular: a mão humana assume, o robô para. */
-    await marcarProspeccao(lead.id, 'pausado')
+    /* O dono escreveu pelo celular. "#pausa" desliga o robô nesta conversa;
+       "#robo" religa. Qualquer outra coisa entra como fala do robô e ele NÃO
+       responde agora (não há o que responder): na próxima réplica da pessoa
+       ele continua, lendo o que o dono disse e decidindo o próximo passo. */
+    const comando = comandoDoDono(mensagem.texto)
+    if (comando === 'pausa') {
+      await marcarProspeccao(lead.id, 'pausado')
+      return await rastro('humano', 'pausa', mensagem.telefone)
+    }
+    if (comando === 'robo') {
+      await marcarProspeccao(lead.id, 'bot')
+      return await rastro('humano', 'robo', mensagem.telefone)
+    }
     await acrescentarFala(lead.id, { de: 'robo', texto: mensagem.texto })
-    void registrarLog({ canal: 'prospeccao', de: mensagem.telefone, entrada: '', saida: mensagem.texto, modo: 'humano' })
-    return
+    return await rastro('humano', '', mensagem.texto)
   }
 
   const atual = await acrescentarFala(lead.id, { de: 'pessoa', texto: mensagem.texto })

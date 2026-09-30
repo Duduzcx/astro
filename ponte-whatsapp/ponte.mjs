@@ -32,6 +32,7 @@ import makeWASocket, {
   /* Apelidada: o nome original começa com "use" e o lint a confunde com um
      hook do React, que ela não é. */
   useMultiFileAuthState as estadoDeAutenticacao,
+  makeCacheableSignalKeyStore,
 } from '@whiskeysockets/baileys'
 import pino from 'pino'
 import QRCode from 'qrcode'
@@ -96,6 +97,29 @@ function registrarEvento(texto) {
 const ARQUIVO_LOJA = path.join(DADOS, 'loja.json')
 const POR_CONVERSA = 200
 const loja = { conversas: new Map(), nomes: new Map(), mensagens: new Map() }
+
+/* O conteúdo das últimas mensagens que a ponte enviou, por id. Quando o
+   celular de quem recebe não consegue decifrar ("Aguardando mensagem. Essa
+   ação pode levar alguns instantes"), ele pede o reenvio, e a Baileys só
+   reenvia se `getMessage` devolver o conteúdo original. Sem isto, a mensagem
+   ficava presa para sempre, inclusive no seu próprio celular. */
+const enviadas = new Map()
+function lembrarEnviada(info) {
+  const id = info?.key?.id
+  if (!id || !info?.message) return
+  enviadas.set(id, info.message)
+  if (enviadas.size > 500) enviadas.delete(enviadas.keys().next().value)
+}
+function conteudoDaMensagem(key) {
+  const id = String(key?.id || '')
+  if (!id) return undefined
+  if (enviadas.has(id)) return enviadas.get(id)
+  for (const lista of loja.mensagens.values()) {
+    const achada = lista.find((m) => m?.key?.id === id)
+    if (achada?.message) return achada.message
+  }
+  return undefined
+}
 
 const numero = (valor) =>
   typeof valor === 'number' ? valor : valor && typeof valor === 'object' ? Number(valor.low ?? valor) || 0 : Number(valor) || 0
@@ -247,10 +271,12 @@ async function ligar() {
   try {
     const { state, saveCreds } = await estadoDeAutenticacao(path.join(DADOS, 'auth'))
     const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: undefined }))
+    const silencioso = pino({ level: 'silent' })
     sock = makeWASocket({
       version,
-      auth: state,
-      logger: pino({ level: 'silent' }),
+      auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, silencioso) },
+      logger: silencioso,
+      getMessage: async (key) => conteudoDaMensagem(key),
       /* Histórico completo DESLIGADO: medido duas vezes nesta conta, ligá-lo
          faz o WhatsApp derrubar a conexão com 428 em loop, sem nunca chegar
          ao QR. Desligado, o pareamento conecta e o telefone ainda manda um
@@ -519,7 +545,16 @@ async function tratar(req, res) {
       const digitos = String(dados?.number || '').replace(/\D/g, '')
       const texto = String(dados?.text || '')
       if (!digitos || !texto) return responder(res, 400, { erro: 'number e text são obrigatórios' })
-      const enviada = await sock.sendMessage(`${digitos}@s.whatsapp.net`, { text: texto })
+      const jid = `${digitos}@s.whatsapp.net`
+      /* Conversa de vendedor, não de máquina: mostra "digitando…" por um tempo
+         proporcional ao texto (1,5 s a 4 s) e só então manda. Presença
+         falhando não impede o envio. */
+      const espera = Math.min(4000, Math.max(1500, texto.length * 35))
+      await sock.sendPresenceUpdate('composing', jid).catch(() => {})
+      await new Promise((r) => setTimeout(r, espera))
+      const enviada = await sock.sendMessage(jid, { text: texto })
+      lembrarEnviada(enviada)
+      await sock.sendPresenceUpdate('paused', jid).catch(() => {})
       return responder(res, 201, { key: enviada?.key || null })
     }
     if (a === 'chat' && b === 'findChats' && req.method === 'POST') {

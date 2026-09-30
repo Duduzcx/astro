@@ -309,8 +309,9 @@ export function AbaProspeccao() {
             </button>
           </div>
           <p className="mt-3 text-[11px] leading-[1.5] text-slate">
-            Conversa que você não marcar nunca recebe resposta do robô. E se você escrever pelo celular numa
-            conversa assumida, o robô para e o lead fica pausado até você devolver.
+            Conversa que você não marcar nunca recebe resposta do robô. Se você escrever pelo celular numa
+            conversa assumida, o robô cala naquela vez e continua na próxima resposta da pessoa, levando em conta o
+            que você disse. Para desligar o robô numa conversa, mande "#pausa" nela; "#robo" religa.
           </p>
         </div>
 
@@ -319,7 +320,8 @@ export function AbaProspeccao() {
           <p className="mt-1 text-[11px] leading-[1.5] text-slate">
             Mande uma destas frases pelo seu celular, em qualquer conversa, e o robô assume: ele guarda a sua mensagem
             como a primeira dele e responde sozinho quando a pessoa replicar. Vale se a mensagem contiver a frase,
-            sem ligar para maiúsculas, acentos ou pontuação. Se você escrever de novo pelo celular, o robô para.
+            sem ligar para maiúsculas, acentos ou pontuação. Depois, o que você escrever pelo celular entra na conversa e o robô
+            segue dali; "#pausa" desliga o robô naquela conversa.
           </p>
           <textarea
             value={gatilho}

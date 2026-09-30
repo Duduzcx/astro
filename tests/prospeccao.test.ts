@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { bateGatilho, ehDoRobo, falasDoHistorico, resumoDoChat, telefoneDoJid } from '../api/_lib/prospeccao.js'
+import { bateGatilho, comandoDoDono, ehDoRobo, falasDoHistorico, resumoDoChat, telefoneDoJid } from '../api/_lib/prospeccao.js'
 
 const registro = (texto: string, fromMe: boolean, quando: number, extra: Record<string, unknown> = {}) => ({
   key: { remoteJid: '5511999990000@s.whatsapp.net', fromMe, id: `m${quando}` },
@@ -68,4 +68,13 @@ test('a frase gatilho ignora maiúsculas, acentos e pontuação, e vale se a men
   assert.equal(bateGatilho('Boa tarde! Tudo certo por aí?', gatilho), false)
   assert.equal(bateGatilho('', gatilho), false)
   assert.equal(bateGatilho('boa tarde tudo bem', ''), false)
+})
+
+test('os comandos do dono pelo celular: #pausa desliga, #robo religa, o resto é fala', () => {
+  assert.equal(comandoDoDono('#pausa'), 'pausa')
+  assert.equal(comandoDoDono('#Pausa por favor'), 'pausa')
+  assert.equal(comandoDoDono('#robo'), 'robo')
+  assert.equal(comandoDoDono('#ROBÔ'), 'robo')
+  assert.equal(comandoDoDono('Vou passar o contrato amanhã, tudo bem?'), '')
+  assert.equal(comandoDoDono('a pausa do almoço'), '')
 })

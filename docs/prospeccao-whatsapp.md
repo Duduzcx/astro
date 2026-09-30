@@ -154,6 +154,18 @@ mestre e o histórico.
 - Cuidado com frases que você também usa com amigos: se mandar "bom dia,
   tudo bem?" para a sua mãe, o robô vai responder a ela. Prefira uma frase que
   só apareça na prospecção (a abertura do gargalo é a mais segura).
-- Escreveu de novo pelo celular numa conversa assumida? O robô para e o lead
-  fica pausado, como antes. Para devolver ao robô, mande a frase gatilho de
-  novo ou use o painel.
+- Escreveu pelo celular numa conversa assumida? O robô cala naquela vez (não
+  há o que responder), guarda o que você disse como fala dele e continua na
+  próxima réplica da pessoa, já levando o seu texto em conta. Para desligar o
+  robô numa conversa, mande `#pausa` nela; `#robo` religa. O painel também
+  pausa e devolve.
+
+## "Aguardando mensagem. Essa ação pode levar alguns instantes"
+
+É o celular de quem recebe (ou o seu) sem conseguir decifrar uma mensagem
+que a ponte mandou. Ele pede o reenvio e a Baileys só reenvia se a ponte
+souber o conteúdo original: por isso a ponte guarda o conteúdo de cada
+mensagem enviada e o devolve em `getMessage`. Se ainda acontecer, a sessão
+está suja (duas pontes com a mesma sessão, ou uma sessão apagada e recriada
+enquanto o celular lembrava a antiga): desconecte pelo celular (Aparelhos
+conectados) e leia o QR de novo, com uma ponte só no ar.
