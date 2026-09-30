@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { GATILHO_PADRAO, aceitouHorario, bateGatilho, comandoDoDono, contarAutomaticasSeguidas, contarRecusas, deveEncerrar, dicaDaObjecao, ehDoRobo, ehHostil, ehSaudacao, falasDoHistorico, opcaoHumana, parecida, pareceAutomatica, precisaRetomar, resumoDoChat, telefoneDoJid, temMenu } from '../api/_lib/prospeccao.js'
+import { GATILHO_PADRAO, humanizar, aceitouHorario, bateGatilho, comandoDoDono, contarAutomaticasSeguidas, contarRecusas, deveEncerrar, dicaDaObjecao, ehDoRobo, ehHostil, ehSaudacao, falasDoHistorico, opcaoHumana, parecida, pareceAutomatica, precisaRetomar, resumoDoChat, telefoneDoJid, temMenu } from '../api/_lib/prospeccao.js'
 
 const registro = (texto: string, fromMe: boolean, quando: number, extra: Record<string, unknown> = {}) => ({
   key: { remoteJid: '5511999990000@s.whatsapp.net', fromMe, id: `m${quando}` },
@@ -197,4 +197,11 @@ test('a retomada só empurra uma vez, e nunca depois de despedida ou robô alhei
   assert.equal(precisaRetomar([{ de: 'pessoa', texto: 'Não quero nada' }, { de: 'robo', texto: 'Obrigado pelo retorno, fico à disposição.' }]), false)
   assert.equal(precisaRetomar([{ de: 'pessoa', texto: 'Responderemos em breve. Aguarde.' }, { de: 'robo', texto: 'Olá! Preciso falar com o responsável pela imobiliária. Consegue me passar para uma pessoa?' }]), false)
   assert.equal(precisaRetomar([{ de: 'robo', texto: 'Oi' }, { de: 'pessoa', texto: 'Oi' }]), false)
+})
+
+test('humanizar tira dois-pontos, ponto e vírgula, travessão e negrito, e preserva horários', () => {
+  assert.equal(humanizar('Só para entender: é porque já têm um robô?'), 'Só para entender, é porque já têm um robô?')
+  assert.equal(humanizar('Confirmado: amanhã às 10:30 — te espero; obrigado.'), 'Confirmado, amanhã às 10:30, te espero, obrigado.')
+  assert.equal(humanizar('**Amanhã** às 14h?'), 'Amanhã às 14h?')
+  assert.equal(humanizar('Pode ser às 14h.'), 'Pode ser às 14h.')
 })

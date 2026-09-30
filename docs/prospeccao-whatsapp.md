@@ -160,6 +160,19 @@ mestre e o histórico.
   robô numa conversa, mande `#pausa` nela; `#robo` religa. O painel também
   pausa e devolve.
 
+## Mão humana, humanização e limite diário
+
+- Você escreveu numa conversa do robô? Por dez minutos é você quem atende: a
+  resposta da pessoa fica guardada e o robô cala. Depois ele volta com tudo
+  no contexto (a retomada também respeita a janela). `#pausa` desliga de vez.
+- Toda resposta passa por `humanizar`: sem dois-pontos fora de horário, sem
+  ponto e vírgula, sem travessão, sem negrito. A instrução pede frases curtas
+  e começo variado.
+- Abordagens a frio (número digitado) têm limite de 20 por dia
+  (`ABORDAGENS_POR_DIA`). É a regra do WhatsApp, não uma opção: mensagem não
+  solicitada em volume bloqueia o número. Conversas existentes não contam.
+  Para volume, o caminho é a API oficial do WhatsApp Business.
+
 ## Ritmo: saudação, retomada e anti-repetição
 
 - Cumprimento puro nas duas primeiras falas da pessoa ("Boa tarde", "Oi,

@@ -20,6 +20,7 @@ import {
   assumirConversas,
   conectarNumero,
   conversasDoAparelho,
+  dentroDoLimiteDeAbordagens,
   desconectarNumero,
   estadoDoNumero,
   gatilhoDeProspeccao,
@@ -70,6 +71,9 @@ export default async function handler(req, res) {
          WhatsApp; DDI 55 é assumido quando vêm só 10 ou 11 dígitos. */
       const jids = Array.isArray(dados?.jids) ? dados.jids.map(String) : []
       if (dados?.numero) {
+        if (!(await dentroDoLimiteDeAbordagens())) {
+          return res.status(429).json({ erro: 'limite diário de abordagens a frio atingido (20 por dia). Para volume, o caminho é a API oficial do WhatsApp Business.' })
+        }
         let d = String(dados.numero).replace(/\D/g, '')
         if (d.length >= 10 && d.length <= 11) d = `55${d}`
         if (d.length >= 12) jids.push(`${d}@s.whatsapp.net`)

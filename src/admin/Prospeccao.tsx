@@ -70,7 +70,7 @@ export function AbaProspeccao() {
           .map((n) => n.replace(/\D/g, ''))
           .filter((n) => n.length >= 10),
       ),
-    ).slice(0, 30)
+    ).slice(0, 20)
     if (numeros.length === 0) {
       setAviso('Digite o número com DDD (ex.: 11984680317), um por linha.')
       return
@@ -386,7 +386,7 @@ export function AbaProspeccao() {
                 rows={2}
                 value={numeroNovo}
                 onChange={(e) => setNumeroNovo(e.target.value)}
-                placeholder="Números para abordar, um por linha (DDD + número)"
+                placeholder="Números para abordar, um por linha (DDD + número), até 20 por dia"
                 className="min-w-0 flex-1 rounded-xl border border-white/12 bg-onyx/60 px-4 py-2 text-[13px] leading-[1.4] text-ivory outline-none placeholder:text-slate focus:border-[#8db4f5]/50 sm:w-72"
               />
               <button

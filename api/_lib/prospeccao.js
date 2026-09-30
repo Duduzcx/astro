@@ -273,6 +273,7 @@ export const INSTRUCAO_PROSPECCAO_PADRAO = [
   '',
   'FECHAMENTO: assim que houver abertura (a pessoa pergunta como funciona, como vocês fariam, quanto custa, ou diz que faz sentido), NÃO volte ao diagnóstico: encaminhe imediatamente ao diretor. Espírito: "Para você não mudar tudo no escuro, o Eduardo preparou uma demonstração de 10 minutos com o sistema rodando. Amanhã às 10h ou às 14h?"',
   '',
+  'JEITO DE ESCREVER: como gente no WhatsApp. Sem dois-pontos, sem ponto e vírgula, sem travessão, sem negrito, sem lista. Frases curtas, uma ideia por frase. Varie o começo (não comece tudo com "Entendo"). Pode usar "pra", "a gente", "tá". Nada de "Confirmado:" ou "Só para entender:".',
   'RITMO E ETIQUETA (anti-afobação): quem manda na velocidade da conversa é o cliente. Se a pessoa só cumprimentou ("Boa tarde", "Tudo bem?"), responda o cumprimento e PARE, sem pergunta comercial. Uma pergunta por vez; espere a resposta antes do próximo passo. Só fale de site, CRM ou automação quando houver abertura real. NUNCA repita uma pergunta ou uma mensagem já enviada: se a pessoa não respondeu, mude a abordagem ou espere.',
   '',
   'Regras que você NUNCA quebra:',
@@ -626,6 +627,53 @@ const DESPEDIDA = /obrigado pelo retorno|(fico|ficamos|estamos|seguimos) [àa] d
 
 const PEDIDO_DE_PESSOA = 'Olá! Preciso falar com o responsável pela imobiliária. Consegue me passar para uma pessoa?'
 
+/* Tira o que soa a máquina: dois-pontos fora de horário, ponto e vírgula,
+   travessão, negrito. "Só para entender: é porque" vira "Só para entender,
+   é porque"; "10:30" fica como está. */
+export function humanizar(texto) {
+  return String(texto || '')
+    .replace(/\*\*/g, '')
+    .replace(/(\D):\s+/g, '$1, ')
+    .replace(/\s*[—–]\s*/g, ', ')
+    .replace(/;\s*/g, ', ')
+    .replace(/,\s*,/g, ',')
+    .replace(/\s+([.!?,])/g, '$1')
+    .trim()
+}
+
+/* O dono escreveu numa conversa do robô: por dez minutos é ele quem atende.
+   A fala da pessoa fica guardada e o robô cala; passado o tempo, ele volta
+   com tudo no contexto. */
+const JANELA_MAO_HUMANA = 10 * 60 * 1000
+async function maoHumanaAtiva(leadId) {
+  const quando = await lerConfig(`mao_humana_${leadId}`, null)
+  return typeof quando === 'string' && Date.now() - Date.parse(quando) < JANELA_MAO_HUMANA
+}
+
+/* Abordagens a frio (número digitado, sem conversa) por dia. É a regra do
+   WhatsApp: mensagem não solicitada em volume bloqueia o número. Padrão 20;
+   ABORDAGENS_POR_DIA muda. Conversas existentes não contam. */
+const ABORDAGENS_PADRAO = 20
+export async function dentroDoLimiteDeAbordagens() {
+  if (!temBanco()) return true
+  const limite = Number(process.env.ABORDAGENS_POR_DIA || ABORDAGENS_PADRAO)
+  if (!Number.isFinite(limite) || limite <= 0) return false
+  const hoje = new Date().toISOString().slice(0, 10)
+  await prepararBanco()
+  const s = sql()
+  const [linha] = await s`
+    INSERT INTO config ${s({ chave: 'abordagens_uso', valor: s.json({ dia: hoje, quantas: 1 }) })}
+    ON CONFLICT (chave) DO UPDATE SET
+      valor = CASE
+        WHEN config.valor->>'dia' = ${hoje}
+          THEN jsonb_build_object('dia', ${hoje}, 'quantas', (config.valor->>'quantas')::int + 1)
+        ELSE jsonb_build_object('dia', ${hoje}, 'quantas', 1)
+      END,
+      atualizado_em = now()
+    RETURNING (valor->>'quantas')::int AS quantas`
+  return (linha?.quantas || 1) <= limite
+}
+
 /* Saudação pura ("Boa tarde", "Oi, tudo bem?", "Tudo ótimo, e com você?"):
    só palavras de cumprimento, até oito, com pelo menos uma saudação de
    verdade. A etiqueta manda responder o cumprimento e parar. */
@@ -701,6 +749,7 @@ export async function retomarConversas() {
   for (const linha of parados) {
     const conversa = paraArray(linha.conversa)
     if (!precisaRetomar(conversa)) continue
+    if (await maoHumanaAtiva(linha.id)) continue
     const telefone = String(linha.contato || '')
     try {
       const resposta = await falarComIA({ ...linha, conversa }, conversa)
@@ -727,6 +776,10 @@ export async function retomarPonte(req, res) {
 }
 
 async function falarComIA(lead, conversa) {
+  return humanizar(await falarComIACru(lead, conversa))
+}
+
+async function falarComIACru(lead, conversa) {
   /* Resposta automática do outro lado: nada de modelo. Com menu, digita a
      opção que leva a uma pessoa; sem menu (ou sem essa opção), pede o
      responsável em uma frase. O modelo, quando chamado aqui, respondia "1"
@@ -942,6 +995,7 @@ export async function webhookProspeccao(evento) {
       return await rastro('humano', 'robo', mensagem.telefone)
     }
     await acrescentarFala(lead.id, { de: 'robo', texto: mensagem.texto })
+    await gravarConfig(`mao_humana_${lead.id}`, new Date().toISOString())
     return await rastro('humano', '', mensagem.texto)
   }
 
@@ -966,6 +1020,7 @@ export async function webhookProspeccao(evento) {
     }
   }
   const atual = await acrescentarFala(lead.id, { de: 'pessoa', texto: textoDaPessoa })
+  if (await maoHumanaAtiva(lead.id)) return await rastro('humano-ativo', textoDaPessoa, mensagem.telefone)
 
   /* Robô do outro lado: três mensagens automáticas seguidas sem uma pessoa
      aparecer, e o robô deixa um recado e para. Senão vira conversa sem fim.
