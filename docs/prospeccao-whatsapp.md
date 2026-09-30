@@ -136,3 +136,24 @@ Para "meu número, minhas conversas, o robô assumindo", os dois caminhos são:
    construído: seria uma página de conexão no painel, a troca do código pelo
    token no servidor, e a leitura dos webhooks de histórico para montar a
    lista de conversas no banco.
+
+## A frase gatilho: o robô assume a partir do seu celular
+
+Além de marcar conversas no painel ou digitar um número, dá para acionar o
+robô sem abrir o painel: mande **uma das frases gatilho** pelo seu próprio
+WhatsApp, na conversa que quiser. O webhook vê que a mensagem é sua
+(`fromMe`), reconhece a frase, cria o lead (se não existir), marca como
+`bot` e guarda a sua mensagem como a primeira fala do robô. Ele **não manda
+nada nessa hora**: responde quando a pessoa replicar, já com a instrução
+mestre e o histórico.
+
+- As frases ficam na aba Prospecção ("Frases gatilho"), uma por linha. A
+  comparação ignora maiúsculas, acentos e pontuação, e vale se a mensagem
+  contiver a frase. Padrão: "Boa tarde, tudo bem?", "Bom dia, tudo bem?",
+  "Boa noite, tudo bem?" e "notei um gargalo".
+- Cuidado com frases que você também usa com amigos: se mandar "bom dia,
+  tudo bem?" para a sua mãe, o robô vai responder a ela. Prefira uma frase que
+  só apareça na prospecção (a abertura do gargalo é a mais segura).
+- Escreveu de novo pelo celular numa conversa assumida? O robô para e o lead
+  fica pausado, como antes. Para devolver ao robô, mande a frase gatilho de
+  novo ou use o painel.

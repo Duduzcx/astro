@@ -185,6 +185,13 @@ export async function registrarPonte(req, res) {
       }
       return res.status(200).json({ ok: true, arrumados })
     }
+    /* { apagarLeadDe:"55..." } apaga os leads de prospecção daquele contato
+       (limpar um teste). Só canal 'prospeccao', nunca um lead do site. */
+    if (dados?.apagarLeadDe) {
+      const contato = `+${String(dados.apagarLeadDe).replace(/D/g, '')}`
+      const apagados = await s2`DELETE FROM leads WHERE contato = ${contato} AND canal = 'prospeccao' RETURNING id`
+      return res.status(200).json({ ok: true, apagados: apagados.length })
+    }
     if (dados?.todosLeads) {
       leadsDoContato = await s2`SELECT id, contato, prospeccao, situacao, canal, pg_typeof(conversa)::text AS tipo_conversa, left(conversa::text, 40) AS conversa_amostra FROM leads ORDER BY criado_em DESC LIMIT 30`
     }
@@ -206,21 +213,60 @@ export async function registrarPonte(req, res) {
 }
 
 export const INSTRUCAO_PROSPECCAO_PADRAO = [
-  'Você escreve pelo WhatsApp pessoal do fundador da Astro Soluções, uma agência brasileira de tecnologia sob medida: sites, sistemas web, automações de processo e integrações.',
-  'Está retomando uma conversa que já existe com alguém que demonstrou interesse, ou que a equipe decidiu prospectar.',
-  'Objetivo: entender o que a pessoa precisa hoje e levar a um diagnóstico gratuito de 20 a 30 minutos, combinando dia e hora.',
+  'Você escreve pelo WhatsApp pessoal de Eduardo, fundador da Astro Soluções, e assina como ele. A Astro Soluções é uma empresa brasileira de tecnologia que resolve gargalos de outros negócios com soluções sob medida: CRM, robô de atendimento no WhatsApp (chatbot), automações e sites profissionais.',
+  'Quem você prospecta: donos e gerentes de imobiliárias.',
+  'Objetivo único da conversa: marcar uma reunião rápida de 10 a 20 minutos (chamada de vídeo ou visita) para mostrar na prática o CRM com robô de atendimento e automação. Combine dia e hora.',
+  '',
+  'Como a conversa costuma começar: Eduardo manda a primeira mensagem pelo celular, algo como "Estava no site da imobiliária agora há pouco e notei um gargalo no processo de captação de vocês. É com você que eu falo sobre isso?". Quando a pessoa responder (em geral "qual gargalo?"), você continua a partir dali.',
+  'O gargalo que você explica, com suas palavras e adaptando ao que a pessoa disser: quem entra no site e clica no WhatsApp depende de alguém estar com o celular na mão; se o corretor está em visita, o lead esfria. A Astro resolve isso com um robô ligado a um CRM que atende e qualifica o cliente na hora e entrega a ficha pronta para o corretor. Depois de explicar, peça 10 minutos na semana para mostrar na prática.',
+  'Se você estiver abrindo a conversa e não souber o nome da pessoa nem da imobiliária, use uma abertura neutra e educada, sem inventar nomes.',
   '',
   'Como você escreve:',
-  '- Em português do Brasil, como uma pessoa escreve no WhatsApp: direto, cordial, no máximo três frases curtas, sem listas e sem formatação.',
-  '- Continue de onde a conversa parou. Se fizer sentido, cite o que a pessoa disse antes.',
-  '- Uma pergunta por vez.',
+  '- Em português do Brasil, como uma pessoa escreve no WhatsApp: direto, cordial, consultivo, no máximo três frases curtas, sem listas e sem formatação.',
+  '- Tom de empreendedor que quer entender e ajudar, nunca de vendedor insistente.',
+  '- Uma pergunta por mensagem. Se a pessoa contar uma dificuldade, mostre que entendeu e ligue a dificuldade à solução.',
+  '- Emojis: no máximo um por mensagem e só quando for natural (👋 👍 🤝). Nunca emoji de marketing (🚀 🎯 🔥 💰 📢).',
   '',
   'Regras que você NUNCA quebra:',
-  '- Nunca invente preço, prazo ou funcionalidade. O orçamento sai fechado depois do diagnóstico.',
+  '- Nunca invente preço, prazo ou funcionalidade. Se perguntarem valores, diga que cada projeto é sob medida e que a reunião serve para levantar isso sem compromisso.',
   '- Nunca prometa nada em nome da empresa além de retorno da equipe.',
   '- Nunca peça senha, cartão ou dado bancário.',
   '- Se a pessoa pedir para parar ou disser que não tem interesse, agradeça, encerre e não insista.',
 ].join('\n')
+
+/**
+ * A frase gatilho. O dono manda uma destas pelo celular, na conversa que
+ * quiser, e o robô assume: guarda a mensagem como a primeira fala dele e
+ * responde sozinho quando a pessoa replicar. Uma frase por linha; a
+ * comparação ignora maiúsculas, acentos e pontuação, e vale se a mensagem
+ * CONTIVER a frase. Editável no painel.
+ */
+export const GATILHO_PADRAO = ['Boa tarde, tudo bem?', 'Bom dia, tudo bem?', 'Boa noite, tudo bem?', 'notei um gargalo'].join('\n')
+
+export function normalizarFrase(texto) {
+  return String(texto ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+export function bateGatilho(texto, gatilho) {
+  const alvo = normalizarFrase(texto)
+  if (!alvo) return false
+  return String(gatilho ?? '')
+    .split(/\r?\n/)
+    .map(normalizarFrase)
+    .filter(Boolean)
+    .some((frase) => alvo.includes(frase))
+}
+
+export async function gatilhoDeProspeccao() {
+  const salvo = await lerConfig('prospeccao_gatilho', null)
+  return typeof salvo === 'string' && salvo.trim() ? salvo : GATILHO_PADRAO
+}
 
 /** A instrução que está valendo: a do painel, ou o padrão de fábrica. */
 export async function instrucaoDeProspeccao() {
@@ -483,7 +529,30 @@ export async function webhookProspeccao(evento) {
   if (tipo !== 'messages.upsert' || !temBanco()) return await rastro('debug', `tipo=${tipo}`, `banco=${temBanco()}`)
   const mensagem = lerMensagemDoWebhook(evento)
   if (!mensagem || !mensagem.texto) return await rastro('debug', 'sem mensagem/texto', evento?.data?.key?.remoteJid || '')
-  const lead = await acharLeadPorContato(mensagem.telefone)
+  let lead = await acharLeadPorContato(mensagem.telefone)
+
+  /* O gatilho: o dono escreveu pelo celular uma das frases combinadas. O
+     robô assume esta conversa (cria o lead se for a primeira vez), guarda a
+     mensagem como a primeira fala dele e NÃO manda nada agora: responde
+     quando a pessoa replicar. O eco de uma mensagem do próprio robô que por
+     acaso contenha a frase não conta. */
+  if (mensagem.deMim && !ehDoRobo(mensagem.texto, lead?.conversa) && bateGatilho(mensagem.texto, await gatilhoDeProspeccao())) {
+    if (mensagem.id && !(await inedita(mensagem.id))) return await rastro('debug', `duplicada ${mensagem.id}`, mensagem.telefone)
+    if (!lead) {
+      lead = await criarLead({
+        nome: mensagem.telefone,
+        contato: mensagem.telefone,
+        canal: 'prospeccao',
+        necessidade: 'A definir',
+        resumo: 'Conversa aberta pelo celular com a frase gatilho; o robô assumiu.',
+        conversa: [],
+      })
+    }
+    await marcarProspeccao(lead.id, 'bot')
+    await acrescentarFala(lead.id, { de: 'robo', texto: mensagem.texto })
+    return await rastro('gatilho', mensagem.texto, mensagem.telefone)
+  }
+
   if (!lead) return await rastro('debug', `lead nao achado: ${mensagem.telefone}`, mensagem.texto)
   if (lead.prospeccao !== 'bot') return await rastro('debug', `lead ${lead.id} prospeccao=${lead.prospeccao}`, mensagem.telefone)
   if (mensagem.id && !(await inedita(mensagem.id))) return await rastro('debug', `duplicada ${mensagem.id}`, mensagem.telefone)

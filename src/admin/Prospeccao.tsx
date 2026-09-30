@@ -24,6 +24,8 @@ type Dados = {
   }
   instrucao: string
   instrucaoPadrao: string
+  gatilho: string
+  gatilhoPadrao: string
   conversas: Conversa[]
   ponte: { url: string; instancia: string; quando: string } | null
   inteligencia: boolean
@@ -80,6 +82,7 @@ export function AbaProspeccao() {
     }
   }
   const [instrucao, setInstrucao] = useState('')
+  const [gatilho, setGatilho] = useState('')
   const [aviso, setAviso] = useState('')
   const [ocupado, setOcupado] = useState(false)
   const [resultados, setResultados] = useState<Resultado[]>([])
@@ -102,6 +105,7 @@ export function AbaProspeccao() {
       const r: Dados = await pedir('/api/admin/prospeccao')
       setDados(r)
       setInstrucao((atual) => atual || r.instrucao)
+      setGatilho((atual) => atual || r.gatilho)
       setLidoEm(new Date().toLocaleTimeString('pt-BR'))
       setAviso('')
     } catch (falha) {
@@ -221,6 +225,16 @@ export function AbaProspeccao() {
     }
   }
 
+  async function salvarGatilho(texto: string) {
+    try {
+      const r = await pedir('/api/admin/prospeccao', { method: 'PUT', body: JSON.stringify({ gatilho: texto }) })
+      setGatilho(r.gatilho)
+      setAviso('Frases gatilho salvas.')
+    } catch (falha) {
+      setAviso(mensagemDe(falha))
+    }
+  }
+
   async function salvarInstrucao(texto: string) {
     try {
       const r = await pedir('/api/admin/prospeccao', { method: 'PUT', body: JSON.stringify({ instrucao: texto }) })
@@ -298,6 +312,29 @@ export function AbaProspeccao() {
             Conversa que você não marcar nunca recebe resposta do robô. E se você escrever pelo celular numa
             conversa assumida, o robô para e o lead fica pausado até você devolver.
           </p>
+        </div>
+
+        <div className="graphite-card">
+          <p className="label-voice text-[10px]">Frases gatilho (uma por linha)</p>
+          <p className="mt-1 text-[11px] leading-[1.5] text-slate">
+            Mande uma destas frases pelo seu celular, em qualquer conversa, e o robô assume: ele guarda a sua mensagem
+            como a primeira dele e responde sozinho quando a pessoa replicar. Vale se a mensagem contiver a frase,
+            sem ligar para maiúsculas, acentos ou pontuação. Se você escrever de novo pelo celular, o robô para.
+          </p>
+          <textarea
+            value={gatilho}
+            onChange={(evento) => setGatilho(evento.target.value)}
+            rows={4}
+            className="mt-2 w-full rounded-lg border border-white/10 bg-onyx/60 p-3 text-[13px] leading-[1.5] text-ash outline-none focus:border-[#8db4f5]/50"
+          />
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" disabled={!dados.banco} onClick={() => void salvarGatilho(gatilho)} className="rounded-full bg-cobalt px-4 py-2 text-[13px] text-white disabled:opacity-50">
+              Salvar frases
+            </button>
+            <button type="button" onClick={() => setGatilho(dados.gatilhoPadrao)} className="rounded-full border border-white/12 px-4 py-2 text-[13px] text-ash hover:text-ivory">
+              Voltar ao padrão
+            </button>
+          </div>
         </div>
 
         <div className="graphite-card">

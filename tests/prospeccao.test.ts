@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { ehDoRobo, falasDoHistorico, resumoDoChat, telefoneDoJid } from '../api/_lib/prospeccao.js'
+import { bateGatilho, ehDoRobo, falasDoHistorico, resumoDoChat, telefoneDoJid } from '../api/_lib/prospeccao.js'
 
 const registro = (texto: string, fromMe: boolean, quando: number, extra: Record<string, unknown> = {}) => ({
   key: { remoteJid: '5511999990000@s.whatsapp.net', fromMe, id: `m${quando}` },
@@ -58,4 +58,14 @@ test('um chat da lista vira o resumo que o painel mostra', () => {
   assert.equal(resumo.nome, 'Marina Duarte')
   assert.deepEqual(resumo.ultima, { de: 'pessoa', texto: 'fechado então?' })
   assert.equal(resumo.quando, new Date(1_700_000_000_000).toISOString())
+})
+
+test('a frase gatilho ignora maiúsculas, acentos e pontuação, e vale se a mensagem a contiver', () => {
+  const gatilho = 'Boa tarde, tudo bem?\nnotei um gargalo'
+  assert.equal(bateGatilho('boa tarde tudo bem', gatilho), true)
+  assert.equal(bateGatilho('BOA TARDE, TUDO BEM?? Eduardo aqui.', gatilho), true)
+  assert.equal(bateGatilho('Estava no site de vocês e notei um GARGALO na captação.', gatilho), true)
+  assert.equal(bateGatilho('Boa tarde! Tudo certo por aí?', gatilho), false)
+  assert.equal(bateGatilho('', gatilho), false)
+  assert.equal(bateGatilho('boa tarde tudo bem', ''), false)
 })
