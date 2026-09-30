@@ -33,6 +33,7 @@ import makeWASocket, {
      hook do React, que ela não é. */
   useMultiFileAuthState as estadoDeAutenticacao,
   makeCacheableSignalKeyStore,
+  downloadMediaMessage,
 } from '@whiskeysockets/baileys'
 import pino from 'pino'
 import QRCode from 'qrcode'
@@ -188,7 +189,7 @@ function guardarMensagem(m, avisar) {
   conversa.quando = Math.max(conversa.quando || 0, plana.messageTimestamp)
   loja.conversas.set(jid, conversa)
   agendarGravacao()
-  if (avisar) void avisarSite('messages.upsert', plana)
+  if (avisar) void encaminharAoSite(m, plana)
 }
 
 let gravacao = 0
@@ -221,6 +222,28 @@ carregarLoja()
    O site: webhook das mensagens e registro do endereço público. */
 let webhook = `${SITE}/api/crm/whatsapp/webhook/${encodeURIComponent(INSTANCIA)}`
 let urlPublica = URL_FIXA
+
+/* Áudio de quem responde: baixa e manda junto (base64) para o site
+   transcrever e responder ao conteúdo. Só de fora (não fromMe), até 2 MB.
+   Se não baixar, o site recebe a mensagem sem o áudio e pede por texto. */
+async function encaminharAoSite(m, plana) {
+  let carga = plana
+  const audio =
+    m?.message?.audioMessage || m?.message?.ephemeralMessage?.message?.audioMessage || m?.message?.viewOnceMessage?.message?.audioMessage
+  if (audio && !plana?.key?.fromMe && sock) {
+    try {
+      const buf = await downloadMediaMessage(m, 'buffer', {}, { logger: pino({ level: 'silent' }), reuploadRequest: sock.updateMediaMessage })
+      if (buf && buf.length <= 2 * 1024 * 1024) {
+        carga = { ...plana, audioBase64: Buffer.from(buf).toString('base64'), audioMime: String(audio.mimetype || 'audio/ogg') }
+      } else {
+        registrarEvento('áudio grande demais para encaminhar (mais de 2 MB)')
+      }
+    } catch (erro) {
+      registrarEvento(`áudio não baixou: ${erro?.message}`)
+    }
+  }
+  await avisarSite('messages.upsert', carga)
+}
 
 async function avisarSite(evento, data) {
   try {

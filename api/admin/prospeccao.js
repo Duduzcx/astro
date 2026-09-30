@@ -97,7 +97,7 @@ export default async function handler(req, res) {
       }
       if (typeof dados?.gatilho === 'string') {
         const gatilho = dados.gatilho.slice(0, 600).trim()
-        await gravarConfig('prospeccao_gatilho', gatilho || GATILHO_PADRAO)
+        await gravarConfig('prospeccao_gatilho', gatilho === GATILHO_PADRAO ? '' : gatilho)
         saida.gatilho = gatilho || GATILHO_PADRAO
       }
       if (Object.keys(saida).length === 0) return res.status(400).json({ erro: 'nada para gravar' })

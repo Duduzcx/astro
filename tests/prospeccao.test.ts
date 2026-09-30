@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { aceitouHorario, bateGatilho, comandoDoDono, contarRecusas, deveEncerrar, dicaDaObjecao, ehDoRobo, ehHostil, falasDoHistorico, resumoDoChat, telefoneDoJid } from '../api/_lib/prospeccao.js'
+import { GATILHO_PADRAO, aceitouHorario, bateGatilho, comandoDoDono, contarAutomaticasSeguidas, contarRecusas, deveEncerrar, dicaDaObjecao, ehDoRobo, ehHostil, falasDoHistorico, pareceAutomatica, resumoDoChat, telefoneDoJid } from '../api/_lib/prospeccao.js'
 
 const registro = (texto: string, fromMe: boolean, quando: number, extra: Record<string, unknown> = {}) => ({
   key: { remoteJid: '5511999990000@s.whatsapp.net', fromMe, id: `m${quando}` },
@@ -134,4 +134,32 @@ test('aceite de horário exige hora explícita, um sim e nenhum não', () => {
   assert.equal(aceitouHorario('Pode ser, me explica melhor'), false)
   assert.equal(aceitouHorario('Qual gargalo?'), false)
   assert.match(dicaDaObjecao([{ de: 'pessoa', texto: 'Pode ser às 14h. Obrigada!' }]), /ACEITOU/)
+})
+
+test('o gatilho padrão dispara com a saudação sozinha', () => {
+  assert.equal(bateGatilho('Boa tarde', GATILHO_PADRAO), true)
+  assert.equal(bateGatilho('boa tarde, tudo bem? Eduardo aqui', GATILHO_PADRAO), true)
+  assert.equal(bateGatilho('Bom dia!', GATILHO_PADRAO), true)
+  assert.equal(bateGatilho('Oi, tudo bem?', GATILHO_PADRAO), false)
+})
+
+test('reconhece resposta automática e conta as seguidas; o aceite ignora horário de atendimento', () => {
+  const menu = 'Olá! Seja bem-vindo à Imobiliária Sol.\n1 - Vendas\n2 - Locação\n3 - Falar com atendente'
+  assert.equal(pareceAutomatica(menu), true)
+  assert.equal(pareceAutomatica('Nosso horário de atendimento é das 9h às 18h. Responderemos em breve.'), true)
+  assert.equal(pareceAutomatica('Qual gargalo? Pode falar comigo.'), false)
+  assert.equal(pareceAutomatica('Pode ser às 14h, obrigado'), false)
+  assert.equal(aceitouHorario('Nosso horário de atendimento é das 9h às 18h.'), false)
+  assert.equal(aceitouHorario('Atendemos das 9h às 18h'), false)
+  const conversa = [
+    { de: 'robo', texto: 'Boa tarde' },
+    { de: 'pessoa', texto: menu },
+    { de: 'robo', texto: '3' },
+    { de: 'pessoa', texto: 'Responderemos em breve. Aguarde um momento.' },
+    { de: 'robo', texto: 'Preciso falar com o responsável.' },
+    { de: 'pessoa', texto: 'Responderemos em breve. Aguarde um momento.' },
+  ]
+  assert.equal(contarAutomaticasSeguidas(conversa), 3)
+  assert.equal(contarAutomaticasSeguidas([...conversa, { de: 'pessoa', texto: 'Oi, aqui é o Carlos, dono. Qual gargalo?' }]), 0)
+  assert.match(dicaDaObjecao([{ de: 'pessoa', texto: menu }]), /AUTOM/)
 })

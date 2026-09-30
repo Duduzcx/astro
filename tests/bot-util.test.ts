@@ -70,7 +70,9 @@ test('textos: a clínica sobrescreve o padrão e as chaves são preenchidas', ()
 
 test('o webhook da Evolution é lido em qualquer formato de mensagem', () => {
   const base = { key: { remoteJid: '5511999990000@s.whatsapp.net', fromMe: false, id: 'ABC' }, pushName: 'Ana' }
-  assert.deepEqual(lerMensagemDoWebhook({ data: { ...base, message: { conversation: 'oi' } } }), { telefone: '+5511999990000', texto: 'oi', id: 'ABC', nomeExibido: 'Ana', deMim: false })
+  assert.deepEqual(lerMensagemDoWebhook({ data: { ...base, message: { conversation: 'oi' } } }), { telefone: '+5511999990000', texto: 'oi', id: 'ABC', nomeExibido: 'Ana', deMim: false, temAudio: false, audio: null })
+  assert.equal(lerMensagemDoWebhook({ data: { ...base, message: { audioMessage: { mimetype: 'audio/ogg; codecs=opus' } }, audioBase64: 'AAAA' } })?.temAudio, true)
+  assert.equal(lerMensagemDoWebhook({ data: { ...base, message: { audioMessage: { mimetype: 'audio/ogg; codecs=opus' } }, audioBase64: 'AAAA' } })?.audio?.mime, 'audio/ogg; codecs=opus')
   assert.equal(lerMensagemDoWebhook({ data: { ...base, message: { extendedTextMessage: { text: '2' } } } })?.texto, '2')
   assert.equal(lerMensagemDoWebhook({ data: { ...base, message: { buttonsResponseMessage: { selectedDisplayText: 'Limpeza' } } } })?.texto, 'Limpeza')
   assert.equal(lerMensagemDoWebhook({ data: { key: { remoteJid: '123@g.us' }, message: { conversation: 'grupo' } } }), null)

@@ -155,11 +155,15 @@ export function lerMensagemDoWebhook(evento         )                           
     ((m.listResponseMessage                                  )?.title ?? '') ||
     ((m.templateButtonReplyMessage                                                )?.selectedDisplayText ?? '') ||
     ''
+  const audio = m.audioMessage || m.ephemeralMessage?.message?.audioMessage || m.viewOnceMessage?.message?.audioMessage
   return {
     telefone: `+${somenteDigitos(jid.split('@')[0])}`,
     texto: String(texto).trim(),
     id: String(chave.id || ''),
     nomeExibido: String(dados.pushName || ''),
     deMim: Boolean(chave.fromMe),
+    /* Áudio: a ponte manda o arquivo em base64 junto do evento. */
+    temAudio: Boolean(audio),
+    audio: dados.audioBase64 ? { base64: String(dados.audioBase64), mime: String(dados.audioMime || audio?.mimetype || 'audio/ogg') } : null,
   }
 }

@@ -10,7 +10,8 @@ export class ErroHttp extends Error {
   }
 }
 
-const LIMITE_CORPO = 256 * 1024
+/* 3 MB: um áudio de WhatsApp de uns minutos, em base64, vem junto do webhook. */
+const LIMITE_CORPO = 3 * 1024 * 1024
 
 /** O corpo como objeto: o que a Vercel já leu, ou o fluxo cru (harness local). */
 export async function corpo(req     )                                   {

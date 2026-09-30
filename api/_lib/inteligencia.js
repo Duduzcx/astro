@@ -251,6 +251,30 @@ async function comGroq(instrucao, mensagens) {
   throw ultimo || new Error('groq: nenhum modelo respondeu')
 }
 
+/**
+ * Transcreve um áudio (base64) pelo Whisper da Groq, grátis. '' sem chave.
+ * O WhatsApp manda ogg/opus; a Groq aceita direto.
+ */
+export async function transcreverAudio(base64, mime = 'audio/ogg') {
+  if (!process.env.GROQ_API_KEY || !base64) return ''
+  const bytes = Buffer.from(String(base64), 'base64')
+  const tipo = String(mime || 'audio/ogg').split(';')[0].trim()
+  const nome = /ogg|opus/.test(tipo) ? 'audio.ogg' : /mp4|m4a|aac/.test(tipo) ? 'audio.m4a' : /mpeg|mp3/.test(tipo) ? 'audio.mp3' : 'audio.bin'
+  const forma = new FormData()
+  forma.append('file', new Blob([bytes], { type: tipo }), nome)
+  forma.append('model', process.env.GROQ_TRANSCRICAO || 'whisper-large-v3-turbo')
+  forma.append('language', 'pt')
+  forma.append('response_format', 'json')
+  const r = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
+    body: forma,
+  })
+  if (!r.ok) throw new Error(`groq transcrição ${r.status}: ${(await r.text()).slice(0, 120)}`)
+  const dados = await r.json()
+  return limpar(dados?.text || '', 1500)
+}
+
 /** Uma conversa guardada ({ de, texto }) vira o formato que o modelo lê. */
 export function conversaParaMensagens(conversa, maximo = 16) {
   return (Array.isArray(conversa) ? conversa : [])

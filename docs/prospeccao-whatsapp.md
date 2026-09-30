@@ -149,8 +149,8 @@ mestre e o histórico.
 
 - As frases ficam na aba Prospecção ("Frases gatilho"), uma por linha. A
   comparação ignora maiúsculas, acentos e pontuação, e vale se a mensagem
-  contiver a frase. Padrão: "Boa tarde, tudo bem?", "Bom dia, tudo bem?",
-  "Boa noite, tudo bem?" e "notei um gargalo".
+  contiver a frase. Padrão: "Boa tarde", "Bom dia", "Boa noite" e "notei um
+  gargalo": a saudação sozinha já basta.
 - Cuidado com frases que você também usa com amigos: se mandar "bom dia,
   tudo bem?" para a sua mãe, o robô vai responder a ela. Prefira uma frase que
   só apareça na prospecção (a abertura do gargalo é a mais segura).
@@ -159,6 +159,25 @@ mestre e o histórico.
   próxima réplica da pessoa, já levando o seu texto em conta. Para desligar o
   robô numa conversa, mande `#pausa` nela; `#robo` religa. O painel também
   pausa e devolve.
+
+## Áudio
+
+Quem responde por áudio é atendido normalmente: a ponte baixa o arquivo e o
+manda em base64 junto do webhook; o site transcreve pelo Whisper da Groq
+(grátis, `whisper-large-v3-turbo`) e a conversa segue como texto, com a fala
+guardada como "(áudio) …". Se a transcrição falhar, o robô pede por escrito.
+Limite: 2 MB por áudio na ponte, 3 MB de corpo no site.
+
+## Robô do outro lado
+
+Muita imobiliária tem resposta automática (menu "digite 1", "seja
+bem-vindo", "responderemos em breve"). O site reconhece isso na mensagem
+recebida e, em vez de conversar com o robô, manda a IA escolher a opção que
+leva a uma pessoa ou pedir o responsável. Na terceira mensagem automática
+seguida (a mesma mensagem repetida também conta), o robô deixa um recado
+("Quando o responsável puder, é só me chamar por aqui") e o lead fica pausado.
+Quando uma pessoa de verdade escrever, `#robo` pelo celular ou o painel
+devolvem ao robô.
 
 ## Quando o robô para sozinho
 

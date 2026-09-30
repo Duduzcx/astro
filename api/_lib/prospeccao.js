@@ -21,7 +21,7 @@ import { criarEvolution, lerMensagemDoWebhook } from '../crm/_lib/evolution.js'
 import { corpo } from '../crm/_lib/http.js'
 import { gravarConfig, lerConfig } from './config.js'
 import { prepararBanco, sql, temBanco } from './db.js'
-import { conversaParaMensagens, dentroDoTeto, limpar, modeloGroqEmUso, qualInteligencia, responderComIA, temInteligencia } from './inteligencia.js'
+import { conversaParaMensagens, dentroDoTeto, limpar, modeloGroqEmUso, qualInteligencia, responderComIA, temInteligencia, transcreverAudio } from './inteligencia.js'
 import { acharLeadPorContato, acrescentarFala, criarLead, texto as limparTexto } from './leads.js'
 import { registrarLog } from './logs.js'
 
@@ -208,6 +208,10 @@ export async function registrarPonte(req, res) {
       return res.status(200).json({ ok: true, apagados: apagados.length })
     }
     /* { resetarInstrucao:true } volta a instrução mestre ao padrão de fábrica. */
+    if (dados?.resetarGatilho) {
+      await gravarConfig('prospeccao_gatilho', '')
+      return res.status(200).json({ ok: true, gatilho: 'padrão de fábrica' })
+    }
     if (dados?.resetarInstrucao) {
       await gravarConfig('prospeccao_instrucao', '')
       return res.status(200).json({ ok: true, instrucao: 'padrão de fábrica' })
@@ -277,6 +281,7 @@ export const INSTRUCAO_PROSPECCAO_PADRAO = [
   '- Nunca escreva marcador de modelo como [Nome]. Se não souber o nome da pessoa, não use nome nenhum (nem na despedida: "Obrigado pelo retorno." e ponto).',
   '- Eduardo é o diretor da Astro, do seu lado. NUNCA chame a pessoa com quem você fala de Eduardo nem de nenhum outro nome que ela não tenha dito.',
   '- Nunca mais de uma pergunta por mensagem; nunca mais de duas frases. Nunca seja desrespeitoso, mesmo se a pessoa for.',
+  '- Se a mensagem recebida parecer automática (menu numerado, "digite 1", "seja bem-vindo", "responderemos em breve"), não converse com o robô: escolha a opção que leva a uma pessoa ou peça o responsável.',
   '- Emojis: no máximo um por mensagem, só quando natural (👋 👍 🤝). Nunca emoji de marketing (🚀 🎯 🔥 💰 📢).',
 ].join('\n')
 
@@ -287,7 +292,7 @@ export const INSTRUCAO_PROSPECCAO_PADRAO = [
  * comparação ignora maiúsculas, acentos e pontuação, e vale se a mensagem
  * CONTIVER a frase. Editável no painel.
  */
-export const GATILHO_PADRAO = ['Boa tarde, tudo bem?', 'Bom dia, tudo bem?', 'Boa noite, tudo bem?', 'notei um gargalo'].join('\n')
+export const GATILHO_PADRAO = ['Boa tarde', 'Bom dia', 'Boa noite', 'notei um gargalo'].join('\n')
 
 export function normalizarFrase(texto) {
   return String(texto ?? '')
@@ -528,12 +533,42 @@ function situacaoDaConversa(conversa) {
 
 /* A objeção da última fala da pessoa, para a técnica certa não depender da
    sorte do modelo: o roteiro tem uma resposta para cada uma. */
+/* Resposta automática do outro lado: menu numerado, "digite 1", saudação
+   padrão de robô, aviso de horário de atendimento, protocolo. Ou a MESMA
+   mensagem repetida (o "responderemos em breve" que volta a cada envio). */
+const AUTOMATICA =
+  /mensagem autom[aá]tica|atendimento autom|resposta autom|assistente virtual|sou (o|a|um|uma) (assistente|bot|rob[oô])|digite (o n[uú]mero|uma op[cç][aã]o|a op[cç][aã]o|\d)|escolha (uma|a) op[cç][aã]o|op[cç][aã]o (desejada|inv[aá]lida)|seja bem[- ]vind|responderemos (em breve|assim que|o mais)|retornaremos (em breve|o mais)|em breve (um|uma|nossa|nosso) (atendente|equipe|consultor|corretor)|hor[aá]rio de (atendimento|funcionamento)|fora do (nosso )?hor[aá]rio|n[uú]mero de protocolo|seu protocolo|n[aã]o (é|e) monitorad|para (falar|continuar|prosseguir)[^.]{0,40}(digite|envie|responda)|aguarde (um momento|que um|enquanto)/i
+const LINHA_DE_MENU = /^\s*(\d{1,2}|[a-z])\s*[-.):|]\s*\S/i
+
+export function pareceAutomatica(texto) {
+  const t = String(texto || '')
+  if (!t.trim()) return false
+  if (AUTOMATICA.test(t)) return true
+  return t.split(/\r?\n/).filter((linha) => LINHA_DE_MENU.test(linha)).length >= 2
+}
+
+/* Quantas mensagens automáticas a pessoa mandou em seguida, contando do fim
+   (as do robô no meio não interrompem). Repetir uma mensagem anterior dela
+   também conta. Três seguidas: não há pessoa do outro lado, e o robô para. */
+export function contarAutomaticasSeguidas(conversa) {
+  const daPessoa = (Array.isArray(conversa) ? conversa : []).filter((f) => f?.de === 'pessoa').map((f) => String(f.texto || ''))
+  let n = 0
+  for (let i = daPessoa.length - 1; i >= 0; i -= 1) {
+    const atual = normalizarFrase(daPessoa[i])
+    const repetida = atual.length > 8 && daPessoa.slice(0, i).some((x) => normalizarFrase(x) === atual)
+    if (pareceAutomatica(daPessoa[i]) || repetida) n += 1
+    else break
+  }
+  return n
+}
+
 /* A pessoa aceitou um horário? Precisa de uma hora explícita ("14h",
    "10:30") junto de um sim, e nenhum "não" na frase. É o fim do trabalho do
    robô: confirma, agradece e o Eduardo assume. */
 const HORA = /\b(\d{1,2}\s?h(\s?\d{2})?|\d{1,2}\s\d{2}\b|\d{1,2}\s?horas?|as \d{1,2}\b|meio dia)\b/
-const ACEITE = /\b(pode ser|fechado|combinado|ok|beleza|bora|vamos|perfeito|otimo|topo|confirmo|confirmado|marca|pode|fica bom|melhor|prefiro|as)\b/
+const ACEITE = /\b(pode ser|fechado|combinado|ok|beleza|bora|vamos|perfeito|otimo|topo|confirmo|confirmado|pode marcar|pode agendar|marca|fica bom|ta bom|tudo bem|certo|melhor|prefiro)\b/
 export function aceitouHorario(texto) {
+  if (pareceAutomatica(texto)) return false
   const t = normalizarFrase(texto)
   return HORA.test(t) && ACEITE.test(t) && !/\b(nao|nunca|nem)\b/.test(t)
 }
@@ -543,6 +578,9 @@ export function dicaDaObjecao(conversa) {
   const bruto = String(ultima?.texto || '')
   const t = normalizarFrase(bruto)
   if (!t) return ''
+  if (pareceAutomatica(bruto)) {
+    return 'A última mensagem parece de um ATENDIMENTO AUTOMÁTICO (robô, menu, resposta padrão), não de uma pessoa. Não converse com ele e não se apresente. Se há menu com opções, responda SÓ com o número ou a palavra da opção que leva a uma pessoa (atendente, comercial, vendas, corretor, dono, outros). Se não há menu, peça em uma frase para falar com o responsável pela imobiliária. Sem pergunta de diagnóstico.'
+  }
   if (aceitouHorario(bruto)) {
     return 'A pessoa ACEITOU um horário: confirme dia e hora em uma frase, agradeça no masculino e diga que o Eduardo confirma com ela antes. Nenhuma pergunta, nenhuma proposta nova, nenhum link.'
   }
@@ -684,7 +722,8 @@ export async function webhookProspeccao(evento) {
     .replace(/_/g, '.')
   if (tipo !== 'messages.upsert' || !temBanco()) return await rastro('debug', `tipo=${tipo}`, `banco=${temBanco()}`)
   const mensagem = lerMensagemDoWebhook(evento)
-  if (!mensagem || !mensagem.texto) return await rastro('debug', 'sem mensagem/texto', evento?.data?.key?.remoteJid || '')
+  if (!mensagem) return await rastro('debug', 'sem mensagem', evento?.data?.key?.remoteJid || '')
+  if (!mensagem.texto && !mensagem.temAudio) return await rastro('debug', 'sem texto', evento?.data?.key?.remoteJid || '')
   let lead = await acharLeadPorContato(mensagem.telefone)
 
   /* O gatilho: o dono escreveu pelo celular uma das frases combinadas. O
@@ -733,15 +772,52 @@ export async function webhookProspeccao(evento) {
     return await rastro('humano', '', mensagem.texto)
   }
 
-  const atual = await acrescentarFala(lead.id, { de: 'pessoa', texto: mensagem.texto })
-  if (!temInteligencia() || !(await dentroDoTeto())) return await rastro('silencio', mensagem.texto, 'sem IA/teto')
+  /* Áudio: a ponte mandou o arquivo; o Whisper da Groq transcreve e a
+     conversa segue como texto. Sem transcrição, pede por escrito. */
+  let textoDaPessoa = mensagem.texto
+  if (!textoDaPessoa && mensagem.temAudio) {
+    const transcrito = mensagem.audio ? await transcreverAudio(mensagem.audio.base64, mensagem.audio.mime).catch(() => '') : ''
+    if (transcrito) {
+      textoDaPessoa = `(áudio) ${transcrito}`
+    } else {
+      const pedido = 'Aqui o áudio não abriu. Consegue me mandar por texto?'
+      await acrescentarFala(lead.id, { de: 'pessoa', texto: '(áudio que não deu para ouvir)' })
+      try {
+        const evo = await evolucaoDaProspeccao()
+        await evo?.enviarTexto(instanciaPessoal(), mensagem.telefone, pedido)
+      } catch (erro) {
+        return await rastro('debug', 'envio falhou', erro?.message || '')
+      }
+      await acrescentarFala(lead.id, { de: 'robo', texto: pedido })
+      return await rastro('audio', 'sem transcrição', mensagem.telefone)
+    }
+  }
+  const atual = await acrescentarFala(lead.id, { de: 'pessoa', texto: textoDaPessoa })
+
+  /* Robô do outro lado: três mensagens automáticas seguidas sem uma pessoa
+     aparecer, e o robô deixa um recado e para. Senão vira conversa sem fim.
+     Nas duas primeiras, a IA tenta chegar a uma pessoa (dica da objeção). */
+  if (contarAutomaticasSeguidas(atual) >= 3) {
+    const recado = 'Quando o responsável pela imobiliária puder, é só me chamar por aqui.'
+    try {
+      const evo = await evolucaoDaProspeccao()
+      await evo?.enviarTexto(instanciaPessoal(), mensagem.telefone, recado)
+      await acrescentarFala(lead.id, { de: 'robo', texto: recado })
+    } catch (erro) {
+      await rastro('debug', 'envio falhou', erro?.message || '')
+    }
+    await marcarProspeccao(lead.id, 'pausado')
+    return await rastro('robo-alheio', textoDaPessoa, mensagem.telefone)
+  }
+
+  if (!temInteligencia() || !(await dentroDoTeto())) return await rastro('silencio', textoDaPessoa, 'sem IA/teto')
   let resposta = ''
   try {
     resposta = await falarComIA(lead, atual)
   } catch (erro) {
     return await rastro('debug', 'IA falhou', erro?.message || '')
   }
-  if (!resposta) return await rastro('debug', 'IA vazia', mensagem.texto)
+  if (!resposta) return await rastro('debug', 'IA vazia', textoDaPessoa)
   try {
     const evo = await evolucaoDaProspeccao()
     await evo?.enviarTexto(instanciaPessoal(), mensagem.telefone, resposta)
@@ -749,16 +825,14 @@ export async function webhookProspeccao(evento) {
     return await rastro('debug', 'envio falhou', erro?.message || '')
   }
   await acrescentarFala(lead.id, { de: 'robo', texto: resposta })
-  await rastro('ia', mensagem.texto, resposta)
-  /* Despedida enviada: o lead sai do robô. Sem isto, um "ok" da pessoa
-     depois do adeus receberia outra resposta. */
+  await rastro('ia', textoDaPessoa, resposta)
   if (deveEncerrar(atual)) {
     await marcarProspeccao(lead.id, 'pausado')
-    await rastro('encerrado', mensagem.texto, mensagem.telefone)
-  } else if (aceitouHorario(mensagem.texto)) {
+    await rastro('encerrado', textoDaPessoa, mensagem.telefone)
+  } else if (aceitouHorario(textoDaPessoa)) {
     /* Reunião aceita: o robô confirmou e sai; daqui em diante é o Eduardo,
        pelo celular. "#robo" devolve ao robô se precisar. */
     await marcarProspeccao(lead.id, 'pausado')
-    await rastro('agendou', mensagem.texto, mensagem.telefone)
+    await rastro('agendou', textoDaPessoa, mensagem.telefone)
   }
 }
