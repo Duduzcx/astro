@@ -105,3 +105,12 @@ test('encerra no segundo não ou na hostilidade, nunca na primeira recusa', () =
   assert.equal(ehHostil('Pode ser amanhã às 10h'), false)
   assert.equal(ehHostil('Isso é golpe? Vou denunciar'), true)
 })
+
+test('recusa definitiva encerra na hora; "não tenho interesse" simples ainda ganha uma investigação', () => {
+  const abertura = { de: 'robo', texto: 'Notei um gargalo na captação. É com você que eu falo?' }
+  assert.equal(deveEncerrar([abertura, { de: 'pessoa', texto: 'Não venha me oferecer nada.' }]), true)
+  assert.equal(deveEncerrar([abertura, { de: 'pessoa', texto: 'Não quero nada, obrigado' }]), true)
+  assert.equal(deveEncerrar([abertura, { de: 'pessoa', texto: 'Não tenho interesse nenhum.' }]), true)
+  assert.equal(deveEncerrar([abertura, { de: 'pessoa', texto: 'Não tenho interesse.' }]), false)
+  assert.equal(deveEncerrar([abertura, { de: 'pessoa', texto: 'A gente já usa o Kenlo aqui.' }]), false)
+})
