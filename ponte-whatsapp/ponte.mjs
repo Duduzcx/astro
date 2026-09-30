@@ -97,7 +97,29 @@ function registrarEvento(texto) {
    (o WhatsApp só manda o histórico na primeira ligação). */
 const ARQUIVO_LOJA = path.join(DADOS, 'loja.json')
 const POR_CONVERSA = 200
+const VERSAO = '2026-09-30c'
 const loja = { conversas: new Map(), nomes: new Map(), mensagens: new Map() }
+/* Status de entrega, no nome que o WhatsApp usa: 0 erro, 1 pendente (não
+   saiu), 2 no servidor, 3 entregue no aparelho, 4 lida, 5 tocada. */
+const STATUS = ['ERRO', 'PENDENTE', 'SERVIDOR', 'ENTREGUE', 'LIDA', 'TOCADA']
+function nomeDoStatus(v) {
+  if (typeof v === 'number') return STATUS[v] || String(v)
+  const s = String(v || '')
+  return { PENDING: 'PENDENTE', SERVER_ACK: 'SERVIDOR', DELIVERY_ACK: 'ENTREGUE', READ: 'LIDA', PLAYED: 'TOCADA', ERROR: 'ERRO' }[s] || s
+}
+/* Só a contagem por status dos últimos envios: diz se as mensagens estão
+   saindo (servidor/entregue) ou presas (pendente), sem expor número nem texto. */
+function resumoDosEnvios() {
+  const todas = []
+  for (const lista of loja.mensagens.values()) for (const m of lista) if (m?.key?.fromMe) todas.push(m)
+  todas.sort((a, b) => numero(a.messageTimestamp) - numero(b.messageTimestamp))
+  const contagem = {}
+  for (const m of todas.slice(-50)) {
+    const n = nomeDoStatus(m.status)
+    contagem[n] = (contagem[n] || 0) + 1
+  }
+  return { ultimos: Math.min(50, todas.length), porStatus: contagem }
+}
 
 /* O conteúdo das últimas mensagens que a ponte enviou, por id. Quando o
    celular de quem recebe não consegue decifrar ("Aguardando mensagem. Essa
@@ -386,6 +408,23 @@ async function ligar() {
         }
       }
     })
+    /* As confirmações (saiu do servidor, entregou, leu) chegam depois do
+       envio; sem isto o registro ficava "PENDENTE" para sempre e não dava
+       para saber se a mensagem saiu. */
+    sock.ev.on('messages.update', (atualizacoes) => {
+      let mudou = false
+      for (const { key, update } of atualizacoes || []) {
+        if (update?.status == null || !key?.id) continue
+        const jid = jidDePessoa(key)
+        const lista = jid ? loja.mensagens.get(jid) : null
+        const m = lista?.find((x) => x?.key?.id === key.id)
+        if (m) {
+          m.status = nomeDoStatus(update.status)
+          mudou = true
+        }
+      }
+      if (mudou) agendarGravacao()
+    })
     sock.ev.on('messaging-history.set', ({ chats, contacts, messages, isLatest, progress }) => {
       registrarEvento(`histórico: ${(chats || []).length} conversas, ${(contacts || []).length} contatos, ${(messages || []).length} mensagens${isLatest ? ' (último pacote)' : ''}${progress != null ? ` ${progress}%` : ''}`)
       for (const c of contacts || []) aprenderLid(c.lid, c.id)
@@ -501,6 +540,8 @@ async function tratar(req, res) {
         numero: meuNumero,
         publica: urlPublica || null,
         registradaNoSite: registrada,
+        versao: VERSAO,
+        envios: resumoDosEnvios(),
         webhook,
         conversas: loja.conversas.size,
         mensagens: [...loja.mensagens.values()].reduce((n, l) => n + l.length, 0),
