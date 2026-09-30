@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { bateGatilho, comandoDoDono, contarRecusas, deveEncerrar, dicaDaObjecao, ehDoRobo, ehHostil, falasDoHistorico, resumoDoChat, telefoneDoJid } from '../api/_lib/prospeccao.js'
+import { aceitouHorario, bateGatilho, comandoDoDono, contarRecusas, deveEncerrar, dicaDaObjecao, ehDoRobo, ehHostil, falasDoHistorico, resumoDoChat, telefoneDoJid } from '../api/_lib/prospeccao.js'
 
 const registro = (texto: string, fromMe: boolean, quando: number, extra: Record<string, unknown> = {}) => ({
   key: { remoteJid: '5511999990000@s.whatsapp.net', fromMe, id: `m${quando}` },
@@ -124,4 +124,14 @@ test('a dica da objeção aponta a técnica do roteiro pela última fala da pess
   assert.match(dicaDaObjecao(pessoa('Faz sentido. Como vocês fariam isso aqui?')), /FECHE/)
   assert.equal(dicaDaObjecao(pessoa('Não tenho interesse, obrigado.')), '')
   assert.equal(dicaDaObjecao([{ de: 'robo', texto: 'Já temos tudo pronto para você' }]), '')
+})
+
+test('aceite de horário exige hora explícita, um sim e nenhum não', () => {
+  assert.equal(aceitouHorario('Pode ser às 14h. Obrigada!'), true)
+  assert.equal(aceitouHorario('Amanhã às 10:30 fica bom'), true)
+  assert.equal(aceitouHorario('Fechado, 10h'), true)
+  assert.equal(aceitouHorario('Não posso às 14h'), false)
+  assert.equal(aceitouHorario('Pode ser, me explica melhor'), false)
+  assert.equal(aceitouHorario('Qual gargalo?'), false)
+  assert.match(dicaDaObjecao([{ de: 'pessoa', texto: 'Pode ser às 14h. Obrigada!' }]), /ACEITOU/)
 })

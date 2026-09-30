@@ -528,11 +528,24 @@ function situacaoDaConversa(conversa) {
 
 /* A objeção da última fala da pessoa, para a técnica certa não depender da
    sorte do modelo: o roteiro tem uma resposta para cada uma. */
+/* A pessoa aceitou um horário? Precisa de uma hora explícita ("14h",
+   "10:30") junto de um sim, e nenhum "não" na frase. É o fim do trabalho do
+   robô: confirma, agradece e o Eduardo assume. */
+const HORA = /\b(\d{1,2}\s?h(\s?\d{2})?|\d{1,2}\s\d{2}\b|\d{1,2}\s?horas?|as \d{1,2}\b|meio dia)\b/
+const ACEITE = /\b(pode ser|fechado|combinado|ok|beleza|bora|vamos|perfeito|otimo|topo|confirmo|confirmado|marca|pode|fica bom|melhor|prefiro|as)\b/
+export function aceitouHorario(texto) {
+  const t = normalizarFrase(texto)
+  return HORA.test(t) && ACEITE.test(t) && !/\b(nao|nunca|nem)\b/.test(t)
+}
+
 export function dicaDaObjecao(conversa) {
   const ultima = [...(Array.isArray(conversa) ? conversa : [])].reverse().find((f) => f?.de === 'pessoa')
   const bruto = String(ultima?.texto || '')
   const t = normalizarFrase(bruto)
   if (!t) return ''
+  if (aceitouHorario(bruto)) {
+    return 'A pessoa ACEITOU um horário: confirme dia e hora em uma frase, agradeça no masculino e diga que o Eduardo confirma com ela antes. Nenhuma pergunta, nenhuma proposta nova, nenhum link.'
+  }
   if (/\b(tempo|corrid\w*|ocupad\w*|agenda|depois|outra hora|semana que vem|mes que vem)\b/.test(t)) {
     return 'A pessoa diz que não tem tempo: REDUZA O ESFORÇO (10 minutos com o Eduardo, ou o link de teste de 5 minutos) e ofereça os dois horários. Não investigue.'
   }
@@ -545,7 +558,7 @@ export function dicaDaObjecao(conversa) {
   if (/\b(e ?mail|manda|envia|material|apresentacao|pdf)\b/.test(t)) {
     return 'A pessoa pede material: em 10 minutos o Eduardo mostra funcionando, o que vale mais que PDF; ofereça os dois horários.'
   }
-  if (/\b(como (funciona|fariam|faria|seria|voces fazem)|faz sentido|interessante|me explica|quero entender|pode ser)\b/.test(t)) {
+  if (/\b(como (funciona|fariam|faria|seria|voces fazem)|faz sentido|interessante|me explica|quero entender)\b/.test(t)) {
     return 'A pessoa demonstrou abertura: FECHE com o Eduardo agora (demonstração de 10 minutos, amanhã às 10h ou às 14h). Não volte ao diagnóstico.'
   }
   return ''
@@ -742,5 +755,10 @@ export async function webhookProspeccao(evento) {
   if (deveEncerrar(atual)) {
     await marcarProspeccao(lead.id, 'pausado')
     await rastro('encerrado', mensagem.texto, mensagem.telefone)
+  } else if (aceitouHorario(mensagem.texto)) {
+    /* Reunião aceita: o robô confirmou e sai; daqui em diante é o Eduardo,
+       pelo celular. "#robo" devolve ao robô se precisar. */
+    await marcarProspeccao(lead.id, 'pausado')
+    await rastro('agendou', mensagem.texto, mensagem.telefone)
   }
 }
