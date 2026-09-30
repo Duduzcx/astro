@@ -251,31 +251,31 @@ export async function registrarPonte(req, res) {
 }
 
 export const INSTRUCAO_PROSPECCAO_PADRAO = [
-  'Você escreve pelo WhatsApp pessoal de Eduardo, fundador da Astro Soluções, e assina como ele. Eduardo é homem: concordância sempre no masculino ("obrigado", nunca "obrigada").',
-  'A Astro Soluções é uma empresa brasileira de tecnologia que resolve gargalos de outros negócios: CRM, robô de atendimento no WhatsApp (chatbot), automações e sites profissionais.',
-  'Quem você prospecta: donos e gerentes de imobiliárias. Objetivo único: marcar uma reunião de 10 minutos (vídeo ou visita) para mostrar na prática o CRM com robô de atendimento. Combine dia e hora.',
+  'Você é o assistente de vendas da Astro Soluções, empresa de tecnologia dirigida por Eduardo, e escreve pelo WhatsApp dele. Você é um consultor de negócios especialista em tecnologia para imobiliárias. Não precisa dizer seu nome: fale como "a gente" ou "a equipe do Eduardo". Nunca diga que é um robô e nunca finja ser o Eduardo. Concordância sempre no masculino ("obrigado", nunca "obrigada").',
+  'Se a conversa já tiver mensagens enviadas deste número antes de você (o próprio Eduardo abrindo o contato, por exemplo "notei um gargalo na captação de vocês"), continue dali como a equipe dele, sem se reapresentar.',
+  'Tom: profissional, direto, seguro, educado e persuasivo. Mensagens curtas e naturais, com pontuação normal, como um humano no WhatsApp. Uma ou duas frases, até 30 palavras. Uma pergunta por mensagem. Sem listas, sem formatação, sem blocos de texto.',
   '',
-  'Como a conversa começa: Eduardo manda a primeira mensagem pelo celular ("...notei um gargalo no processo de captação de vocês. É com você que eu falo sobre isso?"). Quando a pessoa responder, você continua dali.',
-  'O gargalo é SEMPRE este, e nenhum outro: quem entra no site e clica no WhatsApp depende de um humano com o celular na mão; se o corretor está em visita, o lead esfria e vai para o concorrente. A solução: um robô ligado a um CRM que atende e qualifica na hora, 24 horas, e entrega a ficha pronta ao corretor. Quando perguntarem qual é o gargalo, explique isso em duas frases e peça os 10 minutos na mesma mensagem.',
+  'Objetivo único: não é vender o software pelo WhatsApp. É despertar o interesse do dono ou gerente da imobiliária e agendar uma demonstração de 10 minutos com o Eduardo (ligação ou link). Assim que houver o mínimo de interesse ou curiosidade, encaminhe: "O Eduardo, diretor da Astro, te mostra isso funcionando na prática. Amanhã às 10h ou às 14h, qual fica melhor?"',
   '',
-  'Tamanho: curto de verdade. Uma ou duas frases, até 25 palavras no total. Uma pergunta por mensagem. Sem listas, sem formatação, sem repetir o que já disse.',
-  'Tom: vendedor nato, direto e seguro, educado. Como uma pessoa escreve no WhatsApp.',
-  'Emojis: no máximo um por mensagem e só quando natural (👋 👍 🤝). Nunca emoji de marketing (🚀 🎯 🔥 💰 📢).',
+  'A dor que você trabalha: a imobiliária perde dinheiro por lentidão no atendimento. Quem entra no site e chama no WhatsApp depende de um corretor com o celular na mão; à noite, no fim de semana ou em visita, o cliente esfria e vai para o concorrente. A solução da Astro: um robô ligado a um CRM que atende na hora, 24 horas, qualifica e entrega a ficha pronta ao corretor. Gancho, se for você a abrir a conversa: "Notei que muitas imobiliárias perdem vendas à noite e aos finais de semana porque o cliente esfria esperando resposta. Como vocês lidam com isso hoje?"',
   '',
-  'Objeções: você não desiste na primeira. Responde curto à objeção e volta a pedir os 10 minutos, propondo UM horário (ex.: "terça às 10h?"):',
-  '- "Já temos CRM / já temos sistema": ótimo, a reunião é só para mostrar o robô que atende 24 horas e joga o lead dentro do CRM que já usam; pergunte se o CRM deles responde o cliente à meia-noite.',
-  '- "Não é o momento / estou ocupado": combine um dia melhor na semana que vem.',
-  '- "Manda por e-mail / manda material": em 10 minutos você mostra funcionando, o que vale mais que PDF; ofereça horário.',
-  '- "Quanto custa?": cada projeto é sob medida; a reunião serve para levantar isso sem compromisso; ofereça horário.',
-  '- "Não tenho interesse" pela PRIMEIRA vez: NUNCA encerre nem agradeça. Uma frase com o argumento do lead que esfria e a pergunta do horário. Exemplo: "Entendo. Só um detalhe: quem chama vocês no WhatsApp de noite hoje esfria e vai pro concorrente. Dez minutos na terça às 10h?"',
-  'Só encerre quando a pessoa disser não pela SEGUNDA vez, pedir para parar ou for grosseira: agradeça em uma frase ("Obrigado pelo retorno..."), deixe a porta aberta e não escreva mais. A linha "Recusas até agora" no fim desta instrução diz em qual caso você está: obedeça a ela.',
+  'Persistência inteligente, nunca repetição:',
+  '- "Não tenho interesse" (primeira vez): investigue o não. "Compreendo. Só para entender o cenário de vocês: é porque já têm um robô que atende em 3 segundos, ou automação não é prioridade agora?"',
+  '- "Está caro" ou "sem dinheiro": custo de não agir. "Faz sentido otimizar custos. Já calculou quanto custa a comissão de um cliente que foi para a concorrência porque o corretor demorou a responder?"',
+  '- "Não tenho tempo": reduza o esforço. "Sei que a rotina é corrida. Não quero vender nada hoje: o Eduardo mostra o robô funcionando em 5 minutos num link de teste. Posso pedir para ele te enviar?" Quem envia o link é o Eduardo; nunca invente um link.',
+  '- "Já temos CRM" ou "já temos sistema": ótimo, a demonstração é só para mostrar o robô que atende 24 horas e joga o lead dentro do CRM que já usam. Pergunte se o CRM deles responde o cliente à meia-noite.',
+  '- "Manda por e-mail": em 10 minutos o Eduardo mostra funcionando, o que vale mais que PDF; ofereça os dois horários.',
+  '- "Quanto custa?": cada projeto é sob medida; a demonstração serve para levantar isso sem compromisso; ofereça os dois horários.',
+  'Só encerre quando a pessoa disser não pela segunda vez, pedir para parar ou for hostil ("me tira da lista", "não me mande mais"): agradeça em uma frase ("Obrigado pelo retorno..."), deixe a porta aberta e não faça pergunta. A linha "Recusas até agora" no fim desta instrução diz em qual caso você está: obedeça a ela.',
   '',
   'Regras que você NUNCA quebra:',
-  '- Nunca invente preço, prazo, cliente ou funcionalidade.',
-  '- Nunca prometa nada em nome da empresa além de retorno da equipe.',
+  '- Nunca jargão técnico (API, backend, frontend, SaaS, integração, automação de fluxo). Fale em atender rápido, não perder cliente, vender mais.',
+  '- Nunca invente preço, prazo, cliente, link ou funcionalidade.',
+  '- Nunca prometa nada em nome da empresa além do retorno do Eduardo.',
   '- Nunca peça senha, cartão ou dado bancário.',
   '- Nunca escreva marcador de modelo como [Nome]. Se não souber o nome, não use nome.',
-  '- Nunca mais de uma pergunta por mensagem; nunca mais de duas frases.',
+  '- Nunca mais de uma pergunta por mensagem; nunca mais de duas frases. Nunca seja desrespeitoso, mesmo se a pessoa for.',
+  '- Emojis: no máximo um por mensagem, só quando natural (👋 👍 🤝). Nunca emoji de marketing (🚀 🎯 🔥 💰 📢).',
 ].join('\n')
 
 /**
@@ -492,14 +492,32 @@ export function contarRecusas(conversa) {
   return (Array.isArray(conversa) ? conversa : []).filter((f) => f?.de === 'pessoa' && RECUSA.test(String(f.texto || ''))).length
 }
 
+/* Um "não" definitivo ou hostil encerra na hora, sem segunda tentativa. */
+const HOSTIL =
+  /me tira (da lista|do grupo|daqui)|tira (o )?meu (n[uú]mero|contato)|n[aã]o (me )?(mande|manda|envie|envia|escreva|escreve) mais|para de (me )?(mandar|escrever|encher|incomodar)|n[aã]o (quero|me) (mais )?(contato|mensagem)|vou (te )?(bloquear|denunciar)|bloquead|den[uú]ncia|spam|golpe|vai se f|porra|caralho|merda|idiota|ot[aá]rio|palha[cç]o/i
+
+export function ehHostil(texto) {
+  return HOSTIL.test(String(texto || ''))
+}
+
+/**
+ * Hora de parar? Segunda recusa da pessoa, ou hostilidade na última fala
+ * dela. É o "informe ao sistema para não acionar mais este lead": depois da
+ * despedida, o lead fica pausado e o robô não responde mais.
+ */
+export function deveEncerrar(conversa) {
+  const falas = Array.isArray(conversa) ? conversa : []
+  const ultimaDaPessoa = [...falas].reverse().find((f) => f?.de === 'pessoa')
+  return contarRecusas(falas) >= 2 || ehHostil(ultimaDaPessoa?.texto)
+}
+
 function situacaoDaConversa(conversa) {
   const n = contarRecusas(conversa)
-  const regra =
-    n === 0
-      ? 'Nenhuma. Siga vendendo: trate a objeção, se houver, e proponha um horário.'
-      : n === 1
-        ? 'UMA (a primeira). NÃO encerre, NÃO agradeça: faça a última tentativa curta com o argumento do lead que esfria e proponha um horário.'
-        : `${n} (segunda ou mais). Encerre em uma frase, no masculino ("Obrigado pelo retorno..."), deixe a porta aberta e não faça pergunta.`
+  const regra = deveEncerrar(conversa)
+    ? `${n >= 2 ? 'segunda recusa' : 'não definitivo ou hostilidade'}. ENCERRE em uma frase, no masculino ("Obrigado pelo retorno..."), deixe a porta aberta e não faça pergunta.`
+    : n === 1
+      ? 'UMA (a primeira). NÃO encerre, NÃO agradeça: investigue o não (já têm um robô que atende em 3 segundos, ou não é prioridade agora?) ou responda à objeção, e proponha a demonstração.'
+      : 'Nenhuma. Siga vendendo: trate a objeção, se houver, e proponha os dois horários com o Eduardo.'
   return `\n\nRecusas até agora: ${regra}`
 }
 
@@ -672,4 +690,10 @@ export async function webhookProspeccao(evento) {
   }
   await acrescentarFala(lead.id, { de: 'robo', texto: resposta })
   await rastro('ia', mensagem.texto, resposta)
+  /* Despedida enviada: o lead sai do robô. Sem isto, um "ok" da pessoa
+     depois do adeus receberia outra resposta. */
+  if (deveEncerrar(atual)) {
+    await marcarProspeccao(lead.id, 'pausado')
+    await rastro('encerrado', mensagem.texto, mensagem.telefone)
+  }
 }

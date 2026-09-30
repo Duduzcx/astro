@@ -160,6 +160,14 @@ mestre e o histórico.
   robô numa conversa, mande `#pausa` nela; `#robo` religa. O painel também
   pausa e devolve.
 
+## Quando o robô para sozinho
+
+Segunda recusa da pessoa, ou um não definitivo ou hostil ("me tira da lista",
+"não me mande mais"): o robô manda uma despedida curta e o lead fica
+**pausado**, sem receber mais nada. A contagem de recusas é do próprio site
+(não depende do modelo) e entra no fim da instrução como "Recusas até agora".
+Para reativar, o painel ou `#robo` pelo celular.
+
 ## Só uma ponte por número
 
 O site aceita o registro de uma ponte nova apenas se a antiga estiver morta

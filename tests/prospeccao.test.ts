@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { bateGatilho, comandoDoDono, contarRecusas, ehDoRobo, falasDoHistorico, resumoDoChat, telefoneDoJid } from '../api/_lib/prospeccao.js'
+import { bateGatilho, comandoDoDono, contarRecusas, deveEncerrar, ehDoRobo, ehHostil, falasDoHistorico, resumoDoChat, telefoneDoJid } from '../api/_lib/prospeccao.js'
 
 const registro = (texto: string, fromMe: boolean, quando: number, extra: Record<string, unknown> = {}) => ({
   key: { remoteJid: '5511999990000@s.whatsapp.net', fromMe, id: `m${quando}` },
@@ -93,4 +93,15 @@ test('conta as recusas da pessoa, e só as dela', () => {
   assert.equal(contarRecusas([{ de: 'pessoa', texto: 'Pode ser quinta às 15h. Obrigada!' }]), 0)
   assert.equal(contarRecusas([{ de: 'pessoa', texto: 'Não sei se é com você, mas me interessa saber mais' }]), 0)
   assert.equal(contarRecusas([{ de: 'pessoa', texto: 'Para de me mandar mensagem' }]), 1)
+})
+
+test('encerra no segundo não ou na hostilidade, nunca na primeira recusa', () => {
+  const abertura = { de: 'robo', texto: 'Notei um gargalo na captação. É com você que eu falo?' }
+  assert.equal(deveEncerrar([abertura, { de: 'pessoa', texto: 'Não tenho interesse, obrigado.' }]), false)
+  assert.equal(deveEncerrar([abertura, { de: 'pessoa', texto: 'Não tenho interesse.' }, { de: 'robo', texto: 'Compreendo. É porque já têm robô?' }, { de: 'pessoa', texto: 'Não quero, obrigado.' }]), true)
+  assert.equal(deveEncerrar([abertura, { de: 'pessoa', texto: 'Me tira da lista, por favor.' }]), true)
+  assert.equal(deveEncerrar([abertura, { de: 'pessoa', texto: 'Não me mande mais mensagem' }]), true)
+  assert.equal(deveEncerrar([abertura, { de: 'pessoa', texto: 'Quanto custa isso?' }]), false)
+  assert.equal(ehHostil('Pode ser amanhã às 10h'), false)
+  assert.equal(ehHostil('Isso é golpe? Vou denunciar'), true)
 })
