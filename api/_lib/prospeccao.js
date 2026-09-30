@@ -526,17 +526,59 @@ function situacaoDaConversa(conversa) {
   return `\n\nRecusas até agora: ${regra}`
 }
 
+/* A objeção da última fala da pessoa, para a técnica certa não depender da
+   sorte do modelo: o roteiro tem uma resposta para cada uma. */
+export function dicaDaObjecao(conversa) {
+  const ultima = [...(Array.isArray(conversa) ? conversa : [])].reverse().find((f) => f?.de === 'pessoa')
+  const bruto = String(ultima?.texto || '')
+  const t = normalizarFrase(bruto)
+  if (!t) return ''
+  if (/\b(tempo|corrid\w*|ocupad\w*|agenda|depois|outra hora|semana que vem|mes que vem)\b/.test(t)) {
+    return 'A pessoa diz que não tem tempo: REDUZA O ESFORÇO (10 minutos com o Eduardo, ou o link de teste de 5 minutos) e ofereça os dois horários. Não investigue.'
+  }
+  if (/\b(caro|preco|valor|custa|custo|dinheiro|orcamento|prioridade|investir|investimento|cortando|grana)\b/.test(t)) {
+    return 'A pessoa fala de custo ou prioridade: use o CUSTO DE NÃO AGIR (a ferramenta só guarda o contato; corretor em visita demora 30 minutos e o cliente compra do concorrente) e ofereça a demonstração com os dois horários.'
+  }
+  if (/\b(ja (temos|tem|usamos|usa|uso|temos um|tem um)|kenlo|vista|imobzi|jetimob|superlogica|nosso sistema|nosso crm|nosso site)\b/.test(t) && !bruto.includes('?')) {
+    return 'A pessoa diz que já tem sistema, CRM ou site: use o CONTORNO (o sistema de vocês atende o lead no WhatsApp em 3 segundos de madrugada, qualifica e joga mastigado pro corretor sem ele mexer um dedo?).'
+  }
+  if (/\b(e ?mail|manda|envia|material|apresentacao|pdf)\b/.test(t)) {
+    return 'A pessoa pede material: em 10 minutos o Eduardo mostra funcionando, o que vale mais que PDF; ofereça os dois horários.'
+  }
+  if (/\b(como (funciona|fariam|faria|seria|voces fazem)|faz sentido|interessante|me explica|quero entender|pode ser)\b/.test(t)) {
+    return 'A pessoa demonstrou abertura: FECHE com o Eduardo agora (demonstração de 10 minutos, amanhã às 10h ou às 14h). Não volte ao diagnóstico.'
+  }
+  return ''
+}
+
+const DESPEDIDA = /obrigado pelo retorno|(fico|ficamos|estamos|seguimos) [àa] disposi|encerrar o contato|boa sorte|qualquer coisa (e so|é só) chamar/i
+
 async function falarComIA(lead, conversa) {
-  const instrucao = (await instrucaoDeProspeccao()) + contextoDoLead(lead) + situacaoDaConversa(conversa)
+  const situacao = situacaoDaConversa(conversa)
+  const dica = dicaDaObjecao(conversa)
+  /* A situação vai no TOPO e no fim: o modelo pesa mais o começo, e foi por
+     ler só o roteiro (que cita "não tenho interesse" como definitivo) que
+     ele encerrou na primeira recusa simples. */
+  const cabecalho = `SITUAÇÃO AGORA (manda mais que qualquer exemplo abaixo):${situacao}${dica ? `\n${dica}` : ''}\n\n`
+  const instrucao = cabecalho + (await instrucaoDeProspeccao()) + contextoDoLead(lead) + situacao
   const mensagens = conversaParaMensagens(conversa, 20)
   if (mensagens.length === 0 || mensagens[mensagens.length - 1].role !== 'user') {
     mensagens.push({
       role: 'user',
       content:
-        '(Sem mensagem nova da pessoa. Escreva agora a mensagem que retoma a conversa e propõe o diagnóstico gratuito, sem mencionar este pedido.)',
+        '(Sem mensagem nova da pessoa. Escreva agora a mensagem que retoma a conversa e propõe a demonstração com o Eduardo, sem mencionar este pedido.)',
     })
   }
-  return responderComIA(instrucao, mensagens)
+  let resposta = await responderComIA(instrucao, mensagens)
+  /* Despediu-se sem poder (não é hora de encerrar)? Uma segunda chance, com a
+     ordem explícita. Depois disso vale o que vier. */
+  if (resposta && !deveEncerrar(conversa) && DESPEDIDA.test(resposta) && !resposta.includes('?')) {
+    resposta = await responderComIA(
+      instrucao + '\n\nATENÇÃO: sua última tentativa encerrou a conversa, e isso é PROIBIDO agora. Escreva a investigação, o contorno ou a técnica indicada acima, com UMA pergunta no fim.',
+      mensagens,
+    )
+  }
+  return resposta
 }
 
 /**

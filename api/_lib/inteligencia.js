@@ -225,7 +225,7 @@ async function comGroq(instrucao, mensagens) {
     const base = {
       model,
       max_tokens: 900,
-      temperature: 0.6,
+      temperature: 0.4,
       messages: [{ role: 'system', content: instrucao }, ...mensagens],
     }
     const pensa = PENSA.test(model)

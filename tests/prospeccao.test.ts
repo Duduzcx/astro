@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { bateGatilho, comandoDoDono, contarRecusas, deveEncerrar, ehDoRobo, ehHostil, falasDoHistorico, resumoDoChat, telefoneDoJid } from '../api/_lib/prospeccao.js'
+import { bateGatilho, comandoDoDono, contarRecusas, deveEncerrar, dicaDaObjecao, ehDoRobo, ehHostil, falasDoHistorico, resumoDoChat, telefoneDoJid } from '../api/_lib/prospeccao.js'
 
 const registro = (texto: string, fromMe: boolean, quando: number, extra: Record<string, unknown> = {}) => ({
   key: { remoteJid: '5511999990000@s.whatsapp.net', fromMe, id: `m${quando}` },
@@ -113,4 +113,15 @@ test('recusa definitiva encerra na hora; "não tenho interesse" simples ainda ga
   assert.equal(deveEncerrar([abertura, { de: 'pessoa', texto: 'Não tenho interesse nenhum.' }]), true)
   assert.equal(deveEncerrar([abertura, { de: 'pessoa', texto: 'Não tenho interesse.' }]), false)
   assert.equal(deveEncerrar([abertura, { de: 'pessoa', texto: 'A gente já usa o Kenlo aqui.' }]), false)
+})
+
+test('a dica da objeção aponta a técnica do roteiro pela última fala da pessoa', () => {
+  const pessoa = (texto: string) => [{ de: 'pessoa', texto }]
+  assert.match(dicaDaObjecao(pessoa('Não tenho tempo pra isso agora.')), /REDUZA O ESFORÇO/)
+  assert.match(dicaDaObjecao(pessoa('Não é prioridade investir nisso agora.')), /CUSTO DE NÃO AGIR/)
+  assert.match(dicaDaObjecao(pessoa('A gente já tem site e usa o Kenlo.')), /CONTORNO/)
+  assert.match(dicaDaObjecao(pessoa('Me manda por e-mail.')), /material/)
+  assert.match(dicaDaObjecao(pessoa('Faz sentido. Como vocês fariam isso aqui?')), /FECHE/)
+  assert.equal(dicaDaObjecao(pessoa('Não tenho interesse, obrigado.')), '')
+  assert.equal(dicaDaObjecao([{ de: 'robo', texto: 'Já temos tudo pronto para você' }]), '')
 })
