@@ -128,6 +128,16 @@ export async function registrarPonte(req, res) {
       }
       /* Testa a IA de verdade, com um pedido fixo: é o passo do "assumir" que
          pode estar falando vazio. */
+      /* { ensaio:"qual gargalo?" } roda a instrução de prospecção de verdade,
+         numa conversa de mentira aberta pela frase gatilho, e devolve o que o
+         robô responderia. Não manda nada a ninguém. */
+      if (typeof dados?.ensaio === 'string' && dados.ensaio.trim()) {
+        const conversa = [
+          { de: 'robo', texto: 'Olá, tudo bem? Eduardo aqui. Estava navegando no site da imobiliária agora há pouco e notei um gargalo no processo de captação de vocês. É com você que eu falo sobre isso?' },
+          { de: 'pessoa', texto: dados.ensaio.slice(0, 400) },
+        ]
+        testes.ensaio = await falarComIA({ nome: 'Contato de ensaio', contato: '+5500000000000' }, conversa).catch((erro) => `erro: ${erro?.message}`)
+      }
       testes.ia = await responderComIA('Responda apenas: pronto.', [{ role: 'user', content: 'diga pronto' }])
         .then((t) => (t ? `respondeu (${t.length} caracteres): ${t.slice(0, 60)}` : 'voltou VAZIA'))
         .catch((erro) => `erro: ${erro?.message}`)
@@ -138,7 +148,7 @@ export async function registrarPonte(req, res) {
           headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
         })
           .then((r) => r.json())
-          .then((d) => (Array.isArray(d?.data) ? d.data.map((m) => m.id).filter((id) => /llama|gemma|mixtral|qwen/i.test(id)).slice(0, 20) : d))
+          .then((d) => (Array.isArray(d?.data) ? d.data.map((m) => m.id).slice(0, 40) : d))
           .catch((erro) => `erro: ${erro?.message}`)
       }
       /* Envia um teste para o PRÓPRIO número conectado (mensagem para si

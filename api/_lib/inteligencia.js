@@ -170,7 +170,14 @@ export async function responderComIA(instrucao, mensagens) {
    Guardado em memória entre chamadas quentes. */
 let modeloGroq = ''
 const NAO_CONVERSA = /guard|whisper|tts|embed|prompt-guard|moderation|vision-preview$/i
-const PREFERENCIA = [/llama-4/i, /llama-3\.[0-9]+-70b/i, /llama-3/i, /qwen/i, /gemma/i, /mixtral/i]
+const PREFERENCIA = [/llama-4.*maverick/i, /llama-4/i, /gpt-oss-120b/i, /kimi-k2/i, /llama-3\.[0-9]+-70b/i, /gpt-oss/i, /deepseek/i, /llama-3/i, /qwen/i, /gemma/i, /mixtral/i]
+
+/* Modelos que "pensam" antes de responder (Qwen3, gpt-oss, DeepSeek): o
+   pensamento gasta o max_tokens e a resposta sai cortada no meio de uma
+   palavra ("praticamente nenhum dos autom"). Para estes, pede sem raciocínio
+   e esconde o que sobrar. */
+const PENSA = /qwen|gpt-oss|deepseek|qwq|r1/i
+const SEM_PENSAMENTO = /<think>[\s\S]*?<\/think>/gi
 
 async function escolherModeloGroq() {
   if (process.env.BOT_MODELO || process.env.GROQ_MODELO) return process.env.BOT_MODELO || process.env.GROQ_MODELO
@@ -191,20 +198,28 @@ async function escolherModeloGroq() {
   return (modeloGroq = chat[0])
 }
 
-async function comGroq(instrucao, mensagens) {
-  const model = await escolherModeloGroq()
-  const resposta = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+async function pedirGroq(corpo) {
+  return fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      model,
-      max_tokens: 400,
-      messages: [{ role: 'system', content: instrucao }, ...mensagens],
-    }),
+    body: JSON.stringify(corpo),
   })
+}
+
+async function comGroq(instrucao, mensagens) {
+  const model = await escolherModeloGroq()
+  const base = {
+    model,
+    max_tokens: 900,
+    temperature: 0.6,
+    messages: [{ role: 'system', content: instrucao }, ...mensagens],
+  }
+  let resposta = await pedirGroq(PENSA.test(model) ? { ...base, reasoning_effort: 'none', reasoning_format: 'hidden' } : base)
+  /* O modelo não aceitou os parâmetros de raciocínio: manda sem eles. */
+  if (resposta.status === 400 && PENSA.test(model)) resposta = await pedirGroq(base)
   if (!resposta.ok) {
     /* Modelo saiu de linha entre a listagem e agora: esquece a escolha e a
        próxima chamada relista. */
@@ -212,7 +227,10 @@ async function comGroq(instrucao, mensagens) {
     throw new Error(`groq ${resposta.status} (modelo ${model}): ${(await resposta.text()).slice(0, 160)}`)
   }
   const dados = await resposta.json()
-  return dados?.choices?.[0]?.message?.content || ''
+  const escolha = dados?.choices?.[0]
+  const texto = String(escolha?.message?.content || '').replace(SEM_PENSAMENTO, '').trim()
+  if (!texto) throw new Error(`groq devolveu vazio (modelo ${model}, parou por ${escolha?.finish_reason || '?'})`)
+  return texto
 }
 
 /** Uma conversa guardada ({ de, texto }) vira o formato que o modelo lê. */
