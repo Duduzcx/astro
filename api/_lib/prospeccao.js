@@ -222,11 +222,29 @@ export async function registrarPonte(req, res) {
 
   const url = String(dados?.url || '').replace(/\/+$/, '')
   if (!/^https?:\/\/[\w.-]+(:\d+)?$/.test(url)) return res.status(400).json({ erro: 'url inválida' })
-  await gravarConfig('ponte', {
-    url,
-    instancia: String(dados?.instancia || instanciaPessoal()).slice(0, 60),
-    quando: new Date().toISOString(),
-  })
+  /* Uma ponte só por número. Se já há outra registrada, viva e conectada,
+     num endereço diferente, recusa: duas pontes na mesma sessão fazem o
+     WhatsApp derrubar as duas (440), as mensagens viram "Aguardando
+     mensagem" e o site fica apontando para a que morrer por último. Foi o
+     que aconteceu quando a ponte local do PC subiu com a do Fly no ar. A
+     recusa aparece no terminal da ponte recusada. */
+  const instancia = String(dados?.instancia || instanciaPessoal()).slice(0, 60)
+  const antiga = await lerConfig('ponte', null)
+  if (antiga?.url && antiga.url !== url) {
+    const viva = await fetch(`${antiga.url}/instance/connectionState/${encodeURIComponent(instancia)}`, {
+      headers: { apikey: process.env.EVOLUTION_API_KEY || '' },
+      signal: AbortSignal.timeout(6000),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => String(d?.instance?.state || '') === 'open')
+      .catch(() => false)
+    if (viva) {
+      return res.status(409).json({
+        erro: `já existe uma ponte conectada em ${antiga.url}; desligue-a antes de ligar outra (só uma ponte por número)`,
+      })
+    }
+  }
+  await gravarConfig('ponte', { url, instancia, quando: new Date().toISOString() })
   return res.status(200).json({ ok: true })
 }
 

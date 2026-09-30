@@ -160,6 +160,15 @@ mestre e o histórico.
   robô numa conversa, mande `#pausa` nela; `#robo` religa. O painel também
   pausa e devolve.
 
+## Só uma ponte por número
+
+O site aceita o registro de uma ponte nova apenas se a antiga estiver morta
+ou desconectada. Uma ponte que sobe enquanto outra está conectada (a do PC
+com a do Fly no ar, por exemplo) recebe 409 e imprime no terminal "o site
+recusou o registro: já existe uma ponte conectada em …". Desligue a outra
+antes. Sem isso as duas brigam pela sessão, o WhatsApp derruba as duas (440)
+e o painel fica apontando para a que morrer por último.
+
 ## "Aguardando mensagem. Essa ação pode levar alguns instantes"
 
 É o celular de quem recebe (ou o seu) sem conseguir decifrar uma mensagem
