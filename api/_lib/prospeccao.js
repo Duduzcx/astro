@@ -591,7 +591,7 @@ export function dicaDaObjecao(conversa) {
     return 'A pessoa fala de custo ou prioridade: use o CUSTO DE NÃO AGIR (a ferramenta só guarda o contato; corretor em visita demora 30 minutos e o cliente compra do concorrente) e ofereça a demonstração com os dois horários.'
   }
   if (/\b(ja (temos|tem|usamos|usa|uso|temos um|tem um)|kenlo|vista|imobzi|jetimob|superlogica|nosso sistema|nosso crm|nosso site)\b/.test(t) && !bruto.includes('?')) {
-    return 'A pessoa diz que já tem sistema, CRM ou site: use o CONTORNO (o sistema de vocês atende o lead no WhatsApp em 3 segundos de madrugada, qualifica e joga mastigado pro corretor sem ele mexer um dedo?).'
+    return 'A pessoa diz que já tem sistema, CRM ou site: use o CONTORNO como PERGUNTA, nunca como afirmação sobre o sistema deles: "O sistema de vocês atende o lead no WhatsApp em 3 segundos de madrugada, qualifica e joga mastigado pro corretor sem ele mexer um dedo?" Não elogie, não descreva e não presuma o que o sistema deles faz.'
   }
   if (/\b(e ?mail|manda|envia|material|apresentacao|pdf)\b/.test(t)) {
     return 'A pessoa pede material: em 10 minutos o Eduardo mostra funcionando, o que vale mais que PDF; ofereça os dois horários.'
@@ -628,6 +628,15 @@ async function falarComIA(lead, conversa) {
       instrucao + '\n\nATENÇÃO: sua última tentativa encerrou a conversa, e isso é PROIBIDO agora. Escreva a investigação, o contorno ou a técnica indicada acima, com UMA pergunta no fim.',
       mensagens,
     )
+  }
+  /* Insistiu em se despedir? Entra o roteiro, sem o modelo: a investigação
+     do primeiro não, ou a pergunta de diagnóstico. Medido: o gpt-oss trata
+     "não tenho interesse, obrigado" como definitivo mesmo com a ordem. */
+  if (resposta && !deveEncerrar(conversa) && DESPEDIDA.test(resposta) && !resposta.includes('?')) {
+    resposta =
+      contarRecusas(conversa) >= 1
+        ? 'Compreendo. Só para entender o cenário de vocês: é porque já têm um robô que atende em segundos, ou automação não é prioridade agora?'
+        : 'Entendi. Hoje o site e o atendimento no WhatsApp de vocês estão rodando redondo, ou sentem que perdem clientes por lentidão?'
   }
   return resposta
 }
