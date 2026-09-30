@@ -168,7 +168,7 @@ export async function responderComIA(instrucao, mensagens) {
    tem, descarta os que não conversam (classificadores, transcrição, voz,
    embeddings) e escolhe o melhor de chat, com preferência por família.
    Guardado em memória entre chamadas quentes. */
-let modeloGroq = ''
+let modelosGroq = []
 const NAO_CONVERSA = /guard|whisper|tts|orpheus|canopylabs|allam|embed|prompt-guard|moderation|vision-preview$/i
 const PREFERENCIA = [/llama-4.*maverick/i, /llama-4/i, /gpt-oss-120b/i, /kimi-k2/i, /llama-3\.[0-9]+-70b/i, /gpt-oss/i, /deepseek/i, /llama-3/i, /qwen/i, /gemma/i, /mixtral/i]
 
@@ -179,14 +179,19 @@ const PREFERENCIA = [/llama-4.*maverick/i, /llama-4/i, /gpt-oss-120b/i, /kimi-k2
 const PENSA = /qwen|gpt-oss|deepseek|qwq|r1/i
 const SEM_PENSAMENTO = /<think>[\s\S]*?<\/think>/gi
 
-/** O modelo da Groq que está valendo nesta invocação (vazio antes da primeira chamada). */
+/** O modelo da Groq que está valendo (vazio antes da primeira chamada). */
 export function modeloGroqEmUso() {
-  return process.env.BOT_MODELO || process.env.GROQ_MODELO || modeloGroq
+  return process.env.BOT_MODELO || process.env.GROQ_MODELO || modelosGroq[0] || ''
 }
 
-async function escolherModeloGroq() {
-  if (process.env.BOT_MODELO || process.env.GROQ_MODELO) return process.env.BOT_MODELO || process.env.GROQ_MODELO
-  if (modeloGroq) return modeloGroq
+/* A fila de modelos de conversa da conta, do melhor para o pior. Não é um
+   nome fixo (o catálogo muda) e não é um só: o plano grátis tem limite de
+   tokens por minuto por modelo (429), e quando o primeiro estoura o próximo
+   da fila responde, em vez de o robô ficar mudo. */
+async function escolherModelosGroq() {
+  const fixo = process.env.BOT_MODELO || process.env.GROQ_MODELO
+  if (fixo) return [fixo]
+  if (modelosGroq.length) return modelosGroq
   const r = await fetch('https://api.groq.com/openai/v1/models', {
     headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
   })
@@ -196,11 +201,10 @@ async function escolherModeloGroq() {
     .map((m) => String(m.id))
     .filter((id) => !NAO_CONVERSA.test(id))
   if (chat.length === 0) throw new Error('a chave da Groq não tem nenhum modelo de conversa')
-  for (const regra of PREFERENCIA) {
-    const achado = chat.find((id) => regra.test(id))
-    if (achado) return (modeloGroq = achado)
-  }
-  return (modeloGroq = chat[0])
+  const fila = []
+  for (const regra of PREFERENCIA) for (const id of chat) if (regra.test(id) && !fila.includes(id)) fila.push(id)
+  for (const id of chat) if (!fila.includes(id)) fila.push(id)
+  return (modelosGroq = fila)
 }
 
 async function pedirGroq(corpo) {
@@ -215,28 +219,36 @@ async function pedirGroq(corpo) {
 }
 
 async function comGroq(instrucao, mensagens) {
-  const model = await escolherModeloGroq()
-  const base = {
-    model,
-    max_tokens: 900,
-    temperature: 0.6,
-    messages: [{ role: 'system', content: instrucao }, ...mensagens],
+  const fila = await escolherModelosGroq()
+  let ultimo = null
+  for (const model of fila.slice(0, 3)) {
+    const base = {
+      model,
+      max_tokens: 900,
+      temperature: 0.6,
+      messages: [{ role: 'system', content: instrucao }, ...mensagens],
+    }
+    const pensa = PENSA.test(model)
+    let resposta = await pedirGroq(pensa ? { ...base, reasoning_effort: /qwen|qwq/i.test(model) ? 'none' : 'low', reasoning_format: 'hidden' } : base)
+    /* O modelo não aceitou os parâmetros de raciocínio: manda sem eles. */
+    if (resposta.status === 400 && pensa) resposta = await pedirGroq(base)
+    if (resposta.status === 429 || resposta.status >= 500) {
+      /* Limite por minuto do plano grátis, ou o modelo caiu: o próximo da fila. */
+      ultimo = new Error(`groq ${resposta.status} (modelo ${model}): ${(await resposta.text()).slice(0, 120)}`)
+      continue
+    }
+    if (!resposta.ok) {
+      /* Modelo saiu de linha entre a listagem e agora: a próxima chamada relista. */
+      modelosGroq = []
+      throw new Error(`groq ${resposta.status} (modelo ${model}): ${(await resposta.text()).slice(0, 160)}`)
+    }
+    const dados = await resposta.json()
+    const escolha = dados?.choices?.[0]
+    const texto = String(escolha?.message?.content || '').replace(SEM_PENSAMENTO, '').trim()
+    if (!texto) throw new Error(`groq devolveu vazio (modelo ${model}, parou por ${escolha?.finish_reason || '?'})`)
+    return texto
   }
-  const raciocinio = /qwen|qwq/i.test(model) ? 'none' : 'low'
-  let resposta = await pedirGroq(PENSA.test(model) ? { ...base, reasoning_effort: raciocinio, reasoning_format: 'hidden' } : base)
-  /* O modelo não aceitou os parâmetros de raciocínio: manda sem eles. */
-  if (resposta.status === 400 && PENSA.test(model)) resposta = await pedirGroq(base)
-  if (!resposta.ok) {
-    /* Modelo saiu de linha entre a listagem e agora: esquece a escolha e a
-       próxima chamada relista. */
-    modeloGroq = ''
-    throw new Error(`groq ${resposta.status} (modelo ${model}): ${(await resposta.text()).slice(0, 160)}`)
-  }
-  const dados = await resposta.json()
-  const escolha = dados?.choices?.[0]
-  const texto = String(escolha?.message?.content || '').replace(SEM_PENSAMENTO, '').trim()
-  if (!texto) throw new Error(`groq devolveu vazio (modelo ${model}, parou por ${escolha?.finish_reason || '?'})`)
-  return texto
+  throw ultimo || new Error('groq: nenhum modelo respondeu')
 }
 
 /** Uma conversa guardada ({ de, texto }) vira o formato que o modelo lê. */

@@ -138,7 +138,7 @@ export async function registrarPonte(req, res) {
           ? [{ de: 'pessoa', texto: dados.ensaio.slice(0, 400) }]
           : null
       if (ensaio) {
-        testes.ensaio = await falarComIA({ nome: 'Contato de ensaio', contato: '+5500000000000' }, [abertura, ...ensaio]).catch((erro) => `erro: ${erro?.message}`)
+        testes.ensaio = await falarComIA({ nome: '', contato: '+5500000000000' }, [abertura, ...ensaio]).catch((erro) => `erro: ${erro?.message}`)
       }
       testes.ia = await responderComIA('Responda apenas: pronto.', [{ role: 'user', content: 'diga pronto' }])
         .then((t) => (t ? `respondeu (${t.length} caracteres): ${t.slice(0, 60)}` : 'voltou VAZIA'))
@@ -253,7 +253,7 @@ export async function registrarPonte(req, res) {
 export const INSTRUCAO_PROSPECCAO_PADRAO = [
   'Você é o assistente de vendas da Astro Soluções, empresa de tecnologia dirigida por Eduardo, e escreve pelo WhatsApp dele. Você é um consultor de negócios especialista em tecnologia para imobiliárias. Não precisa dizer seu nome: fale como "a gente" ou "a equipe do Eduardo". Nunca diga que é um robô e nunca finja ser o Eduardo. Concordância sempre no masculino ("obrigado", nunca "obrigada").',
   'Se a conversa já tiver mensagens enviadas deste número antes de você (o próprio Eduardo abrindo o contato, por exemplo "notei um gargalo na captação de vocês"), continue dali como a equipe dele, sem se reapresentar.',
-  'Tom: profissional, direto, seguro, educado e persuasivo. Mensagens curtas e naturais, com pontuação normal, como um humano no WhatsApp. Uma ou duas frases, até 30 palavras. Uma pergunta por mensagem. Sem listas, sem formatação, sem blocos de texto.',
+  'Tom: profissional, direto, seguro, educado e persuasivo. Mensagens curtas e naturais, com pontuação normal, como um humano no WhatsApp. Uma ou duas frases, até 25 palavras no total. Uma pergunta por mensagem. Sem listas, sem formatação, sem blocos de texto. A pergunta dos horários é sempre curta: "Amanhã às 10h ou às 14h?"',
   '',
   'Objetivo único: não é vender o software pelo WhatsApp. É despertar o interesse do dono ou gerente da imobiliária e agendar uma demonstração de 10 minutos com o Eduardo (ligação ou link). Assim que houver o mínimo de interesse ou curiosidade, encaminhe: "O Eduardo, diretor da Astro, te mostra isso funcionando na prática. Amanhã às 10h ou às 14h, qual fica melhor?"',
   '',
@@ -463,8 +463,9 @@ export async function mensagensDaConversa(jid) {
 
 /** O que o modelo precisa saber além da instrução mestre: os campos do próprio lead. */
 function contextoDoLead(lead) {
+  const nomeReal = lead?.nome && !/^\+?[\d\s()-]{8,}$/.test(String(lead.nome).trim()) ? String(lead.nome) : ''
   const sabido = [
-    lead?.nome ? `Nome: ${lead.nome}` : '',
+    nomeReal ? `Nome: ${nomeReal}` : '',
     lead?.empresa ? `Empresa: ${lead.empresa}` : '',
     lead?.necessidade && lead.necessidade !== 'A definir' ? `Precisa de: ${lead.necessidade}` : '',
     lead?.anotacoes ? `Anotações da equipe: ${limpar(lead.anotacoes, 600)}` : '',
@@ -636,7 +637,7 @@ export async function webhookProspeccao(evento) {
     if (mensagem.id && !(await inedita(mensagem.id))) return await rastro('debug', `duplicada ${mensagem.id}`, mensagem.telefone)
     if (!lead) {
       lead = await criarLead({
-        nome: mensagem.telefone,
+        nome: '',
         contato: mensagem.telefone,
         canal: 'prospeccao',
         necessidade: 'A definir',
