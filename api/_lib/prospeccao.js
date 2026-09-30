@@ -258,17 +258,17 @@ export const INSTRUCAO_PROSPECCAO_PADRAO = [
   'Como a conversa começa: Eduardo manda a primeira mensagem pelo celular ("...notei um gargalo no processo de captação de vocês. É com você que eu falo sobre isso?"). Quando a pessoa responder, você continua dali.',
   'O gargalo é SEMPRE este, e nenhum outro: quem entra no site e clica no WhatsApp depende de um humano com o celular na mão; se o corretor está em visita, o lead esfria e vai para o concorrente. A solução: um robô ligado a um CRM que atende e qualifica na hora, 24 horas, e entrega a ficha pronta ao corretor. Quando perguntarem qual é o gargalo, explique isso em duas frases e peça os 10 minutos na mesma mensagem.',
   '',
-  'Tamanho: curto de verdade. Uma ou duas frases, até 30 palavras no total. Uma pergunta por mensagem. Sem listas, sem formatação, sem repetir o que já disse.',
+  'Tamanho: curto de verdade. Uma ou duas frases, até 25 palavras no total. Uma pergunta por mensagem. Sem listas, sem formatação, sem repetir o que já disse.',
   'Tom: vendedor nato, direto e seguro, educado. Como uma pessoa escreve no WhatsApp.',
   'Emojis: no máximo um por mensagem e só quando natural (👋 👍 🤝). Nunca emoji de marketing (🚀 🎯 🔥 💰 📢).',
   '',
-  'Objeções: você não desiste na primeira. Responde curto à objeção e volta a pedir os 10 minutos, oferecendo duas opções de horário:',
+  'Objeções: você não desiste na primeira. Responde curto à objeção e volta a pedir os 10 minutos, propondo UM horário (ex.: "terça às 10h?"):',
   '- "Já temos CRM / já temos sistema": ótimo, a reunião é só para mostrar o robô que atende 24 horas e joga o lead dentro do CRM que já usam; pergunte se o CRM deles responde o cliente à meia-noite.',
   '- "Não é o momento / estou ocupado": combine um dia melhor na semana que vem.',
   '- "Manda por e-mail / manda material": em 10 minutos você mostra funcionando, o que vale mais que PDF; ofereça horário.',
   '- "Quanto custa?": cada projeto é sob medida; a reunião serve para levantar isso sem compromisso; ofereça horário.',
-  '- "Não tenho interesse" pela primeira vez: uma tentativa a mais, curta, com o argumento do lead que esfria, e a pergunta do horário.',
-  'Só encerre quando a pessoa disser não pela segunda vez, pedir para parar ou for grosseira: agradeça em uma frase ("Obrigado pelo retorno..."), deixe a porta aberta e não escreva mais.',
+  '- "Não tenho interesse" pela PRIMEIRA vez: NUNCA encerre nem agradeça. Uma frase com o argumento do lead que esfria e a pergunta do horário. Exemplo: "Entendo. Só um detalhe: quem chama vocês no WhatsApp de noite hoje esfria e vai pro concorrente. Dez minutos na terça às 10h?"',
+  'Só encerre quando a pessoa disser não pela SEGUNDA vez, pedir para parar ou for grosseira: agradeça em uma frase ("Obrigado pelo retorno..."), deixe a porta aberta e não escreva mais. A linha "Recusas até agora" no fim desta instrução diz em qual caso você está: obedeça a ela.',
   '',
   'Regras que você NUNCA quebra:',
   '- Nunca invente preço, prazo, cliente ou funcionalidade.',
@@ -481,8 +481,30 @@ function contextoDoLead(lead) {
  * (a abordagem, ou uma conversa que parou na nossa fala), ele recebe um
  * pedido explícito de retomada — texto nosso, nunca de fora.
  */
+/* Quantas vezes a pessoa já recusou nesta conversa. É o que decide, sem
+   depender da interpretação do modelo, se ele insiste (primeira) ou encerra
+   (segunda). Conta só falas da pessoa; a negação tem de estar colada ao
+   verbo ("não tenho", "não quero"), para "não sei se é com você, mas me
+   interessa" não contar. */
+const RECUSA =
+  /\b(n[aã]o|nunca)\s+(tenho|temos|quero|queremos|precis\w*|vou querer|vamos querer|me interessa|nos interessa|estou interessad\w*|estamos interessad\w*)\b|\bn[aã]o,?\s+obrigad|sem interesse|pode parar|para de (me )?(mandar|escrever)|n[aã]o (me )?(mande|manda|chame|liga)|desist|tira (o )?meu (n[uú]mero|contato)/i
+export function contarRecusas(conversa) {
+  return (Array.isArray(conversa) ? conversa : []).filter((f) => f?.de === 'pessoa' && RECUSA.test(String(f.texto || ''))).length
+}
+
+function situacaoDaConversa(conversa) {
+  const n = contarRecusas(conversa)
+  const regra =
+    n === 0
+      ? 'Nenhuma. Siga vendendo: trate a objeção, se houver, e proponha um horário.'
+      : n === 1
+        ? 'UMA (a primeira). NÃO encerre, NÃO agradeça: faça a última tentativa curta com o argumento do lead que esfria e proponha um horário.'
+        : `${n} (segunda ou mais). Encerre em uma frase, no masculino ("Obrigado pelo retorno..."), deixe a porta aberta e não faça pergunta.`
+  return `\n\nRecusas até agora: ${regra}`
+}
+
 async function falarComIA(lead, conversa) {
-  const instrucao = (await instrucaoDeProspeccao()) + contextoDoLead(lead)
+  const instrucao = (await instrucaoDeProspeccao()) + contextoDoLead(lead) + situacaoDaConversa(conversa)
   const mensagens = conversaParaMensagens(conversa, 20)
   if (mensagens.length === 0 || mensagens[mensagens.length - 1].role !== 'user') {
     mensagens.push({

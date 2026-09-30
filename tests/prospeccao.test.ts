@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { bateGatilho, comandoDoDono, ehDoRobo, falasDoHistorico, resumoDoChat, telefoneDoJid } from '../api/_lib/prospeccao.js'
+import { bateGatilho, comandoDoDono, contarRecusas, ehDoRobo, falasDoHistorico, resumoDoChat, telefoneDoJid } from '../api/_lib/prospeccao.js'
 
 const registro = (texto: string, fromMe: boolean, quando: number, extra: Record<string, unknown> = {}) => ({
   key: { remoteJid: '5511999990000@s.whatsapp.net', fromMe, id: `m${quando}` },
@@ -77,4 +77,20 @@ test('os comandos do dono pelo celular: #pausa desliga, #robo religa, o resto é
   assert.equal(comandoDoDono('#ROBÔ'), 'robo')
   assert.equal(comandoDoDono('Vou passar o contrato amanhã, tudo bem?'), '')
   assert.equal(comandoDoDono('a pausa do almoço'), '')
+})
+
+test('conta as recusas da pessoa, e só as dela', () => {
+  const conversa = [
+    { de: 'robo', texto: 'Notei um gargalo. É com você que eu falo?' },
+    { de: 'pessoa', texto: 'Qual gargalo?' },
+    { de: 'robo', texto: 'Não tenho como explicar em uma frase, mas...' },
+    { de: 'pessoa', texto: 'Não tenho interesse, obrigado.' },
+    { de: 'robo', texto: 'Entendo. Dez minutos na terça?' },
+    { de: 'pessoa', texto: 'Não, obrigado. Não quero mesmo.' },
+  ]
+  assert.equal(contarRecusas(conversa), 2)
+  assert.equal(contarRecusas(conversa.slice(0, 4)), 1)
+  assert.equal(contarRecusas([{ de: 'pessoa', texto: 'Pode ser quinta às 15h. Obrigada!' }]), 0)
+  assert.equal(contarRecusas([{ de: 'pessoa', texto: 'Não sei se é com você, mas me interessa saber mais' }]), 0)
+  assert.equal(contarRecusas([{ de: 'pessoa', texto: 'Para de me mandar mensagem' }]), 1)
 })
