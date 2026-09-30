@@ -26,6 +26,7 @@ type Dados = {
   instrucaoPadrao: string
   gatilho: string
   gatilhoPadrao: string
+  modo: 'responder' | 'ativo'
   conversas: Conversa[]
   ponte: { url: string; instancia: string; quando: string } | null
   inteligencia: boolean
@@ -240,6 +241,16 @@ export function AbaProspeccao() {
     }
   }
 
+  async function salvarModo(modo: 'responder' | 'ativo') {
+    try {
+      await pedir('/api/admin/prospeccao', { method: 'PUT', body: JSON.stringify({ modo }) })
+      setAviso(modo === 'ativo' ? 'Modo ativo ligado. Abordagem a frio limitada a 10 por dia; o risco de restrição é seu.' : 'Modo "só responde" ligado.')
+      await carregar()
+    } catch (falha) {
+      setAviso(mensagemDe(falha))
+    }
+  }
+
   async function salvarGatilho(texto: string) {
     try {
       const r = await pedir('/api/admin/prospeccao', { method: 'PUT', body: JSON.stringify({ gatilho: texto }) })
@@ -327,6 +338,34 @@ export function AbaProspeccao() {
             Conversa que você não marcar nunca recebe resposta do robô. Se você escrever pelo celular numa
             conversa assumida, o robô cala naquela vez e continua na próxima resposta da pessoa, levando em conta o
             que você disse. Para desligar o robô numa conversa, mande "#pausa" nela; "#robo" religa.
+          </p>
+        </div>
+
+        <div className="graphite-card">
+          <p className="label-voice text-[10px]">Modo do robô</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              aria-pressed={dados.modo !== 'ativo'}
+              onClick={() => void salvarModo('responder')}
+              className={`rounded-full px-4 py-2 text-[13px] ${dados.modo !== 'ativo' ? 'bg-cobalt text-white' : 'border border-white/12 text-ash hover:text-ivory'}`}
+            >
+              Só responde
+            </button>
+            <button
+              type="button"
+              aria-pressed={dados.modo === 'ativo'}
+              onClick={() => void salvarModo('ativo')}
+              className={`rounded-full px-4 py-2 text-[13px] ${dados.modo === 'ativo' ? 'bg-cobalt text-white' : 'border border-white/12 text-ash hover:text-ivory'}`}
+            >
+              Ativo
+            </button>
+          </div>
+          <p className="mt-2 text-[11px] leading-[1.5] text-slate">
+            "Só responde": o robô fala com quem escreveu primeiro ou com quem você abriu à mão pelo celular (frase gatilho).
+            Sem abordagem a frio e sem empurrão automático. "Ativo": empurrão em conversa parada e abordagem a frio pelo
+            painel, até 10 por dia. Foi o modo ativo, com dezenas de números desconhecidos de uma vez, que causou a
+            restrição de 24 horas. Para prospectar em volume, o caminho é a API oficial do WhatsApp Business.
           </p>
         </div>
 

@@ -9,6 +9,7 @@
  * PATCH { lead, prospeccao }  'bot', 'pausado' ou '' num lead
  * PUT { instrucao }   grava a instrução mestre de prospecção
  * PUT { gatilho }     grava as frases gatilho (uma por linha)
+ * PUT { modo }        'responder' (só responde) ou 'ativo' (empurrão e abordagem a frio)
  */
 import { exigirSessao } from '../_lib/auth.js'
 import { gravarConfig } from '../_lib/config.js'
@@ -27,6 +28,8 @@ import {
   instrucaoDeProspeccao,
   marcarProspeccao,
   mensagensDaConversa,
+  modoDeProspeccao,
+  MODOS_DO_ROBO,
   ponteRegistrada,
 } from '../_lib/prospeccao.js'
 import { corpo, ErroHttp } from '../crm/_lib/http.js'
@@ -50,6 +53,7 @@ export default async function handler(req, res) {
       const estado = await estadoDoNumero()
       const instrucao = await instrucaoDeProspeccao()
       const gatilho = await gatilhoDeProspeccao()
+      const modo = await modoDeProspeccao()
       const ponte = await ponteRegistrada()
       const conversas = estado.estado === 'conectado' ? await conversasDoAparelho().catch(() => []) : []
       return res.status(200).json({
@@ -58,6 +62,7 @@ export default async function handler(req, res) {
         instrucaoPadrao: INSTRUCAO_PROSPECCAO_PADRAO,
         gatilho,
         gatilhoPadrao: GATILHO_PADRAO,
+        modo,
         conversas,
         ponte,
         inteligencia: temInteligencia(),
@@ -71,6 +76,9 @@ export default async function handler(req, res) {
          WhatsApp; DDI 55 é assumido quando vêm só 10 ou 11 dígitos. */
       const jids = Array.isArray(dados?.jids) ? dados.jids.map(String) : []
       if (dados?.numero) {
+        if ((await modoDeProspeccao()) !== 'ativo') {
+          return res.status(409).json({ erro: 'abordagem a frio desligada: o robô está no modo "só responde". Ligue o modo ativo na aba, sabendo do risco de restrição.' })
+        }
         if (!(await dentroDoLimiteDeAbordagens())) {
           return res.status(429).json({ erro: 'limite diário de abordagens a frio atingido (20 por dia). Para volume, o caminho é a API oficial do WhatsApp Business.' })
         }
@@ -98,6 +106,11 @@ export default async function handler(req, res) {
            melhora vale sem precisar salvar de novo. */
         await gravarConfig('prospeccao_instrucao', instrucao === INSTRUCAO_PROSPECCAO_PADRAO ? '' : instrucao)
         saida.instrucao = instrucao || INSTRUCAO_PROSPECCAO_PADRAO
+      }
+      if (typeof dados?.modo === 'string') {
+        if (!MODOS_DO_ROBO.includes(dados.modo)) return res.status(400).json({ erro: 'modo desconhecido' })
+        await gravarConfig('prospeccao_modo', dados.modo)
+        saida.modo = dados.modo
       }
       if (typeof dados?.gatilho === 'string') {
         const gatilho = dados.gatilho.slice(0, 600).trim()

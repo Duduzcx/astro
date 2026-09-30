@@ -160,6 +160,24 @@ mestre e o histórico.
   robô numa conversa, mande `#pausa` nela; `#robo` religa. O painel também
   pausa e devolve.
 
+## Restrição do WhatsApp e o modo do robô
+
+Em 30/09/2026 o número pessoal levou uma restrição de 24 horas depois de
+dezenas de abordagens a frio num minuto, por um cliente não oficial. Não há
+como contornar isso e a ponte não tenta. O que existe é o **modo do robô**
+(aba Prospecção):
+
+- **Só responde** (padrão): o robô fala apenas com quem escreveu primeiro ou
+  com quem você abriu à mão pelo celular (frase gatilho). Nada de abordagem
+  a frio pelo painel, nada de empurrão automático.
+- **Ativo**: empurrão em conversa parada e abordagem a frio pelo painel, até
+  10 por dia (`ABORDAGENS_POR_DIA`). Use sabendo do risco.
+
+Regras que valem sempre: uma ponte só por número; não reparear à toa; parar
+no primeiro "não" definitivo ou hostilidade; nunca rajada. Para prospecção
+em volume, o caminho é a API oficial do WhatsApp Business (número
+dedicado, modelos aprovados, opt-in), que o site pode passar a usar.
+
 ## Mão humana, humanização e limite diário
 
 - Você escreveu numa conversa do robô? Por dez minutos é você quem atende: a

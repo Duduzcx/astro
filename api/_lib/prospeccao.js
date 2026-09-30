@@ -329,6 +329,19 @@ export function comandoDoDono(texto) {
   return ''
 }
 
+/**
+ * O modo do robô. 'responder' (padrão): só fala com quem escreveu primeiro
+ * ou com quem o dono abriu à mão pelo celular; sem abordagem a frio e sem
+ * empurrão automático. 'ativo': empurrão em conversa parada e abordagem a
+ * frio pelo painel, dentro do limite diário. Foi o modo ativo, com dezenas
+ * de números desconhecidos num minuto, que levou à restrição de 24 horas.
+ */
+export const MODOS_DO_ROBO = ['responder', 'ativo']
+export async function modoDeProspeccao() {
+  const salvo = await lerConfig('prospeccao_modo', null)
+  return MODOS_DO_ROBO.includes(salvo) ? salvo : 'responder'
+}
+
 export async function gatilhoDeProspeccao() {
   const salvo = await lerConfig('prospeccao_gatilho', null)
   return typeof salvo === 'string' && salvo.trim() ? salvo : GATILHO_PADRAO
@@ -653,7 +666,7 @@ async function maoHumanaAtiva(leadId) {
 /* Abordagens a frio (número digitado, sem conversa) por dia. É a regra do
    WhatsApp: mensagem não solicitada em volume bloqueia o número. Padrão 20;
    ABORDAGENS_POR_DIA muda. Conversas existentes não contam. */
-const ABORDAGENS_PADRAO = 20
+const ABORDAGENS_PADRAO = 10
 export async function dentroDoLimiteDeAbordagens() {
   if (!temBanco()) return true
   const limite = Number(process.env.ABORDAGENS_POR_DIA || ABORDAGENS_PADRAO)
@@ -735,6 +748,7 @@ export function precisaRetomar(conversa) {
  */
 export async function retomarConversas() {
   if (!temBanco() || !temInteligencia()) return { retomadas: 0 }
+  if ((await modoDeProspeccao()) !== 'ativo') return { retomadas: 0, modo: 'responder' }
   await prepararBanco()
   const s = sql()
   const parados = await s`
