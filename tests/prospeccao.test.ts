@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { GATILHO_PADRAO, aceitouHorario, bateGatilho, comandoDoDono, contarAutomaticasSeguidas, contarRecusas, deveEncerrar, dicaDaObjecao, ehDoRobo, ehHostil, falasDoHistorico, pareceAutomatica, resumoDoChat, telefoneDoJid } from '../api/_lib/prospeccao.js'
+import { GATILHO_PADRAO, aceitouHorario, bateGatilho, comandoDoDono, contarAutomaticasSeguidas, contarRecusas, deveEncerrar, dicaDaObjecao, ehDoRobo, ehHostil, falasDoHistorico, opcaoHumana, pareceAutomatica, resumoDoChat, telefoneDoJid, temMenu } from '../api/_lib/prospeccao.js'
 
 const registro = (texto: string, fromMe: boolean, quando: number, extra: Record<string, unknown> = {}) => ({
   key: { remoteJid: '5511999990000@s.whatsapp.net', fromMe, id: `m${quando}` },
@@ -162,4 +162,15 @@ test('reconhece resposta automática e conta as seguidas; o aceite ignora horár
   assert.equal(contarAutomaticasSeguidas(conversa), 3)
   assert.equal(contarAutomaticasSeguidas([...conversa, { de: 'pessoa', texto: 'Oi, aqui é o Carlos, dono. Qual gargalo?' }]), 0)
   assert.match(dicaDaObjecao([{ de: 'pessoa', texto: menu }]), /AUTOM/)
+})
+
+test('num menu automático, acha a opção que leva a uma pessoa', () => {
+  const menu = 'Olá! Seja bem-vindo à Imobiliária Sol.\n1 - Vendas\n2 - Locação\n3 - Falar com atendente'
+  assert.equal(temMenu(menu), true)
+  assert.equal(opcaoHumana(menu), '1')
+  assert.equal(opcaoHumana('Escolha uma opção:\n1) Locação\n2) Financiamento\n3) Outros assuntos'), '3')
+  assert.equal(opcaoHumana('Escolha uma opção:\nA. Locação\nB. Falar com um corretor'), 'B')
+  assert.equal(temMenu('Responderemos em breve. Aguarde um momento.'), false)
+  assert.equal(opcaoHumana('Responderemos em breve. Aguarde um momento.'), '')
+  assert.match(dicaDaObjecao([{ de: 'pessoa', texto: 'Qual gargalo? Pode falar comigo.' }]), /perguntou qual/)
 })

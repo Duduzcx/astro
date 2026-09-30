@@ -540,6 +540,21 @@ const AUTOMATICA =
   /mensagem autom[aá]tica|atendimento autom|resposta autom|assistente virtual|sou (o|a|um|uma) (assistente|bot|rob[oô])|digite (o n[uú]mero|uma op[cç][aã]o|a op[cç][aã]o|\d)|escolha (uma|a) op[cç][aã]o|op[cç][aã]o (desejada|inv[aá]lida)|seja bem[- ]vind|responderemos (em breve|assim que|o mais)|retornaremos (em breve|o mais)|em breve (um|uma|nossa|nosso) (atendente|equipe|consultor|corretor)|hor[aá]rio de (atendimento|funcionamento)|fora do (nosso )?hor[aá]rio|n[uú]mero de protocolo|seu protocolo|n[aã]o (é|e) monitorad|para (falar|continuar|prosseguir)[^.]{0,40}(digite|envie|responda)|aguarde (um momento|que um|enquanto)/i
 const LINHA_DE_MENU = /^\s*(\d{1,2}|[a-z])\s*[-.):|]\s*\S/i
 
+/* Num menu automático, a opção que leva a uma pessoa ("3 - Falar com
+   atendente", "2) Comercial"). Devolve o que digitar ("3"), ou '' se o menu
+   não tem uma opção assim. */
+const OPCAO_HUMANA = /atendente|humano|pessoa|falar com|comercial|vendas|vender|corretor|dono|gerente|propriet|outros|outro assunto|demais/i
+export function temMenu(texto) {
+  return String(texto || '').split(/\r?\n/).filter((linha) => LINHA_DE_MENU.test(linha)).length >= 2
+}
+export function opcaoHumana(texto) {
+  for (const linha of String(texto || '').split(/\r?\n/)) {
+    const m = linha.match(/^\s*(\d{1,2}|[a-z])\s*[-.):|]\s*(.+)$/i)
+    if (m && OPCAO_HUMANA.test(m[2])) return m[1]
+  }
+  return ''
+}
+
 export function pareceAutomatica(texto) {
   const t = String(texto || '')
   if (!t.trim()) return false
@@ -581,6 +596,9 @@ export function dicaDaObjecao(conversa) {
   if (pareceAutomatica(bruto)) {
     return 'A última mensagem parece de um ATENDIMENTO AUTOMÁTICO (robô, menu, resposta padrão), não de uma pessoa. Não converse com ele e não se apresente. Se há menu com opções, responda SÓ com o número ou a palavra da opção que leva a uma pessoa (atendente, comercial, vendas, corretor, dono, outros). Se não há menu, peça em uma frase para falar com o responsável pela imobiliária. Sem pergunta de diagnóstico.'
   }
+  if (/\b(qual|que|quais) (gargalo|problema|falha|erro)s?\b|\bque gargalo\b|\b(pode|podem) falar\b|\bme (conta|diz|fala)\b/.test(t) && !/\bnao\b/.test(t)) {
+    return 'A pessoa perguntou qual é o gargalo. Diga em uma frase, sem inventar nada sobre o sistema dela: "Quem chama vocês no WhatsApp com o corretor em visita, à noite ou no fim de semana fica sem resposta, esfria e vai pro concorrente." Depois emende a pergunta de diagnóstico digital.'
+  }
   if (aceitouHorario(bruto)) {
     return 'A pessoa ACEITOU um horário: confirme dia e hora em uma frase, agradeça no masculino e diga que o Eduardo confirma com ela antes. Nenhuma pergunta, nenhuma proposta nova, nenhum link.'
   }
@@ -604,7 +622,19 @@ export function dicaDaObjecao(conversa) {
 
 const DESPEDIDA = /obrigado pelo retorno|(fico|ficamos|estamos|seguimos) [àa] disposi|encerrar o contato|boa sorte|qualquer coisa (e so|é só) chamar/i
 
+const PEDIDO_DE_PESSOA = 'Olá! Preciso falar com o responsável pela imobiliária. Consegue me passar para uma pessoa?'
+
 async function falarComIA(lead, conversa) {
+  /* Resposta automática do outro lado: nada de modelo. Com menu, digita a
+     opção que leva a uma pessoa; sem menu (ou sem essa opção), pede o
+     responsável em uma frase. O modelo, quando chamado aqui, respondia "1"
+     a um aviso sem menu. */
+  const ultimaDaPessoa = [...(Array.isArray(conversa) ? conversa : [])].reverse().find((f) => f?.de === 'pessoa')?.texto || ''
+  if (pareceAutomatica(ultimaDaPessoa)) {
+    const opcao = temMenu(ultimaDaPessoa) ? opcaoHumana(ultimaDaPessoa) : ''
+    return opcao || PEDIDO_DE_PESSOA
+  }
+
   const situacao = situacaoDaConversa(conversa)
   const dica = dicaDaObjecao(conversa)
   /* A situação vai no TOPO e no fim: o modelo pesa mais o começo, e foi por
