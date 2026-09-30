@@ -600,7 +600,7 @@ export function dicaDaObjecao(conversa) {
     return 'A última mensagem parece de um ATENDIMENTO AUTOMÁTICO (robô, menu, resposta padrão), não de uma pessoa. Não converse com ele e não se apresente. Se há menu com opções, responda SÓ com o número ou a palavra da opção que leva a uma pessoa (atendente, comercial, vendas, corretor, dono, outros). Se não há menu, peça em uma frase para falar com o responsável pela imobiliária. Sem pergunta de diagnóstico.'
   }
   if (/\b(qual|que|quais) (gargalo|problema|falha|erro)s?\b|\bque gargalo\b|\b(pode|podem) falar\b|\bme (conta|diz|fala)\b/.test(t) && !/\bnao\b/.test(t)) {
-    return 'A pessoa perguntou qual é o gargalo. Diga em uma frase, sem inventar nada sobre o sistema dela: "Quem chama vocês no WhatsApp com o corretor em visita, à noite ou no fim de semana fica sem resposta, esfria e vai pro concorrente." Depois emende a pergunta de diagnóstico digital.'
+    return 'A pessoa perguntou qual é o gargalo. Diga em uma frase, sem inventar nada sobre o sistema dela: "Quem chama vocês no WhatsApp com o corretor em visita, à noite ou no fim de semana fica sem resposta, esfria e vai pro concorrente." Depois emende UMA pergunta curta, de ate dez palavras, sobre como eles atendem esses contatos hoje. Tudo em no maximo 30 palavras.'
   }
   if (aceitouHorario(bruto)) {
     return 'A pessoa ACEITOU um horário: confirme dia e hora em uma frase, agradeça no masculino e diga que o Eduardo confirma com ela antes. Nenhuma pergunta, nenhuma proposta nova, nenhum link.'
