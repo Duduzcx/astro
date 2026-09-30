@@ -169,7 +169,7 @@ export async function responderComIA(instrucao, mensagens) {
    embeddings) e escolhe o melhor de chat, com preferência por família.
    Guardado em memória entre chamadas quentes. */
 let modeloGroq = ''
-const NAO_CONVERSA = /guard|whisper|tts|embed|prompt-guard|moderation|vision-preview$/i
+const NAO_CONVERSA = /guard|whisper|tts|orpheus|canopylabs|allam|embed|prompt-guard|moderation|vision-preview$/i
 const PREFERENCIA = [/llama-4.*maverick/i, /llama-4/i, /gpt-oss-120b/i, /kimi-k2/i, /llama-3\.[0-9]+-70b/i, /gpt-oss/i, /deepseek/i, /llama-3/i, /qwen/i, /gemma/i, /mixtral/i]
 
 /* Modelos que "pensam" antes de responder (Qwen3, gpt-oss, DeepSeek): o
@@ -178,6 +178,11 @@ const PREFERENCIA = [/llama-4.*maverick/i, /llama-4/i, /gpt-oss-120b/i, /kimi-k2
    e esconde o que sobrar. */
 const PENSA = /qwen|gpt-oss|deepseek|qwq|r1/i
 const SEM_PENSAMENTO = /<think>[\s\S]*?<\/think>/gi
+
+/** O modelo da Groq que está valendo nesta invocação (vazio antes da primeira chamada). */
+export function modeloGroqEmUso() {
+  return process.env.BOT_MODELO || process.env.GROQ_MODELO || modeloGroq
+}
 
 async function escolherModeloGroq() {
   if (process.env.BOT_MODELO || process.env.GROQ_MODELO) return process.env.BOT_MODELO || process.env.GROQ_MODELO
@@ -217,7 +222,8 @@ async function comGroq(instrucao, mensagens) {
     temperature: 0.6,
     messages: [{ role: 'system', content: instrucao }, ...mensagens],
   }
-  let resposta = await pedirGroq(PENSA.test(model) ? { ...base, reasoning_effort: 'none', reasoning_format: 'hidden' } : base)
+  const raciocinio = /qwen|qwq/i.test(model) ? 'none' : 'low'
+  let resposta = await pedirGroq(PENSA.test(model) ? { ...base, reasoning_effort: raciocinio, reasoning_format: 'hidden' } : base)
   /* O modelo não aceitou os parâmetros de raciocínio: manda sem eles. */
   if (resposta.status === 400 && PENSA.test(model)) resposta = await pedirGroq(base)
   if (!resposta.ok) {

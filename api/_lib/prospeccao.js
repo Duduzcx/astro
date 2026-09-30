@@ -21,7 +21,7 @@ import { criarEvolution, lerMensagemDoWebhook } from '../crm/_lib/evolution.js'
 import { corpo } from '../crm/_lib/http.js'
 import { gravarConfig, lerConfig } from './config.js'
 import { prepararBanco, sql, temBanco } from './db.js'
-import { conversaParaMensagens, dentroDoTeto, limpar, qualInteligencia, responderComIA, temInteligencia } from './inteligencia.js'
+import { conversaParaMensagens, dentroDoTeto, limpar, modeloGroqEmUso, qualInteligencia, responderComIA, temInteligencia } from './inteligencia.js'
 import { acharLeadPorContato, acrescentarFala, criarLead, texto as limparTexto } from './leads.js'
 import { registrarLog } from './logs.js'
 
@@ -141,6 +141,7 @@ export async function registrarPonte(req, res) {
       testes.ia = await responderComIA('Responda apenas: pronto.', [{ role: 'user', content: 'diga pronto' }])
         .then((t) => (t ? `respondeu (${t.length} caracteres): ${t.slice(0, 60)}` : 'voltou VAZIA'))
         .catch((erro) => `erro: ${erro?.message}`)
+      testes.modeloGroq = modeloGroqEmUso()
       /* Os modelos de chat que a chave da Groq realmente tem: o padrão pode
          ter saído de linha, e é isto que aponta o certo. */
       if (process.env.GROQ_API_KEY) {
@@ -228,7 +229,8 @@ export const INSTRUCAO_PROSPECCAO_PADRAO = [
   'Objetivo único da conversa: marcar uma reunião rápida de 10 a 20 minutos (chamada de vídeo ou visita) para mostrar na prática o CRM com robô de atendimento e automação. Combine dia e hora.',
   '',
   'Como a conversa costuma começar: Eduardo manda a primeira mensagem pelo celular, algo como "Estava no site da imobiliária agora há pouco e notei um gargalo no processo de captação de vocês. É com você que eu falo sobre isso?". Quando a pessoa responder (em geral "qual gargalo?"), você continua a partir dali.',
-  'O gargalo que você explica, com suas palavras e adaptando ao que a pessoa disser: quem entra no site e clica no WhatsApp depende de alguém estar com o celular na mão; se o corretor está em visita, o lead esfria. A Astro resolve isso com um robô ligado a um CRM que atende e qualifica o cliente na hora e entrega a ficha pronta para o corretor. Depois de explicar, peça 10 minutos na semana para mostrar na prática.',
+  'O gargalo é SEMPRE este, e nenhum outro (não invente problema de formulário, de site lento ou de anúncio): quem entra no site da imobiliária e clica no WhatsApp depende de um humano estar com o celular na mão; se o corretor está em visita, o lead esfria e vai para o concorrente. A solução da Astro: um robô ligado a um CRM que atende e qualifica o cliente na hora, 24 horas, e entrega a ficha pronta para o corretor.',
+  'Quando a pessoa perguntar qual é o gargalo, explique exatamente isso em duas frases curtas e, na mesma mensagem, peça 10 minutos na semana para mostrar na prática como funciona. Só depois, se a pessoa resistir, faça perguntas sobre como eles atendem hoje.',
   'Se você estiver abrindo a conversa e não souber o nome da pessoa nem da imobiliária, use uma abertura neutra e educada, sem inventar nomes.',
   '',
   'Como você escreve:',
