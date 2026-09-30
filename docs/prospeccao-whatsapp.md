@@ -221,3 +221,11 @@ mensagem enviada e o devolve em `getMessage`. Se ainda acontecer, a sessão
 está suja (duas pontes com a mesma sessão, ou uma sessão apagada e recriada
 enquanto o celular lembrava a antiga): desconecte pelo celular (Aparelhos
 conectados) e leia o QR de novo, com uma ponte só no ar.
+Medido em 30/09/2026: com a Baileys 6.7 o diario mostrava
+`SessionError: No matching sessions found` em jids `@lid` e 46 dos ultimos 50
+envios ficavam PENDENTE (sem confirmacao do servidor). A Baileys 7 (7.0.0-rc14)
+reescreveu o suporte ao endereçamento LID; com ela os pendentes passaram a
+sair e as confirmacoes (SERVIDOR, ENTREGUE, LIDA) apareceram. O
+`/diagnostico` da ponte mostra `versao`, `envios.porStatus` (contagem dos
+ultimos 50 envios por status) e os avisos da Baileys com numeros mascarados.
+
