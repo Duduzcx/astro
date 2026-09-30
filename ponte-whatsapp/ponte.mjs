@@ -97,7 +97,7 @@ function registrarEvento(texto) {
    (o WhatsApp só manda o histórico na primeira ligação). */
 const ARQUIVO_LOJA = path.join(DADOS, 'loja.json')
 const POR_CONVERSA = 200
-const VERSAO = '2026-09-30c'
+const VERSAO = '2026-09-30d'
 const loja = { conversas: new Map(), nomes: new Map(), mensagens: new Map() }
 /* Status de entrega, no nome que o WhatsApp usa: 0 erro, 1 pendente (não
    saiu), 2 no servidor, 3 entregue no aparelho, 4 lida, 5 tocada. */
@@ -248,7 +248,31 @@ let urlPublica = URL_FIXA
 /* Áudio de quem responde: baixa e manda junto (base64) para o site
    transcrever e responder ao conteúdo. Só de fora (não fromMe), até 2 MB.
    Se não baixar, o site recebe a mensagem sem o áudio e pede por texto. */
+const ESPERA_PARA_JUNTAR = 8000
+const aguardando = new Map()
+function textoSimples(plana) {
+  const msg = plana?.message || {}
+  return String(msg.conversation || msg.extendedTextMessage?.text || '').trim()
+}
+
 async function encaminharAoSite(m, plana) {
+  /* Texto de quem responde: junta o que chegar nos próximos 8 s ("Boa
+     tarde", "Tudo bem?") e manda uma vez só, com o id da última. Áudio e
+     mensagens do dono vão na hora. */
+  const textoRecebido = !plana?.key?.fromMe ? textoSimples(plana) : ''
+  if (textoRecebido) {
+    const jid = String(plana.key.remoteJid || '')
+    const fila = aguardando.get(jid) || { textos: [], ultima: plana, temporizador: null }
+    fila.textos.push(textoRecebido)
+    fila.ultima = plana
+    clearTimeout(fila.temporizador)
+    fila.temporizador = setTimeout(() => {
+      aguardando.delete(jid)
+      void avisarSite('messages.upsert', { ...fila.ultima, message: { conversation: fila.textos.join('\n') } })
+    }, ESPERA_PARA_JUNTAR)
+    aguardando.set(jid, fila)
+    return
+  }
   let carga = plana
   const audio =
     m?.message?.audioMessage || m?.message?.ephemeralMessage?.message?.audioMessage || m?.message?.viewOnceMessage?.message?.audioMessage
@@ -317,10 +341,16 @@ async function ligar() {
     const { state, saveCreds } = await estadoDeAutenticacao(path.join(DADOS, 'auth'))
     const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: undefined }))
     const silencioso = pino({ level: 'silent' })
+    /* Só avisos e erros da Baileys, no diário, sem números (mascarados) e
+       sem texto de mensagem: é onde aparece por que um envio não sai. */
+    const avisos = pino(
+      { level: 'warn' },
+      { write: (linha) => registrarEvento(`baileys: ${String(linha).replace(/\d{7,}/g, '…').slice(0, 240)}`) },
+    )
     sock = makeWASocket({
       version,
       auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, silencioso) },
-      logger: silencioso,
+      logger: avisos,
       getMessage: async (key) => conteudoDaMensagem(key),
       /* Histórico completo DESLIGADO: medido duas vezes nesta conta, ligá-lo
          faz o WhatsApp derrubar a conexão com 428 em loop, sem nunca chegar
