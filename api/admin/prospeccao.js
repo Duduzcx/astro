@@ -90,7 +90,9 @@ export default async function handler(req, res) {
       const saida = {}
       if (typeof dados?.instrucao === 'string') {
         const instrucao = dados.instrucao.slice(0, 6000).trim()
-        await gravarConfig('prospeccao_instrucao', instrucao || INSTRUCAO_PROSPECCAO_PADRAO)
+        /* Igual ao padrão grava vazio: quando o padrão de fábrica melhorar, a
+           melhora vale sem precisar salvar de novo. */
+        await gravarConfig('prospeccao_instrucao', instrucao === INSTRUCAO_PROSPECCAO_PADRAO ? '' : instrucao)
         saida.instrucao = instrucao || INSTRUCAO_PROSPECCAO_PADRAO
       }
       if (typeof dados?.gatilho === 'string') {
