@@ -335,7 +335,7 @@ let ligando = false
 let reconectando = false
 
 async function ligar() {
-  if (ligando) return
+  if (ligando || sock) return
   ligando = true
   try {
     const { state, saveCreds } = await estadoDeAutenticacao(path.join(DADOS, 'auth'))
