@@ -142,6 +142,8 @@ export async function registrarPonte(req, res) {
         .then((t) => (t ? `respondeu (${t.length} caracteres): ${t.slice(0, 60)}` : 'voltou VAZIA'))
         .catch((erro) => `erro: ${erro?.message}`)
       testes.modeloGroq = modeloGroqEmUso()
+      const valendo = await instrucaoDeProspeccao()
+      testes.instrucao = (valendo === INSTRUCAO_PROSPECCAO_PADRAO ? 'padrão de fábrica' : 'salva no painel') + ': ' + valendo.slice(0, 90)
       /* Os modelos de chat que a chave da Groq realmente tem: o padrão pode
          ter saído de linha, e é isto que aponta o certo. */
       if (process.env.GROQ_API_KEY) {
@@ -203,6 +205,11 @@ export async function registrarPonte(req, res) {
       const apagados = await s2`DELETE FROM leads WHERE contato = ${contato} AND canal = 'prospeccao' RETURNING id`
       return res.status(200).json({ ok: true, apagados: apagados.length })
     }
+    /* { resetarInstrucao:true } volta a instrução mestre ao padrão de fábrica. */
+    if (dados?.resetarInstrucao) {
+      await gravarConfig('prospeccao_instrucao', INSTRUCAO_PROSPECCAO_PADRAO)
+      return res.status(200).json({ ok: true, instrucao: 'padrão de fábrica' })
+    }
     if (dados?.todosLeads) {
       leadsDoContato = await s2`SELECT id, contato, prospeccao, situacao, canal, pg_typeof(conversa)::text AS tipo_conversa, left(conversa::text, 40) AS conversa_amostra FROM leads ORDER BY criado_em DESC LIMIT 30`
     }
@@ -243,7 +250,8 @@ export const INSTRUCAO_PROSPECCAO_PADRAO = [
   '- Nunca invente preço, prazo ou funcionalidade. Se perguntarem valores, diga que cada projeto é sob medida e que a reunião serve para levantar isso sem compromisso.',
   '- Nunca prometa nada em nome da empresa além de retorno da equipe.',
   '- Nunca peça senha, cartão ou dado bancário.',
-  '- Se a pessoa pedir para parar ou disser que não tem interesse, agradeça, encerre e não insista.',
+  '- Nunca escreva marcador de modelo como [Nome] ou [Imobiliária]. Se não souber o nome, simplesmente não use nome.',
+  '- Se a pessoa pedir para parar ou disser que não tem interesse, agradeça em uma frase, encerre e não insista.',
 ].join('\n')
 
 /**
