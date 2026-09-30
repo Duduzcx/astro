@@ -2,7 +2,7 @@ import { webhookEvolution } from './_lib/bot.js'
 import { cronLembretes, cronManterVivo } from './_lib/cron.js'
 import { ErroHttp, primeiro,                    } from './_lib/http.js'
 import { rotasPainel } from './_lib/painel.js'
-import { registrarPonte } from '../_lib/prospeccao.js'
+import { registrarPonte, retomarPonte } from '../_lib/prospeccao.js'
 
 /**
  * Uma função só para o CRM inteiro. O plano gratuito da Vercel para em doze
@@ -13,6 +13,7 @@ import { registrarPonte } from '../_lib/prospeccao.js'
  *   cron/lembretes                 o anti-faltas, com CRON_SECRET
  *   cron/manter-vivo               a consulta diária que impede o Supabase de pausar
  *   ponte/registrar                a ponte do WhatsApp pessoal avisa onde está
+ *   ponte/retomar                  a ponte pede, a cada dez minutos, o empurrão nas conversas paradas
  *   (o resto)                      o painel, com a sessão do Supabase Auth
  *
  * O caminho chega em `?p=`, escrito pelo rewrite do vercel.json, e não pelo
@@ -33,6 +34,7 @@ export default async function handler(req     , res     ) {
     if (partes[0] === 'cron' && partes[1] === 'lembretes') return await cronLembretes(req, res)
     if (partes[0] === 'cron' && partes[1] === 'manter-vivo') return await cronManterVivo(req, res)
     if (partes[0] === 'ponte' && partes[1] === 'registrar') return await registrarPonte(req, res)
+    if (partes[0] === 'ponte' && partes[1] === 'retomar') return await retomarPonte(req, res)
     return await rotasPainel(partes, req, res)
   } catch (erro) {
     if (erro instanceof ErroHttp) return res.status(erro.codigo).json({ erro: erro.message })

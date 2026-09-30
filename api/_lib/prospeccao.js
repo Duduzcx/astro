@@ -22,7 +22,7 @@ import { corpo } from '../crm/_lib/http.js'
 import { gravarConfig, lerConfig } from './config.js'
 import { prepararBanco, sql, temBanco } from './db.js'
 import { conversaParaMensagens, dentroDoTeto, limpar, modeloGroqEmUso, qualInteligencia, responderComIA, temInteligencia, transcreverAudio } from './inteligencia.js'
-import { acharLeadPorContato, acrescentarFala, criarLead, texto as limparTexto } from './leads.js'
+import { acharLeadPorContato, acrescentarFala, criarLead, paraArray, texto as limparTexto } from './leads.js'
 import { registrarLog } from './logs.js'
 
 /** O nome da instância do número pessoal na Evolution. */
@@ -272,6 +272,8 @@ export const INSTRUCAO_PROSPECCAO_PADRAO = [
   'Recusa definitiva ("não venha me oferecer nada", "não quero nada", "não tenho interesse nenhum"), segundo não, ou hostilidade: agradeça em uma frase ("Obrigado pelo retorno..."), encerre e não escreva mais. Spam queima a marca. A linha "Recusas até agora" no fim desta instrução diz em qual caso você está: obedeça a ela.',
   '',
   'FECHAMENTO: assim que houver abertura (a pessoa pergunta como funciona, como vocês fariam, quanto custa, ou diz que faz sentido), NÃO volte ao diagnóstico: encaminhe imediatamente ao diretor. Espírito: "Para você não mudar tudo no escuro, o Eduardo preparou uma demonstração de 10 minutos com o sistema rodando. Amanhã às 10h ou às 14h?"',
+  '',
+  'RITMO E ETIQUETA (anti-afobação): quem manda na velocidade da conversa é o cliente. Se a pessoa só cumprimentou ("Boa tarde", "Tudo bem?"), responda o cumprimento e PARE, sem pergunta comercial. Uma pergunta por vez; espere a resposta antes do próximo passo. Só fale de site, CRM ou automação quando houver abertura real. NUNCA repita uma pergunta ou uma mensagem já enviada: se a pessoa não respondeu, mude a abordagem ou espere.',
   '',
   'Regras que você NUNCA quebra:',
   '- Nunca jargão técnico (API, backend, frontend, SaaS, integração via API). Fale em atender rápido, não perder cliente, vender mais.',
@@ -624,15 +626,131 @@ const DESPEDIDA = /obrigado pelo retorno|(fico|ficamos|estamos|seguimos) [àa] d
 
 const PEDIDO_DE_PESSOA = 'Olá! Preciso falar com o responsável pela imobiliária. Consegue me passar para uma pessoa?'
 
+/* Saudação pura ("Boa tarde", "Oi, tudo bem?", "Tudo ótimo, e com você?"):
+   só palavras de cumprimento, até oito, com pelo menos uma saudação de
+   verdade. A etiqueta manda responder o cumprimento e parar. */
+const PALAVRAS_DE_SAUDACAO = new Set('oi oii ola olá opa eai e ai fala bom boa dia tarde noite tudo bem td tb como vai voce vc esta ta beleza blz tranquilo com otimo certo sim joia joinha ok mesmo aqui por tambem a o obrigado obrigada gente'.split(' '))
+const CUMPRIMENTO = /\b(oi+|ola|opa|eai|e ai|bom dia|boa tarde|boa noite|tudo bem|tudo bom|td bem|td bom|como vai|como voce|como vc|beleza|e voce|e vc|e com voce|e com vc)\b/
+export function ehSaudacao(texto) {
+  const t = normalizarFrase(texto)
+  if (!t) return false
+  const palavras = t.split(' ')
+  if (palavras.length > 8) return false
+  return CUMPRIMENTO.test(t) && palavras.every((p) => PALAVRAS_DE_SAUDACAO.has(p))
+}
+
+/* A saudação da hora, em São Paulo, ou a que a pessoa usou. */
+export function saudacaoDoDia(textoDaPessoa = '') {
+  const t = normalizarFrase(textoDaPessoa)
+  if (t.includes('bom dia')) return 'Bom dia'
+  if (t.includes('boa tarde')) return 'Boa tarde'
+  if (t.includes('boa noite')) return 'Boa noite'
+  const hora = Number(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo', hour: 'numeric', hour12: false }))
+  return hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite'
+}
+
+/* Duas mensagens são "a mesma" se, tirados acentos e pontuação, forem
+   iguais ou compartilharem 55% das palavras. É o que barra o robô de
+   repetir a pergunta que acabou de fazer. */
+export function parecida(a, b) {
+  const na = normalizarFrase(a)
+  const nb = normalizarFrase(b)
+  if (!na || !nb) return false
+  if (na === nb) return true
+  const pa = new Set(na.split(' ').filter((p) => p.length > 2))
+  const pb = new Set(nb.split(' ').filter((p) => p.length > 2))
+  if (pa.size === 0 || pb.size === 0) return false
+  let comuns = 0
+  for (const p of pa) if (pb.has(p)) comuns += 1
+  return comuns / (pa.size + pb.size - comuns) >= 0.55
+}
+
+/* Quem parou de responder ganha um empurrão leve, UMA vez: a última fala é
+   do robô e a anterior não é (ou não existe). Não empurra depois de uma
+   despedida, de um pedido a um robô alheio, nem em cima de resposta
+   automática. */
+export function precisaRetomar(conversa) {
+  const falas = paraArray(conversa)
+  const ultima = falas[falas.length - 1]
+  if (!ultima || ultima.de !== 'robo') return false
+  const anterior = falas[falas.length - 2]
+  if (anterior && anterior.de === 'robo') return false
+  if (DESPEDIDA.test(String(ultima.texto || '')) || ultima.texto === PEDIDO_DE_PESSOA) return false
+  if (anterior && pareceAutomatica(anterior.texto)) return false
+  return true
+}
+
+/**
+ * A ponte chama a cada dez minutos (ela está sempre ligada; a Vercel grátis
+ * só tem cron diário). Três leads por vez, os parados há mais tempo, entre
+ * 20 minutos e 2 dias sem resposta.
+ */
+export async function retomarConversas() {
+  if (!temBanco() || !temInteligencia()) return { retomadas: 0 }
+  await prepararBanco()
+  const s = sql()
+  const parados = await s`
+    SELECT * FROM leads
+    WHERE prospeccao = 'bot' AND canal = 'prospeccao'
+      AND atualizado_em < now() - interval '20 minutes'
+      AND atualizado_em > now() - interval '2 days'
+    ORDER BY atualizado_em ASC LIMIT 3`
+  const evo = await evolucaoDaProspeccao()
+  if (!evo) return { retomadas: 0 }
+  let retomadas = 0
+  for (const linha of parados) {
+    const conversa = paraArray(linha.conversa)
+    if (!precisaRetomar(conversa)) continue
+    const telefone = String(linha.contato || '')
+    try {
+      const resposta = await falarComIA({ ...linha, conversa }, conversa)
+      if (!resposta) continue
+      await evo.enviarTexto(instanciaPessoal(), telefone, resposta)
+      await acrescentarFala(linha.id, { de: 'robo', texto: resposta })
+      await registrarLog({ canal: 'prospeccao', de: telefone, entrada: '(retomada)', saida: resposta, modo: 'retomada' }).catch(() => {})
+      retomadas += 1
+    } catch (erro) {
+      await registrarLog({ canal: 'prospeccao', de: telefone, entrada: '(retomada)', saida: String(erro?.message || '').slice(0, 90), modo: 'debug' }).catch(() => {})
+    }
+  }
+  return { retomadas }
+}
+
+export async function retomarPonte(req, res) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST')
+    return res.status(405).json({ erro: 'método não permitido' })
+  }
+  const chave = String(req.headers.apikey || '')
+  if (!chave || chave !== (process.env.EVOLUTION_API_KEY || '')) return res.status(401).json({ erro: 'não autorizado' })
+  return res.status(200).json({ ok: true, ...(await retomarConversas()) })
+}
+
 async function falarComIA(lead, conversa) {
   /* Resposta automática do outro lado: nada de modelo. Com menu, digita a
      opção que leva a uma pessoa; sem menu (ou sem essa opção), pede o
      responsável em uma frase. O modelo, quando chamado aqui, respondia "1"
      a um aviso sem menu. */
-  const ultimaDaPessoa = [...(Array.isArray(conversa) ? conversa : [])].reverse().find((f) => f?.de === 'pessoa')?.texto || ''
-  if (pareceAutomatica(ultimaDaPessoa)) {
+  const falas = Array.isArray(conversa) ? conversa : []
+  const ultimaFala = falas[falas.length - 1]
+  const ultimaDaPessoa = [...falas].reverse().find((f) => f?.de === 'pessoa')?.texto || ''
+  if (ultimaFala?.de === 'pessoa' && pareceAutomatica(ultimaDaPessoa)) {
     const opcao = temMenu(ultimaDaPessoa) ? opcaoHumana(ultimaDaPessoa) : ''
     return opcao || PEDIDO_DE_PESSOA
+  }
+
+  /* Etiqueta: cumprimento puro nas duas primeiras falas da pessoa recebe só
+     o cumprimento de volta, e para. "Tudo bem?" de volta vira a pergunta
+     leve de quem fala com o responsável. Sem modelo: o modelo emendava a
+     pergunta comercial. */
+  const falasDaPessoa = falas.filter((f) => f?.de === 'pessoa')
+  if (ultimaFala?.de === 'pessoa' && falasDaPessoa.length <= 2 && ehSaudacao(ultimaDaPessoa)) {
+    const t = normalizarFrase(ultimaDaPessoa)
+    if (/\b(tudo bem|tudo bom|td bem|td bom|como vai|como voce|como vc|e voce|e vc|e com voce|e com vc|beleza)\b/.test(t)) {
+      return 'Tudo certo por aqui também! Estou falando com o responsável pela imobiliária?'
+    }
+    const jaSeApresentou = falas.some((f) => f?.de === 'robo' && /assistente da astro/i.test(String(f.texto || '')))
+    return `${saudacaoDoDia(ultimaDaPessoa)}, tudo bem?${jaSeApresentou ? '' : ' Aqui é o assistente da Astro Soluções.'}`
   }
 
   const situacao = situacaoDaConversa(conversa)
@@ -643,11 +761,14 @@ async function falarComIA(lead, conversa) {
   const cabecalho = `SITUAÇÃO AGORA (manda mais que qualquer exemplo abaixo):${situacao}${dica ? `\n${dica}` : ''}\n\n`
   const instrucao = cabecalho + (await instrucaoDeProspeccao()) + contextoDoLead(lead) + situacao
   const mensagens = conversaParaMensagens(conversa, 20)
-  if (mensagens.length === 0 || mensagens[mensagens.length - 1].role !== 'user') {
+  /* Abertura a frio (número digitado, sem histórico): só o cumprimento e a
+     apresentação. O assunto vem quando a pessoa responder, ou na retomada. */
+  if (mensagens.length === 0) return `${saudacaoDoDia()}, tudo bem? Aqui é o assistente da Astro Soluções.`
+  if (mensagens[mensagens.length - 1].role !== 'user') {
     mensagens.push({
       role: 'user',
       content:
-        '(Sem mensagem nova da pessoa. Escreva agora a mensagem que retoma a conversa e propõe a demonstração com o Eduardo, sem mencionar este pedido.)',
+        '(A pessoa não respondeu à sua última mensagem. Puxe o assunto de leve, em UMA frase curta com UMA pergunta, diferente da anterior: se ainda não perguntou se fala com o responsável, pergunte isso; senão, a pergunta de diagnóstico digital; se o diagnóstico já foi feito, proponha a demonstração com o Eduardo. Não mencione este pedido.)',
     })
   }
   let resposta = await responderComIA(instrucao, mensagens)
@@ -667,6 +788,19 @@ async function falarComIA(lead, conversa) {
       contarRecusas(conversa) >= 1
         ? 'Compreendo. Só para entender o cenário de vocês: é porque já têm um robô que atende em segundos, ou automação não é prioridade agora?'
         : 'Entendi. Hoje o site e o atendimento no WhatsApp de vocês estão rodando redondo, ou sentem que perdem clientes por lentidão?'
+  }
+  /* Anti-repetição: igual (ou 70% igual) a uma das três últimas do robô?
+     Uma segunda chance pedindo algo diferente; depois, uma frase neutra que
+     devolve a vez à pessoa. */
+  const ultimasDoRobo = falas.filter((f) => f?.de === 'robo').slice(-3).map((f) => String(f.texto || ''))
+  if (resposta && ultimasDoRobo.some((x) => parecida(x, resposta))) {
+    resposta = await responderComIA(
+      instrucao + '\n\nATENÇÃO: você ia repetir uma mensagem que já mandou nesta conversa. Escreva algo DIFERENTE, avançando um passo, sem refazer a pergunta anterior.',
+      mensagens,
+    )
+    if (ultimasDoRobo.some((x) => parecida(x, resposta))) {
+      resposta = 'Sem problema. Quando puder, me diz qual horário fica melhor para você e eu deixo tudo certo com o Eduardo.'
+    }
   }
   return resposta
 }

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { GATILHO_PADRAO, aceitouHorario, bateGatilho, comandoDoDono, contarAutomaticasSeguidas, contarRecusas, deveEncerrar, dicaDaObjecao, ehDoRobo, ehHostil, falasDoHistorico, opcaoHumana, pareceAutomatica, resumoDoChat, telefoneDoJid, temMenu } from '../api/_lib/prospeccao.js'
+import { GATILHO_PADRAO, aceitouHorario, bateGatilho, comandoDoDono, contarAutomaticasSeguidas, contarRecusas, deveEncerrar, dicaDaObjecao, ehDoRobo, ehHostil, ehSaudacao, falasDoHistorico, opcaoHumana, parecida, pareceAutomatica, precisaRetomar, resumoDoChat, telefoneDoJid, temMenu } from '../api/_lib/prospeccao.js'
 
 const registro = (texto: string, fromMe: boolean, quando: number, extra: Record<string, unknown> = {}) => ({
   key: { remoteJid: '5511999990000@s.whatsapp.net', fromMe, id: `m${quando}` },
@@ -173,4 +173,28 @@ test('num menu automático, acha a opção que leva a uma pessoa', () => {
   assert.equal(temMenu('Responderemos em breve. Aguarde um momento.'), false)
   assert.equal(opcaoHumana('Responderemos em breve. Aguarde um momento.'), '')
   assert.match(dicaDaObjecao([{ de: 'pessoa', texto: 'Qual gargalo? Pode falar comigo.' }]), /perguntou qual/)
+})
+
+test('saudação pura é reconhecida; frase com assunto não', () => {
+  assert.equal(ehSaudacao('Boa tarde'), true)
+  assert.equal(ehSaudacao('Oi, tudo bem?'), true)
+  assert.equal(ehSaudacao('Tudo ótimo, e com você?'), true)
+  assert.equal(ehSaudacao('Boa tarde, quem fala?'), false)
+  assert.equal(ehSaudacao('Sim'), false)
+  assert.equal(ehSaudacao('Oi, tudo bem? Vi o site de vocês'), false)
+})
+
+test('mensagens parecidas são pegas; diferentes não', () => {
+  assert.equal(parecida('Amanhã às 10h ou às 14h?', 'Amanhã às 10h ou às 14h'), true)
+  assert.equal(parecida('Estou falando com o responsável pela imobiliária?', 'Falo com o responsável pela imobiliária?'), true)
+  assert.equal(parecida('Como está a estrutura digital de vocês hoje?', 'Amanhã às 10h ou às 14h?'), false)
+})
+
+test('a retomada só empurra uma vez, e nunca depois de despedida ou robô alheio', () => {
+  assert.equal(precisaRetomar([{ de: 'robo', texto: 'Boa tarde, tudo bem? Aqui é o assistente da Astro Soluções.' }]), true)
+  assert.equal(precisaRetomar([{ de: 'pessoa', texto: 'Oi' }, { de: 'robo', texto: 'Estou falando com o responsável?' }]), true)
+  assert.equal(precisaRetomar([{ de: 'robo', texto: 'Boa tarde' }, { de: 'robo', texto: 'Falo com o responsável?' }]), false)
+  assert.equal(precisaRetomar([{ de: 'pessoa', texto: 'Não quero nada' }, { de: 'robo', texto: 'Obrigado pelo retorno, fico à disposição.' }]), false)
+  assert.equal(precisaRetomar([{ de: 'pessoa', texto: 'Responderemos em breve. Aguarde.' }, { de: 'robo', texto: 'Olá! Preciso falar com o responsável pela imobiliária. Consegue me passar para uma pessoa?' }]), false)
+  assert.equal(precisaRetomar([{ de: 'robo', texto: 'Oi' }, { de: 'pessoa', texto: 'Oi' }]), false)
 })

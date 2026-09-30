@@ -133,5 +133,10 @@
       "source": "/crm/(.*)",
       "destination": "/crm.html"
     }
-  ]
+  ],
+  "functions": {
+    "api/**/*.js": {
+      "maxDuration": 60
+    }
+  }
 }

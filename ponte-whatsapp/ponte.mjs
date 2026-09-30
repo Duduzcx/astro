@@ -650,4 +650,16 @@ servidor.listen(PORTA, '0.0.0.0', async () => {
     if (!registrada) void registrarNoSite()
   }, 30 * 1000)
   setInterval(() => void registrarNoSite(), 10 * 60 * 1000)
+  /* Quem parou de responder ganha um empurrão do site, uma vez só. A ponte
+     pede a cada dez minutos porque está sempre ligada; a Vercel grátis só
+     tem cron diário. */
+  setInterval(() => {
+    if (estado !== 'conectado') return
+    fetch(`${SITE}/api/crm/ponte/retomar`, { method: 'POST', headers: { apikey: CHAVE }, signal: AbortSignal.timeout(60000) })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.retomadas) registrarEvento(`conversas retomadas pelo site: ${d.retomadas}`)
+      })
+      .catch(() => {})
+  }, 10 * 60 * 1000)
 })

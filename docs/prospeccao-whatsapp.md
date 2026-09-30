@@ -160,6 +160,22 @@ mestre e o histórico.
   robô numa conversa, mande `#pausa` nela; `#robo` religa. O painel também
   pausa e devolve.
 
+## Ritmo: saudação, retomada e anti-repetição
+
+- Cumprimento puro nas duas primeiras falas da pessoa ("Boa tarde", "Oi,
+  tudo bem?") recebe só o cumprimento de volta, sem pergunta comercial; um
+  "tudo bem?" de volta vira "Tudo certo por aqui também! Estou falando com o
+  responsável pela imobiliária?". Isso é do site, não do modelo.
+- Abertura a frio (número digitado no painel) é só "Boa tarde, tudo bem? Aqui
+  é o assistente da Astro Soluções." O assunto vem quando a pessoa responder.
+- Parou de responder? A ponte pede ao site, a cada dez minutos, um empurrão
+  leve nas conversas do robô paradas entre 20 minutos e 2 dias, três por vez,
+  uma vez só por conversa (`POST /api/crm/ponte/retomar`, com a chave).
+- O site compara cada resposta com as três últimas do robô; parecida, pede
+  outra; se insistir, manda uma frase neutra que devolve a vez à pessoa.
+- Vários números de uma vez no painel: um por linha, um pedido por número com
+  pausa de 5 a 9 segundos entre eles, até 30 por rodada.
+
 ## Áudio
 
 Quem responde por áudio é atendido normalmente: a ponte baixa o arquivo e o

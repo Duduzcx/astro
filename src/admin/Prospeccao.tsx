@@ -61,19 +61,34 @@ export function AbaProspeccao() {
   const [numeroNovo, setNumeroNovo] = useState('')
 
   async function assumirNumero() {
-    const numero = numeroNovo.replace(/\D/g, '')
-    if (numero.length < 10) {
-      setAviso('Digite o número com DDD (ex.: 11984680317).')
+    /* Vários números de uma vez (um por linha), um pedido por número com
+       pausa entre eles: rajada de mensagens iguais é o que o WhatsApp pune. */
+    const numeros = Array.from(
+      new Set(
+        numeroNovo
+          .split(/[\n,;]+/)
+          .map((n) => n.replace(/\D/g, ''))
+          .filter((n) => n.length >= 10),
+      ),
+    ).slice(0, 30)
+    if (numeros.length === 0) {
+      setAviso('Digite o número com DDD (ex.: 11984680317), um por linha.')
       return
     }
     setOcupado(true)
     setAviso('')
+    const todos: Resultado[] = []
     try {
-      const r = await pedir('/api/admin/prospeccao', { method: 'POST', body: JSON.stringify({ numero }) })
-      setResultados(r.resultados)
-      const falha = (r.resultados || []).find((x: Resultado) => x.erro)
-      if (falha) setAviso(falha.erro || 'falhou')
-      else setNumeroNovo('')
+      for (let i = 0; i < numeros.length; i += 1) {
+        if (numeros.length > 1) setAviso(`Abordando ${i + 1} de ${numeros.length}…`)
+        const r = await pedir('/api/admin/prospeccao', { method: 'POST', body: JSON.stringify({ numero: numeros[i] }) })
+        todos.push(...((r.resultados || []) as Resultado[]))
+        setResultados([...todos])
+        if (i < numeros.length - 1) await new Promise((fim) => setTimeout(fim, 5000 + Math.random() * 4000))
+      }
+      const falhas = todos.filter((x) => x.erro).length
+      setAviso(falhas ? `${falhas} de ${todos.length} falharam; veja abaixo.` : '')
+      if (!falhas) setNumeroNovo('')
       await carregar()
     } catch (falha) {
       setAviso(mensagemDe(falha))
@@ -367,13 +382,12 @@ export function AbaProspeccao() {
               aborda. Não depende do histórico do aparelho. */}
           {conectado && dados.inteligencia && dados.banco ? (
             <div className="flex w-full items-center gap-2 sm:w-auto">
-              <input
-                type="tel"
-                inputMode="numeric"
+              <textarea
+                rows={2}
                 value={numeroNovo}
                 onChange={(e) => setNumeroNovo(e.target.value)}
-                placeholder="Prospectar um número (DDD + número)"
-                className="min-w-0 flex-1 rounded-full border border-white/12 bg-onyx/60 px-4 py-2 text-[13px] text-ivory outline-none placeholder:text-slate focus:border-[#8db4f5]/50 sm:w-64"
+                placeholder="Números para abordar, um por linha (DDD + número)"
+                className="min-w-0 flex-1 rounded-xl border border-white/12 bg-onyx/60 px-4 py-2 text-[13px] leading-[1.4] text-ivory outline-none placeholder:text-slate focus:border-[#8db4f5]/50 sm:w-72"
               />
               <button
                 type="button"
