@@ -244,3 +244,11 @@ test('pedido de humano e segundo ping', () => {
   assert.equal(precisaSegundoPing([{ de: 'pessoa', texto: 'Interessante' }, convite, { de: 'robo', texto: PING_DE_RETORNO }]), false)
   assert.equal(precisaSegundoPing([{ de: 'pessoa', texto: 'Não quero' }, convite, { de: 'robo', texto: 'Obrigado pelo retorno, fico à disposição.' }]), false)
 })
+
+test('segredoConfere compara em tempo constante e nunca aceita vazio', async () => {
+  const { segredoConfere } = await import('../api/crm/_lib/http.js')
+  assert.equal(segredoConfere('abc', 'abc'), true)
+  assert.equal(segredoConfere('abd', 'abc'), false)
+  assert.equal(segredoConfere('', ''), false)
+  assert.equal(segredoConfere(undefined, 'abc'), false)
+})

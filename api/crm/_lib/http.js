@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto'
 
 
 /** O que a Vercel entrega a uma função em Node: a requisição com query e corpo já lidos. */
