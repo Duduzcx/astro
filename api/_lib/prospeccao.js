@@ -698,10 +698,12 @@ export function linkDoSite() {
 /* Horário comercial em São Paulo: segunda a sábado, 8h às 20h. Abordagem a
    frio e empurrão só dentro dele; responder a quem escreveu vale sempre. */
 export function dentroDoHorario(agora = new Date()) {
-  const partes = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', weekday: 'short', hour: 'numeric', hour12: false }).formatToParts(agora)
-  const dia = partes.find((p) => p.type === 'weekday')?.value || ''
-  const hora = Number(partes.find((p) => p.type === 'hour')?.value || 0) % 24
-  if (dia === 'Sun') return false
+  /* UTC-3 fixo: o Brasil nao tem horario de verao desde 2019, e assim nao
+     depende do ICU do servidor (na Vercel o Intl devolveu a hora em UTC). */
+  const sp = new Date(agora.getTime() - 3 * 3600 * 1000)
+  const dia = sp.getUTCDay()
+  const hora = sp.getUTCHours()
+  if (dia === 0) return false
   return hora >= 8 && hora < 20
 }
 
