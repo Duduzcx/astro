@@ -252,3 +252,24 @@ test('segredoConfere compara em tempo constante e nunca aceita vazio', async () 
   assert.equal(segredoConfere('', ''), false)
   assert.equal(segredoConfere(undefined, 'abc'), false)
 })
+
+test('o robô da imobiliária que varia a frase e sempre oferece "comprar, alugar ou…" é pego em três batidas', () => {
+  const r1 = 'Nosso atendimento é planejado para ser imediato e eficiente. Você deseja comprar, alugar ou tratar de algum assunto administrativo?'
+  const r2 = 'Nosso atendimento é imediato para garantir a melhor experiência ao cliente. Você deseja comprar, alugar ou falar com o administrativo?'
+  const r3 = 'Para assuntos administrativos ou parcerias, favor entrar em contato diretamente com o nosso Administrativo pelo número 5511911223145. Você deseja comprar ou alugar um imóvel?'
+  assert.equal(pareceAutomatica(r1), true)
+  assert.equal(pareceAutomatica(r2), true)
+  assert.equal(pareceAutomatica(r3), true)
+  assert.equal(pareceAutomatica('Qual gargalo? Pode falar comigo.'), false)
+  assert.equal(pareceAutomatica('Pode ser às 14h, obrigado'), false)
+  const conversa = [
+    { de: 'robo', texto: 'Boa tarde' },
+    { de: 'pessoa', texto: r1 },
+    { de: 'robo', texto: 'Olá! Preciso falar com o responsável pela imobiliária. Consegue me passar para uma pessoa?' },
+    { de: 'pessoa', texto: r2 },
+    { de: 'robo', texto: 'Não é sobre imóvel. Pode me passar o contato de quem cuida do comercial ou do marketing?' },
+    { de: 'pessoa', texto: r3 },
+  ]
+  assert.equal(contarAutomaticasSeguidas(conversa), 3)
+  assert.equal(contarAutomaticasSeguidas([...conversa, { de: 'pessoa', texto: 'Oi, aqui é a Carla, do comercial. Pode falar.' }]), 0)
+})

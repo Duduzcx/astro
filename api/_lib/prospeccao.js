@@ -574,7 +574,7 @@ function situacaoDaConversa(conversa) {
    padrão de robô, aviso de horário de atendimento, protocolo. Ou a MESMA
    mensagem repetida (o "responderemos em breve" que volta a cada envio). */
 const AUTOMATICA =
-  /mensagem autom[aá]tica|atendimento autom|resposta autom|assistente virtual|sou (o|a|um|uma) (assistente|bot|rob[oô])|digite (o n[uú]mero|uma op[cç][aã]o|a op[cç][aã]o|\d)|escolha (uma|a) op[cç][aã]o|op[cç][aã]o (desejada|inv[aá]lida)|seja bem[- ]vind|responderemos (em breve|assim que|o mais)|retornaremos (em breve|o mais)|em breve (um|uma|nossa|nosso) (atendente|equipe|consultor|corretor)|hor[aá]rio de (atendimento|funcionamento)|fora do (nosso )?hor[aá]rio|n[uú]mero de protocolo|seu protocolo|n[aã]o (é|e) monitorad|para (falar|continuar|prosseguir)[^.]{0,40}(digite|envie|responda)|aguarde (um momento|que um|enquanto)/i
+  /mensagem autom[aá]tica|atendimento autom|resposta autom|assistente virtual|sou (o|a|um|uma) (assistente|bot|rob[oô])|digite (o n[uú]mero|uma op[cç][aã]o|a op[cç][aã]o|\d)|escolha (uma|a) op[cç][aã]o|op[cç][aã]o (desejada|inv[aá]lida)|seja bem[- ]vind|responderemos (em breve|assim que|o mais)|retornaremos (em breve|o mais)|em breve (um|uma|nossa|nosso) (atendente|equipe|consultor|corretor)|hor[aá]rio de (atendimento|funcionamento)|fora do (nosso )?hor[aá]rio|n[uú]mero de protocolo|seu protocolo|n[aã]o (é|e) monitorad|para (falar|continuar|prosseguir)[^.]{0,40}(digite|envie|responda)|aguarde (um momento|que um|enquanto)|voc[eê] deseja [^?]{0,80}\bou\b[^?]{0,60}\?|deseja (comprar|alugar|vender|falar com)|nosso atendimento [eé] (imediato|planejado|focado|r[aá]pido|automatizado)|favor entrar em contato|entre em contato (diretamente )?(com|pelo)|pelo n[uú]mero \d{8,}|para assuntos administrativos|por nada!? voc[eê] deseja/i
 const LINHA_DE_MENU = /^\s*(\d{1,2}|[a-z])\s*[-.):|]\s*\S/i
 
 /* Num menu automático, a opção que leva a uma pessoa ("3 - Falar com
@@ -607,7 +607,7 @@ export function contarAutomaticasSeguidas(conversa) {
   let n = 0
   for (let i = daPessoa.length - 1; i >= 0; i -= 1) {
     const atual = normalizarFrase(daPessoa[i])
-    const repetida = atual.length > 8 && daPessoa.slice(0, i).some((x) => normalizarFrase(x) === atual)
+    const repetida = atual.length > 8 && daPessoa.slice(0, i).some((x) => parecida(x, daPessoa[i]))
     if (pareceAutomatica(daPessoa[i]) || repetida) n += 1
     else break
   }
@@ -663,9 +663,10 @@ export function dicaDaObjecao(conversa) {
   return ''
 }
 
-const DESPEDIDA = /obrigado pelo retorno|(fico|ficamos|estamos|seguimos) [àa] disposi|encerrar o contato|boa sorte|qualquer coisa (e so|é só) chamar/i
+const DESPEDIDA = /obrigad[oa] pelo (retorno|contato|tempo|papo)|obrigad[oa] pela aten[cç][aã]o|(fico|ficamos|estamos|seguimos) [àa] disposi|encerrar o contato|boa sorte|qualquer coisa (e so|é só) chamar|at[eé] (mais|logo|breve)|tenha um (bom|[oó]timo) dia/i
 
 const PEDIDO_DE_PESSOA = 'Olá! Preciso falar com o responsável pela imobiliária. Consegue me passar para uma pessoa?'
+const PEDIDO_DE_PESSOA_2 = 'Não é sobre imóvel. Pode me passar o contato de quem cuida do comercial ou do marketing?'
 
 /* Tira o que soa a máquina: dois-pontos fora de horário, ponto e vírgula,
    travessão, negrito. "Só para entender: é porque" vira "Só para entender,
@@ -862,7 +863,7 @@ export function pedeHumano(texto) {
 
 /* Teto de respostas do robô por hora para o mesmo número (padrão 8): barra
    loop com robô alheio que escape da detecção e conversa frenética. */
-const RITMO_POR_HORA = Number(process.env.RESPOSTAS_POR_HORA || 8)
+const RITMO_POR_HORA = Number(process.env.RESPOSTAS_POR_HORA || 5)
 async function dentroDoRitmo(leadId) {
   const hora = new Date().toISOString().slice(0, 13)
   const chave = `ritmo_${leadId}`
@@ -881,7 +882,7 @@ export function precisaSegundoPing(conversa) {
   if (falas.length < 3) return false
   const [antes, penultima, ultima] = falas.slice(-3)
   if (ultima?.de !== 'robo' || penultima?.de !== 'robo' || antes?.de !== 'pessoa') return false
-  if (DESPEDIDA.test(String(ultima.texto || '')) || ultima.texto === PEDIDO_DE_PESSOA || ultima.texto === PING_DE_RETORNO) return false
+  if (DESPEDIDA.test(String(ultima.texto || '')) || ultima.texto === PEDIDO_DE_PESSOA || ultima.texto === PEDIDO_DE_PESSOA_2 || ultima.texto === PING_DE_RETORNO) return false
   if (pareceAutomatica(antes.texto)) return false
   return true
 }
@@ -943,7 +944,7 @@ export function parecida(a, b) {
   if (pa.size === 0 || pb.size === 0) return false
   let comuns = 0
   for (const p of pa) if (pb.has(p)) comuns += 1
-  return comuns / (pa.size + pb.size - comuns) >= 0.55
+  return comuns / (pa.size + pb.size - comuns) >= 0.5
 }
 
 /* Quem parou de responder ganha um empurrão leve, UMA vez: a última fala é
@@ -956,7 +957,7 @@ export function precisaRetomar(conversa) {
   if (!ultima || ultima.de !== 'robo') return false
   const anterior = falas[falas.length - 2]
   if (anterior && anterior.de === 'robo') return false
-  if (DESPEDIDA.test(String(ultima.texto || '')) || ultima.texto === PEDIDO_DE_PESSOA) return false
+  if (DESPEDIDA.test(String(ultima.texto || '')) || ultima.texto === PEDIDO_DE_PESSOA || ultima.texto === PEDIDO_DE_PESSOA_2) return false
   if (anterior && pareceAutomatica(anterior.texto)) return false
   return true
 }
@@ -1046,7 +1047,7 @@ async function falarComIACru(lead, conversa) {
   const ultimaDaPessoa = [...falas].reverse().find((f) => f?.de === 'pessoa')?.texto || ''
   if (ultimaFala?.de === 'pessoa' && pareceAutomatica(ultimaDaPessoa)) {
     const opcao = temMenu(ultimaDaPessoa) ? opcaoHumana(ultimaDaPessoa) : ''
-    return opcao || PEDIDO_DE_PESSOA
+    return opcao || (contarAutomaticasSeguidas(falas) >= 2 ? PEDIDO_DE_PESSOA_2 : PEDIDO_DE_PESSOA)
   }
 
   /* Etiqueta: cumprimento puro nas duas primeiras falas da pessoa recebe só
@@ -1104,7 +1105,7 @@ async function falarComIACru(lead, conversa) {
   /* Anti-repetição: igual (ou 70% igual) a uma das três últimas do robô?
      Uma segunda chance pedindo algo diferente; depois, uma frase neutra que
      devolve a vez à pessoa. */
-  const ultimasDoRobo = falas.filter((f) => f?.de === 'robo').slice(-3).map((f) => String(f.texto || ''))
+  const ultimasDoRobo = falas.filter((f) => f?.de === 'robo').slice(-5).map((f) => String(f.texto || ''))
   if (resposta && ultimasDoRobo.some((x) => parecida(x, resposta))) {
     resposta = await responderComIA(
       instrucao + '\n\nATENÇÃO: você ia repetir uma mensagem que já mandou nesta conversa. Escreva algo DIFERENTE, avançando um passo, sem refazer a pergunta anterior.',
@@ -1326,6 +1327,7 @@ export async function webhookProspeccao(evento) {
       await rastro('debug', 'envio falhou', erro?.message || '')
     }
     await marcarProspeccao(lead.id, 'pausado')
+    await avisarDono('Robô do outro lado: conversa pausada', lead, textoDaPessoa)
     return await rastro('robo-alheio', textoDaPessoa, mensagem.telefone)
   }
 
@@ -1356,5 +1358,10 @@ export async function webhookProspeccao(evento) {
     await marcarProspeccao(lead.id, 'pausado')
     await rastro('agendou', textoDaPessoa, mensagem.telefone)
     await avisarDono('Reunião aceita', lead, textoDaPessoa)
+  } else if (DESPEDIDA.test(resposta) && !resposta.includes('?')) {
+    /* O próprio robô se despediu: a conversa acabou para ele. Sem isto, um
+       "por nada" do outro lado reabria tudo. */
+    await marcarProspeccao(lead.id, 'pausado')
+    await rastro('encerrado', 'despedida do robo', mensagem.telefone)
   }
 }
