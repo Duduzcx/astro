@@ -273,7 +273,8 @@ export const INSTRUCAO_PROSPECCAO_PADRAO = [
   '',
   'FECHAMENTO: assim que houver abertura (a pessoa pergunta como funciona, como vocês fariam, quanto custa, ou diz que faz sentido), NÃO volte ao diagnóstico: encaminhe imediatamente ao diretor. Espírito: "Para você não mudar tudo no escuro, o Eduardo preparou uma demonstração de 10 minutos com o sistema rodando. Amanhã às 10h ou às 14h?"',
   '',
-  'JEITO DE ESCREVER: como gente no WhatsApp. Sem dois-pontos, sem ponto e vírgula, sem travessão, sem negrito, sem lista. Frases curtas, uma ideia por frase. Varie o começo (não comece tudo com "Entendo"). Pode usar "pra", "a gente", "tá". Nada de "Confirmado:" ou "Só para entender:".',
+  'JEITO DE ESCREVER: português correto e simples, sem gíria e sem abreviação ("você", "para", "está"), caloroso e sem formalidade. Muita gente mais velha do outro lado: frases curtas, uma ideia por frase, palavras comuns. Sem dois-pontos, ponto e vírgula, travessão, negrito, lista ou emoji. Varie o começo (não comece tudo com "Entendo"). Quando a mensagem tiver duas partes (responder algo e depois perguntar outra coisa), separe em dois balões com uma linha em branco, no máximo dois balões, cada um com uma frase. Nunca empilhe assuntos numa mensagem.',
+  'PERCEPÇÃO: leia o tom da pessoa e adapte. Pessoa mais velha ou confusa, mais paciência e explicação simples. Pergunta fora do roteiro, responda breve e natural e volte ao assunto. Você conduz a venda, mas conversa como gente, com jeito próprio, sem decorar frases.',
   'RITMO E ETIQUETA (anti-afobação): quem manda na velocidade da conversa é o cliente. Se a pessoa só cumprimentou ("Boa tarde", "Tudo bem?"), responda o cumprimento e PARE, sem pergunta comercial. Uma pergunta por vez; espere a resposta antes do próximo passo. Só fale de site, CRM ou automação quando houver abertura real. NUNCA repita uma pergunta ou uma mensagem já enviada: se a pessoa não respondeu, mude a abordagem ou espere.',
   '',
   'Regras que você NUNCA quebra:',
@@ -285,7 +286,7 @@ export const INSTRUCAO_PROSPECCAO_PADRAO = [
   '- Eduardo é o diretor da Astro, do seu lado. NUNCA chame a pessoa com quem você fala de Eduardo nem de nenhum outro nome que ela não tenha dito.',
   '- Nunca mais de uma pergunta por mensagem; nunca mais de duas frases. Nunca seja desrespeitoso, mesmo se a pessoa for.',
   '- Se a mensagem recebida parecer automática (menu numerado, "digite 1", "seja bem-vindo", "responderemos em breve"), não converse com o robô: escolha a opção que leva a uma pessoa ou peça o responsável.',
-  '- Emojis: no máximo um por mensagem, só quando natural (👋 👍 🤝). Nunca emoji de marketing (🚀 🎯 🔥 💰 📢).',
+  '- Nunca use emoji.',
 ].join('\n')
 
 /**
@@ -396,7 +397,7 @@ export function ehDoRobo(texto, conversa) {
   return (Array.isArray(conversa) ? conversa : [])
     .filter((fala) => fala && fala.de === 'robo')
     .slice(-3)
-    .some((fala) => limpar(fala.texto, 800) === alvo)
+    .some((fala) => limpar(fala.texto, 800) === alvo || String(fala.texto || '').split(/\n{2,}/).some((parte) => limpar(parte, 800) === alvo))
 }
 
 /** Um chat da lista do aparelho, resumido para o painel. */
@@ -644,14 +645,21 @@ const PEDIDO_DE_PESSOA = 'Olá! Preciso falar com o responsável pela imobiliár
    travessão, negrito. "Só para entender: é porque" vira "Só para entender,
    é porque"; "10:30" fica como está. */
 export function humanizar(texto) {
-  return String(texto || '')
+  const limpo = String(texto || '')
     .replace(/\*\*/g, '')
-    .replace(/(\D):\s+/g, '$1, ')
-    .replace(/\s*[—–]\s*/g, ', ')
-    .replace(/;\s*/g, ', ')
-    .replace(/,\s*,/g, ',')
-    .replace(/\s+([.!?,])/g, '$1')
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu, '')
+    .replace(/(\D):[ \t]+/g, '$1, ')
+    .replace(/[ \t]*[—–][ \t]*/g, ', ')
+    .replace(/;[ \t]*/g, ', ')
+    .replace(/,[ \t]*,/g, ',')
+    .replace(/[ \t]+([.!?,])/g, '$1')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/ *\n */g, '\n')
     .trim()
+  /* Dois balões no máximo: o que passar disso junta no segundo. */
+  const partes = limpo.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean)
+  if (partes.length <= 2) return partes.join('\n\n')
+  return `${partes[0]}\n\n${partes.slice(1).join(' ')}`
 }
 
 /* O dono escreveu numa conversa do robô: por dez minutos é ele quem atende.
@@ -814,7 +822,7 @@ async function falarComIACru(lead, conversa) {
   if (ultimaFala?.de === 'pessoa' && falasDaPessoa.length <= 2 && ehSaudacao(ultimaDaPessoa)) {
     const t = normalizarFrase(ultimaDaPessoa)
     if (/\b(tudo bem|tudo bom|td bem|td bom|como vai|como voce|como vc|e voce|e vc|e com voce|e com vc|beleza)\b/.test(t)) {
-      return 'Tudo certo por aqui também! Estou falando com o responsável pela imobiliária?'
+      return 'Tudo certo por aqui também!\n\nEstou falando com o responsável pela imobiliária?'
     }
     const jaSeApresentou = falas.some((f) => f?.de === 'robo' && /assistente da astro/i.test(String(f.texto || '')))
     return `${saudacaoDoDia(ultimaDaPessoa)}, tudo bem?${jaSeApresentou ? '' : ' Aqui é o assistente da Astro Soluções.'}`

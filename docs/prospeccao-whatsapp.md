@@ -178,6 +178,17 @@ no primeiro "não" definitivo ou hostilidade; nunca rajada. Para prospecção
 em volume, o caminho é a API oficial do WhatsApp Business (número
 dedicado, modelos aprovados, opt-in), que o site pode passar a usar.
 
+## Tempo de gente e balões
+
+A ponte não responde na hora. Ao receber um pedido de envio ela devolve 202
+e, em segundo plano, espera 3 a 6 segundos ("lendo"), mostra "digitando"
+por um tempo proporcional ao texto (2,5 a 10 segundos) e manda. Uma linha em
+branco na resposta separa balões (até três), com pausa entre eles. Soma-se
+aos 8 segundos em que a ponte junta mensagens seguidas da pessoa. O "tudo
+bem?" de volta sai em dois balões: primeiro "Tudo certo por aqui também!",
+depois "Estou falando com o responsável pela imobiliária?". A instrução pede
+português correto e simples, sem gíria, sem emoji, no máximo dois balões.
+
 ## Mão humana, humanização e limite diário
 
 - Você escreveu numa conversa do robô? Por dez minutos é você quem atende: a

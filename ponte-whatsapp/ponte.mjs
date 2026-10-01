@@ -97,7 +97,7 @@ function registrarEvento(texto) {
    (o WhatsApp só manda o histórico na primeira ligação). */
 const ARQUIVO_LOJA = path.join(DADOS, 'loja.json')
 const POR_CONVERSA = 200
-const VERSAO = '2026-09-30d'
+const VERSAO = '2026-09-30e'
 const loja = { conversas: new Map(), nomes: new Map(), mensagens: new Map() }
 /* Status de entrega, no nome que o WhatsApp usa: 0 erro, 1 pendente (não
    saiu), 2 no servidor, 3 entregue no aparelho, 4 lida, 5 tocada. */
@@ -133,6 +133,35 @@ function lembrarEnviada(info) {
   enviadas.set(id, info.message)
   if (enviadas.size > 500) enviadas.delete(enviadas.keys().next().value)
 }
+/* Envia como uma pessoa: lê antes (3 a 6 s), mostra "digitando" num tempo
+   proporcional ao texto (2,5 a 10 s), manda, e entre balões espera mais um
+   pouco. Uma fila por conversa, para dois pedidos não se cruzarem. O site
+   recebe 202 na hora: a espera acontece aqui, não na função da Vercel. */
+const filasDeEnvio = new Map()
+const pausa = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+async function enviarComoGente(jid, partes) {
+  const anterior = filasDeEnvio.get(jid) || Promise.resolve()
+  const tarefa = anterior.then(async () => {
+    await pausa(3000 + Math.random() * 3000)
+    for (const [i, parte] of partes.entries()) {
+      if (!sock || estado !== 'conectado') return registrarEvento('envio adiado perdido: número não conectado')
+      const digitando = Math.min(10000, Math.max(2500, parte.length * 55))
+      await sock.sendPresenceUpdate('composing', jid).catch(() => {})
+      await pausa(digitando)
+      try {
+        const enviada = await sock.sendMessage(jid, { text: parte })
+        lembrarEnviada(enviada)
+      } catch (erro) {
+        registrarEvento(`envio falhou: ${erro?.message}`)
+      }
+      await sock.sendPresenceUpdate('paused', jid).catch(() => {})
+      if (i < partes.length - 1) await pausa(2500 + Math.random() * 2500)
+    }
+  })
+  filasDeEnvio.set(jid, tarefa.catch(() => {}))
+  await tarefa
+}
+
 function conteudoDaMensagem(key) {
   const id = String(key?.id || '')
   if (!id) return undefined
@@ -640,16 +669,15 @@ async function tratar(req, res) {
       const texto = String(dados?.text || '')
       if (!digitos || !texto) return responder(res, 400, { erro: 'number e text são obrigatórios' })
       const jid = `${digitos}@s.whatsapp.net`
-      /* Conversa de vendedor, não de máquina: mostra "digitando…" por um tempo
-         proporcional ao texto (1,5 s a 4 s) e só então manda. Presença
-         falhando não impede o envio. */
-      const espera = Math.min(4000, Math.max(1500, texto.length * 35))
-      await sock.sendPresenceUpdate('composing', jid).catch(() => {})
-      await new Promise((r) => setTimeout(r, espera))
-      const enviada = await sock.sendMessage(jid, { text: texto })
-      lembrarEnviada(enviada)
-      await sock.sendPresenceUpdate('paused', jid).catch(() => {})
-      return responder(res, 201, { key: enviada?.key || null })
+      /* Linha em branco separa balões (no máximo três). A espera de gente
+         acontece em segundo plano; o site não fica preso. */
+      const partes = texto
+        .split(/\n{2,}/)
+        .map((p) => p.trim())
+        .filter(Boolean)
+        .slice(0, 3)
+      void enviarComoGente(jid, partes)
+      return responder(res, 202, { agendado: true, partes: partes.length })
     }
     if (a === 'chat' && b === 'findChats' && req.method === 'POST') {
       return responder(res, 200, listaDeConversas())

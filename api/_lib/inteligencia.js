@@ -62,6 +62,18 @@ export function limpar(texto, limite = 1200) {
     .slice(0, limite)
 }
 
+/* Como limpar(), mas preserva a linha em branco que separa dois balões:
+   espaços repetidos viram um, três ou mais quebras viram duas. */
+export function limparFalas(texto, limite = 1500) {
+  return String(texto ?? '')
+    .replace(/\r/g, '')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/ *\n */g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .slice(0, limite)
+}
+
 /** A instrução que está valendo: a do painel, ou o padrão de fábrica. */
 export async function instrucaoAtual() {
   const salva = await lerConfig('bot_instrucao', null)
@@ -156,7 +168,7 @@ export async function responderComIA(instrucao, mensagens) {
       : qual === 'groq'
         ? await comGroq(instrucao, mensagens)
         : await comOpenAI(instrucao, mensagens)
-  return limpar(texto, 1500)
+  return limparFalas(texto, 1500)
 }
 
 /**

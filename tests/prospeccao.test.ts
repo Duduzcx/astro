@@ -205,3 +205,16 @@ test('humanizar tira dois-pontos, ponto e vírgula, travessão e negrito, e pres
   assert.equal(humanizar('**Amanhã** às 14h?'), 'Amanhã às 14h?')
   assert.equal(humanizar('Pode ser às 14h.'), 'Pode ser às 14h.')
 })
+
+test('humanizar tira emoji e limita a dois balões, preservando a linha em branco', () => {
+  assert.equal(humanizar('Tudo certo por aqui! 👍\n\nEstou falando com o responsável?'), 'Tudo certo por aqui!\n\nEstou falando com o responsável?')
+  assert.equal(humanizar('Um.\n\nDois.\n\nTrês?'), 'Um.\n\nDois. Três?')
+  assert.equal(humanizar('Obrigado 🤝'), 'Obrigado')
+})
+
+test('o eco de um balão é reconhecido como fala do robô', () => {
+  const conversa = [{ de: 'robo', texto: 'Tudo certo por aqui também!\n\nEstou falando com o responsável pela imobiliária?' }]
+  assert.equal(ehDoRobo('Tudo certo por aqui também!', conversa), true)
+  assert.equal(ehDoRobo('Estou falando com o responsável pela imobiliária?', conversa), true)
+  assert.equal(ehDoRobo('Vou passar o contrato amanhã', conversa), false)
+})
