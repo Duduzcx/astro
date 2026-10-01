@@ -160,6 +160,19 @@ mestre e o histórico.
   robô numa conversa, mande `#pausa` nela; `#robo` religa. O painel também
   pausa e devolve.
 
+## Transbordo, alertas, ritmo e segundo ping
+
+- "Me liga", "quero falar com uma pessoa", "urgente": o robô responde uma
+  frase ("Vou passar para o Eduardo…"), pausa o lead e avisa o dono.
+- Alertas: `ALERTA_WEBHOOK_URL` na Vercel (webhook do Discord ou qualquer
+  URL que aceite `{ content }`). Dispara em reunião aceita, pedido de
+  humano e hostilidade, com nome, contato, última mensagem e link do painel.
+- Ritmo: no máximo 8 respostas por hora para o mesmo número
+  (`RESPOSTAS_POR_HORA`); passou disso, silêncio até a próxima hora.
+- Segundo ping: entre 1 e 3 dias sem resposta depois do empurrão, uma vez,
+  "Sei que a rotina na imobiliária é corrida. Conseguiu dar uma olhada na
+  mensagem acima?". Só no modo ativo, em horário comercial.
+
 ## Travas da abordagem a frio (proteção do número)
 
 Toda abordagem a frio passa por `podeAbordarAFrio`, nesta ordem: modo

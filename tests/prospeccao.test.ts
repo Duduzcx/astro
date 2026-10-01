@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { GATILHO_PADRAO, dentroDoHorario, humanizar, aceitouHorario, bateGatilho, comandoDoDono, contarAutomaticasSeguidas, contarRecusas, deveEncerrar, dicaDaObjecao, ehDoRobo, ehHostil, ehSaudacao, falasDoHistorico, opcaoHumana, parecida, pareceAutomatica, precisaRetomar, resumoDoChat, telefoneDoJid, temMenu } from '../api/_lib/prospeccao.js'
+import { GATILHO_PADRAO, PING_DE_RETORNO, dentroDoHorario, humanizar, pedeHumano, precisaSegundoPing, aceitouHorario, bateGatilho, comandoDoDono, contarAutomaticasSeguidas, contarRecusas, deveEncerrar, dicaDaObjecao, ehDoRobo, ehHostil, ehSaudacao, falasDoHistorico, opcaoHumana, parecida, pareceAutomatica, precisaRetomar, resumoDoChat, telefoneDoJid, temMenu } from '../api/_lib/prospeccao.js'
 
 const registro = (texto: string, fromMe: boolean, quando: number, extra: Record<string, unknown> = {}) => ({
   key: { remoteJid: '5511999990000@s.whatsapp.net', fromMe, id: `m${quando}` },
@@ -231,4 +231,16 @@ test('horário comercial em São Paulo: segunda a sábado, 8h às 20h', () => {
   assert.equal(dentroDoHorario(new Date('2026-10-01T01:00:00.000Z')), false) // quarta 22h
   assert.equal(dentroDoHorario(new Date('2026-10-04T15:00:00.000Z')), false) // domingo
   assert.equal(dentroDoHorario(new Date('2026-10-03T13:00:00.000Z')), true) // sábado 10h
+})
+
+test('pedido de humano e segundo ping', () => {
+  assert.equal(pedeHumano('Me liga agora que é mais fácil'), true)
+  assert.equal(pedeHumano('Quero falar com uma pessoa'), true)
+  assert.equal(pedeHumano('Qual gargalo?'), false)
+  const convite = { de: 'robo', texto: 'O Eduardo te mostra em 10 minutos. Amanhã às 10h ou às 14h?' }
+  const empurrao = { de: 'robo', texto: 'Conseguiu ver? Amanhã às 10h ou às 14h?' }
+  assert.equal(precisaSegundoPing([{ de: 'pessoa', texto: 'Interessante' }, convite, empurrao]), true)
+  assert.equal(precisaSegundoPing([{ de: 'pessoa', texto: 'Interessante' }, convite]), false)
+  assert.equal(precisaSegundoPing([{ de: 'pessoa', texto: 'Interessante' }, convite, { de: 'robo', texto: PING_DE_RETORNO }]), false)
+  assert.equal(precisaSegundoPing([{ de: 'pessoa', texto: 'Não quero' }, convite, { de: 'robo', texto: 'Obrigado pelo retorno, fico à disposição.' }]), false)
 })

@@ -793,6 +793,65 @@ export async function podeAbordarAFrio(numeroCru) {
   return { jid: `${d}@s.whatsapp.net` }
 }
 
+/**
+ * Alerta para o dono (Discord ou qualquer webhook que aceite { content }).
+ * ALERTA_WEBHOOK_URL na Vercel liga; sem ela, nada acontece. Dispara quando
+ * a reunião é aceita, quando a pessoa pede uma pessoa ou ligação, e em
+ * hostilidade. Nunca derruba o atendimento se falhar.
+ */
+export async function avisarDono(titulo, lead, detalhe = '') {
+  const url = process.env.ALERTA_WEBHOOK_URL
+  if (!url) return false
+  const nome = lead?.nome && !/^\+?[\d\s()-]{8,}$/.test(String(lead.nome)) ? lead.nome : ''
+  const painel = `${linkDoSite()}/admin`
+  const content = [`**${titulo}**`, nome ? `Nome: ${nome}` : '', `Contato: ${lead?.contato || ''}`, detalhe ? `Última mensagem: ${limpar(detalhe, 300)}` : '', `Painel: ${painel}`]
+    .filter(Boolean)
+    .join('\n')
+  try {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+      signal: AbortSignal.timeout(8000),
+    })
+    return r.ok
+  } catch {
+    return false
+  }
+}
+
+/* Pedido explícito de gente ou de ligação: o robô para e avisa. */
+const PEDE_HUMANO = /\b(me liga|liga pra mim|liga para mim|pode me ligar|me ligue|quero falar com (uma pessoa|alguem|alguém|o eduardo|um humano|um atendente|o dono|o responsavel|o responsável)|falar com uma pessoa|é urgente|e urgente|urgente)\b/i
+export function pedeHumano(texto) {
+  return PEDE_HUMANO.test(String(texto || ''))
+}
+
+/* Teto de respostas do robô por hora para o mesmo número (padrão 8): barra
+   loop com robô alheio que escape da detecção e conversa frenética. */
+const RITMO_POR_HORA = Number(process.env.RESPOSTAS_POR_HORA || 8)
+async function dentroDoRitmo(leadId) {
+  const hora = new Date().toISOString().slice(0, 13)
+  const chave = `ritmo_${leadId}`
+  const atual = await lerConfig(chave, null)
+  const n = atual && atual.hora === hora ? Number(atual.n || 0) + 1 : 1
+  await gravarConfig(chave, { hora, n })
+  return n <= RITMO_POR_HORA
+}
+
+/* Segundo ping, um dia depois: a pessoa recebeu o convite (ou o empurrão) e
+   sumiu. Vale uma vez, só quando as duas últimas falas são do robô e antes
+   delas a pessoa falou. Depois disso, silêncio. */
+export const PING_DE_RETORNO = 'Sei que a rotina na imobiliária é corrida. Conseguiu dar uma olhada na mensagem acima?'
+export function precisaSegundoPing(conversa) {
+  const falas = paraArray(conversa)
+  if (falas.length < 3) return false
+  const [antes, penultima, ultima] = falas.slice(-3)
+  if (ultima?.de !== 'robo' || penultima?.de !== 'robo' || antes?.de !== 'pessoa') return false
+  if (DESPEDIDA.test(String(ultima.texto || '')) || ultima.texto === PEDIDO_DE_PESSOA || ultima.texto === PING_DE_RETORNO) return false
+  if (pareceAutomatica(antes.texto)) return false
+  return true
+}
+
 const ABORDAGENS_PADRAO = 10
 export async function dentroDoLimiteDeAbordagens() {
   if (!temBanco()) return true
@@ -903,6 +962,27 @@ export async function retomarConversas() {
       retomadas += 1
     } catch (erro) {
       await registrarLog({ canal: 'prospeccao', de: telefone, entrada: '(retomada)', saida: String(erro?.message || '').slice(0, 90), modo: 'debug' }).catch(() => {})
+    }
+  }
+  /* Segundo ping: um dia a três dias sem resposta depois do empurrão. */
+  const sumidos = await s`
+    SELECT * FROM leads
+    WHERE prospeccao = 'bot' AND canal = 'prospeccao'
+      AND atualizado_em < now() - interval '24 hours'
+      AND atualizado_em > now() - interval '3 days'
+    ORDER BY atualizado_em ASC LIMIT 3`
+  for (const linha of sumidos) {
+    const conversa = paraArray(linha.conversa)
+    if (!precisaSegundoPing(conversa)) continue
+    if (await maoHumanaAtiva(linha.id)) continue
+    const telefone = String(linha.contato || '')
+    try {
+      await evo.enviarTexto(instanciaPessoal(), telefone, PING_DE_RETORNO)
+      await acrescentarFala(linha.id, { de: 'robo', texto: PING_DE_RETORNO })
+      await registrarLog({ canal: 'prospeccao', de: telefone, entrada: '(segundo ping)', saida: PING_DE_RETORNO, modo: 'retomada' }).catch(() => {})
+      retomadas += 1
+    } catch (erro) {
+      await registrarLog({ canal: 'prospeccao', de: telefone, entrada: '(segundo ping)', saida: String(erro?.message || '').slice(0, 90), modo: 'debug' }).catch(() => {})
     }
   }
   return { retomadas }
@@ -1179,6 +1259,25 @@ export async function webhookProspeccao(evento) {
   const atual = await acrescentarFala(lead.id, { de: 'pessoa', texto: textoDaPessoa })
   if (await maoHumanaAtiva(lead.id)) return await rastro('humano-ativo', textoDaPessoa, mensagem.telefone)
 
+  /* "Me liga", "quero falar com uma pessoa", "urgente": o robô responde uma
+     frase, para, e avisa o dono. Transbordo. */
+  if (pedeHumano(textoDaPessoa)) {
+    const aviso = 'Claro. Vou passar para o Eduardo agora e ele entra em contato com você.'
+    try {
+      const evo = await evolucaoDaProspeccao()
+      await evo?.enviarTexto(instanciaPessoal(), mensagem.telefone, aviso)
+      await acrescentarFala(lead.id, { de: 'robo', texto: aviso })
+    } catch (erro) {
+      await rastro('debug', 'envio falhou', erro?.message || '')
+    }
+    await marcarProspeccao(lead.id, 'pausado')
+    await avisarDono('Pessoa pediu contato humano', lead, textoDaPessoa)
+    return await rastro('humano-pedido', textoDaPessoa, mensagem.telefone)
+  }
+
+  /* Mais de oito respostas na mesma hora para o mesmo número: silêncio. */
+  if (!(await dentroDoRitmo(lead.id))) return await rastro('ritmo', textoDaPessoa, mensagem.telefone)
+
   /* Robô do outro lado: três mensagens automáticas seguidas sem uma pessoa
      aparecer, e o robô deixa um recado e para. Senão vira conversa sem fim.
      Nas duas primeiras, a IA tenta chegar a uma pessoa (dica da objeção). */
@@ -1215,10 +1314,12 @@ export async function webhookProspeccao(evento) {
     await marcarProspeccao(lead.id, 'pausado')
     await marcarOptOut(mensagem.telefone)
     await rastro('encerrado', textoDaPessoa, mensagem.telefone)
+    if (ehHostil(textoDaPessoa)) await avisarDono('Conversa encerrada por hostilidade', lead, textoDaPessoa)
   } else if (aceitouHorario(textoDaPessoa)) {
     /* Reunião aceita: o robô confirmou e sai; daqui em diante é o Eduardo,
        pelo celular. "#robo" devolve ao robô se precisar. */
     await marcarProspeccao(lead.id, 'pausado')
     await rastro('agendou', textoDaPessoa, mensagem.telefone)
+    await avisarDono('Reunião aceita', lead, textoDaPessoa)
   }
 }
