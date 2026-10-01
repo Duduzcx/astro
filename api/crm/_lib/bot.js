@@ -3,7 +3,7 @@ import { processar } from './bot/motor.js'
 import { lerMensagemDoWebhook } from './evolution.js'
 import { agenda, evolution, faq, supabaseAdmin, tokenDoWebhook } from './ambiente.js'
 
-import { corpo, ErroHttp, primeiro,                    } from './http.js'
+import { corpo, ErroHttp, primeiro, segredoConfere } from './http.js'
 import { canalRegistrador, criarRepo, registrarMensagem } from './repo.js'
 import { clinicaPorInstancia } from './sessao.js'
 import { instanciaPessoal, webhookProspeccao } from '../../_lib/prospeccao.js'
@@ -50,7 +50,7 @@ export async function webhookEvolution(req     , res     , instancia        ) {
   const tokenEsperado = tokenDoWebhook()
   const chave = String(req.headers.apikey || '')
   const token = primeiro(req.query.token)
-  const autorizado = (chaveEsperada && chave === chaveEsperada) || (tokenEsperado && token === tokenEsperado)
+  const autorizado = segredoConfere(chave, chaveEsperada) || segredoConfere(token, tokenEsperado)
   if (!autorizado) return res.status(401).json({ erro: 'não autorizado' })
 
   const evento = await corpo(req)

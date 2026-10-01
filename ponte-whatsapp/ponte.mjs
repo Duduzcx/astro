@@ -24,6 +24,7 @@
 import fs from 'node:fs'
 import http from 'node:http'
 import path from 'node:path'
+import { timingSafeEqual } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import makeWASocket, {
   Browsers,
@@ -97,7 +98,7 @@ function registrarEvento(texto) {
    (o WhatsApp só manda o histórico na primeira ligação). */
 const ARQUIVO_LOJA = path.join(DADOS, 'loja.json')
 const POR_CONVERSA = 200
-const VERSAO = '2026-09-30f'
+const VERSAO = '2026-09-30g'
 const loja = { conversas: new Map(), nomes: new Map(), mensagens: new Map() }
 /* Status de entrega, no nome que o WhatsApp usa: 0 erro, 1 pendente (não
    saiu), 2 no servidor, 3 entregue no aparelho, 4 lida, 5 tocada. */
@@ -405,7 +406,7 @@ async function ligar() {
         qrAtual = null
         estado = 'conectado'
         meuNumero = `+${String(sock.user?.id || '').split('@')[0].split(':')[0].replace(/\D/g, '')}`
-        registrarEvento(`conectado como ${meuNumero}`)
+        registrarEvento(`conectado como …${String(meuNumero).slice(-4)}`)
         /* Puxa o estado do app (a lista de conversas e contatos) do telefone,
            já que o pacote de histórico automático não vem nesta conta. Cada
            faixa que volta vira `messaging-history.set`. Falhar não atrapalha. */
@@ -584,13 +585,18 @@ const responder = (res, codigo, dados) => {
   res.end(JSON.stringify(dados))
 }
 
+function chaveConfere(recebida) {
+  const a = Buffer.from(String(recebida || ''))
+  const b = Buffer.from(CHAVE)
+  if (!CHAVE || a.length !== b.length) return false
+  return timingSafeEqual(a, b)
+}
+
 async function tratar(req, res) {
   const url = new URL(req.url || '/', 'http://ponte')
   const partes = url.pathname.split('/').filter(Boolean)
-  if (partes.length === 0) {
-    return responder(res, 200, { ok: true, ponte: 'astro', estado, numero: meuNumero, publica: urlPublica || null })
-  }
-  if (String(req.headers.apikey || '') !== CHAVE) return responder(res, 401, { erro: 'chave inválida' })
+  if (partes.length === 0) return responder(res, 200, { ok: true, ponte: 'astro' })
+  if (!chaveConfere(req.headers.apikey)) return responder(res, 401, { erro: 'chave inválida' })
 
   const [a, b] = partes
   try {

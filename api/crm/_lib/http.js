@@ -60,3 +60,15 @@ export function numeroOuNulo(valor         )                {
 export function primeiro(valor                               )         {
   return Array.isArray(valor) ? valor[0] || '' : valor || ''
 }
+
+/**
+ * Compara um segredo recebido com o esperado em tempo constante: a
+ * comparação com !== vaza, pelo tempo de resposta, quantos caracteres
+ * iniciais acertaram. Vazio nunca confere.
+ */
+export function segredoConfere(recebido, esperado) {
+  const a = Buffer.from(String(recebido || ''))
+  const b = Buffer.from(String(esperado || ''))
+  if (!b.length || a.length !== b.length) return false
+  return timingSafeEqual(a, b)
+}
