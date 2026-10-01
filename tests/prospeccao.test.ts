@@ -218,3 +218,10 @@ test('o eco de um balão é reconhecido como fala do robô', () => {
   assert.equal(ehDoRobo('Estou falando com o responsável pela imobiliária?', conversa), true)
   assert.equal(ehDoRobo('Vou passar o contrato amanhã', conversa), false)
 })
+
+test('humanizar deixa uma pergunta só e a dica barra fatos inventados sobre a empresa', () => {
+  assert.equal(humanizar('Sim, somos de São Paulo. Como está a estrutura? O site funciona bem?'), 'Sim, somos de São Paulo. Como está a estrutura?')
+  assert.equal(humanizar('Tudo certo por aqui!\n\nEstou falando com o responsável?'), 'Tudo certo por aqui!\n\nEstou falando com o responsável?')
+  assert.match(dicaDaObjecao([{ de: 'pessoa', texto: 'Vocês são de São Paulo? Atendem Campinas também?' }]), /fato sobre a empresa/)
+  assert.match(dicaDaObjecao([{ de: 'pessoa', texto: 'Quantos clientes vocês têm?' }]), /fato sobre a empresa/)
+})

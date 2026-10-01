@@ -617,6 +617,9 @@ export function dicaDaObjecao(conversa) {
   if (/\b(qual|que|quais) (gargalo|problema|falha|erro)s?\b|\bque gargalo\b|\b(pode|podem) falar\b|\bme (conta|diz|fala)\b/.test(t) && !/\bnao\b/.test(t)) {
     return 'A pessoa perguntou qual é o gargalo. Diga em uma frase, sem inventar nada sobre o sistema dela: "Quem chama vocês no WhatsApp com o corretor em visita, à noite ou no fim de semana fica sem resposta, esfria e vai pro concorrente." Depois emende UMA pergunta curta, de ate dez palavras, sobre como eles atendem esses contatos hoje. Tudo em no maximo 30 palavras.'
   }
+  if (/\b(sao de onde|de onde (sao|voces sao|e voce)|onde (ficam|fica|voces ficam|e a empresa)|atendem (em|aqui|a regiao|campinas|interior|minha cidade)|voces sao de|qual cidade|que cidade|quantos clientes|quem (ja )?usa|tem cliente|cnpj|endereco)\b/.test(t)) {
+    return 'A pessoa perguntou um fato sobre a empresa (cidade, região atendida, clientes, endereço). NÃO afirme nada disso: você não sabe. Diga em uma frase que o Eduardo confirma esse detalhe na conversa com ela, e siga com UMA pergunta curta de diagnóstico.'
+  }
   if (aceitouHorario(bruto)) {
     return 'A pessoa ACEITOU um horário: confirme dia e hora em uma frase, agradeça no masculino e diga que o Eduardo confirma com ela antes. Nenhuma pergunta, nenhuma proposta nova, nenhum link.'
   }
@@ -657,8 +660,12 @@ export function humanizar(texto) {
     .replace(/[ \t]{2,}/g, ' ')
     .replace(/ *\n */g, '\n')
     .trim()
+  /* Uma pergunta por mensagem, garantido: a segunda interrogação em diante
+     cai fora (quase sempre é a mesma pergunta dita de outro jeito). */
+  const primeira = limpo.indexOf('?')
+  const umaPergunta = primeira >= 0 && limpo.indexOf('?', primeira + 1) >= 0 ? limpo.slice(0, primeira + 1).trim() : limpo
   /* Dois balões no máximo: o que passar disso junta no segundo. */
-  const partes = limpo.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean)
+  const partes = umaPergunta.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean)
   if (partes.length <= 2) return partes.join('\n\n')
   return `${partes[0]}\n\n${partes.slice(1).join(' ')}`
 }
