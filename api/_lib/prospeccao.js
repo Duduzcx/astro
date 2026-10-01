@@ -1300,7 +1300,11 @@ export async function webhookProspeccao(evento) {
   }
 
   if (!lead) {
-    const prospecto = !mensagem.deMim && !mensagem.contatoSalvo && mensagem.jaFalamos
+    /* Lead automatico so quando ligado de proposito (prospeccao_auto_lead =
+       'sim') e com a ponte informando a agenda. Sem isso, amigo que respondeu
+       a um "boa tarde" viraria prospecto. Padrao: desligado. */
+    const autoLead = (await lerConfig('prospeccao_auto_lead', null)) === 'sim'
+    const prospecto = autoLead && !mensagem.deMim && mensagem.contatoSalvo === false && mensagem.jaFalamos
     if (!prospecto) return await rastro('debug', `lead nao achado: ${mensagem.telefone}`, mensagem.contatoSalvo ? 'contato salvo' : mensagem.texto)
     if (await pediuParaNaoContatar(mensagem.telefone)) return await rastro('debug', 'opt-out', mensagem.telefone)
     lead = await criarLead({
