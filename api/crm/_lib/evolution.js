@@ -164,6 +164,9 @@ export function lerMensagemDoWebhook(evento         )                           
     deMim: Boolean(chave.fromMe),
     /* Áudio: a ponte manda o arquivo em base64 junto do evento. */
     temAudio: Boolean(audio),
+    /* A ponte diz se a pessoa está salva na agenda e se o dono já falou nesta conversa. */
+    contatoSalvo: Boolean(dados.contatoSalvo),
+    jaFalamos: Boolean(dados.jaFalamos),
     audio: dados.audioBase64 ? { base64: String(dados.audioBase64), mime: String(dados.audioMime || audio?.mimetype || 'audio/ogg') } : null,
   }
 }

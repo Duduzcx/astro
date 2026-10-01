@@ -160,6 +160,21 @@ mestre e o histórico.
   robô numa conversa, mande `#pausa` nela; `#robo` religa. O painel também
   pausa e devolve.
 
+## Contato salvo, lead automático e indicação
+
+- **Regra do contato salvo**: a ponte sabe quem está na agenda do celular
+  (contato com nome, não só apelido de perfil) e manda isso junto de cada
+  mensagem. O robô só conversa com quem **não** está salvo: a frase gatilho
+  não vale para contato salvo, e a recuperação pula contatos salvos. Quem
+  você assumiu explicitamente pelo painel continua atendido.
+- **Lead automático**: pessoa não salva que responde a uma conversa que você
+  abriu pelo celular vira lead do robô na hora, mesmo sem gatilho. É o que
+  cobre as respostas de ontem.
+- **Indicação**: quando o robô alheio diz "fale com fulano no número X", a
+  conversa atual pausa e o robô abre conversa com o indicado, com as travas
+  da abordagem a frio (horário, limite diário, opt-out, tem WhatsApp), e
+  avisa você.
+
 ## Respostas que chegaram com a ponte fora do ar
 
 Depois de um pareamento novo, as mensagens recebidas enquanto a ponte estava

@@ -887,6 +887,58 @@ export function precisaSegundoPing(conversa) {
   return true
 }
 
+/* Um número de telefone brasileiro dentro de um texto ("pelo número
+   5511911223145", "(11) 91122-3145"), diferente do número de quem escreveu. */
+export function numeroIndicado(texto, telefoneDeQuemEscreveu = '') {
+  const proprio = String(telefoneDeQuemEscreveu).replace(/\D/g, '')
+  const achados = String(texto || '').match(/(?:\+?55\s?)?\(?\d{2}\)?\s?\d{4,5}[-\s]?\d{4}\b/g) || []
+  for (const bruto of achados) {
+    let d = bruto.replace(/\D/g, '')
+    if (d.length === 10 || d.length === 11) d = `55${d}`
+    if (d.length < 12 || d.length > 13) continue
+    if (d === proprio || (proprio && proprio.endsWith(d.slice(-8)))) continue
+    return d
+  }
+  return ''
+}
+
+/**
+ * Abre conversa com quem o atendimento automático indicou. Mesmas travas da
+ * abordagem a frio, menos o modo (a indicação veio da própria empresa).
+ */
+export async function prospectarIndicado(numero, origem) {
+  if (await quarentenaAte()) return { erro: 'em quarentena' }
+  if (!dentroDoHorario()) return { erro: 'fora do horário comercial' }
+  if (await pediuParaNaoContatar(numero)) return { erro: 'opt-out' }
+  if (await acharLeadPorContato(`+${numero}`)) return { erro: 'já é lead' }
+  if ((await existeNoWhatsApp(numero)) === false) return { erro: 'sem WhatsApp' }
+  if (!(await dentroDoLimiteDeAbordagens())) return { erro: 'limite diário' }
+  const evo = await evolucaoDaProspeccao()
+  if (!evo) return { erro: 'sem ponte' }
+  const nomeOrigem = origem?.nome && !/^\+?[\d\s()-]{8,}$/.test(String(origem.nome)) ? String(origem.nome) : ''
+  const novo = await criarLead({
+    nome: '',
+    contato: `+${numero}`,
+    canal: 'prospeccao',
+    necessidade: 'A definir',
+    resumo: `Indicado pelo atendimento automático de ${nomeOrigem || origem?.contato || 'uma imobiliária'}.`,
+    conversa: [],
+  })
+  const abertura = humanizar(
+    `${saudacaoDoDia()}, tudo bem? Aqui é o assistente da Astro Soluções. O atendimento ${nomeOrigem ? `da ${nomeOrigem}` : 'da imobiliária'} indicou você como a pessoa certa para falar.\n\nPosso te explicar em duas linhas o que a gente faz?`,
+  )
+  try {
+    await evo.enviarTexto(instanciaPessoal(), `+${numero}`, abertura)
+  } catch (erro) {
+    return { erro: `envio falhou: ${erro?.message || ''}` }
+  }
+  await marcarProspeccao(novo.id, 'bot')
+  await acrescentarFala(novo.id, { de: 'robo', texto: abertura })
+  await registrarLog({ canal: 'prospeccao', de: `+${numero}`, entrada: '(indicação)', saida: abertura, modo: 'ia' }).catch(() => {})
+  await avisarDono('Indicação recebida: novo contato abordado', { ...novo, contato: `+${numero}` }, `indicado por ${nomeOrigem || origem?.contato || ''}`)
+  return { ok: true, lead: novo.id }
+}
+
 const ABORDAGENS_PADRAO = 10
 export async function dentroDoLimiteDeAbordagens() {
   if (!temBanco()) return true
@@ -1229,6 +1281,7 @@ export async function webhookProspeccao(evento) {
      mensagem como a primeira fala dele e NÃO manda nada agora: responde
      quando a pessoa replicar. O eco de uma mensagem do próprio robô que por
      acaso contenha a frase não conta. */
+  if (mensagem.deMim && mensagem.contatoSalvo && !lead) return await rastro('contato-salvo', 'gatilho ignorado', mensagem.telefone)
   if (mensagem.deMim && !ehDoRobo(mensagem.texto, lead?.conversa) && bateGatilho(mensagem.texto, await gatilhoDeProspeccao())) {
     if (mensagem.id && !(await inedita(mensagem.id))) return await rastro('debug', `duplicada ${mensagem.id}`, mensagem.telefone)
     if (!lead) {
@@ -1246,7 +1299,22 @@ export async function webhookProspeccao(evento) {
     return await rastro('gatilho', mensagem.texto, mensagem.telefone)
   }
 
-  if (!lead) return await rastro('debug', `lead nao achado: ${mensagem.telefone}`, mensagem.texto)
+  if (!lead) {
+    const prospecto = !mensagem.deMim && !mensagem.contatoSalvo && mensagem.jaFalamos
+    if (!prospecto) return await rastro('debug', `lead nao achado: ${mensagem.telefone}`, mensagem.contatoSalvo ? 'contato salvo' : mensagem.texto)
+    if (await pediuParaNaoContatar(mensagem.telefone)) return await rastro('debug', 'opt-out', mensagem.telefone)
+    lead = await criarLead({
+      nome: mensagem.nomeExibido || '',
+      contato: mensagem.telefone,
+      canal: 'prospeccao',
+      necessidade: 'A definir',
+      resumo: 'Respondeu a uma conversa aberta pelo celular; contato não salvo na agenda, o robô assumiu.',
+      conversa: [],
+    })
+    await marcarProspeccao(lead.id, 'bot')
+    lead = { ...lead, prospeccao: 'bot', conversa: [] }
+    await rastro('lead-novo', mensagem.nomeExibido || '', mensagem.telefone)
+  }
   if (lead.prospeccao !== 'bot') return await rastro('debug', `lead ${lead.id} prospeccao=${lead.prospeccao}`, mensagem.telefone)
   if (mensagem.id && !(await inedita(mensagem.id))) return await rastro('debug', `duplicada ${mensagem.id}`, mensagem.telefone)
 
@@ -1294,6 +1362,16 @@ export async function webhookProspeccao(evento) {
   }
   const atual = await acrescentarFala(lead.id, { de: 'pessoa', texto: textoDaPessoa })
   if (await maoHumanaAtiva(lead.id)) return await rastro('humano-ativo', textoDaPessoa, mensagem.telefone)
+
+  /* Robô alheio que indica outro número ("favor entrar em contato pelo
+     número…"): esta conversa para, e o robô abre conversa com o indicado,
+     dentro das travas (horário, limite diário, opt-out, tem WhatsApp). */
+  const indicado = numeroIndicado(textoDaPessoa, mensagem.telefone)
+  if (indicado && pareceAutomatica(textoDaPessoa)) {
+    const resultado = await prospectarIndicado(indicado, lead)
+    await marcarProspeccao(lead.id, 'pausado')
+    return await rastro('indicado', resultado.erro || 'abordado', indicado)
+  }
 
   /* "Me liga", "quero falar com uma pessoa", "urgente": o robô responde uma
      frase, para, e avisa o dono. Transbordo. */

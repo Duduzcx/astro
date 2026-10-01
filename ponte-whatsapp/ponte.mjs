@@ -98,8 +98,35 @@ function registrarEvento(texto) {
    (o WhatsApp só manda o histórico na primeira ligação). */
 const ARQUIVO_LOJA = path.join(DADOS, 'loja.json')
 const POR_CONVERSA = 200
-const VERSAO = '2026-10-01c'
-const loja = { conversas: new Map(), nomes: new Map(), mensagens: new Map(), recuperadas: new Set() }
+const VERSAO = '2026-10-01d'
+const loja = { conversas: new Map(), nomes: new Map(), mensagens: new Map(), recuperadas: new Set(), salvos: new Set() }
+
+/* Contatos salvos na agenda do celular (têm "name", não só o apelido do
+   perfil). O robô só conversa com quem NÃO está salvo: amigo, família e
+   cliente antigo ficam de fora por definição. */
+function marcarSalvos(lista) {
+  let mudou = false
+  for (const c of lista || []) {
+    if (!c?.name) continue
+    const jid = jidDePessoa({ remoteJid: String(c.id || '') }) || String(c.id || '')
+    if (jid && !loja.salvos.has(jid)) {
+      loja.salvos.add(jid)
+      mudou = true
+    }
+  }
+  if (mudou) agendarGravacao()
+}
+
+/* O que vai junto de cada mensagem encaminhada: a pessoa está salva na
+   agenda? Já houve mensagem do dono nesta conversa? */
+function comContexto(plana) {
+  const jid = String(plana?.key?.remoteJid || '')
+  return {
+    ...plana,
+    contatoSalvo: loja.salvos.has(jid),
+    jaFalamos: (loja.mensagens.get(jid) || []).some((m) => m?.key?.fromMe),
+  }
+}
 /* Status de entrega, no nome que o WhatsApp usa: 0 erro, 1 pendente (não
    saiu), 2 no servidor, 3 entregue no aparelho, 4 lida, 5 tocada. */
 const STATUS = ['ERRO', 'PENDENTE', 'SERVIDOR', 'ENTREGUE', 'LIDA', 'TOCADA']
@@ -254,6 +281,7 @@ function agendarGravacao() {
       nomes: [...loja.nomes.entries()],
       mensagens: Object.fromEntries(loja.mensagens),
       recuperadas: [...loja.recuperadas].slice(-500),
+      salvos: [...loja.salvos],
     }
     fs.writeFile(ARQUIVO_LOJA, JSON.stringify(dados), () => undefined)
   }, 2000)
@@ -267,6 +295,7 @@ function carregarLoja() {
     for (const [jid, nome] of dados.nomes || []) loja.nomes.set(jid, nome)
     for (const [jid, lista] of Object.entries(dados.mensagens || {})) loja.mensagens.set(jid, lista)
     for (const id of dados.recuperadas || []) loja.recuperadas.add(id)
+    for (const jid of dados.salvos || []) loja.salvos.add(jid)
   } catch {
     console.warn('loja.json ilegível; começando do zero')
   }
@@ -307,6 +336,7 @@ async function recuperarPendentes() {
     const pendentes = []
     for (const [jid, lista] of loja.mensagens) {
       if (!jid.endsWith('@s.whatsapp.net') || !Array.isArray(lista) || lista.length === 0) continue
+      if (loja.salvos.has(jid)) continue
       const ordenada = [...lista].sort((a, b) => numero(a?.messageTimestamp) - numero(b?.messageTimestamp))
       const ultima = ordenada[ordenada.length - 1]
       if (!ultima?.key || ultima.key.fromMe) continue
@@ -327,7 +357,7 @@ async function recuperarPendentes() {
       if (estado !== 'conectado' || !horarioComercialSP()) break
       loja.recuperadas.add(p.ultima.key.id)
       agendarGravacao()
-      await avisarSite('messages.upsert', { ...p.ultima, message: { conversation: p.texto } })
+      await avisarSite('messages.upsert', comContexto({ ...p.ultima, message: { conversation: p.texto } }))
       feitas += 1
       await pausa(75000)
     }
@@ -350,7 +380,7 @@ async function encaminharAoSite(m, plana) {
     clearTimeout(fila.temporizador)
     fila.temporizador = setTimeout(() => {
       aguardando.delete(jid)
-      void avisarSite('messages.upsert', { ...fila.ultima, message: { conversation: fila.textos.join('\n') } })
+      void avisarSite('messages.upsert', comContexto({ ...fila.ultima, message: { conversation: fila.textos.join('\n') } }))
     }, ESPERA_PARA_JUNTAR)
     aguardando.set(jid, fila)
     return
@@ -370,7 +400,7 @@ async function encaminharAoSite(m, plana) {
       registrarEvento(`áudio não baixou: ${erro?.message}`)
     }
   }
-  await avisarSite('messages.upsert', carga)
+  await avisarSite('messages.upsert', comContexto(carga))
 }
 
 async function avisarSite(evento, data) {
@@ -538,9 +568,12 @@ async function ligar() {
       }
       if (mudou) agendarGravacao()
     })
+    sock.ev.on('contacts.upsert', marcarSalvos)
+    sock.ev.on('contacts.update', marcarSalvos)
     sock.ev.on('messaging-history.set', ({ chats, contacts, messages, isLatest, progress }) => {
       registrarEvento(`histórico: ${(chats || []).length} conversas, ${(contacts || []).length} contatos, ${(messages || []).length} mensagens${isLatest ? ' (último pacote)' : ''}${progress != null ? ` ${progress}%` : ''}`)
       for (const c of contacts || []) aprenderLid(c.lid, c.id)
+      marcarSalvos(contacts)
       for (const c of chats || []) {
         aprenderLid(c.lidJid || c.lid, c.pnJid || c.id)
         const jid = jidDePessoa({ remoteJid: c.id })
@@ -661,6 +694,7 @@ async function tratar(req, res) {
         numero: meuNumero,
         publica: urlPublica || null,
         registradaNoSite: registrada,
+        salvos: loja.salvos.size,
         versao: VERSAO,
         envios: resumoDosEnvios(),
         webhook,

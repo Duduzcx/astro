@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { GATILHO_PADRAO, PING_DE_RETORNO, dentroDoHorario, humanizar, pedeHumano, precisaSegundoPing, aceitouHorario, bateGatilho, comandoDoDono, contarAutomaticasSeguidas, contarRecusas, deveEncerrar, dicaDaObjecao, ehDoRobo, ehHostil, ehSaudacao, falasDoHistorico, opcaoHumana, parecida, pareceAutomatica, precisaRetomar, resumoDoChat, telefoneDoJid, temMenu } from '../api/_lib/prospeccao.js'
+import { GATILHO_PADRAO, PING_DE_RETORNO, numeroIndicado, dentroDoHorario, humanizar, pedeHumano, precisaSegundoPing, aceitouHorario, bateGatilho, comandoDoDono, contarAutomaticasSeguidas, contarRecusas, deveEncerrar, dicaDaObjecao, ehDoRobo, ehHostil, ehSaudacao, falasDoHistorico, opcaoHumana, parecida, pareceAutomatica, precisaRetomar, resumoDoChat, telefoneDoJid, temMenu } from '../api/_lib/prospeccao.js'
 
 const registro = (texto: string, fromMe: boolean, quando: number, extra: Record<string, unknown> = {}) => ({
   key: { remoteJid: '5511999990000@s.whatsapp.net', fromMe, id: `m${quando}` },
@@ -272,4 +272,11 @@ test('o robô da imobiliária que varia a frase e sempre oferece "comprar, aluga
   ]
   assert.equal(contarAutomaticasSeguidas(conversa), 3)
   assert.equal(contarAutomaticasSeguidas([...conversa, { de: 'pessoa', texto: 'Oi, aqui é a Carla, do comercial. Pode falar.' }]), 0)
+})
+
+test('acha o número indicado no texto do robô alheio, ignorando o próprio', () => {
+  assert.equal(numeroIndicado('Favor entrar em contato com o Administrativo pelo número 5511911223145. Você deseja comprar?', '+5511999990000'), '5511911223145')
+  assert.equal(numeroIndicado('Fale com a Ana no (11) 98765-4321', '+5511999990000'), '5511987654321')
+  assert.equal(numeroIndicado('Pode chamar no 11 98765-4321 que ela responde', '+5511987654321'), '')
+  assert.equal(numeroIndicado('Amanhã às 10h ou às 14h?', '+5511999990000'), '')
 })
