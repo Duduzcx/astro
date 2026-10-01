@@ -252,6 +252,21 @@ export function AbaProspeccao() {
     }
   }
 
+  async function atualizarComCelular() {
+    setOcupado(true)
+    setAviso('Pedindo ao celular a lista de conversas…')
+    try {
+      const r: Dados = await pedir('/api/admin/prospeccao?sincronizar=1')
+      setDados(r)
+      setLidoEm(new Date().toLocaleTimeString('pt-BR'))
+      setAviso('')
+    } catch (falha) {
+      setAviso(mensagemDe(falha))
+    } finally {
+      setOcupado(false)
+    }
+  }
+
   async function salvarModo(modo: 'responder' | 'ativo') {
     try {
       await pedir('/api/admin/prospeccao', { method: 'PUT', body: JSON.stringify({ modo }) })
@@ -344,6 +359,11 @@ export function AbaProspeccao() {
             <button type="button" disabled={ocupado} onClick={() => void carregar()} className="rounded-full border border-white/12 px-4 py-2 text-[13px] text-ash hover:text-ivory disabled:opacity-50">
               Atualizar
             </button>
+            {conectado ? (
+              <button type="button" disabled={ocupado} onClick={() => void atualizarComCelular()} className="rounded-full border border-white/12 px-4 py-2 text-[13px] text-ash hover:text-ivory disabled:opacity-50">
+                Buscar conversas no celular
+              </button>
+            ) : null}
           </div>
           <p className="mt-3 text-[11px] leading-[1.5] text-slate">
             Conversa que você não marcar nunca recebe resposta do robô. Se você escrever pelo celular numa

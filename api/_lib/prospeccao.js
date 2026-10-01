@@ -468,7 +468,7 @@ export async function desconectarNumero() {
 }
 
 /** As conversas do aparelho, da mais recente para a mais antiga, com o lead de cada uma quando existe. */
-export async function conversasDoAparelho(limite = 150) {
+export async function conversasDoAparelho(limite = 600) {
   const evo = await evolucaoDaProspeccao()
   if (!evo) return []
   const brutas = await evo.conversas(instanciaPessoal())
@@ -762,6 +762,25 @@ export async function ponteSaudavel() {
     return { ok: true, motivo: '' }
   } catch (erro) {
     return { ok: false, motivo: `ponte inacessível: ${erro?.message || ''}`.trim() }
+  }
+}
+
+/* Pede à ponte que peça ao telefone a lista de conversas de novo e espera
+   alguns segundos para a loja receber. Falha silenciosa: a lista atual segue. */
+export async function sincronizarConversas() {
+  const url = await urlDaPonte()
+  if (!url) return false
+  try {
+    const r = await fetch(`${url}/chat/sincronizar/${encodeURIComponent(instanciaPessoal())}`, {
+      method: 'POST',
+      headers: { apikey: process.env.EVOLUTION_API_KEY || '' },
+      signal: AbortSignal.timeout(8000),
+    })
+    if (!r.ok) return false
+    await new Promise((fim) => setTimeout(fim, 6000))
+    return true
+  } catch {
+    return false
   }
 }
 

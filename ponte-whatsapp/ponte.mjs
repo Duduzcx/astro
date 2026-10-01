@@ -98,7 +98,7 @@ function registrarEvento(texto) {
    (o WhatsApp só manda o histórico na primeira ligação). */
 const ARQUIVO_LOJA = path.join(DADOS, 'loja.json')
 const POR_CONVERSA = 200
-const VERSAO = '2026-10-01a'
+const VERSAO = '2026-10-01b'
 const loja = { conversas: new Map(), nomes: new Map(), mensagens: new Map(), recuperadas: new Set() }
 /* Status de entrega, no nome que o WhatsApp usa: 0 erro, 1 pendente (não
    saiu), 2 no servidor, 3 entregue no aparelho, 4 lida, 5 tocada. */
@@ -603,7 +603,9 @@ function listaDeConversas() {
     /* Mostra a conversa se ela tem um nome OU uma última mensagem de texto:
        o pareamento pode trazer a conversa (com nome) antes de qualquer
        mensagem, e exigir texto a escondia. */
-    .filter((c) => c.name || (c.lastMessage && textoDaMensagem(c.lastMessage)))
+    /* Toda conversa com alguma mensagem aparece, mesmo sem nome e mesmo
+       que a última seja áudio ou imagem: antes, essas ficavam escondidas. */
+    .filter((c) => c.name || c.lastMessage)
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
 }
 
@@ -740,6 +742,16 @@ async function tratar(req, res) {
     }
     /* Evolution-compatível: quais destes números têm WhatsApp. Mandar para
        número sem WhatsApp é sinal de spam; o site pergunta antes de abordar. */
+    /* Pede ao telefone a lista de conversas de novo (o painel chama no
+       "Atualizar"). O que chegar entra na loja em alguns segundos. */
+    if (a === 'chat' && b === 'sincronizar' && req.method === 'POST') {
+      if (estado !== 'conectado' || !sock) return responder(res, 409, { erro: 'número não conectado' })
+      sock
+        .resyncAppState(['critical_unblock_low', 'regular_high', 'regular_low', 'regular'], true)
+        .then(() => registrarEvento('sincronia de conversas pedida pelo painel'))
+        .catch((erro) => registrarEvento(`sincronia pedida pelo painel falhou: ${erro?.message}`))
+      return responder(res, 202, { ok: true, conversas: loja.conversas.size })
+    }
     if (a === 'chat' && b === 'whatsappNumbers' && req.method === 'POST') {
       if (estado !== 'conectado' || !sock) return responder(res, 409, { erro: 'número não conectado' })
       const dados = await corpo(req)

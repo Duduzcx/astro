@@ -31,6 +31,7 @@ import {
   MODOS_DO_ROBO,
   podeAbordarAFrio,
   quarentenaAte,
+  sincronizarConversas,
   ponteRegistrada,
 } from '../_lib/prospeccao.js'
 import { corpo, ErroHttp } from '../crm/_lib/http.js'
@@ -42,6 +43,8 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       if (req.query.qr) return res.status(200).json(await conectarNumero())
+      /* ?sincronizar=1: antes de listar, pede ao telefone a lista de novo. */
+      if (req.query.sincronizar) await sincronizarConversas()
       if (req.query.desconectar) {
         await desconectarNumero()
         return res.status(200).json({ ok: true })
