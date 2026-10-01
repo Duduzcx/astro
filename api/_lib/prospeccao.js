@@ -647,7 +647,7 @@ const PEDIDO_DE_PESSOA = 'Olá! Preciso falar com o responsável pela imobiliár
 export function humanizar(texto) {
   const limpo = String(texto || '')
     .replace(/\*\*/g, '')
-    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu, '')
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]|\u{FE0F}|\u{200D}/gu, '')
     .replace(/(\D):[ \t]+/g, '$1, ')
     .replace(/[ \t]*[—–][ \t]*/g, ', ')
     .replace(/;[ \t]*/g, ', ')
