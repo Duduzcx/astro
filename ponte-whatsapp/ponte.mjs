@@ -98,8 +98,8 @@ function registrarEvento(texto) {
    (o WhatsApp só manda o histórico na primeira ligação). */
 const ARQUIVO_LOJA = path.join(DADOS, 'loja.json')
 const POR_CONVERSA = 200
-const VERSAO = '2026-09-30g'
-const loja = { conversas: new Map(), nomes: new Map(), mensagens: new Map() }
+const VERSAO = '2026-10-01a'
+const loja = { conversas: new Map(), nomes: new Map(), mensagens: new Map(), recuperadas: new Set() }
 /* Status de entrega, no nome que o WhatsApp usa: 0 erro, 1 pendente (não
    saiu), 2 no servidor, 3 entregue no aparelho, 4 lida, 5 tocada. */
 const STATUS = ['ERRO', 'PENDENTE', 'SERVIDOR', 'ENTREGUE', 'LIDA', 'TOCADA']
@@ -253,6 +253,7 @@ function agendarGravacao() {
       conversas: [...loja.conversas.values()],
       nomes: [...loja.nomes.entries()],
       mensagens: Object.fromEntries(loja.mensagens),
+      recuperadas: [...loja.recuperadas].slice(-500),
     }
     fs.writeFile(ARQUIVO_LOJA, JSON.stringify(dados), () => undefined)
   }, 2000)
@@ -265,6 +266,7 @@ function carregarLoja() {
     for (const c of dados.conversas || []) loja.conversas.set(c.id, c)
     for (const [jid, nome] of dados.nomes || []) loja.nomes.set(jid, nome)
     for (const [jid, lista] of Object.entries(dados.mensagens || {})) loja.mensagens.set(jid, lista)
+    for (const id of dados.recuperadas || []) loja.recuperadas.add(id)
   } catch {
     console.warn('loja.json ilegível; começando do zero')
   }
@@ -284,6 +286,55 @@ const aguardando = new Map()
 function textoSimples(plana) {
   const msg = plana?.message || {}
   return String(msg.conversation || msg.extendedTextMessage?.text || '').trim()
+}
+
+/* Depois de reconectar, quem respondeu enquanto a ponte estava fora fica
+   sem resposta: o histórico chega como "append", que não vai ao site. Esta
+   varredura acha conversas cuja última mensagem é da pessoa (até 48 h) e as
+   encaminha ao site UMA a cada 75 s, só em horário comercial (São Paulo,
+   segunda a sábado, 8h às 20h), no máximo 25 por rodada. O site só responde
+   a quem já é lead do robô; o resto ele ignora. */
+let recuperando = false
+function horarioComercialSP(agora = new Date()) {
+  const sp = new Date(agora.getTime() - 3 * 3600 * 1000)
+  return sp.getUTCDay() !== 0 && sp.getUTCHours() >= 8 && sp.getUTCHours() < 20
+}
+async function recuperarPendentes() {
+  if (recuperando || estado !== 'conectado' || !horarioComercialSP()) return
+  recuperando = true
+  try {
+    const agoraSeg = Math.floor(Date.now() / 1000)
+    const pendentes = []
+    for (const [jid, lista] of loja.mensagens) {
+      if (!jid.endsWith('@s.whatsapp.net') || !Array.isArray(lista) || lista.length === 0) continue
+      const ordenada = [...lista].sort((a, b) => numero(a?.messageTimestamp) - numero(b?.messageTimestamp))
+      const ultima = ordenada[ordenada.length - 1]
+      if (!ultima?.key || ultima.key.fromMe) continue
+      if (agoraSeg - numero(ultima.messageTimestamp) > 48 * 3600) continue
+      if (!ultima.key.id || loja.recuperadas.has(ultima.key.id)) continue
+      const textos = []
+      for (let i = ordenada.length - 1; i >= 0 && ordenada[i]?.key && !ordenada[i].key.fromMe; i -= 1) {
+        const t = textoSimples(ordenada[i])
+        if (t) textos.unshift(t)
+      }
+      if (textos.length === 0) continue
+      pendentes.push({ ultima, texto: textos.join('\n') })
+    }
+    if (pendentes.length === 0) return
+    registrarEvento(`recuperação: ${pendentes.length} conversas com resposta pendente; encaminhando uma a cada 75 s (máximo 25)`)
+    let feitas = 0
+    for (const p of pendentes.slice(0, 25)) {
+      if (estado !== 'conectado' || !horarioComercialSP()) break
+      loja.recuperadas.add(p.ultima.key.id)
+      agendarGravacao()
+      await avisarSite('messages.upsert', { ...p.ultima, message: { conversation: p.texto } })
+      feitas += 1
+      await pausa(75000)
+    }
+    registrarEvento(`recuperação: ${feitas} encaminhadas`)
+  } finally {
+    recuperando = false
+  }
 }
 
 async function encaminharAoSite(m, plana) {
@@ -407,6 +458,7 @@ async function ligar() {
         estado = 'conectado'
         meuNumero = `+${String(sock.user?.id || '').split('@')[0].split(':')[0].replace(/\D/g, '')}`
         registrarEvento(`conectado como …${String(meuNumero).slice(-4)}`)
+        setTimeout(() => void recuperarPendentes(), 90 * 1000)
         /* Puxa o estado do app (a lista de conversas e contatos) do telefone,
            já que o pacote de histórico automático não vem nesta conta. Cada
            faixa que volta vira `messaging-history.set`. Falhar não atrapalha. */
@@ -775,6 +827,7 @@ servidor.listen(PORTA, '0.0.0.0', async () => {
   /* Quem parou de responder ganha um empurrão do site, uma vez só. A ponte
      pede a cada dez minutos porque está sempre ligada; a Vercel grátis só
      tem cron diário. */
+  setInterval(() => void recuperarPendentes(), 30 * 60 * 1000)
   setInterval(() => {
     if (estado !== 'conectado') return
     fetch(`${SITE}/api/crm/ponte/retomar`, { method: 'POST', headers: { apikey: CHAVE }, signal: AbortSignal.timeout(60000) })

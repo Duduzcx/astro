@@ -160,6 +160,15 @@ mestre e o histórico.
   robô numa conversa, mande `#pausa` nela; `#robo` religa. O painel também
   pausa e devolve.
 
+## Respostas que chegaram com a ponte fora do ar
+
+Depois de um pareamento novo, as mensagens recebidas enquanto a ponte estava
+fora chegam como histórico, não como mensagem ao vivo, e o site não as vê. A
+ponte, 90 s depois de conectar e de meia em meia hora, varre as conversas
+cuja última mensagem é da pessoa (até 48 h) e as encaminha ao site uma a
+cada 75 s, só em horário comercial, no máximo 25 por rodada, lembrando o que
+já encaminhou. O site responde só a quem já é lead do robô.
+
 ## Transbordo, alertas, ritmo e segundo ping
 
 - "Me liga", "quero falar com uma pessoa", "urgente": o robô responde uma
