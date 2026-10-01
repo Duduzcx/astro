@@ -97,7 +97,7 @@ function registrarEvento(texto) {
    (o WhatsApp só manda o histórico na primeira ligação). */
 const ARQUIVO_LOJA = path.join(DADOS, 'loja.json')
 const POR_CONVERSA = 200
-const VERSAO = '2026-09-30e'
+const VERSAO = '2026-09-30f'
 const loja = { conversas: new Map(), nomes: new Map(), mensagens: new Map() }
 /* Status de entrega, no nome que o WhatsApp usa: 0 erro, 1 pendente (não
    saiu), 2 no servidor, 3 entregue no aparelho, 4 lida, 5 tocada. */
@@ -184,6 +184,7 @@ const lidParaTelefone = new Map()
 const aprenderLid = (lid, telefone) => {
   if (lid && telefone && String(lid).endsWith('@lid') && String(telefone).endsWith('@s.whatsapp.net')) {
     lidParaTelefone.set(String(lid), String(telefone))
+    if (lidParaTelefone.size > 5000) lidParaTelefone.delete(lidParaTelefone.keys().next().value)
   }
 }
 
@@ -678,6 +679,22 @@ async function tratar(req, res) {
         .slice(0, 3)
       void enviarComoGente(jid, partes)
       return responder(res, 202, { agendado: true, partes: partes.length })
+    }
+    /* Evolution-compatível: quais destes números têm WhatsApp. Mandar para
+       número sem WhatsApp é sinal de spam; o site pergunta antes de abordar. */
+    if (a === 'chat' && b === 'whatsappNumbers' && req.method === 'POST') {
+      if (estado !== 'conectado' || !sock) return responder(res, 409, { erro: 'número não conectado' })
+      const dados = await corpo(req)
+      const numeros = (Array.isArray(dados?.numbers) ? dados.numbers : [])
+        .map((n) => String(n).replace(/\D/g, ''))
+        .filter(Boolean)
+        .slice(0, 20)
+      const achados = (await sock.onWhatsApp(...numeros.map((n) => `${n}@s.whatsapp.net`)).catch(() => [])) || []
+      return responder(
+        res,
+        200,
+        numeros.map((n) => ({ number: n, exists: achados.some((x) => x?.exists && String(x?.jid || '').replace(/\D/g, '').startsWith(n)) })),
+      )
     }
     if (a === 'chat' && b === 'findChats' && req.method === 'POST') {
       return responder(res, 200, listaDeConversas())

@@ -160,6 +160,26 @@ mestre e o histórico.
   robô numa conversa, mande `#pausa` nela; `#robo` religa. O painel também
   pausa e devolve.
 
+## Travas da abordagem a frio (proteção do número)
+
+Toda abordagem a frio passa por `podeAbordarAFrio`, nesta ordem: modo
+"ativo" ligado; sem quarentena; horário comercial (segunda a sábado, 8h às
+20h, São Paulo); número válido; não está na lista de opt-out (quem disse não
+definitivo ou foi hostil entra nela para sempre); ponte saudável (menos de
+40% dos últimos envios sem confirmação do WhatsApp, senão a abordagem é
+suspensa sozinha); o número tem WhatsApp (`onWhatsApp` pela ponte); e o
+limite diário. O empurrão automático respeita quarentena e horário. O botão
+"Fui restrito pelo WhatsApp" liga uma quarentena de 3 dias e volta ao modo
+"só responde". A sonda responde `{ abordavel: "5511..." }` com a decisão.
+
+## Site na conversa
+
+A instrução recebe o endereço do site no fim; o robô o manda num balão
+próprio quando a pessoa pede material, quer ver mais, pergunta o que a
+empresa faz, ou no fechamento. Uma vez por conversa: o site remove o link se
+ele já apareceu. `SITE_PUBLICO` na Vercel fixa o endereço (senão a URL
+pública do deploy).
+
 ## Restrição do WhatsApp e o modo do robô
 
 Em 30/09/2026 o número pessoal levou uma restrição de 24 horas depois de

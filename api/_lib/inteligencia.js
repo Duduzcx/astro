@@ -206,6 +206,7 @@ async function escolherModelosGroq() {
   if (modelosGroq.length) return modelosGroq
   const r = await fetch('https://api.groq.com/openai/v1/models', {
     headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
+    signal: AbortSignal.timeout(15000),
   })
   if (!r.ok) throw new Error(`groq modelos ${r.status}: ${(await r.text()).slice(0, 160)}`)
   const dados = await r.json()
@@ -227,6 +228,7 @@ async function pedirGroq(corpo) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(corpo),
+    signal: AbortSignal.timeout(45000),
   })
 }
 
@@ -281,6 +283,7 @@ export async function transcreverAudio(base64, mime = 'audio/ogg') {
     method: 'POST',
     headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
     body: forma,
+    signal: AbortSignal.timeout(40000),
   })
   if (!r.ok) throw new Error(`groq transcrição ${r.status}: ${(await r.text()).slice(0, 120)}`)
   const dados = await r.json()

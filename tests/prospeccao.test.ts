@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { GATILHO_PADRAO, humanizar, aceitouHorario, bateGatilho, comandoDoDono, contarAutomaticasSeguidas, contarRecusas, deveEncerrar, dicaDaObjecao, ehDoRobo, ehHostil, ehSaudacao, falasDoHistorico, opcaoHumana, parecida, pareceAutomatica, precisaRetomar, resumoDoChat, telefoneDoJid, temMenu } from '../api/_lib/prospeccao.js'
+import { GATILHO_PADRAO, dentroDoHorario, humanizar, aceitouHorario, bateGatilho, comandoDoDono, contarAutomaticasSeguidas, contarRecusas, deveEncerrar, dicaDaObjecao, ehDoRobo, ehHostil, ehSaudacao, falasDoHistorico, opcaoHumana, parecida, pareceAutomatica, precisaRetomar, resumoDoChat, telefoneDoJid, temMenu } from '../api/_lib/prospeccao.js'
 
 const registro = (texto: string, fromMe: boolean, quando: number, extra: Record<string, unknown> = {}) => ({
   key: { remoteJid: '5511999990000@s.whatsapp.net', fromMe, id: `m${quando}` },
@@ -224,4 +224,11 @@ test('humanizar deixa uma pergunta só e a dica barra fatos inventados sobre a e
   assert.equal(humanizar('Tudo certo por aqui!\n\nEstou falando com o responsável?'), 'Tudo certo por aqui!\n\nEstou falando com o responsável?')
   assert.match(dicaDaObjecao([{ de: 'pessoa', texto: 'Vocês são de São Paulo? Atendem Campinas também?' }]), /fato sobre a empresa/)
   assert.match(dicaDaObjecao([{ de: 'pessoa', texto: 'Quantos clientes vocês têm?' }]), /fato sobre a empresa/)
+})
+
+test('horário comercial em São Paulo: segunda a sábado, 8h às 20h', () => {
+  assert.equal(dentroDoHorario(new Date('2026-09-30T17:00:00.000Z')), true) // quarta 14h
+  assert.equal(dentroDoHorario(new Date('2026-10-01T01:00:00.000Z')), false) // quarta 22h
+  assert.equal(dentroDoHorario(new Date('2026-10-04T15:00:00.000Z')), false) // domingo
+  assert.equal(dentroDoHorario(new Date('2026-10-03T13:00:00.000Z')), true) // sábado 10h
 })

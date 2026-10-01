@@ -203,11 +203,14 @@ export async function registrarPonte(req, res) {
     /* { apagarLeadDe:"55..." } apaga os leads de prospecção daquele contato
        (limpar um teste). Só canal 'prospeccao', nunca um lead do site. */
     if (dados?.apagarLeadDe) {
-      const contato = `+${String(dados.apagarLeadDe).replace(/D/g, '')}`
+      const contato = `+${String(dados.apagarLeadDe).replace(/\D/g, '')}`
       const apagados = await s2`DELETE FROM leads WHERE contato = ${contato} AND canal = 'prospeccao' RETURNING id`
       return res.status(200).json({ ok: true, apagados: apagados.length })
     }
     /* { resetarInstrucao:true } volta a instrução mestre ao padrão de fábrica. */
+    if (dados?.abordavel) {
+      return res.status(200).json({ ok: true, decisao: await podeAbordarAFrio(String(dados.abordavel)), saude: await ponteSaudavel(), horario: dentroDoHorario(), quarentena: await quarentenaAte() })
+    }
     if (dados?.resetarGatilho) {
       await gravarConfig('prospeccao_gatilho', '')
       return res.status(200).json({ ok: true, gatilho: 'padrão de fábrica' })
@@ -271,6 +274,7 @@ export const INSTRUCAO_PROSPECCAO_PADRAO = [
   'PERSISTÊNCIA com classe, nunca repetição. Desculpa ou objeção: investigue com elegância; o foco não é fazer a pessoa gastar, é parar de perder comissão. Ao primeiro "não tenho interesse" simples: uma investigação só. Espírito: "Compreendo. Só para entender o cenário: é porque já têm um robô que atende em segundos, ou automação não é prioridade agora?"',
   'Recusa definitiva ("não venha me oferecer nada", "não quero nada", "não tenho interesse nenhum"), segundo não, ou hostilidade: agradeça em uma frase ("Obrigado pelo retorno..."), encerre e não escreva mais. Spam queima a marca. A linha "Recusas até agora" no fim desta instrução diz em qual caso você está: obedeça a ela.',
   '',
+  'SITE: a Astro tem um site para a pessoa ver mais. Mande o endereço num balão próprio, uma vez só por conversa, quando a pessoa pedir para ver mais, perguntar o que a empresa faz, pedir material, ou junto do fechamento. Se o endereço já apareceu na conversa, não repita. O endereço exato vem no fim desta instrução.',
   'FECHAMENTO: assim que houver abertura (a pessoa pergunta como funciona, como vocês fariam, quanto custa, ou diz que faz sentido), NÃO volte ao diagnóstico: encaminhe imediatamente ao diretor. Espírito: "Para você não mudar tudo no escuro, o Eduardo preparou uma demonstração de 10 minutos com o sistema rodando. Amanhã às 10h ou às 14h?"',
   '',
   'JEITO DE ESCREVER: português correto e simples, sem gíria e sem abreviação ("você", "para", "está"), caloroso e sem formalidade. Muita gente mais velha do outro lado: frases curtas, uma ideia por frase, palavras comuns. Sem dois-pontos, ponto e vírgula, travessão, negrito, lista ou emoji. Varie o começo (não comece tudo com "Entendo"). Quando a mensagem tiver duas partes (responder algo e depois perguntar outra coisa), separe em dois balões com uma linha em branco, no máximo dois balões, cada um com uma frase. Nunca empilhe assuntos numa mensagem.',
@@ -620,6 +624,9 @@ export function dicaDaObjecao(conversa) {
   if (/\b(sao de onde|de onde (sao|voces sao|e voce)|onde (ficam|fica|voces ficam|e a empresa)|atendem (em|aqui|a regiao|campinas|interior|minha cidade)|voces sao de|qual cidade|que cidade|quantos clientes|quem (ja )?usa|tem cliente|cnpj|endereco)\b/.test(t)) {
     return 'A pessoa perguntou um fato sobre a empresa (cidade, região atendida, clientes, endereço). NÃO afirme nada disso: você não sabe. Diga em uma frase que o Eduardo confirma esse detalhe na conversa com ela, e siga com UMA pergunta curta de diagnóstico.'
   }
+  if (/\b(voces? tem site|voces? teem site|tem site de voces|site de voces|qual (e )?o site|ver mais|quero ver|me mostra|mostra (ai|pra mim)|o que voces fazem|o que a empresa faz|portfolio|exemplos de trabalho)\b/.test(t)) {
+    return `A pessoa quer ver mais ou saber o que a empresa faz: responda em uma frase simples e mande o site num balão separado (${linkDoSite()}), se ele ainda não apareceu na conversa.`
+  }
   if (aceitouHorario(bruto)) {
     return 'A pessoa ACEITOU um horário: confirme dia e hora em uma frase, agradeça no masculino e diga que o Eduardo confirma com ela antes. Nenhuma pergunta, nenhuma proposta nova, nenhum link.'
   }
@@ -633,7 +640,7 @@ export function dicaDaObjecao(conversa) {
     return 'A pessoa diz que já tem sistema, CRM ou site: use o CONTORNO como PERGUNTA, nunca como afirmação sobre o sistema deles: "O sistema de vocês atende o lead no WhatsApp em 3 segundos de madrugada, qualifica e joga mastigado pro corretor sem ele mexer um dedo?" Não elogie, não descreva e não presuma o que o sistema deles faz.'
   }
   if (/\b(e ?mail|manda|envia|material|apresentacao|pdf)\b/.test(t)) {
-    return 'A pessoa pede material: em 10 minutos o Eduardo mostra funcionando, o que vale mais que PDF; ofereça os dois horários.'
+    return `A pessoa pede material: mande o site num balão separado (${linkDoSite()}) e, no outro balão, diga que em 10 minutos o Eduardo mostra funcionando e ofereça os dois horários.`
   }
   if (/\b(como (funciona|fariam|faria|seria|voces fazem)|faz sentido|interessante|me explica|quero entender)\b/.test(t)) {
     return 'A pessoa demonstrou abertura: FECHE com o Eduardo agora (demonstração de 10 minutos, amanhã às 10h ou às 14h). Não volte ao diagnóstico.'
@@ -676,12 +683,114 @@ export function humanizar(texto) {
 const JANELA_MAO_HUMANA = 10 * 60 * 1000
 async function maoHumanaAtiva(leadId) {
   const quando = await lerConfig(`mao_humana_${leadId}`, null)
-  return typeof quando === 'string' && Date.now() - Date.parse(quando) < JANELA_MAO_HUMANA
+  const marco = typeof quando === 'string' ? Date.parse(quando) : NaN
+  return Number.isFinite(marco) && Date.now() - marco < JANELA_MAO_HUMANA
 }
 
 /* Abordagens a frio (número digitado, sem conversa) por dia. É a regra do
    WhatsApp: mensagem não solicitada em volume bloqueia o número. Padrão 20;
    ABORDAGENS_POR_DIA muda. Conversas existentes não contam. */
+/* O site da Astro, para o robô mandar uma vez por conversa. */
+export function linkDoSite() {
+  return String(process.env.SITE_PUBLICO || urlPublica() || 'https://astrosolucoes.vercel.app').replace(/\/+$/, '')
+}
+
+/* Horário comercial em São Paulo: segunda a sábado, 8h às 20h. Abordagem a
+   frio e empurrão só dentro dele; responder a quem escreveu vale sempre. */
+export function dentroDoHorario(agora = new Date()) {
+  const partes = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', weekday: 'short', hour: 'numeric', hour12: false }).formatToParts(agora)
+  const dia = partes.find((p) => p.type === 'weekday')?.value || ''
+  const hora = Number(partes.find((p) => p.type === 'hour')?.value || 0) % 24
+  if (dia === 'Sun') return false
+  return hora >= 8 && hora < 20
+}
+
+/* Quarentena depois de uma restrição do WhatsApp: nada proativo até a data. */
+export async function quarentenaAte() {
+  const ate = await lerConfig('quarentena_ate', null)
+  return typeof ate === 'string' && Date.parse(ate) > Date.now() ? ate : null
+}
+
+/* Quem pediu para não ser contatado nunca mais recebe abordagem. */
+const chaveOptOut = (telefone) => `optout_${String(telefone).replace(/\D/g, '')}`
+export async function marcarOptOut(telefone) {
+  await gravarConfig(chaveOptOut(telefone), new Date().toISOString())
+}
+export async function pediuParaNaoContatar(telefone) {
+  return Boolean(await lerConfig(chaveOptOut(telefone), null))
+}
+
+async function urlDaPonte() {
+  const fixa = String(process.env.EVOLUTION_API_URL || '').replace(/\/+$/, '')
+  if (fixa) return fixa
+  const ponte = await lerConfig('ponte', null)
+  return String(ponte?.url || '').replace(/\/+$/, '')
+}
+
+/* Disjuntor: se os últimos envios da ponte não estão sendo confirmados pelo
+   WhatsApp (muitos PENDENTE), abordagem a frio para. Continuar mandando
+   nessa condição é o que vira restrição. */
+export async function ponteSaudavel() {
+  const url = await urlDaPonte()
+  if (!url) return { ok: false, motivo: 'ponte não registrada' }
+  try {
+    const r = await fetch(`${url}/diagnostico`, { headers: { apikey: process.env.EVOLUTION_API_KEY || '' }, signal: AbortSignal.timeout(6000) })
+    if (!r.ok) return { ok: false, motivo: `ponte respondeu ${r.status}` }
+    const d = await r.json()
+    if (d?.estado !== 'conectado') return { ok: false, motivo: 'número não conectado' }
+    const por = d?.envios?.porStatus || {}
+    const total = Object.values(por).reduce((n, v) => n + Number(v || 0), 0)
+    const pendentes = Number(por.PENDENTE || 0)
+    if (total >= 10 && pendentes / total >= 0.4) return { ok: false, motivo: `${pendentes} de ${total} envios recentes sem confirmação do WhatsApp` }
+    return { ok: true, motivo: '' }
+  } catch (erro) {
+    return { ok: false, motivo: `ponte inacessível: ${erro?.message || ''}`.trim() }
+  }
+}
+
+/* O número tem WhatsApp? Mandar para número sem WhatsApp é sinal de spam. */
+export async function existeNoWhatsApp(numero) {
+  const url = await urlDaPonte()
+  if (!url) return null
+  try {
+    const r = await fetch(`${url}/chat/whatsappNumbers/${encodeURIComponent(instanciaPessoal())}`, {
+      method: 'POST',
+      headers: { apikey: process.env.EVOLUTION_API_KEY || '', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ numbers: [numero] }),
+      signal: AbortSignal.timeout(10000),
+    })
+    if (!r.ok) return null
+    const lista = await r.json()
+    const achado = Array.isArray(lista) ? lista.find((x) => String(x?.number) === String(numero)) : null
+    return achado ? Boolean(achado.exists) : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Pode abordar este número a frio agora? Todas as travas, na ordem em que
+ * custam menos: modo, quarentena, horário, formato, opt-out, saúde da ponte,
+ * tem WhatsApp, e por último o limite diário (que só conta se passou).
+ * Devolve { jid } ou { erro }.
+ */
+export async function podeAbordarAFrio(numeroCru) {
+  if ((await modoDeProspeccao()) !== 'ativo') return { erro: 'abordagem a frio desligada: o robô está no modo "só responde". Ligue o modo ativo sabendo do risco.' }
+  const quarentena = await quarentenaAte()
+  if (quarentena) return { erro: `em quarentena até ${new Date(quarentena).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}: sem abordagem a frio depois de uma restrição` }
+  if (!dentroDoHorario()) return { erro: 'fora do horário comercial (segunda a sábado, 8h às 20h, horário de São Paulo)' }
+  let d = String(numeroCru || '').replace(/\D/g, '')
+  if (d.length >= 10 && d.length <= 11) d = `55${d}`
+  if (d.length < 12) return { erro: 'número inválido: use DDD + número' }
+  if (await pediuParaNaoContatar(d)) return { erro: 'esse número pediu para não ser contatado' }
+  const saude = await ponteSaudavel()
+  if (!saude.ok) return { erro: `abordagem a frio suspensa: ${saude.motivo}` }
+  const existe = await existeNoWhatsApp(d)
+  if (existe === false) return { erro: 'esse número não tem WhatsApp' }
+  if (!(await dentroDoLimiteDeAbordagens())) return { erro: 'limite diário de abordagens a frio atingido. Para volume, o caminho é a API oficial do WhatsApp Business.' }
+  return { jid: `${d}@s.whatsapp.net` }
+}
+
 const ABORDAGENS_PADRAO = 10
 export async function dentroDoLimiteDeAbordagens() {
   if (!temBanco()) return true
@@ -765,6 +874,8 @@ export function precisaRetomar(conversa) {
 export async function retomarConversas() {
   if (!temBanco() || !temInteligencia()) return { retomadas: 0 }
   if ((await modoDeProspeccao()) !== 'ativo') return { retomadas: 0, modo: 'responder' }
+  if (await quarentenaAte()) return { retomadas: 0, quarentena: true }
+  if (!dentroDoHorario()) return { retomadas: 0, foraDoHorario: true }
   await prepararBanco()
   const s = sql()
   const parados = await s`
@@ -842,7 +953,9 @@ async function falarComIACru(lead, conversa) {
      ler só o roteiro (que cita "não tenho interesse" como definitivo) que
      ele encerrou na primeira recusa simples. */
   const cabecalho = `SITUAÇÃO AGORA (manda mais que qualquer exemplo abaixo):${situacao}${dica ? `\n${dica}` : ''}\n\n`
-  const instrucao = cabecalho + (await instrucaoDeProspeccao()) + contextoDoLead(lead) + situacao
+  const linkJaFoi = falas.some((f) => f?.de === 'robo' && String(f.texto || '').includes(linkDoSite()))
+  const instrucao =
+    cabecalho + (await instrucaoDeProspeccao()) + contextoDoLead(lead) + situacao + `\n\nSite da Astro: ${linkDoSite()}${linkJaFoi ? ' (JÁ FOI ENVIADO nesta conversa: não mande de novo)' : ''}`
   const mensagens = conversaParaMensagens(conversa, 20)
   /* Abertura a frio (número digitado, sem histórico): só o cumprimento e a
      apresentação. O assunto vem quando a pessoa responder, ou na retomada. */
@@ -885,6 +998,14 @@ async function falarComIACru(lead, conversa) {
       resposta = 'Sem problema. Quando puder, me diz qual horário fica melhor para você e eu deixo tudo certo com o Eduardo.'
     }
   }
+  /* O site vai uma vez por conversa. */
+  if (linkJaFoi && resposta.includes(linkDoSite())) {
+    resposta = resposta
+      .split(/\n{2,}/)
+      .filter((p) => !p.includes(linkDoSite()))
+      .join('\n\n')
+      .trim()
+  }
   return resposta
 }
 
@@ -904,6 +1025,10 @@ export async function assumirConversas(jids) {
     const telefone = telefoneDoJid(String(jid))
     if (!telefone) {
       resultados.push({ jid, erro: 'contato inválido' })
+      continue
+    }
+    if (await pediuParaNaoContatar(telefone)) {
+      resultados.push({ jid, erro: 'esse contato pediu para não ser contatado' })
       continue
     }
     try {
@@ -1086,6 +1211,7 @@ export async function webhookProspeccao(evento) {
   await rastro('ia', textoDaPessoa, resposta)
   if (deveEncerrar(atual)) {
     await marcarProspeccao(lead.id, 'pausado')
+    await marcarOptOut(mensagem.telefone)
     await rastro('encerrado', textoDaPessoa, mensagem.telefone)
   } else if (aceitouHorario(textoDaPessoa)) {
     /* Reunião aceita: o robô confirmou e sai; daqui em diante é o Eduardo,

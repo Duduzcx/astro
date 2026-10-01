@@ -27,6 +27,7 @@ type Dados = {
   gatilho: string
   gatilhoPadrao: string
   modo: 'responder' | 'ativo'
+  quarentenaAte: string | null
   conversas: Conversa[]
   ponte: { url: string; instancia: string; quando: string } | null
   inteligencia: boolean
@@ -241,6 +242,16 @@ export function AbaProspeccao() {
     }
   }
 
+  async function quarentena(horas: number) {
+    try {
+      await pedir('/api/admin/prospeccao', { method: 'PUT', body: JSON.stringify({ quarentena: horas }) })
+      setAviso(horas > 0 ? 'Quarentena ligada: nada proativo por 3 dias, modo "só responde".' : 'Quarentena encerrada.')
+      await carregar()
+    } catch (falha) {
+      setAviso(mensagemDe(falha))
+    }
+  }
+
   async function salvarModo(modo: 'responder' | 'ativo') {
     try {
       await pedir('/api/admin/prospeccao', { method: 'PUT', body: JSON.stringify({ modo }) })
@@ -364,9 +375,26 @@ export function AbaProspeccao() {
           <p className="mt-2 text-[11px] leading-[1.5] text-slate">
             "Só responde": o robô fala com quem escreveu primeiro ou com quem você abriu à mão pelo celular (frase gatilho).
             Sem abordagem a frio e sem empurrão automático. "Ativo": empurrão em conversa parada e abordagem a frio pelo
-            painel, até 10 por dia. Foi o modo ativo, com dezenas de números desconhecidos de uma vez, que causou a
-            restrição de 24 horas. Para prospectar em volume, o caminho é a API oficial do WhatsApp Business.
+            painel, até 10 por dia, só em horário comercial, só para número com WhatsApp, nunca para quem pediu para
+            parar, e suspensa sozinha se os envios deixarem de ser confirmados. Para prospectar em volume, o caminho é
+            a API oficial do WhatsApp Business.
           </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {dados.quarentenaAte ? (
+              <>
+                <span className="text-[12px] text-[#ffd479]">
+                  Em quarentena até {new Date(dados.quarentenaAte).toLocaleString('pt-BR')}: nada proativo.
+                </span>
+                <button type="button" onClick={() => void quarentena(0)} className="rounded-full border border-white/12 px-3 py-1.5 text-[12px] text-ash hover:text-ivory">
+                  Encerrar quarentena
+                </button>
+              </>
+            ) : (
+              <button type="button" onClick={() => void quarentena(72)} className="rounded-full border border-[#ffd479]/40 px-3 py-1.5 text-[12px] text-[#ffd479] hover:bg-[#ffd479]/10">
+                Fui restrito pelo WhatsApp: quarentena de 3 dias
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="graphite-card">
