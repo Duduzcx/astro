@@ -98,7 +98,7 @@ function registrarEvento(texto) {
    (o WhatsApp só manda o histórico na primeira ligação). */
 const ARQUIVO_LOJA = path.join(DADOS, 'loja.json')
 const POR_CONVERSA = 200
-const VERSAO = '2026-10-01b'
+const VERSAO = '2026-10-01c'
 const loja = { conversas: new Map(), nomes: new Map(), mensagens: new Map(), recuperadas: new Set() }
 /* Status de entrega, no nome que o WhatsApp usa: 0 erro, 1 pendente (não
    saiu), 2 no servidor, 3 entregue no aparelho, 4 lida, 5 tocada. */
@@ -595,6 +595,7 @@ function listaDeConversas() {
         id: c.id,
         remoteJid: c.id,
         name: c.nome || loja.nomes.get(c.id) || '',
+        temTexto: Boolean(ultima && textoDaMensagem(ultima)),
         pushName: c.nome || loja.nomes.get(c.id) || '',
         lastMessage: ultima,
         updatedAt: new Date((c.quando || ultima?.messageTimestamp || 0) * 1000).toISOString(),
@@ -750,7 +751,20 @@ async function tratar(req, res) {
         .resyncAppState(['critical_unblock_low', 'regular_high', 'regular_low', 'regular'], true)
         .then(() => registrarEvento('sincronia de conversas pedida pelo painel'))
         .catch((erro) => registrarEvento(`sincronia pedida pelo painel falhou: ${erro?.message}`))
-      return responder(res, 202, { ok: true, conversas: loja.conversas.size })
+      let maisAntiga = null
+      for (const lista of loja.mensagens.values()) {
+        for (const m of lista) {
+          const t = numero(m?.messageTimestamp)
+          if (m?.key?.id && t && (!maisAntiga || t < numero(maisAntiga.messageTimestamp))) maisAntiga = m
+        }
+      }
+      if (maisAntiga && typeof sock.fetchMessageHistory === 'function') {
+        sock
+          .fetchMessageHistory(100, maisAntiga.key, numero(maisAntiga.messageTimestamp))
+          .then(() => registrarEvento('histórico anterior pedido ao WhatsApp (100 mensagens antes da mais antiga)'))
+          .catch((erro) => registrarEvento(`histórico anterior falhou: ${erro?.message}`))
+      }
+      return responder(res, 202, { ok: true, conversas: loja.conversas.size, pediuHistoricoAnterior: Boolean(maisAntiga) })
     }
     if (a === 'chat' && b === 'whatsappNumbers' && req.method === 'POST') {
       if (estado !== 'conectado' || !sock) return responder(res, 409, { erro: 'número não conectado' })
