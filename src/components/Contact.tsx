@@ -255,6 +255,13 @@ export function Contact() {
                 >
                   Enviar no WhatsApp <ArrowGlyph />
                 </MagneticButton>
+                <p className="mt-3 text-[12px] leading-[1.5] text-slate">
+                  Ao enviar, você concorda com a nossa{' '}
+                  <a href="/privacidade" className="underline underline-offset-4 hover:text-ivory">
+                    Política de Privacidade
+                  </a>
+                  . Usamos seus dados só para responder ao seu pedido.
+                </p>
               </form>
             )}
           </Reveal>

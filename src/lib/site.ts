@@ -69,4 +69,5 @@ export const footerLinks = [
   { label: 'Equipe', href: '#equipe' },
   { label: 'Tech insights', href: '#insights' },
   { label: 'Perguntas frequentes', href: '#faq' },
+  { label: 'Privacidade', href: '/privacidade' },
 ] as const

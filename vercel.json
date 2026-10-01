@@ -132,6 +132,10 @@
     {
       "source": "/crm/(.*)",
       "destination": "/crm.html"
+    },
+    {
+      "source": "/privacidade",
+      "destination": "/privacidade.html"
     }
   ],
   "functions": {

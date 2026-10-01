@@ -4,12 +4,28 @@ import { WordReveal, Reveal } from './ui/Primitives'
 import { ScrollTrail } from './ui/ScrollTrail'
 import { AstroStar } from './brand/AstroMark'
 
-/** Respostas tiradas do anexo de entregáveis. Preço sai na proposta, não aqui. */
+/**
+ * Âncoras de preço do FAQ. Preencha com os valores reais ("R$ 2.900",
+ * "R$ 390") e a resposta "Quanto custa?" passa a mostrar "a partir de"; vazio,
+ * fica só a explicação. Isso evita que a dúvida de preço mate a conversa
+ * antes do diagnóstico, sem o robô precisar falar de valores.
+ */
+const PRECOS: { site?: string; roboCrmMensal?: string; sistema?: string } = {}
+
+function respostaDePreco() {
+  const partes: string[] = []
+  if (PRECOS.site) partes.push(`site profissional a partir de ${PRECOS.site}`)
+  if (PRECOS.roboCrmMensal) partes.push(`robô de WhatsApp com CRM a partir de ${PRECOS.roboCrmMensal} por mês`)
+  if (PRECOS.sistema) partes.push(`sistema sob medida a partir de ${PRECOS.sistema}`)
+  const ancora = partes.length ? `Para você ter uma referência: ${partes.join('; ')}. ` : ''
+  return `${ancora}O valor final depende do escopo. O diagnóstico é gratuito e sai com uma proposta fechada: preço, prazo e marcos de pagamento atrelados às fases do projeto, sem surpresa no meio do caminho.`
+}
+
+/** Respostas tiradas do anexo de entregáveis. */
 const faqs = [
   {
     question: 'Quanto custa um projeto?',
-    answer:
-      'Depende do escopo. O diagnóstico é gratuito e sai com uma proposta fechada: preço, prazo e marcos de pagamento atrelados às fases do projeto — sem surpresa no meio do caminho.',
+    answer: respostaDePreco(),
   },
   {
     question: 'Como funciona o projeto?',
