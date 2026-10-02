@@ -100,9 +100,9 @@ export async function dentroDoTeto() {
       INSERT INTO config ${s({ chave: 'bot_uso', valor: JSON.stringify({ dia: hoje, quantas: 1 }) })}
       ON CONFLICT (chave) DO UPDATE SET
         valor = CASE
-          WHEN config.valor->>'dia' = ${hoje}
-            THEN jsonb_build_object('dia', ${hoje}, 'quantas', (config.valor->>'quantas')::int + 1)
-          ELSE jsonb_build_object('dia', ${hoje}, 'quantas', 1)
+          WHEN config.valor->>'dia' = ${hoje}::text
+            THEN jsonb_build_object('dia', ${hoje}::text, 'quantas', (config.valor->>'quantas')::int + 1)
+          ELSE jsonb_build_object('dia', ${hoje}::text, 'quantas', 1)
         END,
         atualizado_em = now()
       RETURNING (valor->>'quantas')::int AS quantas`

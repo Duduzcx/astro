@@ -217,6 +217,7 @@ export async function registrarPonte(req, res) {
     if (dados?.abordavel) {
       return res.status(200).json({ ok: true, decisao: await podeAbordarAFrio(String(dados.abordavel)), saude: await ponteSaudavel(), horario: dentroDoHorario(), quarentena: await quarentenaAte() })
     }
+    if (dados?.testarLimite) return res.status(200).json({ ok: true, dentroDoLimite: await dentroDoLimiteDeAbordagens() })
     if (dados?.resetarGatilho) {
       await gravarConfig('prospeccao_gatilho', '')
       return res.status(200).json({ ok: true, gatilho: 'padrão de fábrica' })
@@ -1040,9 +1041,9 @@ export async function dentroDoLimiteDeAbordagens() {
     INSERT INTO config ${s({ chave: 'abordagens_uso', valor: s.json({ dia: hoje, quantas: 1 }) })}
     ON CONFLICT (chave) DO UPDATE SET
       valor = CASE
-        WHEN config.valor->>'dia' = ${hoje}
-          THEN jsonb_build_object('dia', ${hoje}, 'quantas', (config.valor->>'quantas')::int + 1)
-        ELSE jsonb_build_object('dia', ${hoje}, 'quantas', 1)
+        WHEN config.valor->>'dia' = ${hoje}::text
+          THEN jsonb_build_object('dia', ${hoje}::text, 'quantas', (config.valor->>'quantas')::int + 1)
+        ELSE jsonb_build_object('dia', ${hoje}::text, 'quantas', 1)
       END,
       atualizado_em = now()
     RETURNING (valor->>'quantas')::int AS quantas`
