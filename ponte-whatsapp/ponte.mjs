@@ -98,7 +98,7 @@ function registrarEvento(texto) {
    (o WhatsApp só manda o histórico na primeira ligação). */
 const ARQUIVO_LOJA = path.join(DADOS, 'loja.json')
 const POR_CONVERSA = 200
-const VERSAO = '2026-10-01d'
+const VERSAO = '2026-10-01e'
 const loja = { conversas: new Map(), nomes: new Map(), mensagens: new Map(), recuperadas: new Set(), salvos: new Set() }
 
 /* Contatos salvos na agenda do celular (têm "name", não só o apelido do
@@ -166,10 +166,16 @@ function lembrarEnviada(info) {
    pouco. Uma fila por conversa, para dois pedidos não se cruzarem. O site
    recebe 202 na hora: a espera acontece aqui, não na função da Vercel. */
 const filasDeEnvio = new Map()
+/* Para quem estamos respondendo agora, e quando foi o último envio: novas
+   mensagens dessa pessoa esperam a resposta sair e juntam-se à próxima, em
+   vez de gerar "uma resposta atrás da outra". */
+const enviando = new Set()
+const ultimoEnvio = new Map()
 const pausa = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 async function enviarComoGente(jid, partes) {
   const anterior = filasDeEnvio.get(jid) || Promise.resolve()
   const tarefa = anterior.then(async () => {
+    enviando.add(jid)
     await pausa(3000 + Math.random() * 3000)
     for (const [i, parte] of partes.entries()) {
       if (!sock || estado !== 'conectado') return registrarEvento('envio adiado perdido: número não conectado')
@@ -179,12 +185,14 @@ async function enviarComoGente(jid, partes) {
       try {
         const enviada = await sock.sendMessage(jid, { text: parte })
         lembrarEnviada(enviada)
+        ultimoEnvio.set(jid, Date.now())
       } catch (erro) {
         registrarEvento(`envio falhou: ${erro?.message}`)
       }
       await sock.sendPresenceUpdate('paused', jid).catch(() => {})
       if (i < partes.length - 1) await pausa(2500 + Math.random() * 2500)
     }
+    enviando.delete(jid)
   })
   filasDeEnvio.set(jid, tarefa.catch(() => {}))
   await tarefa
@@ -310,7 +318,7 @@ let urlPublica = URL_FIXA
 /* Áudio de quem responde: baixa e manda junto (base64) para o site
    transcrever e responder ao conteúdo. Só de fora (não fromMe), até 2 MB.
    Se não baixar, o site recebe a mensagem sem o áudio e pede por texto. */
-const ESPERA_PARA_JUNTAR = 8000
+const ESPERA_PARA_JUNTAR = 20000
 const aguardando = new Map()
 function textoSimples(plana) {
   const msg = plana?.message || {}
@@ -374,14 +382,22 @@ async function encaminharAoSite(m, plana) {
   const textoRecebido = !plana?.key?.fromMe ? textoSimples(plana) : ''
   if (textoRecebido) {
     const jid = String(plana.key.remoteJid || '')
-    const fila = aguardando.get(jid) || { textos: [], ultima: plana, temporizador: null }
+    const fila = aguardando.get(jid) || { textos: [], ultima: plana, temporizador: null, desde: Date.now() }
     fila.textos.push(textoRecebido)
     fila.ultima = plana
     clearTimeout(fila.temporizador)
-    fila.temporizador = setTimeout(() => {
+    const disparar = () => {
+      /* Resposta saindo ou saída há menos de 30 s para esta pessoa: espera
+         mais 15 s e junta o que vier, até 90 s no total. */
+      const respondendo = enviando.has(jid) || Date.now() - (ultimoEnvio.get(jid) || 0) < 30000
+      if (respondendo && Date.now() - fila.desde < 90000) {
+        fila.temporizador = setTimeout(disparar, 15000)
+        return
+      }
       aguardando.delete(jid)
       void avisarSite('messages.upsert', comContexto({ ...fila.ultima, message: { conversation: fila.textos.join('\n') } }))
-    }, ESPERA_PARA_JUNTAR)
+    }
+    fila.temporizador = setTimeout(disparar, ESPERA_PARA_JUNTAR)
     aguardando.set(jid, fila)
     return
   }

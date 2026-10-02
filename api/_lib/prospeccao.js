@@ -311,7 +311,9 @@ export const INSTRUCAO_PROSPECCAO_PADRAO = [
  * comparação ignora maiúsculas, acentos e pontuação, e vale se a mensagem
  * CONTIVER a frase. Editável no painel.
  */
-export const GATILHO_PADRAO = ['Boa tarde', 'Bom dia', 'Boa noite', 'notei um gargalo'].join('\n')
+/* Só frases que o dono não usa com amigo: saudação como gatilho fazia o robô
+   entrar em conversa pessoal e cortar o papo. */
+export const GATILHO_PADRAO = ['notei um gargalo', 'vim falar da Astro'].join('\n')
 
 export function normalizarFrase(texto) {
   return String(texto ?? '')
@@ -689,8 +691,11 @@ export function humanizar(texto) {
   const umaPergunta = primeira >= 0 && limpo.indexOf('?', primeira + 1) >= 0 ? limpo.slice(0, primeira + 1).trim() : limpo
   /* Dois balões no máximo: o que passar disso junta no segundo. */
   const partes = umaPergunta.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean)
-  if (partes.length <= 2) return partes.join('\n\n')
-  return `${partes[0]}\n\n${partes.slice(1).join(' ')}`
+  if (partes.length <= 1) return partes.join('')
+  /* Dois balões só quando o primeiro é curto (saudação, "sim", "perfeito");
+     senão um balão só. "Uma coisa atrás da outra" cansa quem lê. */
+  const curto = partes[0].split(/\s+/).length <= 6
+  return curto ? `${partes[0]}\n\n${partes.slice(1).join(' ')}` : partes.join(' ')
 }
 
 /* O dono escreveu numa conversa do robô: por dez minutos é ele quem atende.

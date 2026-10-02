@@ -136,11 +136,11 @@ test('aceite de horário exige hora explícita, um sim e nenhum não', () => {
   assert.match(dicaDaObjecao([{ de: 'pessoa', texto: 'Pode ser às 14h. Obrigada!' }]), /ACEITOU/)
 })
 
-test('o gatilho padrão dispara com a saudação sozinha', () => {
-  assert.equal(bateGatilho('Boa tarde', GATILHO_PADRAO), true)
-  assert.equal(bateGatilho('boa tarde, tudo bem? Eduardo aqui', GATILHO_PADRAO), true)
-  assert.equal(bateGatilho('Bom dia!', GATILHO_PADRAO), true)
-  assert.equal(bateGatilho('Oi, tudo bem?', GATILHO_PADRAO), false)
+test('o gatilho padrão só dispara com frase de prospecção, nunca com saudação', () => {
+  assert.equal(bateGatilho('Boa tarde', GATILHO_PADRAO), false)
+  assert.equal(bateGatilho('Bom dia!', GATILHO_PADRAO), false)
+  assert.equal(bateGatilho('Estava no site de vocês e notei um gargalo na captação.', GATILHO_PADRAO), true)
+  assert.equal(bateGatilho('Oi, vim falar da Astro Soluções', GATILHO_PADRAO), true)
 })
 
 test('reconhece resposta automática e conta as seguidas; o aceite ignora horário de atendimento', () => {
