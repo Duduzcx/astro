@@ -292,6 +292,7 @@ export const INSTRUCAO_PROSPECCAO_PADRAO = [
   '',
   'JEITO DE ESCREVER: português correto e simples, sem gíria e sem abreviação ("você", "para", "está"), caloroso e sem formalidade. Muita gente mais velha do outro lado: frases curtas, uma ideia por frase, palavras comuns. Sem dois-pontos, ponto e vírgula, travessão, negrito, lista ou emoji. Varie o começo (não comece tudo com "Entendo"). Quando a mensagem tiver duas partes (responder algo e depois perguntar outra coisa), separe em dois balões com uma linha em branco, no máximo dois balões, cada um com uma frase. Nunca empilhe assuntos numa mensagem.',
   'PERCEPÇÃO: leia o tom da pessoa e adapte. Pessoa mais velha ou confusa, mais paciência e explicação simples. Pergunta fora do roteiro, responda breve e natural e volte ao assunto. Você conduz a venda, mas conversa como gente, com jeito próprio, sem decorar frases.',
+  'VENDEDOR DE VERDADE: você não vende sistema, você conversa sobre o negócio da pessoa. Antes de falar de solução, tenha curiosidade genuína: quantas pessoas atendem, de onde vêm os clientes, qual a meta do ano, o que mais toma tempo da equipe. Ouça a resposta e use o que ela disse na próxima mensagem. Se a pessoa diz que está tudo bem, acredite, elogie e procure outro ângulo (crescer, reativar contatos antigos, tirar trabalho repetitivo da equipe), nunca insista no mesmo problema. Fale de resultado (mais clientes atendidos, menos tempo perdido, venda que não escapa), nunca de tecnologia. Só proponha a demonstração depois de ela contar algo do negócio que se conecte com o que a Astro resolve.',
   'RITMO E ETIQUETA (anti-afobação): quem manda na velocidade da conversa é o cliente. Se a pessoa só cumprimentou ("Boa tarde", "Tudo bem?"), responda o cumprimento e PARE, sem pergunta comercial. Uma pergunta por vez; espere a resposta antes do próximo passo. Só fale de site, CRM ou automação quando houver abertura real. NUNCA repita uma pergunta ou uma mensagem já enviada: se a pessoa não respondeu, mude a abordagem ou espere.',
   '',
   'Regras que você NUNCA quebra:',
@@ -723,6 +724,9 @@ export function dicaDaObjecao(conversa, voz = VOZES.imobiliaria) {
   }
   if (/\b(voces? tem site|voces? teem site|tem site de voces|site de voces|qual (e )?o site|ver mais|quero ver|me mostra|mostra (ai|pra mim)|o que voces fazem|o que a empresa faz|portfolio|exemplos de trabalho)\b/.test(t)) {
     return `A pessoa quer ver mais ou saber o que a empresa faz: responda numa frase curta que termina com o endereço do site, no mesmo balão, por exemplo "Aqui dá para ver o que a gente faz: ${linkDoSite()}". Nunca mande só o link. Se o endereço já apareceu na conversa, não repita.`
+  }
+  if (/\b((esta|ta|tudo) (tudo )?(bem|tranquilo|otimo|certo|ok|funcionando)|funciona(ndo)? (muito )?bem|respondemos (rapido|na hora|bem)|nao temos (esse )?problema|nao (sentimos|vejo|vemos) (falta|problema)|nao precisamos|estamos bem servidos|esta tudo certo)\b/.test(t) && !/\?/.test(bruto)) {
+    return 'A pessoa disse que está tudo bem com o atendimento dela. NÃO volte ao diagnóstico, NÃO repita nem reformule perguntas sobre site, WhatsApp ou rapidez, e NÃO force a dor. Valide com sinceridade em poucas palavras ("Que bom, isso é raro") e mude de ângulo com curiosidade pelo NEGÓCIO dela, numa pergunta leve: quantas pessoas atendem o WhatsApp, de onde vêm a maioria dos clientes, ou o que acontece com quem pediu informação e sumiu (contato antigo parado é venda parada). Nada de sistema, CRM ou automação nesta mensagem.'
   }
   if (aceitouHorario(bruto)) {
     return 'A pessoa ACEITOU um horário: confirme dia e hora em uma frase, agradeça no masculino e diga que o Eduardo confirma com ela antes. Nenhuma pergunta, nenhuma proposta nova, nenhum link.'
@@ -1215,9 +1219,19 @@ async function falarComIACru(lead, conversa) {
      ler só o roteiro (que cita "não tenho interesse" como definitivo) que
      ele encerrou na primeira recusa simples. */
   const cabecalho = `${voz.bloco ? `${voz.bloco}\n\n` : ''}SITUAÇÃO AGORA (manda mais que qualquer exemplo abaixo):${situacao}${dica ? `\n${dica}` : ''}\n\n`
+  const jaPerguntou = falas
+    .filter((f) => f?.de === 'robo' && String(f.texto || '').includes('?'))
+    .map((f) => String(f.texto).split(/(?<=[.!?])\s+/).filter((frase) => frase.includes('?')).join(' '))
+    .filter(Boolean)
+    .slice(-6)
   const linkJaFoi = falas.some((f) => f?.de === 'robo' && String(f.texto || '').includes(linkDoSite()))
   const instrucao =
-    cabecalho + (await instrucaoDeProspeccao()) + contextoDoLead(lead) + situacao + `\n\nSite da Astro: ${linkDoSite()}${linkJaFoi ? ' (JÁ FOI ENVIADO nesta conversa: não mande de novo)' : ''}`
+    cabecalho +
+    (await instrucaoDeProspeccao()) +
+    contextoDoLead(lead) +
+    situacao +
+    (jaPerguntou.length ? `\n\nPerguntas que você JÁ fez nesta conversa (as respostas estão no histórico; não repita nem reformule nenhuma, avance):\n${jaPerguntou.map((q) => `- ${q}`).join('\n')}` : '') +
+    `\n\nSite da Astro: ${linkDoSite()}${linkJaFoi ? ' (JÁ FOI ENVIADO nesta conversa: não mande de novo)' : ''}`
   const mensagens = conversaParaMensagens(conversa, 20)
   /* Abertura a frio (número digitado, sem histórico): só o cumprimento e a
      apresentação. O assunto vem quando a pessoa responder, ou na retomada. */

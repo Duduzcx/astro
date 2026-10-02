@@ -287,3 +287,10 @@ test('os três segmentos têm voz completa e a dica do gargalo usa a voz', () =>
   assert.match(dicaDaObjecao([{ de: 'pessoa', texto: 'Qual gargalo?' }], VOZES.odonto), /Paciente que chama/)
   assert.match(dicaDaObjecao([{ de: 'pessoa', texto: 'A gente já tem sistema aqui.' }], VOZES.cursinho), /secretaria/)
 })
+
+test('pessoa satisfeita recebe a dica de mudar de ângulo, não de repetir o diagnóstico', () => {
+  assert.match(dicaDaObjecao([{ de: 'pessoa', texto: 'na verdade esta bem tranquilo' }]), /mude de ângulo/)
+  assert.match(dicaDaObjecao([{ de: 'pessoa', texto: 'esta funcionando muito bem' }]), /mude de ângulo/)
+  assert.match(dicaDaObjecao([{ de: 'pessoa', texto: 'respondemos rapido e com certa prioridade' }]), /mude de ângulo/)
+  assert.doesNotMatch(dicaDaObjecao([{ de: 'pessoa', texto: 'Tudo bem? Como funciona?' }]), /mude de ângulo/)
+})
