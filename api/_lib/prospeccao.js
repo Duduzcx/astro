@@ -642,7 +642,7 @@ export function dicaDaObjecao(conversa) {
     return 'A pessoa perguntou um fato sobre a empresa (cidade, região atendida, clientes, endereço). NÃO afirme nada disso: você não sabe. Diga em uma frase que o Eduardo confirma esse detalhe na conversa com ela, e siga com UMA pergunta curta de diagnóstico.'
   }
   if (/\b(voces? tem site|voces? teem site|tem site de voces|site de voces|qual (e )?o site|ver mais|quero ver|me mostra|mostra (ai|pra mim)|o que voces fazem|o que a empresa faz|portfolio|exemplos de trabalho)\b/.test(t)) {
-    return `A pessoa quer ver mais ou saber o que a empresa faz: responda em uma frase simples e mande o site num balão separado (${linkDoSite()}), se ele ainda não apareceu na conversa.`
+    return `A pessoa quer ver mais ou saber o que a empresa faz: responda numa frase curta que termina com o endereço do site, no mesmo balão, por exemplo "Aqui dá para ver o que a gente faz: ${linkDoSite()}". Nunca mande só o link. Se o endereço já apareceu na conversa, não repita.`
   }
   if (aceitouHorario(bruto)) {
     return 'A pessoa ACEITOU um horário: confirme dia e hora em uma frase, agradeça no masculino e diga que o Eduardo confirma com ela antes. Nenhuma pergunta, nenhuma proposta nova, nenhum link.'
@@ -657,7 +657,7 @@ export function dicaDaObjecao(conversa) {
     return 'A pessoa diz que já tem sistema, CRM ou site: use o CONTORNO como PERGUNTA, nunca como afirmação sobre o sistema deles: "O sistema de vocês atende o lead no WhatsApp em 3 segundos de madrugada, qualifica e joga mastigado pro corretor sem ele mexer um dedo?" Não elogie, não descreva e não presuma o que o sistema deles faz.'
   }
   if (/\b(e ?mail|manda|envia|material|apresentacao|pdf)\b/.test(t)) {
-    return `A pessoa pede material: mande o site num balão separado (${linkDoSite()}) e, no outro balão, diga que em 10 minutos o Eduardo mostra funcionando e ofereça os dois horários.`
+    return `A pessoa pede material: diga numa frase que o site mostra o que a gente faz e termine com o endereço ${linkDoSite()}; depois, em outra frase, que em 10 minutos o Eduardo mostra funcionando, e ofereça os dois horários. Nunca mande só o link.`
   }
   if (/\b(como (funciona|fariam|faria|seria|voces fazem)|faz sentido|interessante|me explica|quero entender)\b/.test(t)) {
     return 'A pessoa demonstrou abertura: FECHE com o Eduardo agora (demonstração de 10 minutos, amanhã às 10h ou às 14h). Não volte ao diagnóstico.'
