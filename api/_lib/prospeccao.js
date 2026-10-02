@@ -673,7 +673,7 @@ function situacaoDaConversa(conversa) {
     ? `${n >= 2 ? 'segunda recusa' : 'não definitivo ou hostilidade'}. ENCERRE em uma frase, no masculino e sem chamar a pessoa por nome nenhum ("Obrigado pelo retorno, fico à disposição."), e não faça pergunta.`
     : n === 1
       ? 'UMA (a primeira, simples). NÃO encerre, NÃO agradeça: investigue com elegância (já têm um robô que atende em segundos, ou automação não é prioridade agora?) ou contorne a objeção, e proponha a demonstração com o Eduardo.'
-      : 'Nenhuma. Siga: diagnóstico digital se ainda não fez, contorno da objeção se houver, e a demonstração com o Eduardo (amanhã às 10h ou às 14h).'
+      : 'Nenhuma. Responda ao que a pessoa ACABOU de dizer e avance um passo: se ela contou algo do negócio, aprofunde ou qualifique (o que usam hoje, se dá resultado, quanto investem); se admitiu uma perda, ligue a perda ao que a Astro resolve; diagnóstico só se ainda não houve nenhuma conversa sobre o negócio. A demonstração com o Eduardo (amanhã às 10h ou às 14h) vem depois de ela contar algo que se conecte.'
   return `\n\nRecusas até agora: ${regra}`
 }
 
@@ -753,6 +753,9 @@ export function dicaDaObjecao(conversa, voz = VOZES.imobiliaria) {
   }
   if (/\b((esta|ta|tudo) (tudo )?(bem|tranquilo|otimo|certo|ok|funcionando)|funciona(ndo)? (muito )?bem|respondemos (rapido|na hora|bem)|nao temos (esse )?problema|nao (sentimos|vejo|vemos) (falta|problema)|nao precisamos|estamos bem servidos|esta tudo certo)\b/.test(t) && !/\?/.test(bruto)) {
     return 'A pessoa disse que está tudo bem com o atendimento dela. NÃO volte ao diagnóstico, NÃO repita nem reformule perguntas sobre site, WhatsApp ou rapidez, e NÃO force a dor. Valide com sinceridade em poucas palavras ("Que bom, isso é raro") e mude de ângulo com curiosidade pelo NEGÓCIO dela, numa pergunta leve: quantas pessoas atendem o WhatsApp, de onde vêm a maioria dos clientes, ou o que acontece com quem pediu informação e sumiu (contato antigo parado é venda parada). Nada de sistema, CRM ou automação nesta mensagem.'
+  }
+  if (/\b(nem volta\w*|nao volta\w*|nao da tempo|nao temos tempo|some\w*|sumiu|perde\w*|esquece\w*|fica pra depois|acaba ficando|nao consegue\w*|demora\w*)\b/.test(t) && !/\b(nao perdemos|nao perde)\b/.test(t)) {
+    return 'A pessoa ADMITIU uma perda ou falta de tempo. Não volte ao diagnóstico. Mostre que entendeu usando as palavras dela, ligue em uma frase ao que a Astro resolve (atendimento e retorno automático a quem sumiu, sem tomar tempo da equipe) e faça UMA pergunta de qualificação: o que eles usam hoje para isso, ou quanto essa perda representa. Sem termo técnico.'
   }
   if (aceitouHorario(bruto)) {
     return 'A pessoa ACEITOU um horário: confirme dia e hora em uma frase, agradeça no masculino e diga que o Eduardo confirma com ela antes. Nenhuma pergunta, nenhuma proposta nova, nenhum link.'
