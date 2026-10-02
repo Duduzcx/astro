@@ -770,7 +770,9 @@ export function dicaDaObjecao(conversa, voz = VOZES.imobiliaria) {
     return `A pessoa diz que já tem sistema, CRM ou site: use o CONTORNO como PERGUNTA, nunca como afirmação sobre o sistema deles: "${voz.contorno}" Não elogie, não descreva e não presuma o que o sistema deles faz.`
   }
   if (pedeOutroCanal(bruto) && !emailNoTexto(bruto) && !numeroIndicado(bruto)) {
-    return 'A pessoa quer continuar por e-mail ou por outro número. Peça só o necessário, numa frase curta: o e-mail (ou o número com DDD) e o nome de quem vai receber. Nada de pitch, nada de horário, nada de link nesta mensagem.'
+    return /e-?mail/i.test(bruto)
+      ? 'A pessoa quer receber por e-mail. Peça só o necessário, numa frase curta e simpática: o e-mail e o nome de quem vai receber. Nada de pitch, nada de horário, nada de link nesta mensagem.'
+      : 'A pessoa quer continuar com outra pessoa ou outro número. Peça só o necessário, numa frase curta e simpática: o número com DDD e o nome de quem vai atender. Nada de pitch, nada de horário, nada de link nesta mensagem.'
   }
   if (/\b(e ?mail|manda|envia|material|apresentacao|pdf)\b/.test(t)) {
     return `A pessoa pede material: diga numa frase que o site mostra o que a gente faz e termine com o endereço ${linkDoSite()}; depois, em outra frase, que em 10 minutos o Eduardo mostra funcionando, e ofereça os dois horários. Nunca mande só o link.`
