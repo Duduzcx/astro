@@ -698,7 +698,7 @@ export function dicaDaObjecao(conversa, voz = VOZES.imobiliaria) {
   if (aceitouHorario(bruto)) {
     return 'A pessoa ACEITOU um horário: confirme dia e hora em uma frase, agradeça no masculino e diga que o Eduardo confirma com ela antes. Nenhuma pergunta, nenhuma proposta nova, nenhum link.'
   }
-  if (/\b(tempo|corrid\w*|ocupad\w*|agenda|depois|outra hora|semana que vem|mes que vem)\b/.test(t)) {
+  if (/\b(tempo|corrid\w*|ocupad\w*|agenda (cheia|lotada|apertada)|depois|outra hora|semana que vem|mes que vem)\b/.test(t)) {
     return 'A pessoa diz que não tem tempo: REDUZA O ESFORÇO (10 minutos com o Eduardo, ou o link de teste de 5 minutos) e ofereça os dois horários. Não investigue.'
   }
   if (/\b(caro|preco|valor|custa|custo|dinheiro|orcamento|prioridade|investir|investimento|cortando|grana)\b/.test(t)) {
