@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
  * docs/prospeccao-whatsapp.md.
  */
 type Conversa = {
+  oculta?: boolean
   jid: string
   telefone: string
   nome: string
@@ -62,6 +63,7 @@ export function AbaProspeccao() {
   const [qr, setQr] = useState<string | null>(null)
   const [escolhidas, setEscolhidas] = useState<Set<string>>(() => new Set())
   const [numeroNovo, setNumeroNovo] = useState('')
+  const [mostrarOcultas, setMostrarOcultas] = useState(false)
 
   async function assumirNumero() {
     /* Vários números de uma vez (um por linha), um pedido por número com
@@ -314,6 +316,22 @@ export function AbaProspeccao() {
 
   const conectado = dados.estado.estado === 'conectado'
   const nomeDe = (conversa: Conversa) => conversa.nome || conversa.telefone
+  const visiveis = dados ? dados.conversas.filter((c) => mostrarOcultas || !c.oculta) : []
+  const totalOcultas = dados ? dados.conversas.filter((c) => c.oculta).length : 0
+
+  async function ocultarConversa(conversa: Conversa, sim: boolean) {
+    try {
+      await pedir('/api/admin/prospeccao', { method: 'PATCH', body: JSON.stringify(sim ? { ocultar: conversa.telefone } : { mostrar: conversa.telefone }) })
+      setEscolhidas((atual) => {
+        const prox = new Set(atual)
+        prox.delete(conversa.jid)
+        return prox
+      })
+      await carregar()
+    } catch (falha) {
+      setAviso(mensagemDe(falha))
+    }
+  }
   const alternar = (jid: string) =>
     setEscolhidas((atual) => {
       const proximo = new Set(atual)
@@ -504,7 +522,14 @@ export function AbaProspeccao() {
 
       <div className="graphite-card">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="label-voice text-[10px]">Conversas do aparelho {conectado ? `(${dados.conversas.length})` : ''}</p>
+          <p className="label-voice text-[10px]">
+            Conversas do aparelho {conectado ? `(${visiveis.length})` : ''}
+            {totalOcultas ? (
+              <button type="button" onClick={() => setMostrarOcultas((v) => !v)} className="ml-3 rounded-full border border-white/12 px-2.5 py-0.5 text-[10px] normal-case tracking-normal text-ash hover:text-ivory">
+                {mostrarOcultas ? 'Esconder ocultas' : `Mostrar ${totalOcultas} ocultas`}
+              </button>
+            ) : null}
+          </p>
           {/* Prospectar quem não está na lista: digita o número e o robô
               aborda. Não depende do histórico do aparelho. */}
           {conectado && dados.inteligencia && dados.banco ? (
@@ -550,7 +575,7 @@ export function AbaProspeccao() {
           <p className="mt-3 text-[13px] text-slate">Nenhuma conversa individual no aparelho.</p>
         ) : (
           <ul className="mt-3 divide-y divide-white/8">
-            {dados.conversas.map((conversa) => {
+            {visiveis.map((conversa) => {
               const modo = conversa.lead?.prospeccao || ''
               const marcada = escolhidas.has(conversa.jid)
               return (
@@ -600,6 +625,14 @@ export function AbaProspeccao() {
                       className="rounded-full border border-white/12 px-3 py-1 text-[12px] text-ash hover:text-ivory"
                     >
                       Ler
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void ocultarConversa(conversa, !conversa.oculta)}
+                      title={conversa.oculta ? 'Voltar a mostrar e liberar o robô' : 'Esconder da lista e tirar o robô desta conversa (amigo, família, cliente antigo)'}
+                      className="rounded-full border border-white/12 px-3 py-1 text-[12px] text-slate hover:text-ivory"
+                    >
+                      {conversa.oculta ? 'Mostrar' : 'Ocultar'}
                     </button>
                     {conversa.lead && modo ? (
                       <button

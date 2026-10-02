@@ -34,6 +34,7 @@ import {
   SEGMENTOS,
   segmentoPadrao,
   sincronizarConversas,
+  ocultar,
   ponteRegistrada,
 } from '../_lib/prospeccao.js'
 import { corpo, ErroHttp } from '../crm/_lib/http.js'
@@ -97,6 +98,11 @@ export default async function handler(req, res) {
     if (req.method === 'PATCH') {
       if (!temBanco()) return res.status(503).json({ erro: 'banco não configurado' })
       const dados = await corpo(req)
+      /* { ocultar: "+55..." } esconde a conversa e tira o robô dela; { mostrar: "+55..." } devolve. */
+      if (dados?.ocultar || dados?.mostrar) {
+        const lista = await ocultar(String(dados.ocultar || dados.mostrar), Boolean(dados.ocultar))
+        return res.status(200).json({ ocultas: lista.length })
+      }
       const lead = await marcarProspeccao(Number(dados?.lead), String(dados?.prospeccao ?? ''))
       if (!lead) return res.status(404).json({ erro: 'lead não encontrado' })
       return res.status(200).json({ lead })

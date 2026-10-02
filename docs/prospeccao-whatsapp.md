@@ -160,6 +160,13 @@ mestre e o histórico.
   robô numa conversa, mande `#pausa` nela; `#robo` religa. O painel também
   pausa e devolve.
 
+## Ocultar conversa (a agenda feita à mão)
+
+Como o WhatsApp não entrega a agenda à ponte, o painel tem **Ocultar** em
+cada conversa: ela some da lista ("Mostrar N ocultas" devolve) e o robô
+nunca mexe nela, nem por gatilho, nem por recuperação. Guardado em
+`prospeccao_ocultas` (telefones). "Mostrar" desfaz.
+
 ## Contato salvo, lead automático e indicação
 
 - **Regra do contato salvo**: a ponte sabe quem está na agenda do celular

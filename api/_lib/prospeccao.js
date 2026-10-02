@@ -411,6 +411,30 @@ async function fixarSegmento(leadId, segmento) {
   await gravarConfig(`segmento_${leadId}`, SEGMENTOS.includes(segmento) ? segmento : await segmentoPadrao())
 }
 
+/**
+ * Conversas ocultadas pelo dono no painel (amigo, família, cliente antigo):
+ * somem da lista e o robô nunca mexe nelas, nem por gatilho. É a regra do
+ * "contato salvo" feita à mão, já que o WhatsApp não entrega a agenda.
+ */
+export async function ocultas() {
+  const lista = await lerConfig('prospeccao_ocultas', null)
+  return Array.isArray(lista) ? lista.map(String) : []
+}
+export async function ocultar(telefone, sim = true) {
+  const atual = new Set(await ocultas())
+  const chave = String(telefone).replace(/\D/g, '')
+  if (!chave) return [...atual]
+  if (sim) atual.add(chave)
+  else atual.delete(chave)
+  const nova = [...atual].slice(-1000)
+  await gravarConfig('prospeccao_ocultas', nova)
+  return nova
+}
+export async function estaOculta(telefone) {
+  const chave = String(telefone).replace(/\D/g, '')
+  return Boolean(chave) && (await ocultas()).includes(chave)
+}
+
 export async function gatilhoDeProspeccao() {
   const salvo = await lerConfig('prospeccao_gatilho', null)
   return typeof salvo === 'string' && salvo.trim() ? salvo : GATILHO_PADRAO
@@ -530,6 +554,8 @@ export async function conversasDoAparelho(limite = 600) {
     .filter((chat) => chat.telefone && !/@g\.us$|broadcast/.test(chat.jid))
     .sort((a, b) => (b.quando || '').localeCompare(a.quando || ''))
     .slice(0, limite)
+  const escondidas = temBanco() ? await ocultas() : []
+  for (const chat of chats) chat.oculta = escondidas.includes(String(chat.telefone || '').replace(/\D/g, ''))
   if (!temBanco() || chats.length === 0) return chats.map((chat) => ({ ...chat, lead: null }))
   await prepararBanco()
   const s = sql()
@@ -1339,6 +1365,7 @@ export async function webhookProspeccao(evento) {
   const mensagem = lerMensagemDoWebhook(evento)
   if (!mensagem) return await rastro('debug', 'sem mensagem', evento?.data?.key?.remoteJid || '')
   if (!mensagem.texto && !mensagem.temAudio) return await rastro('debug', 'sem texto', evento?.data?.key?.remoteJid || '')
+  if (await estaOculta(mensagem.telefone)) return await rastro('oculta', '', mensagem.telefone)
   let lead = await acharLeadPorContato(mensagem.telefone)
 
   /* O gatilho: o dono escreveu pelo celular uma das frases combinadas. O
