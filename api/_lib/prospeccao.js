@@ -677,7 +677,7 @@ export function humanizar(texto) {
   const limpo = String(texto || '')
     .replace(/\*\*/g, '')
     .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]|\u{FE0F}|\u{200D}/gu, '')
-    .replace(/(\D):[ \t]+/g, '$1, ')
+    .replace(/(\D):[ \t]+(?!https?:\/\/)/g, '$1, ')
     .replace(/[ \t]*[—–][ \t]*/g, ', ')
     .replace(/;[ \t]*/g, ', ')
     .replace(/,[ \t]*,/g, ',')
@@ -695,7 +695,9 @@ export function humanizar(texto) {
   /* Dois balões só quando o primeiro é curto (saudação, "sim", "perfeito");
      senão um balão só. "Uma coisa atrás da outra" cansa quem lê. */
   const curto = partes[0].split(/\s+/).length <= 6
-  return curto ? `${partes[0]}\n\n${partes.slice(1).join(' ')}` : partes.join(' ')
+  const pontuada = (t) => (/[.!?…]$/.test(t) ? t : `${t}.`)
+  const resto = partes.slice(1).map((t, i, arr) => (i < arr.length - 1 ? pontuada(t) : t)).join(' ')
+  return curto ? `${partes[0]}\n\n${resto}` : `${pontuada(partes[0])} ${resto}`
 }
 
 /* O dono escreveu numa conversa do robô: por dez minutos é ele quem atende.
