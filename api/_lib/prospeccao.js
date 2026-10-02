@@ -220,6 +220,51 @@ export async function registrarPonte(req, res) {
     /* { assumir: [jid] } o mesmo que o botão "O robô assume" do painel. */
     if (Array.isArray(dados?.assumir)) return res.status(200).json({ ok: true, resultados: await assumirConversas(dados.assumir.map(String).slice(0, 10)) })
     if (Array.isArray(dados?.ensaioIndicacao)) return res.status(200).json({ ok: true, abertura: await aberturaParaIndicado({ nome: '', segmento: dados.segmento }, dados.ensaioIndicacao) })
+    /* { indicar: "55...", origem: "55..." } chama o indicado com o contexto da conversa de origem. */
+    if (dados?.indicar && dados?.origem) {
+      const origemLead = await acharLeadPorContato(`+${String(dados.origem).replace(/\D/g, '')}`)
+      if (!origemLead) return res.status(404).json({ erro: 'lead de origem não encontrado' })
+      const conversaOrigem = paraArray(origemLead.conversa)
+      if (dados.texto) conversaOrigem.push({ de: 'pessoa', texto: String(dados.texto).slice(0, 400) })
+      const resultado = await prospectarIndicado(String(dados.indicar).replace(/\D/g, ''), origemLead, conversaOrigem, true)
+      if (resultado?.ok) await marcarProspeccao(origemLead.id, 'pausado')
+      return res.status(200).json({ ok: true, resultado })
+    }
+    /* { pendencias:true } leads do robô: quem falou por último e há quanto tempo. */
+    if (dados?.pendencias) {
+      const linhas = await s2`SELECT id, contato, nome, prospeccao, atualizado_em, conversa FROM leads WHERE canal = 'prospeccao' AND prospeccao = 'bot' ORDER BY atualizado_em DESC LIMIT 60`
+      return res.status(200).json({
+        ok: true,
+        leads: linhas.map((l) => {
+          const c = paraArray(l.conversa)
+          const ult = c[c.length - 1]
+          return { id: l.id, contato: l.contato, nome: l.nome, falas: c.length, daPessoa: c.filter((f) => f?.de === 'pessoa').length, ultimo: ult?.de || '', horas: Math.round((Date.now() - new Date(l.atualizado_em).getTime()) / 36e5), retomar: precisaRetomar(c) }
+        }),
+      })
+    }
+    /* { retomarLead: id } um empurrão leve numa conversa parada (fora do modo ativo, uma vez). */
+    if (dados?.retomarLead) {
+      const [linha] = await s2`SELECT * FROM leads WHERE id = ${Number(dados.retomarLead)}`
+      if (!linha) return res.status(404).json({ erro: 'lead não encontrado' })
+      const conversa = paraArray(linha.conversa)
+      if (!dentroDoHorario()) return res.status(200).json({ ok: false, motivo: 'fora do horário' })
+      if (await estaOculta(linha.contato)) return res.status(200).json({ ok: false, motivo: 'oculta' })
+      if (await pediuParaNaoContatar(linha.contato)) return res.status(200).json({ ok: false, motivo: 'opt-out' })
+      const evo = await evolucaoDaProspeccao()
+      let texto = ''
+      if (conversa[conversa.length - 1]?.de === 'pessoa') {
+        texto = await falarComIA({ ...linha, conversa }, conversa)
+      } else if (precisaRetomar(conversa)) {
+        texto = await falarComIA({ ...linha, conversa }, conversa)
+      } else {
+        return res.status(200).json({ ok: false, motivo: 'já empurrado ou encerrado' })
+      }
+      if (!texto) return res.status(200).json({ ok: false, motivo: 'IA vazia' })
+      await evo.enviarTexto(instanciaPessoal(), linha.contato, texto)
+      await acrescentarFala(linha.id, { de: 'robo', texto })
+      await registrarLog({ canal: 'prospeccao', de: linha.contato, entrada: '(retomada manual)', saida: texto, modo: 'retomada' }).catch(() => {})
+      return res.status(200).json({ ok: true, texto })
+    }
     if (dados?.testarLimite) return res.status(200).json({ ok: true, dentroDoLimite: await dentroDoLimiteDeAbordagens() })
     if (dados?.resetarGatilho) {
       await gravarConfig('prospeccao_gatilho', '')
@@ -771,6 +816,9 @@ export function dicaDaObjecao(conversa, voz = VOZES.imobiliaria) {
   if (/\b(ja (temos|tem|usamos|usa|uso|temos um|tem um)|kenlo|vista|imobzi|jetimob|superlogica|nosso sistema|nosso crm|nosso site)\b/.test(t) && !bruto.includes('?')) {
     return `A pessoa diz que já tem sistema, CRM ou site: use o CONTORNO como PERGUNTA, nunca como afirmação sobre o sistema deles: "${voz.contorno}" Não elogie, não descreva e não presuma o que o sistema deles faz.`
   }
+  if (/\b(segue o contato|vou (te )?(passar|mandar|enviar) o contato|passo o contato|nao esta|não está|so (na|segunda|amanha)|somente (na|segunda|amanha)|volta (na|segunda|amanha))\b/.test(t) && !numeroIndicado(bruto)) {
+    return 'A pessoa avisou que vai passar o contato do responsável, ou que o responsável não está. Responda curto e simpático, só agradecendo e dizendo que fica no aguardo (ex.: "Perfeito, obrigado! Fico no aguardo."). Nada de pitch, nada de pergunta sobre o negócio nesta mensagem.'
+  }
   if (pedeOutroCanal(bruto) && !emailNoTexto(bruto) && !numeroIndicado(bruto)) {
     return /e-?mail/i.test(bruto)
       ? 'A pessoa quer receber por e-mail. Peça só o necessário, numa frase curta e simpática: o e-mail e o nome de quem vai receber. Nada de pitch, nada de horário, nada de link nesta mensagem.'
@@ -1054,13 +1102,14 @@ export async function aberturaParaIndicado(origem, conversaOrigem) {
   return texto && texto.split(/\s+/).length <= 40 ? humanizar(texto) : ''
 }
 
-export async function prospectarIndicado(numero, origem, conversaOrigem = null) {
+export async function prospectarIndicado(numero, origem, conversaOrigem = null, porPessoa = false) {
   if (await quarentenaAte()) return { erro: 'em quarentena' }
   if (!dentroDoHorario()) return { erro: 'fora do horário comercial' }
   if (await pediuParaNaoContatar(numero)) return { erro: 'opt-out' }
   if (await acharLeadPorContato(`+${numero}`)) return { erro: 'já é lead' }
   if ((await existeNoWhatsApp(numero)) === false) return { erro: 'sem WhatsApp' }
-  if (!(await dentroDoLimiteDeAbordagens())) return { erro: 'limite diário' }
+  /* Indicação feita por alguém da empresa é contato quente: não gasta o limite diário. */
+  if (!porPessoa && !(await dentroDoLimiteDeAbordagens())) return { erro: 'limite diário' }
   const evo = await evolucaoDaProspeccao()
   if (!evo) return { erro: 'sem ponte' }
   const nomeOrigem = origem?.nome && !/^\+?[\d\s()-]{8,}$/.test(String(origem.nome)) ? String(origem.nome) : ''
@@ -1094,7 +1143,7 @@ export async function prospectarIndicado(numero, origem, conversaOrigem = null) 
 
 /* A pessoa quer continuar em outro canal: e-mail ou outro número. */
 const PEDE_OUTRO_CANAL =
-  /\b(manda|mande|envia|envie|enviar|mandar|encaminha|encaminhe)\b[^.?!]{0,50}\b(e-?mail|email)\b|\bpor e-?mail\b|\bno (meu )?e-?mail\b|\b(outro|esse|este|nesse|neste) (n[uú]mero|whats(app)?|contato)\b|\bfal(a|ar|e) com [^.?!]{0,40}\b(no|nesse|neste|pelo)\b|\bchama (no|nesse|neste|o)\b|\b(meu|o) (e-?mail|email) (é|e)\b/i
+  /\b(manda|mande|envia|envie|enviar|mandar|encaminha|encaminhe)\b[^.?!]{0,50}\b(e-?mail|email)\b|\bpor e-?mail\b|\bno (meu )?e-?mail\b|\b(outro|esse|este|nesse|neste) (n[uú]mero|whats(app)?|contato)\b|\bfal(a|ar|e) com [^.?!]{0,40}\b(no|nesse|neste|pelo)\b|\bchama (no|nesse|neste|o)\b|\b(meu|o) (e-?mail|email) (é|e)\b|contato compartilhado|segue o contato|vou (te )?(passar|mandar|enviar) o contato|passo o contato|o contato (dela|dele|do respons\w+|da respons\w+)/i
 export function pedeOutroCanal(texto) {
   return PEDE_OUTRO_CANAL.test(String(texto || ''))
 }
@@ -1294,9 +1343,15 @@ async function falarComIACru(lead, conversa) {
      leve de quem fala com o responsável. Sem modelo: o modelo emendava a
      pergunta comercial. */
   const falasDaPessoa = falas.filter((f) => f?.de === 'pessoa')
-  if (ultimaFala?.de === 'pessoa' && falasDaPessoa.length <= 2 && ehSaudacao(ultimaDaPessoa)) {
+  if (ultimaFala?.de === 'pessoa' && ehSaudacao(ultimaDaPessoa)) {
     const t = normalizarFrase(ultimaDaPessoa)
-    if (/\b(tudo bem|tudo bom|td bem|td bom|como vai|como voce|como vc|e voce|e vc|e com voce|e com vc|beleza)\b/.test(t)) {
+    /* A pessoa perguntou "tudo bem?": responde e devolve a pergunta, e para.
+       O assunto vem depois que ela responder. */
+    if (/\b(tudo bem|tudo bom|td bem|td bom|como vai|como voce|como vc|beleza)\b/.test(t) && !/\b(e voce|e vc|e com voce|e com vc)\b/.test(t)) {
+      return `${/\b(boa tarde|bom dia|boa noite)\b/.test(t) ? `${saudacaoDoDia(ultimaDaPessoa)}! ` : ''}Tudo ótimo por aqui, e com você?`
+    }
+    if (falasDaPessoa.length > 2) return 'Que bom!'
+    if (/\b(e voce|e vc|e com voce|e com vc|tudo bem|tudo bom|beleza)\b/.test(t)) {
       return `Tudo certo por aqui também!\n\nEstou falando com ${voz.quem}?`
     }
     const jaSeApresentou = falas.some((f) => f?.de === 'robo' && /assistente da astro/i.test(String(f.texto || '')))
@@ -1607,7 +1662,7 @@ export async function webhookProspeccao(evento) {
     /* Número indicado: o robô já chama a pessoa, com o contexto desta conversa. */
     let indicacao = null
     if (!emailDado && numeroDado) {
-      indicacao = await prospectarIndicado(numeroDado, lead, [...paraArray(lead.conversa), { de: 'pessoa', texto: textoDaPessoa }]).catch((erro) => ({ erro: erro?.message || 'falhou' }))
+      indicacao = await prospectarIndicado(numeroDado, lead, [...paraArray(lead.conversa), { de: 'pessoa', texto: textoDaPessoa }], true).catch((erro) => ({ erro: erro?.message || 'falhou' }))
     }
     const confirmacao = emailDado
       ? `Perfeito, a apresentação vai para ${emailDado} ainda hoje. Obrigado pela atenção!`

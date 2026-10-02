@@ -78,3 +78,9 @@ test('o webhook da Evolution é lido em qualquer formato de mensagem', () => {
   assert.equal(lerMensagemDoWebhook({ data: { key: { remoteJid: '123@g.us' }, message: { conversation: 'grupo' } } }), null)
   assert.equal(lerMensagemDoWebhook({ data: { ...base, key: { ...base.key, fromMe: true }, message: { conversation: 'eu' } } })?.deMim, true)
 })
+
+test('cartão de contato compartilhado vira texto com nome e número', () => {
+  const vcard = 'BEGIN:VCARD\nVERSION:3.0\nFN:Marketing Alphalink Fran\nTEL;type=CELL;waid=5511914499352:+55 11 91449-9352\nEND:VCARD'
+  const m = lerMensagemDoWebhook({ data: { key: { remoteJid: '5511947584000@s.whatsapp.net', fromMe: false, id: 'X' }, message: { contactMessage: { displayName: 'Marketing Alphalink Fran', vcard } } } })
+  assert.equal(m?.texto, 'Contato compartilhado: Marketing Alphalink Fran 5511914499352')
+})

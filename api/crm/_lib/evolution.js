@@ -156,9 +156,20 @@ export function lerMensagemDoWebhook(evento         )                           
     ((m.templateButtonReplyMessage                                                )?.selectedDisplayText ?? '') ||
     ''
   const audio = m.audioMessage || m.ephemeralMessage?.message?.audioMessage || m.viewOnceMessage?.message?.audioMessage
+  /* Cartão de contato compartilhado: vira texto com nome e número, para o
+     robô entender a indicação. */
+  const cartoes = [m.contactMessage, ...((m.contactsArrayMessage && m.contactsArrayMessage.contacts) || [])].filter(Boolean)
+  const textoDoCartao = cartoes
+    .map((c) => {
+      const vcard = String(c.vcard || '')
+      const tel = (vcard.match(/waid=(\d{8,15})/) || vcard.match(/TEL[^:\n]*:([+\d\s()-]{8,})/) || [])[1] || ''
+      return tel ? `Contato compartilhado: ${String(c.displayName || '').trim()} ${tel.trim()}` : ''
+    })
+    .filter(Boolean)
+    .join('\n')
   return {
     telefone: `+${somenteDigitos(jid.split('@')[0])}`,
-    texto: String(texto).trim(),
+    texto: String(texto || textoDoCartao).trim(),
     id: String(chave.id || ''),
     nomeExibido: String(dados.pushName || ''),
     deMim: Boolean(chave.fromMe),
