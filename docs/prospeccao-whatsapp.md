@@ -204,6 +204,14 @@ já encaminhou. O site responde só a quem já é lead do robô.
   "Sei que a rotina na imobiliária é corrida. Conseguiu dar uma olhada na
   mensagem acima?". Só no modo ativo, em horário comercial.
 
+## Aprendizado com resultado
+
+Cada conversa que termina em reunião aceita é guardada (últimas 12 falas,
+números trocados por "[número]") em `exemplos_vencedores`, até 20. As
+respostas seguintes do mesmo segmento recebem os 4 mais recentes como
+referência de tom e caminho. Não é treino de modelo: é aprender com o que
+deu certo, de graça e na hora.
+
 ## Segmentos: imobiliária, cursinho, clínica odontológica
 
 A aba tem "Segmento dos próximos leads". Cada lead guarda o segmento com que
