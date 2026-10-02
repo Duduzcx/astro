@@ -911,7 +911,7 @@ export async function podeAbordarAFrio(numeroCru) {
   if (existe === false) return { erro: 'esse número não tem WhatsApp' }
   const ultima = await lerConfig('ultima_abordagem_fria', null)
   const marco = typeof ultima === 'string' ? Date.parse(ultima) : NaN
-  if (Number.isFinite(marco) && Date.now() - marco < 120000) return { erro: 'aguarde: no mínimo 2 minutos entre abordagens a frio' }
+  if (Number.isFinite(marco) && Date.now() - marco < 60000) return { erro: 'aguarde: no mínimo 1 minuto entre abordagens a frio' }
   if (!(await dentroDoLimiteDeAbordagens())) return { erro: 'limite diário de abordagens a frio atingido. Para volume, o caminho é a API oficial do WhatsApp Business.' }
   await gravarConfig('ultima_abordagem_fria', new Date().toISOString())
   return { jid: `${d}@s.whatsapp.net` }

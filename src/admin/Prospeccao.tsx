@@ -89,9 +89,9 @@ export function AbaProspeccao() {
         const r = await pedir('/api/admin/prospeccao', { method: 'POST', body: JSON.stringify({ numero: numeros[i] }) })
         todos.push(...((r.resultados || []) as Resultado[]))
         setResultados([...todos])
-        /* Dois minutos e pouco entre números: é o intervalo mínimo que o site
+        /* Um minuto e pouco entre números: é o intervalo mínimo que o site
            exige, e é o ritmo de uma pessoa abrindo conversas à mão. */
-        if (i < numeros.length - 1) await new Promise((fim) => setTimeout(fim, 125000 + Math.random() * 20000))
+        if (i < numeros.length - 1) await new Promise((fim) => setTimeout(fim, 63000 + Math.random() * 15000))
       }
       const falhas = todos.filter((x) => x.erro).length
       setAviso(falhas ? `${falhas} de ${todos.length} falharam; veja abaixo.` : '')
@@ -538,7 +538,7 @@ export function AbaProspeccao() {
                 rows={2}
                 value={numeroNovo}
                 onChange={(e) => setNumeroNovo(e.target.value)}
-                placeholder="Números para abordar, um por linha (DDD + número), até 10 por dia, um a cada 2 minutos"
+                placeholder="Números para abordar, um por linha (DDD + número), até 10 por dia, um por minuto"
                 className="min-w-0 flex-1 rounded-xl border border-white/12 bg-onyx/60 px-4 py-2 text-[13px] leading-[1.4] text-ivory outline-none placeholder:text-slate focus:border-[#8db4f5]/50 sm:w-72"
               />
               <button
