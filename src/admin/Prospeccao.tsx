@@ -67,7 +67,9 @@ export function AbaProspeccao() {
 
   async function assumirNumero() {
     /* Vários números de uma vez (um por linha), um pedido por número com
-       pausa entre eles: rajada de mensagens iguais é o que o WhatsApp pune. */
+       pausa entre eles. Erro em um número não para a lista: vira uma linha
+       de resultado e o laço segue. "Aguarde" (intervalo mínimo do site)
+       espera e tenta de novo uma vez. */
     const numeros = Array.from(
       new Set(
         numeroNovo
@@ -83,22 +85,37 @@ export function AbaProspeccao() {
     setOcupado(true)
     setAviso('')
     const todos: Resultado[] = []
+    const espera = (ms: number) => new Promise((fim) => setTimeout(fim, ms))
+    const abordar = async (numero: string) => {
+      const r = await pedir('/api/admin/prospeccao', { method: 'POST', body: JSON.stringify({ numero }) })
+      return (r.resultados || []) as Resultado[]
+    }
     try {
       for (let i = 0; i < numeros.length; i += 1) {
-        if (numeros.length > 1) setAviso(`Abordando ${i + 1} de ${numeros.length}…`)
-        const r = await pedir('/api/admin/prospeccao', { method: 'POST', body: JSON.stringify({ numero: numeros[i] }) })
-        todos.push(...((r.resultados || []) as Resultado[]))
+        setAviso(`Abordando ${i + 1} de ${numeros.length}…`)
+        try {
+          todos.push(...(await abordar(numeros[i])))
+        } catch (falha) {
+          const motivo = mensagemDe(falha)
+          if (/aguarde/i.test(motivo)) {
+            setAviso(`Intervalo mínimo: esperando para abordar ${i + 1} de ${numeros.length}…`)
+            await espera(65000)
+            try {
+              todos.push(...(await abordar(numeros[i])))
+            } catch (denovo) {
+              todos.push({ jid: `${numeros[i]}@s.whatsapp.net`, erro: mensagemDe(denovo) } as Resultado)
+            }
+          } else {
+            todos.push({ jid: `${numeros[i]}@s.whatsapp.net`, erro: motivo } as Resultado)
+          }
+        }
         setResultados([...todos])
-        /* Um minuto e pouco entre números: é o intervalo mínimo que o site
-           exige, e é o ritmo de uma pessoa abrindo conversas à mão. */
-        if (i < numeros.length - 1) await new Promise((fim) => setTimeout(fim, 63000 + Math.random() * 15000))
+        if (i < numeros.length - 1) await espera(63000 + Math.random() * 15000)
       }
       const falhas = todos.filter((x) => x.erro).length
-      setAviso(falhas ? `${falhas} de ${todos.length} falharam; veja abaixo.` : '')
+      setAviso(falhas ? `${falhas} de ${todos.length} não foram abordados; os motivos estão abaixo.` : `${todos.length} abordados.`)
       if (!falhas) setNumeroNovo('')
       await carregar()
-    } catch (falha) {
-      setAviso(mensagemDe(falha))
     } finally {
       setOcupado(false)
     }
