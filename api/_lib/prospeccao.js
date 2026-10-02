@@ -22,7 +22,7 @@ import { corpo, segredoConfere } from '../crm/_lib/http.js'
 import { gravarConfig, lerConfig } from './config.js'
 import { prepararBanco, sql, temBanco } from './db.js'
 import { conversaParaMensagens, dentroDoTeto, limpar, modeloGroqEmUso, qualInteligencia, responderComIA, temInteligencia, transcreverAudio } from './inteligencia.js'
-import { acharLeadPorContato, acrescentarFala, criarLead, paraArray, texto as limparTexto } from './leads.js'
+import { acharLeadPorContato, acrescentarFala, atualizarLead, criarLead, paraArray, texto as limparTexto } from './leads.js'
 import { registrarLog } from './logs.js'
 
 /** O nome da instância do número pessoal na Evolution. */
@@ -769,6 +769,9 @@ export function dicaDaObjecao(conversa, voz = VOZES.imobiliaria) {
   if (/\b(ja (temos|tem|usamos|usa|uso|temos um|tem um)|kenlo|vista|imobzi|jetimob|superlogica|nosso sistema|nosso crm|nosso site)\b/.test(t) && !bruto.includes('?')) {
     return `A pessoa diz que já tem sistema, CRM ou site: use o CONTORNO como PERGUNTA, nunca como afirmação sobre o sistema deles: "${voz.contorno}" Não elogie, não descreva e não presuma o que o sistema deles faz.`
   }
+  if (pedeOutroCanal(bruto) && !emailNoTexto(bruto) && !numeroIndicado(bruto)) {
+    return 'A pessoa quer continuar por e-mail ou por outro número. Peça só o necessário, numa frase curta: o e-mail (ou o número com DDD) e o nome de quem vai receber. Nada de pitch, nada de horário, nada de link nesta mensagem.'
+  }
   if (/\b(e ?mail|manda|envia|material|apresentacao|pdf)\b/.test(t)) {
     return `A pessoa pede material: diga numa frase que o site mostra o que a gente faz e termine com o endereço ${linkDoSite()}; depois, em outra frase, que em 10 minutos o Eduardo mostra funcionando, e ofereça os dois horários. Nunca mande só o link.`
   }
@@ -1062,6 +1065,16 @@ export async function prospectarIndicado(numero, origem) {
   await registrarLog({ canal: 'prospeccao', de: `+${numero}`, entrada: '(indicação)', saida: abertura, modo: 'ia' }).catch(() => {})
   await avisarDono('Indicação recebida: novo contato abordado', { ...novo, contato: `+${numero}` }, `indicado por ${nomeOrigem || origem?.contato || ''}`)
   return { ok: true, lead: novo.id }
+}
+
+/* A pessoa quer continuar em outro canal: e-mail ou outro número. */
+const PEDE_OUTRO_CANAL =
+  /\b(manda|mande|envia|envie|enviar|mandar|encaminha|encaminhe)\b[^.?!]{0,50}\b(e-?mail|email)\b|\bpor e-?mail\b|\bno (meu )?e-?mail\b|\b(outro|esse|este|nesse|neste) (n[uú]mero|whats(app)?|contato)\b|\bfal(a|ar|e) com [^.?!]{0,40}\b(no|nesse|neste|pelo)\b|\bchama (no|nesse|neste|o)\b|\b(meu|o) (e-?mail|email) (é|e)\b/i
+export function pedeOutroCanal(texto) {
+  return PEDE_OUTRO_CANAL.test(String(texto || ''))
+}
+export function emailNoTexto(texto) {
+  return (String(texto || '').match(/[\w.+-]+@[\w-]+(\.[\w-]+)+/) || [''])[0].toLowerCase()
 }
 
 const ABORDAGENS_PADRAO = 10
@@ -1532,6 +1545,31 @@ export async function webhookProspeccao(evento) {
     await marcarProspeccao(lead.id, 'pausado')
     await avisarDono('Pessoa pediu contato humano', lead, textoDaPessoa)
     return await rastro('humano-pedido', textoDaPessoa, mensagem.telefone)
+  }
+
+  /* Continuar em outro canal: a pessoa pediu (agora ou na fala anterior) e
+     passou o e-mail ou o número. O robô confirma, encerra aqui e avisa o
+     dono, que segue por lá. Não manda mensagem sozinho para o outro número. */
+  const falasPessoa = paraArray(lead.conversa).filter((f) => f?.de === 'pessoa').slice(-2).map((f) => String(f.texto || ''))
+  const pediuAntes = pedeOutroCanal(textoDaPessoa) || falasPessoa.some(pedeOutroCanal) || paraArray(lead.conversa).slice(-1).some((f) => f?.de === 'robo' && /e-?mail|n[uú]mero/i.test(String(f.texto || '')))
+  const emailDado = emailNoTexto(textoDaPessoa)
+  const numeroDado = numeroIndicado(textoDaPessoa, mensagem.telefone)
+  if (pediuAntes && (emailDado || numeroDado)) {
+    const destino = emailDado || `+${numeroDado}`
+    const confirmacao = emailDado
+      ? `Perfeito, a apresentação vai para ${emailDado} ainda hoje. Obrigado pela atenção!`
+      : 'Perfeito, vou continuar a conversa por esse número. Obrigado pela atenção!'
+    try {
+      const evo = await evolucaoDaProspeccao()
+      await evo?.enviarTexto(instanciaPessoal(), mensagem.telefone, confirmacao)
+      await acrescentarFala(lead.id, { de: 'robo', texto: confirmacao })
+    } catch (erro) {
+      await rastro('debug', 'envio falhou', erro?.message || '')
+    }
+    await marcarProspeccao(lead.id, 'pausado')
+    await atualizarLead(lead.id, { anotacoes: `${lead.anotacoes ? `${lead.anotacoes}\n` : ''}Pediu para continuar em outro canal: ${destino} (${new Date().toLocaleDateString('pt-BR')}).` }).catch(() => {})
+    await avisarDono(emailDado ? 'Pediu a apresentação por e-mail' : 'Pediu para continuar em outro número', lead, `${destino} · "${textoDaPessoa}"`)
+    return await rastro('outro-canal', destino, mensagem.telefone)
   }
 
   /* Mais de oito respostas na mesma hora para o mesmo número: silêncio. */
