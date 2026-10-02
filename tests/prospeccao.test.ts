@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { GATILHO_PADRAO, PING_DE_RETORNO, numeroIndicado, dentroDoHorario, humanizar, pedeHumano, precisaSegundoPing, aceitouHorario, bateGatilho, comandoDoDono, contarAutomaticasSeguidas, contarRecusas, deveEncerrar, dicaDaObjecao, ehDoRobo, ehHostil, ehSaudacao, falasDoHistorico, opcaoHumana, parecida, pareceAutomatica, precisaRetomar, resumoDoChat, telefoneDoJid, temMenu } from '../api/_lib/prospeccao.js'
+import { GATILHO_PADRAO, PING_DE_RETORNO, SEGMENTOS, VOZES, numeroIndicado, dentroDoHorario, humanizar, pedeHumano, precisaSegundoPing, aceitouHorario, bateGatilho, comandoDoDono, contarAutomaticasSeguidas, contarRecusas, deveEncerrar, dicaDaObjecao, ehDoRobo, ehHostil, ehSaudacao, falasDoHistorico, opcaoHumana, parecida, pareceAutomatica, precisaRetomar, resumoDoChat, telefoneDoJid, temMenu } from '../api/_lib/prospeccao.js'
 
 const registro = (texto: string, fromMe: boolean, quando: number, extra: Record<string, unknown> = {}) => ({
   key: { remoteJid: '5511999990000@s.whatsapp.net', fromMe, id: `m${quando}` },
@@ -279,4 +279,11 @@ test('acha o número indicado no texto do robô alheio, ignorando o próprio', (
   assert.equal(numeroIndicado('Fale com a Ana no (11) 98765-4321', '+5511999990000'), '5511987654321')
   assert.equal(numeroIndicado('Pode chamar no 11 98765-4321 que ela responde', '+5511987654321'), '')
   assert.equal(numeroIndicado('Amanhã às 10h ou às 14h?', '+5511999990000'), '')
+})
+
+test('os três segmentos têm voz completa e a dica do gargalo usa a voz', () => {
+  assert.deepEqual(SEGMENTOS, ['imobiliaria', 'cursinho', 'odonto'])
+  for (const s of SEGMENTOS) for (const campo of ['rotulo', 'quem', 'gargalo', 'contorno']) assert.ok((VOZES as Record<string, Record<string, string>>)[s][campo].length > 3, s + '.' + campo)
+  assert.match(dicaDaObjecao([{ de: 'pessoa', texto: 'Qual gargalo?' }], VOZES.odonto), /Paciente que chama/)
+  assert.match(dicaDaObjecao([{ de: 'pessoa', texto: 'A gente já tem sistema aqui.' }], VOZES.cursinho), /secretaria/)
 })

@@ -28,6 +28,7 @@ type Dados = {
   gatilhoPadrao: string
   modo: 'responder' | 'ativo'
   quarentenaAte: string | null
+  segmento: 'imobiliaria' | 'cursinho' | 'odonto'
   conversas: Conversa[]
   ponte: { url: string; instancia: string; quando: string } | null
   inteligencia: boolean
@@ -72,7 +73,7 @@ export function AbaProspeccao() {
           .map((n) => n.replace(/\D/g, ''))
           .filter((n) => n.length >= 10),
       ),
-    ).slice(0, 20)
+    ).slice(0, 10)
     if (numeros.length === 0) {
       setAviso('Digite o número com DDD (ex.: 11984680317), um por linha.')
       return
@@ -86,7 +87,9 @@ export function AbaProspeccao() {
         const r = await pedir('/api/admin/prospeccao', { method: 'POST', body: JSON.stringify({ numero: numeros[i] }) })
         todos.push(...((r.resultados || []) as Resultado[]))
         setResultados([...todos])
-        if (i < numeros.length - 1) await new Promise((fim) => setTimeout(fim, 5000 + Math.random() * 4000))
+        /* Dois minutos e pouco entre números: é o intervalo mínimo que o site
+           exige, e é o ritmo de uma pessoa abrindo conversas à mão. */
+        if (i < numeros.length - 1) await new Promise((fim) => setTimeout(fim, 125000 + Math.random() * 20000))
       }
       const falhas = todos.filter((x) => x.erro).length
       setAviso(falhas ? `${falhas} de ${todos.length} falharam; veja abaixo.` : '')
@@ -242,6 +245,16 @@ export function AbaProspeccao() {
     }
   }
 
+  async function salvarSegmento(segmento: 'imobiliaria' | 'cursinho' | 'odonto') {
+    try {
+      await pedir('/api/admin/prospeccao', { method: 'PUT', body: JSON.stringify({ segmento }) })
+      setAviso('Segmento salvo. Vale para os leads que nascerem daqui em diante.')
+      await carregar()
+    } catch (falha) {
+      setAviso(mensagemDe(falha))
+    }
+  }
+
   async function quarentena(horas: number) {
     try {
       await pedir('/api/admin/prospeccao', { method: 'PUT', body: JSON.stringify({ quarentena: horas }) })
@@ -373,6 +386,33 @@ export function AbaProspeccao() {
         </div>
 
         <div className="graphite-card">
+          <p className="label-voice text-[10px]">Segmento dos próximos leads</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {(
+              [
+                ['imobiliaria', 'Imobiliária'],
+                ['cursinho', 'Cursinho preparatório'],
+                ['odonto', 'Clínica odontológica'],
+              ] as const
+            ).map(([valor, rotulo]) => (
+              <button
+                key={valor}
+                type="button"
+                aria-pressed={dados.segmento === valor}
+                onClick={() => void salvarSegmento(valor)}
+                className={`rounded-full px-4 py-2 text-[13px] ${dados.segmento === valor ? 'bg-cobalt text-white' : 'border border-white/12 text-ash hover:text-ivory'}`}
+              >
+                {rotulo}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-[11px] leading-[1.5] text-slate">
+            Escolha antes de abordar uma lista. Cada lead guarda o segmento com que nasceu: dor, contorno e fechamento
+            mudam conforme o ramo; o roteiro de vendas é o mesmo.
+          </p>
+        </div>
+
+        <div className="graphite-card">
           <p className="label-voice text-[10px]">Modo do robô</p>
           <div className="mt-2 flex flex-wrap gap-2">
             <button
@@ -473,7 +513,7 @@ export function AbaProspeccao() {
                 rows={2}
                 value={numeroNovo}
                 onChange={(e) => setNumeroNovo(e.target.value)}
-                placeholder="Números para abordar, um por linha (DDD + número), até 20 por dia"
+                placeholder="Números para abordar, um por linha (DDD + número), até 10 por dia, um a cada 2 minutos"
                 className="min-w-0 flex-1 rounded-xl border border-white/12 bg-onyx/60 px-4 py-2 text-[13px] leading-[1.4] text-ivory outline-none placeholder:text-slate focus:border-[#8db4f5]/50 sm:w-72"
               />
               <button

@@ -197,6 +197,16 @@ já encaminhou. O site responde só a quem já é lead do robô.
   "Sei que a rotina na imobiliária é corrida. Conseguiu dar uma olhada na
   mensagem acima?". Só no modo ativo, em horário comercial.
 
+## Segmentos: imobiliária, cursinho, clínica odontológica
+
+A aba tem "Segmento dos próximos leads". Cada lead guarda o segmento com que
+nasceu (config `segmento_<id>`); o padrão para leads novos é
+`prospeccao_segmento`. A instrução de fábrica é de imobiliária; para os
+outros ramos um bloco no topo manda ler os termos equivalentes e traz a dor
+e a entrega do ramo, e as frases fixas (quem é o responsável, gargalo,
+contorno) vêm da voz do segmento (`VOZES` em prospeccao.js). A sonda aceita
+`{ ensaio, segmento }` para ensaiar cada voz.
+
 ## Travas da abordagem a frio (proteção do número)
 
 Toda abordagem a frio passa por `podeAbordarAFrio`, nesta ordem: modo

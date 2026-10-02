@@ -31,6 +31,8 @@ import {
   MODOS_DO_ROBO,
   podeAbordarAFrio,
   quarentenaAte,
+  SEGMENTOS,
+  segmentoPadrao,
   sincronizarConversas,
   ponteRegistrada,
 } from '../_lib/prospeccao.js'
@@ -59,6 +61,7 @@ export default async function handler(req, res) {
       const gatilho = await gatilhoDeProspeccao()
       const modo = await modoDeProspeccao()
       const quarentena = await quarentenaAte()
+      const segmento = await segmentoPadrao()
       const ponte = await ponteRegistrada()
       const conversas = estado.estado === 'conectado' ? await conversasDoAparelho().catch(() => []) : []
       return res.status(200).json({
@@ -69,6 +72,7 @@ export default async function handler(req, res) {
         gatilhoPadrao: GATILHO_PADRAO,
         modo,
         quarentenaAte: quarentena,
+        segmento,
         conversas,
         ponte,
         inteligencia: temInteligencia(),
@@ -116,6 +120,11 @@ export default async function handler(req, res) {
         await gravarConfig('quarentena_ate', ate)
         if (ate) await gravarConfig('prospeccao_modo', 'responder')
         saida.quarentenaAte = ate || null
+      }
+      if (typeof dados?.segmento === 'string') {
+        if (!SEGMENTOS.includes(dados.segmento)) return res.status(400).json({ erro: 'segmento desconhecido' })
+        await gravarConfig('prospeccao_segmento', dados.segmento)
+        saida.segmento = dados.segmento
       }
       if (typeof dados?.modo === 'string') {
         if (!MODOS_DO_ROBO.includes(dados.modo)) return res.status(400).json({ erro: 'modo desconhecido' })

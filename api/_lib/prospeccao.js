@@ -144,7 +144,7 @@ export async function registrarPonte(req, res) {
           ? [{ de: 'pessoa', texto: dados.ensaio.slice(0, 400) }]
           : null
       if (ensaio) {
-        testes.ensaio = await falarComIA({ nome: '', contato: '+5500000000000' }, [abertura, ...ensaio]).catch((erro) => `erro: ${erro?.message}`)
+        testes.ensaio = await falarComIA({ nome: '', contato: '+5500000000000', segmento: dados.segmento }, [abertura, ...ensaio]).catch((erro) => `erro: ${erro?.message}`)
       }
       testes.ia = await responderComIA('Responda apenas: pronto.', [{ role: 'user', content: 'diga pronto' }])
         .then((t) => (t ? `respondeu (${t.length} caracteres): ${t.slice(0, 60)}` : 'voltou VAZIA'))
@@ -358,6 +358,57 @@ export const MODOS_DO_ROBO = ['responder', 'ativo']
 export async function modoDeProspeccao() {
   const salvo = await lerConfig('prospeccao_modo', null)
   return MODOS_DO_ROBO.includes(salvo) ? salvo : 'responder'
+}
+
+/**
+ * Os três ramos que o robô atende. A instrução de fábrica é escrita para
+ * imobiliária; para os outros, um bloco no topo manda ler "imobiliária,
+ * corretor, imóvel" como o equivalente do ramo, e as frases fixas (quem é o
+ * responsável, o gargalo, o contorno) vêm da voz do segmento. O segmento é
+ * fixado no lead quando ele nasce (config segmento_<id>); o padrão para
+ * leads novos é escolhido na aba.
+ */
+export const SEGMENTOS = ['imobiliaria', 'cursinho', 'odonto']
+export const VOZES = {
+  imobiliaria: {
+    rotulo: 'Imobiliária',
+    quem: 'o responsável pela imobiliária',
+    gargalo: 'Quem chama vocês no WhatsApp com o corretor em visita, à noite ou no fim de semana fica sem resposta, esfria e vai pro concorrente.',
+    contorno: 'O sistema de vocês atende o lead no WhatsApp em 3 segundos de madrugada, qualifica e joga mastigado pro corretor sem ele mexer um dedo?',
+    bloco: '',
+  },
+  cursinho: {
+    rotulo: 'Cursinho preparatório',
+    quem: 'a coordenação ou o responsável pelo cursinho',
+    gargalo: 'Pai ou aluno que chama no WhatsApp perguntando de matrícula, preço ou turma e não é respondido na hora fecha com o cursinho do lado.',
+    contorno: 'O sistema de vocês responde o pai à noite, tira as dúvidas de matrícula e já agenda a visita sem ninguém da secretaria mexer?',
+    bloco:
+      'SEGMENTO DESTA CONVERSA: CURSINHO PREPARATÓRIO. Onde a instrução fala de imobiliária, corretor, imóvel e captação, leia cursinho, secretaria ou coordenação, aluno ou pai, e matrícula. A dor: na época de matrícula a secretaria não dá conta do WhatsApp, pai e aluno esperam, e quem não é respondido na hora fecha com o concorrente. O que a Astro entrega: site com inscrição, robô que responde dúvidas de turmas, horários e matrícula 24 horas e agenda visita ou aula experimental, e um CRM simples com cada interessado e em que etapa está. Fechamento igual: demonstração de 10 minutos com o Eduardo.',
+  },
+  odonto: {
+    rotulo: 'Clínica odontológica',
+    quem: 'o responsável pela clínica',
+    gargalo: 'Paciente que chama no WhatsApp para marcar ou perguntar valor e não é respondido na hora marca em outra clínica.',
+    contorno: 'O sistema de vocês responde o paciente à noite, confirma a consulta e lembra no dia, sem a recepção precisar mexer?',
+    bloco:
+      'SEGMENTO DESTA CONVERSA: CLÍNICA ODONTOLÓGICA. Onde a instrução fala de imobiliária, corretor, imóvel e captação, leia clínica, recepção, paciente e consulta. A dor: recepção afogada em ligações, paciente que quer marcar ou saber valor espera e desiste, faltas sem confirmação. O que a Astro entrega: site com agendamento, robô que marca e confirma consultas 24 horas, lembra o paciente no dia e qualifica (plano ou particular), e um CRM simples para a recepção. Fechamento igual: demonstração de 10 minutos com o Eduardo.',
+  },
+}
+export async function segmentoPadrao() {
+  const s = await lerConfig('prospeccao_segmento', null)
+  return SEGMENTOS.includes(s) ? s : 'imobiliaria'
+}
+async function segmentoDoLead(lead) {
+  if (SEGMENTOS.includes(lead?.segmento)) return lead.segmento
+  if (lead?.id) {
+    const s = await lerConfig(`segmento_${lead.id}`, null)
+    if (SEGMENTOS.includes(s)) return s
+  }
+  return segmentoPadrao()
+}
+async function fixarSegmento(leadId, segmento) {
+  if (!leadId) return
+  await gravarConfig(`segmento_${leadId}`, SEGMENTOS.includes(segmento) ? segmento : await segmentoPadrao())
 }
 
 export async function gatilhoDeProspeccao() {
@@ -627,7 +678,7 @@ export function aceitouHorario(texto) {
   return HORA.test(t) && ACEITE.test(t) && !/\b(nao|nunca|nem)\b/.test(t)
 }
 
-export function dicaDaObjecao(conversa) {
+export function dicaDaObjecao(conversa, voz = VOZES.imobiliaria) {
   const ultima = [...(Array.isArray(conversa) ? conversa : [])].reverse().find((f) => f?.de === 'pessoa')
   const bruto = String(ultima?.texto || '')
   const t = normalizarFrase(bruto)
@@ -636,7 +687,7 @@ export function dicaDaObjecao(conversa) {
     return 'A última mensagem parece de um ATENDIMENTO AUTOMÁTICO (robô, menu, resposta padrão), não de uma pessoa. Não converse com ele e não se apresente. Se há menu com opções, responda SÓ com o número ou a palavra da opção que leva a uma pessoa (atendente, comercial, vendas, corretor, dono, outros). Se não há menu, peça em uma frase para falar com o responsável pela imobiliária. Sem pergunta de diagnóstico.'
   }
   if (/\b(qual|que|quais) (gargalo|problema|falha|erro)s?\b|\bque gargalo\b|\b(pode|podem) falar\b|\bme (conta|diz|fala)\b/.test(t) && !/\bnao\b/.test(t)) {
-    return 'A pessoa perguntou qual é o gargalo. Diga em uma frase, sem inventar nada sobre o sistema dela: "Quem chama vocês no WhatsApp com o corretor em visita, à noite ou no fim de semana fica sem resposta, esfria e vai pro concorrente." Depois emende UMA pergunta curta, de ate dez palavras, sobre como eles atendem esses contatos hoje. Tudo em no maximo 30 palavras.'
+    return `A pessoa perguntou qual é o gargalo. Diga em uma frase, sem inventar nada sobre o sistema dela: "${voz.gargalo}" Depois emende UMA pergunta curta, de até dez palavras, sobre como eles atendem esses contatos hoje. Tudo em no máximo 30 palavras.`
   }
   if (/\b(sao de onde|de onde (sao|voces sao|e voce)|onde (ficam|fica|voces ficam|e a empresa)|atendem (em|aqui|a regiao|campinas|interior|minha cidade)|voces sao de|qual cidade|que cidade|quantos clientes|quem (ja )?usa|tem cliente|cnpj|endereco)\b/.test(t)) {
     return 'A pessoa perguntou um fato sobre a empresa (cidade, região atendida, clientes, endereço). NÃO afirme nada disso: você não sabe. Diga em uma frase que o Eduardo confirma esse detalhe na conversa com ela, e siga com UMA pergunta curta de diagnóstico.'
@@ -654,7 +705,7 @@ export function dicaDaObjecao(conversa) {
     return 'A pessoa fala de custo ou prioridade: use o CUSTO DE NÃO AGIR (a ferramenta só guarda o contato; corretor em visita demora 30 minutos e o cliente compra do concorrente) e ofereça a demonstração com os dois horários.'
   }
   if (/\b(ja (temos|tem|usamos|usa|uso|temos um|tem um)|kenlo|vista|imobzi|jetimob|superlogica|nosso sistema|nosso crm|nosso site)\b/.test(t) && !bruto.includes('?')) {
-    return 'A pessoa diz que já tem sistema, CRM ou site: use o CONTORNO como PERGUNTA, nunca como afirmação sobre o sistema deles: "O sistema de vocês atende o lead no WhatsApp em 3 segundos de madrugada, qualifica e joga mastigado pro corretor sem ele mexer um dedo?" Não elogie, não descreva e não presuma o que o sistema deles faz.'
+    return `A pessoa diz que já tem sistema, CRM ou site: use o CONTORNO como PERGUNTA, nunca como afirmação sobre o sistema deles: "${voz.contorno}" Não elogie, não descreva e não presuma o que o sistema deles faz.`
   }
   if (/\b(e ?mail|manda|envia|material|apresentacao|pdf)\b/.test(t)) {
     return `A pessoa pede material: diga numa frase que o site mostra o que a gente faz e termine com o endereço ${linkDoSite()}; depois, em outra frase, que em 10 minutos o Eduardo mostra funcionando, e ofereça os dois horários. Nunca mande só o link.`
@@ -667,8 +718,8 @@ export function dicaDaObjecao(conversa) {
 
 const DESPEDIDA = /obrigad[oa] pelo (retorno|contato|tempo|papo)|obrigad[oa] pela aten[cç][aã]o|(fico|ficamos|estamos|seguimos) [àa] disposi|encerrar o contato|boa sorte|qualquer coisa (e so|é só) chamar|at[eé] (mais|logo|breve)|tenha um (bom|[oó]timo) dia/i
 
-const PEDIDO_DE_PESSOA = 'Olá! Preciso falar com o responsável pela imobiliária. Consegue me passar para uma pessoa?'
-const PEDIDO_DE_PESSOA_2 = 'Não é sobre imóvel. Pode me passar o contato de quem cuida do comercial ou do marketing?'
+const PEDIDO_DE_PESSOA = 'Olá! Preciso falar com o responsável pela empresa. Consegue me passar para uma pessoa?'
+const PEDIDO_DE_PESSOA_2 = 'Não é atendimento comum. Pode me passar o contato de quem cuida do comercial ou do marketing?'
 
 /* Tira o que soa a máquina: dois-pontos fora de horário, ponto e vírgula,
    travessão, negrito. "Só para entender: é porque" vira "Só para entender,
@@ -831,7 +882,11 @@ export async function podeAbordarAFrio(numeroCru) {
   if (!saude.ok) return { erro: `abordagem a frio suspensa: ${saude.motivo}` }
   const existe = await existeNoWhatsApp(d)
   if (existe === false) return { erro: 'esse número não tem WhatsApp' }
+  const ultima = await lerConfig('ultima_abordagem_fria', null)
+  const marco = typeof ultima === 'string' ? Date.parse(ultima) : NaN
+  if (Number.isFinite(marco) && Date.now() - marco < 120000) return { erro: 'aguarde: no mínimo 2 minutos entre abordagens a frio' }
   if (!(await dentroDoLimiteDeAbordagens())) return { erro: 'limite diário de abordagens a frio atingido. Para volume, o caminho é a API oficial do WhatsApp Business.' }
+  await gravarConfig('ultima_abordagem_fria', new Date().toISOString())
   return { jid: `${d}@s.whatsapp.net` }
 }
 
@@ -883,7 +938,7 @@ async function dentroDoRitmo(leadId) {
 /* Segundo ping, um dia depois: a pessoa recebeu o convite (ou o empurrão) e
    sumiu. Vale uma vez, só quando as duas últimas falas são do robô e antes
    delas a pessoa falou. Depois disso, silêncio. */
-export const PING_DE_RETORNO = 'Sei que a rotina na imobiliária é corrida. Conseguiu dar uma olhada na mensagem acima?'
+export const PING_DE_RETORNO = 'Sei que a rotina aí é corrida. Conseguiu dar uma olhada na mensagem acima?'
 export function precisaSegundoPing(conversa) {
   const falas = paraArray(conversa)
   if (falas.length < 3) return false
@@ -928,11 +983,12 @@ export async function prospectarIndicado(numero, origem) {
     contato: `+${numero}`,
     canal: 'prospeccao',
     necessidade: 'A definir',
-    resumo: `Indicado pelo atendimento automático de ${nomeOrigem || origem?.contato || 'uma imobiliária'}.`,
+    resumo: `Indicado pelo atendimento automático de ${nomeOrigem || origem?.contato || 'uma empresa'}.`,
     conversa: [],
   })
+  await fixarSegmento(novo.id, await segmentoDoLead(origem))
   const abertura = humanizar(
-    `${saudacaoDoDia()}, tudo bem? Aqui é o assistente da Astro Soluções. O atendimento ${nomeOrigem ? `da ${nomeOrigem}` : 'da imobiliária'} indicou você como a pessoa certa para falar.\n\nPosso te explicar em duas linhas o que a gente faz?`,
+    `${saudacaoDoDia()}, tudo bem? Aqui é o assistente da Astro Soluções. O atendimento ${nomeOrigem ? `da ${nomeOrigem}` : 'da empresa'} indicou você como a pessoa certa para falar.\n\nPosso te explicar em duas linhas o que a gente faz?`,
   )
   try {
     await evo.enviarTexto(instanciaPessoal(), `+${numero}`, abertura)
@@ -1102,6 +1158,7 @@ async function falarComIACru(lead, conversa) {
      responsável em uma frase. O modelo, quando chamado aqui, respondia "1"
      a um aviso sem menu. */
   const falas = Array.isArray(conversa) ? conversa : []
+  const voz = VOZES[await segmentoDoLead(lead)] || VOZES.imobiliaria
   const ultimaFala = falas[falas.length - 1]
   const ultimaDaPessoa = [...falas].reverse().find((f) => f?.de === 'pessoa')?.texto || ''
   if (ultimaFala?.de === 'pessoa' && pareceAutomatica(ultimaDaPessoa)) {
@@ -1117,18 +1174,18 @@ async function falarComIACru(lead, conversa) {
   if (ultimaFala?.de === 'pessoa' && falasDaPessoa.length <= 2 && ehSaudacao(ultimaDaPessoa)) {
     const t = normalizarFrase(ultimaDaPessoa)
     if (/\b(tudo bem|tudo bom|td bem|td bom|como vai|como voce|como vc|e voce|e vc|e com voce|e com vc|beleza)\b/.test(t)) {
-      return 'Tudo certo por aqui também!\n\nEstou falando com o responsável pela imobiliária?'
+      return `Tudo certo por aqui também!\n\nEstou falando com ${voz.quem}?`
     }
     const jaSeApresentou = falas.some((f) => f?.de === 'robo' && /assistente da astro/i.test(String(f.texto || '')))
     return `${saudacaoDoDia(ultimaDaPessoa)}, tudo bem?${jaSeApresentou ? '' : ' Aqui é o assistente da Astro Soluções.'}`
   }
 
   const situacao = situacaoDaConversa(conversa)
-  const dica = dicaDaObjecao(conversa)
+  const dica = dicaDaObjecao(conversa, voz)
   /* A situação vai no TOPO e no fim: o modelo pesa mais o começo, e foi por
      ler só o roteiro (que cita "não tenho interesse" como definitivo) que
      ele encerrou na primeira recusa simples. */
-  const cabecalho = `SITUAÇÃO AGORA (manda mais que qualquer exemplo abaixo):${situacao}${dica ? `\n${dica}` : ''}\n\n`
+  const cabecalho = `${voz.bloco ? `${voz.bloco}\n\n` : ''}SITUAÇÃO AGORA (manda mais que qualquer exemplo abaixo):${situacao}${dica ? `\n${dica}` : ''}\n\n`
   const linkJaFoi = falas.some((f) => f?.de === 'robo' && String(f.texto || '').includes(linkDoSite()))
   const instrucao =
     cabecalho + (await instrucaoDeProspeccao()) + contextoDoLead(lead) + situacao + `\n\nSite da Astro: ${linkDoSite()}${linkJaFoi ? ' (JÁ FOI ENVIADO nesta conversa: não mande de novo)' : ''}`
@@ -1220,6 +1277,7 @@ export async function assumirConversas(jids) {
           resumo: 'Conversa assumida pelo robô a partir do WhatsApp pessoal.',
           conversa: falasDoHistorico(registros),
         })
+        await fixarSegmento(lead.id)
       }
       /* Só marca 'bot' DEPOIS que a abordagem foi enviada. Antes o lead ficava
          "prospectando" mesmo quando a IA falhava (chave sem crédito) ou o
@@ -1300,6 +1358,7 @@ export async function webhookProspeccao(evento) {
         resumo: 'Conversa aberta pelo celular com a frase gatilho; o robô assumiu.',
         conversa: [],
       })
+      await fixarSegmento(lead.id)
     }
     await marcarProspeccao(lead.id, 'bot')
     await acrescentarFala(lead.id, { de: 'robo', texto: mensagem.texto })
@@ -1322,6 +1381,7 @@ export async function webhookProspeccao(evento) {
       resumo: 'Respondeu a uma conversa aberta pelo celular; contato não salvo na agenda, o robô assumiu.',
       conversa: [],
     })
+    await fixarSegmento(lead.id)
     await marcarProspeccao(lead.id, 'bot')
     lead = { ...lead, prospeccao: 'bot', conversa: [] }
     await rastro('lead-novo', mensagem.nomeExibido || '', mensagem.telefone)
@@ -1407,7 +1467,7 @@ export async function webhookProspeccao(evento) {
      aparecer, e o robô deixa um recado e para. Senão vira conversa sem fim.
      Nas duas primeiras, a IA tenta chegar a uma pessoa (dica da objeção). */
   if (contarAutomaticasSeguidas(atual) >= 3) {
-    const recado = 'Quando o responsável pela imobiliária puder, é só me chamar por aqui.'
+    const recado = 'Quando o responsável puder, é só me chamar por aqui.'
     try {
       const evo = await evolucaoDaProspeccao()
       await evo?.enviarTexto(instanciaPessoal(), mensagem.telefone, recado)
