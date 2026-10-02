@@ -305,3 +305,12 @@ test('pedido de outro canal: reconhece o pedido e o contato', async () => {
   assert.equal(emailNoTexto('sem email aqui'), '')
   assert.match(dicaDaObjecao([{ de: 'pessoa', texto: 'Manda a apresentação por e-mail' }]), /Peça só o necessário/)
 })
+
+test('encurtar mantém a primeira frase e a pergunta dentro do limite', async () => {
+  const { encurtar } = await import('../api/_lib/prospeccao.js')
+  const longo = 'Mesmo respondendo rápido, quando o corretor está em visita ele perde tempo para digitar. Se o cliente já escolher outro, a comissão sai. Podemos mostrar como automatizar em 10 minutos. Amanhã às 10h ou às 14h?'
+  const curto = encurtar(longo, 22)
+  assert.ok(curto.split(/\s+/).length <= 22, curto)
+  assert.ok(curto.endsWith('Amanhã às 10h ou às 14h?'), curto)
+  assert.equal(encurtar('Que bom. Quantas pessoas atendem?', 22), 'Que bom. Quantas pessoas atendem?')
+})
