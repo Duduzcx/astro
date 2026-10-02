@@ -217,6 +217,8 @@ export async function registrarPonte(req, res) {
     if (dados?.abordavel) {
       return res.status(200).json({ ok: true, decisao: await podeAbordarAFrio(String(dados.abordavel)), saude: await ponteSaudavel(), horario: dentroDoHorario(), quarentena: await quarentenaAte() })
     }
+    /* { assumir: [jid] } o mesmo que o botão "O robô assume" do painel. */
+    if (Array.isArray(dados?.assumir)) return res.status(200).json({ ok: true, resultados: await assumirConversas(dados.assumir.map(String).slice(0, 10)) })
     if (dados?.testarLimite) return res.status(200).json({ ok: true, dentroDoLimite: await dentroDoLimiteDeAbordagens() })
     if (dados?.resetarGatilho) {
       await gravarConfig('prospeccao_gatilho', '')
