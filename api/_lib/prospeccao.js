@@ -855,6 +855,9 @@ export function dicaDaObjecao(conversa, voz = VOZES.imobiliaria) {
   if (pareceAutomatica(bruto)) {
     return 'A última mensagem parece de um ATENDIMENTO AUTOMÁTICO (robô, menu, resposta padrão), não de uma pessoa. Não converse com ele e não se apresente. Se há menu com opções, responda SÓ com o número ou a palavra da opção que leva a uma pessoa (atendente, comercial, vendas, corretor, dono, outros). Se não há menu, peça em uma frase para falar com o responsável pela imobiliária. Sem pergunta de diagnóstico.'
   }
+  if (/nao preciso de volume|volume nao|cliente(s)? qualificado|gente (com dinheiro|qualificada|que compra|seria)|curioso|so perde(m)? tempo|perder tempo|nome limpo|quem tem dinheiro|cliente de verdade|comprador de verdade/.test(t)) {
+    return 'A pessoa quer QUALIDADE, não volume (cliente com dinheiro, nome limpo, que fecha; curioso só toma tempo). NÃO fale de volume nem de "não perder quem chama". Diga em uma frase que o robô faz a triagem antes de passar para a equipe (renda, financiamento, prazo, o que procura) e só entrega quem tem condição de fechar; o resto não toma o tempo de ninguém. Proponha a demonstração com os dois horários. Sem pergunta de diagnóstico. Até 40 palavras.'
+  }
   if (/\b(qual|que|quais) (gargalo|problema|falha|erro)s?\b|\bque gargalo\b|\b(pode|podem) falar\b|\bme (conta|diz|fala)\b/.test(t) && !/\bnao\b/.test(t)) {
     return `A pessoa perguntou qual é o gargalo. Diga em uma frase, sem inventar nada sobre o sistema dela: "${voz.gargalo}" Depois emende UMA pergunta curta, de até dez palavras, sobre como eles atendem esses contatos hoje. Tudo em no máximo 30 palavras.`
   }
@@ -1631,7 +1634,7 @@ async function falarComIACru(lead, conversa) {
      ele encerrou na primeira recusa simples. */
   const chegaDePerguntas = perguntasDoRobo >= 3 && !pitchFeito
   /* Tres perguntas sem apresentar: a apresentacao sai fixa, sem modelo. */
-  if (chegaDePerguntas && ultimaFala?.de === "pessoa" && !foraDoAlvo(ultimaDaPessoa) && !deveEncerrar(conversa)) return pitchDe(segmentoAtual)
+  if (chegaDePerguntas && !dica && ultimaFala?.de === 'pessoa' && !foraDoAlvo(ultimaDaPessoa) && !deveEncerrar(conversa)) return pitchDe(segmentoAtual)
   const cabecalho = `${voz.bloco ? `${voz.bloco}\n\n` : ''}SITUAÇÃO AGORA (manda mais que qualquer exemplo abaixo):${situacao}${dica ? `\n${dica}` : ''}${chegaDePerguntas ? '\nVocê já fez três perguntas e ainda não apresentou nada: parece interrogatório. AGORA apresente em duas frases o que a Astro faz e o resultado, e proponha a demonstração com o Eduardo. Nenhuma pergunta de diagnóstico.' : ''}${querObjetividade && pitchFeito ? '\nA pessoa pediu objetividade e você JÁ apresentou a Astro: não repita a apresentação. Responda em uma frase o que ela perguntou e feche com os dois horários.' : ''}\nAo propor horários, escreva exatamente "${perguntaDosHorarios()}" (hoje é ${new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long' }).format(new Date())}).\n\n`
   const jaPerguntou = falas
     .filter((f) => f?.de === 'robo' && String(f.texto || '').includes('?'))

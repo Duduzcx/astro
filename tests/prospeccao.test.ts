@@ -418,3 +418,10 @@ test('"odeio robô, já bloqueio na hora" é hostil e encerra; "pois não" e "?"
   for (const t of ['Bom dia Pois não', '?', ' ?? ']) assert.equal(m.pedeObjetividade(t), true, t)
   assert.equal(m.pedeObjetividade('Pois é, perdemos cliente sim'), false)
 })
+
+test('"não preciso de volume, preciso de gente com dinheiro" pede triagem, não volume', async () => {
+  const m = await import('../api/_lib/prospeccao.js')
+  const dica = m.dicaDaObjecao([{ de: 'pessoa', texto: 'Não preciso de volume. Preciso de gente com o nome limpo e dinheiro para pagar o produto. Quem tem dinheiro não perde tempo em WhatsApp, liga direto' }])
+  assert.match(dica, /triagem/)
+  assert.doesNotMatch(dica, /REDUZA O ESFORÇO/)
+})
