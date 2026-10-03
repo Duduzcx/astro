@@ -442,3 +442,8 @@ test('abertura a frio é humana, com o nome da empresa, e ninguém lê "robô"',
   assert.doesNotMatch(m.aberturaAFrio({}), /assistente/i)
   for (const seg of ['imobiliaria', 'cursinho', 'odonto']) assert.doesNotMatch(m.apresentacaoDe(seg), /rob[oô]|\bbot\b|chatbot|\bIA\b/i, seg)
 })
+
+test('"com posso ajudar?" (erro de digitação) pede o assunto', async () => {
+  const m = await import('../api/_lib/prospeccao.js')
+  for (const t of ['Sim Com posso ajudar?', 'Posso ajudar?', 'No que posso ser útil']) assert.equal(m.pedeObjetividade(t), true, t)
+})
