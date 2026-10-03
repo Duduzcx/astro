@@ -314,3 +314,11 @@ test('encurtar mantém a primeira frase e a pergunta dentro do limite', async ()
   assert.ok(curto.endsWith('Amanhã às 10h ou às 14h?'), curto)
   assert.equal(encurtar('Que bom. Quantas pessoas atendem?', 22), 'Que bom. Quantas pessoas atendem?')
 })
+
+test('número errado e pedido de objetividade são reconhecidos', async () => {
+  const { foraDoAlvo, pedeObjetividade } = await import('../api/_lib/prospeccao.js')
+  for (const t of ['Vc deve estar com o número incorreto.', 'Desculpa... Não trabalho com clientes... Este número é pessoal', 'Mocca acho que vc digitou errado', 'Não trabalho com nada disso', 'Não tenho imobiliária não', 'Desculpa... Não faço a mínima ideia']) assert.equal(foraDoAlvo(t), true, t)
+  for (const t of ['Qual gargalo?', 'Não tenho interesse, obrigado.', 'Sim, sou eu']) assert.equal(foraDoAlvo(t), false, t)
+  for (const t of ['Vamos lá. O que teria para me oferecer?', 'Desculpe. Mas quando trato de negócios gosto mais de ser direto aos assuntos', 'Se quiser oferecer algo me ofereça', 'O que vocês fazem exatamente?']) assert.equal(pedeObjetividade(t), true, t)
+  assert.equal(pedeObjetividade('Como está o atendimento de vocês?'), false)
+})

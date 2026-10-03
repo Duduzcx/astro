@@ -341,6 +341,8 @@ export const INSTRUCAO_PROSPECCAO_PADRAO = [
   'VENDEDOR DE VERDADE: você não vende sistema, você conversa sobre o negócio da pessoa. Antes de falar de solução, tenha curiosidade genuína: quantas pessoas atendem, de onde vêm os clientes, qual a meta do ano, o que mais toma tempo da equipe. Ouça a resposta e use o que ela disse na próxima mensagem. Se a pessoa diz que está tudo bem, acredite, elogie e procure outro ângulo (crescer, reativar contatos antigos, tirar trabalho repetitivo da equipe), nunca insista no mesmo problema. Fale de resultado (mais clientes atendidos, menos tempo perdido, venda que não escapa), nunca de tecnologia. Só proponha a demonstração depois de ela contar algo do negócio que se conecte com o que a Astro resolve.',
   'QUALIFICAÇÃO: quando a conversa já está fluindo e a pessoa contou como funciona o negócio, antes de propor a demonstração, entenda o que eles usam hoje, uma pergunta por mensagem e sem soar interrogatório: o que usam hoje para atender e organizar os clientes; se está dando o resultado que esperavam; e quanto investem nisso por mês, se ela estiver à vontade. Use a resposta no fechamento ("pelo que você pagou e pelo que contou, vale ver isso em 10 minutos").',
   'TAMANHO: responda no tamanho da mensagem da pessoa. Mensagem curta ("ok", "seria eu", "pode falar") pede resposta curta, de uma frase. Nunca passe de duas frases curtas.',
+  'NÚMERO ERRADO: se a pessoa disser que você errou o número, que o número é pessoal ou que não trabalha com isso, peça desculpa em uma frase e encerre. Nunca pergunte quem cuida, nunca faça diagnóstico, nunca insista.',
+  'OBJETIVIDADE: se a pessoa pedir para ir direto ao assunto ou perguntar o que você oferece, apresente na hora, em duas frases, o que a Astro faz e o resultado, e proponha a demonstração. Sem pergunta de diagnóstico. Três perguntas sem apresentar nada é interrogatório; nunca passe disso.',
   'RITMO E ETIQUETA (anti-afobação): quem manda na velocidade da conversa é o cliente. Se a pessoa só cumprimentou ("Boa tarde", "Tudo bem?"), responda o cumprimento e PARE, sem pergunta comercial. Uma pergunta por vez; espere a resposta antes do próximo passo. Só fale de site, CRM ou automação quando houver abertura real. NUNCA repita uma pergunta ou uma mensagem já enviada: se a pessoa não respondeu, mude a abordagem ou espere.',
   '',
   'Regras que você NUNCA quebra:',
@@ -834,6 +836,34 @@ export function dicaDaObjecao(conversa, voz = VOZES.imobiliaria) {
 }
 
 const DESPEDIDA = /obrigad[oa] pelo (retorno|contato|tempo|papo)|obrigad[oa] pela aten[cç][aã]o|(fico|ficamos|estamos|seguimos) [àa] disposi|encerrar o contato|boa sorte|qualquer coisa (e so|é só) chamar|at[eé] (mais|logo|breve)|tenha um (bom|[oó]timo) dia/i
+
+/* Número errado ou pessoa que não tem nada a ver com o negócio. Uma
+   desculpa, encerra, nunca mais chama. Foi o caso da pessoa que se explicou
+   três vezes, ouviu três perguntas de volta e bloqueou o número. */
+const FORA_DO_ALVO =
+  /n[uú]mero (incorreto|errado|pessoal)|digitou errado|ligou errado|mandou errado|mensagem errada|pessoa errada|(e|é) engano|foi engano|n[aã]o trabalho com|n[aã]o (tenho|temos) (imobili|empresa|loja|neg[oó]cio|cl[ií]nica|cursinho|nada a ver)|nada a ver com|n[aã]o (sou|somos) (de |da |do )?(imobili|corretor|empresa|cl[ií]nica|cursinho)|n[aã]o (fa[cç]o|tenho) (a m[ií]nima )?ideia|n[aã]o conhe[cç]o (voc|isso|a astro)|n[aã]o (é|e) (aqui|comigo)|n[aã]o sei (do que|de que) (vc|voc[eê]) (ta|t[aá]|est[aá]) falando|quem (é|e) voc[eê]|n[aã]o (pedi|solicitei) (nada|isso)|este (n[uú]mero )?(é|e) pessoal|uso pessoal|n[aã]o (atuo|mexo) (com|nessa|nisso)/i
+export function foraDoAlvo(texto) {
+  return FORA_DO_ALVO.test(String(texto || ''))
+}
+const DESCULPA_ENGANO = 'Desculpe o engano, foi número errado. Tenha um ótimo dia!'
+const QUEM_CUIDA = 'Entendi, desculpe! Você saberia me dizer quem cuida disso por aí?'
+const NEGATIVA_CURTA = /^(n[aã]o|nao|n|negativo|n[aã]o sou|n[aã]o é comigo|n[aã]o sei|sei n[aã]o|n[aã]o fa[cç]o ideia|nem ideia)[\s.!,]*$/i
+
+/* Pediu objetividade: apresentação em duas frases, sem pergunta. */
+const PEDE_OBJETIVIDADE =
+  /o que (voc[eê]s?|vcs?) (tem|t[eê]m|oferece|oferecem|faz|fazem|vende|vendem)|o que (é|e) (isso|a astro)|do que se trata|qual (é |e )?a (proposta|oferta|ideia)|me (ofere[cç]a|oferece|explica|fala) (o que|logo|direto)|seja (direto|objetivo)|(vai|vá|v[aá]) direto|direto aos? (assuntos?|ponto)|ser (direto|objetivo)|sem (rodeio|enrola|inqu[eé]rito)|n[aã]o gosto de (pergunta|inqu[eé]rito)|chega de pergunta|o que voc[eê] quer|qual o (seu )?objetivo|quanto (é|e|custa)|me ofere[cç]a|quiser oferecer|me manda (a |uma )?proposta|vamos l[aá]\.? o que/i
+export function pedeObjetividade(texto) {
+  return PEDE_OBJETIVIDADE.test(String(texto || ''))
+}
+/* A apresentação direta, por segmento. */
+const PITCHES = {
+  imobiliaria: 'A Astro monta o site da imobiliária e um robô no WhatsApp que atende em segundos, 24 horas, e entrega a ficha do cliente pronta para o corretor. O resultado é não perder quem chama fora do horário.\n\nQuer ver funcionando em 10 minutos, amanhã às 10h ou às 14h?',
+  cursinho: 'A Astro monta o site do cursinho com inscrição e um robô no WhatsApp que responde dúvidas de turmas e matrícula 24 horas e agenda a visita, com cada interessado organizado para a secretaria. O resultado é não perder matrícula por demora.\n\nQuer ver funcionando em 10 minutos, amanhã às 10h ou às 14h?',
+  odonto: 'A Astro monta o site da clínica com agendamento e um robô no WhatsApp que marca e confirma consultas 24 horas, lembra o paciente no dia e organiza tudo para a recepção. O resultado é não perder paciente por demora.\n\nQuer ver funcionando em 10 minutos, amanhã às 10h ou às 14h?',
+}
+function pitchDe(segmento) {
+  return PITCHES[segmento] || PITCHES.imobiliaria
+}
 
 const PEDIDO_DE_PESSOA = 'Olá! Preciso falar com o responsável pela empresa. Consegue me passar para uma pessoa?'
 const PEDIDO_DE_PESSOA_2 = 'Não é atendimento comum. Pode me passar o contato de quem cuida do comercial ou do marketing?'
@@ -1338,6 +1368,25 @@ async function falarComIACru(lead, conversa) {
     return opcao || (contarAutomaticasSeguidas(falas) >= 2 ? PEDIDO_DE_PESSOA_2 : PEDIDO_DE_PESSOA)
   }
 
+  /* Fora do alvo: desculpa e fim. Nada de pergunta, nada de indicação. */
+  if (ultimaFala?.de === 'pessoa' && foraDoAlvo(ultimaDaPessoa)) return DESCULPA_ENGANO
+
+  /* "Não" seco depois de "é o responsável?": pergunta quem cuida, uma vez.
+     Segundo não, ou "não sei": desculpa e fim. */
+  const ultimaDoRobo = [...falas].reverse().find((f) => f?.de === 'robo')?.texto || ''
+  if (ultimaFala?.de === 'pessoa' && NEGATIVA_CURTA.test(String(ultimaDaPessoa).trim())) {
+    const jaPerguntouQuem = falas.some((f) => f?.de === 'robo' && f.texto === QUEM_CUIDA)
+    if (jaPerguntouQuem) return DESCULPA_ENGANO
+    if (/respons[aá]vel|quem cuida|falando com|é você quem|decide/i.test(ultimaDoRobo)) return QUEM_CUIDA
+  }
+
+  const segmentoAtual = await segmentoDoLead(lead)
+  const perguntasDoRobo = falas.filter((f) => f?.de === 'robo' && String(f.texto || '').includes('?')).length
+  const pitchFeito = falas.some((f) => f?.de === 'robo' && /demonstra|10 minutos|10 min|Eduardo|rob[oô] (no|de) WhatsApp/i.test(String(f.texto || '')))
+  const querObjetividade = ultimaFala?.de === 'pessoa' && pedeObjetividade(ultimaDaPessoa)
+  /* Pediu objetividade: apresentação direta, sem modelo. */
+  if (querObjetividade) return pitchDe(segmentoAtual)
+
   /* Etiqueta: cumprimento puro nas duas primeiras falas da pessoa recebe só
      o cumprimento de volta, e para. "Tudo bem?" de volta vira a pergunta
      leve de quem fala com o responsável. Sem modelo: o modelo emendava a
@@ -1363,7 +1412,8 @@ async function falarComIACru(lead, conversa) {
   /* A situação vai no TOPO e no fim: o modelo pesa mais o começo, e foi por
      ler só o roteiro (que cita "não tenho interesse" como definitivo) que
      ele encerrou na primeira recusa simples. */
-  const cabecalho = `${voz.bloco ? `${voz.bloco}\n\n` : ''}SITUAÇÃO AGORA (manda mais que qualquer exemplo abaixo):${situacao}${dica ? `\n${dica}` : ''}\n\n`
+  const chegaDePerguntas = perguntasDoRobo >= 3 && !pitchFeito
+  const cabecalho = `${voz.bloco ? `${voz.bloco}\n\n` : ''}SITUAÇÃO AGORA (manda mais que qualquer exemplo abaixo):${situacao}${dica ? `\n${dica}` : ''}${chegaDePerguntas ? '\nVocê já fez três perguntas e ainda não apresentou nada: parece interrogatório. AGORA apresente em duas frases o que a Astro faz e o resultado, e proponha a demonstração com o Eduardo. Nenhuma pergunta de diagnóstico.' : ''}\n\n`
   const jaPerguntou = falas
     .filter((f) => f?.de === 'robo' && String(f.texto || '').includes('?'))
     .map((f) => String(f.texto).split(/(?<=[.!?])\s+/).filter((frase) => frase.includes('?')).join(' '))
@@ -1420,6 +1470,9 @@ async function falarComIACru(lead, conversa) {
       resposta = 'Sem problema. Quando puder, me diz qual horário fica melhor para você e eu deixo tudo certo com o Eduardo.'
     }
   }
+  /* Teto de perguntas: se mesmo assim veio outra pergunta de diagnóstico, entra a apresentação fixa. */
+  if (chegaDePerguntas && resposta.includes('?') && !/10h|14h|demonstra|Eduardo/i.test(resposta)) resposta = pitchDe(segmentoAtual)
+
   /* O site vai uma vez por conversa. */
   if (linkJaFoi && resposta.includes(linkDoSite())) {
     resposta = resposta
@@ -1734,8 +1787,14 @@ export async function webhookProspeccao(evento) {
     await guardarExemploVencedor([...atual, { de: 'robo', texto: resposta }], await segmentoDoLead(lead)).catch(() => {})
   } else if (DESPEDIDA.test(resposta) && !resposta.includes('?')) {
     /* O próprio robô se despediu: a conversa acabou para ele. Sem isto, um
-       "por nada" do outro lado reabria tudo. */
+       "por nada" do outro lado reabria tudo. Engano de número vira opt-out:
+       nunca mais chama, nem por lista, nem por indicação. */
     await marcarProspeccao(lead.id, 'pausado')
-    await rastro('encerrado', 'despedida do robo', mensagem.telefone)
+    if (resposta === DESCULPA_ENGANO) {
+      await marcarOptOut(mensagem.telefone)
+      await rastro('fora-do-alvo', textoDaPessoa, mensagem.telefone)
+    } else {
+      await rastro('encerrado', 'despedida do robo', mensagem.telefone)
+    }
   }
 }
