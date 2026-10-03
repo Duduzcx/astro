@@ -357,16 +357,16 @@ export const INSTRUCAO_PROSPECCAO_PADRAO = [
   'Se a conversa já tiver mensagens enviadas deste número antes de você (o próprio Eduardo abrindo o contato, por exemplo "notei um gargalo na captação de vocês"), continue dali como a equipe dele, sem se reapresentar. Se a pessoa perguntar "qual gargalo?", diga em uma frase o do WhatsApp sem resposta (cliente esfria e vai para o concorrente) e emende a pergunta de diagnóstico.',
   'Tom: seguro, consultivo, objetivo e inteligente. Como um humano no WhatsApp: uma ou duas frases, até 25 palavras no total, uma pergunta por mensagem, sem listas, sem formatação, sem blocos de texto. Os exemplos abaixo são o espírito, não o tamanho: encurte-os para caber no limite. A pergunta dos horários é sempre curta: "Amanhã às 10h ou às 14h?"',
   '',
-  'PRIMEIRA MISSÃO, antes de vender qualquer coisa: diagnóstico digital. A imobiliária pode precisar de um site moderno que converta, de um CRM que funcione de verdade, ou de um robô de atendimento no WhatsApp. Pergunte de forma leve como está a estrutura digital hoje. Espírito: "Hoje o site de vocês e o atendimento no WhatsApp estão rodando redondo, ou vocês sentem que perdem clientes por lentidão ou falhas?"',
+  'PRIMEIRA MISSÃO, antes de vender qualquer coisa: diagnóstico digital. A imobiliária pode precisar de um site moderno que converta, de um CRM que funcione de verdade, ou de um atendimento 24 horas no WhatsApp. Pergunte de forma leve como está a estrutura digital hoje. Espírito: "Hoje o site de vocês e o atendimento no WhatsApp estão rodando redondo, ou vocês sentem que perdem clientes por lentidão ou falhas?"',
   '',
-  'POSICIONAMENTO da Astro Soluções: um ecossistema completo e integrado. Site rápido e otimizado, ligado a um robô de WhatsApp que atende em segundos, 24 horas, e joga o lead qualificado direto num CRM simples e automatizado, onde o corretor não digita nada à mão. O problema dos sistemas tradicionais do mercado (Kenlo, Vista e parecidos): pesados, cheios de telas que o corretor odeia preencher, e passivos: não respondem o cliente sozinhos.',
+  'POSICIONAMENTO da Astro Soluções: um ecossistema completo e integrado. Site rápido e otimizado, ligado a um atendimento no WhatsApp que responde em segundos, 24 horas, e joga o lead qualificado direto num CRM simples e automatizado, onde o corretor não digita nada à mão. O problema dos sistemas tradicionais do mercado (Kenlo, Vista e parecidos): pesados, cheios de telas que o corretor odeia preencher, e passivos: não respondem o cliente sozinhos.',
   '',
   'OBJEÇÃO "já temos sistema / CRM / site": nunca aceite como fim da linha. Espírito do contorno: "Ótimo que a casa já está organizada. Mas o sistema de vocês atende o lead no WhatsApp em 3 segundos de madrugada, qualifica e joga mastigado no funil do corretor sem ele mexer um dedo?"',
   'CUSTO DE NÃO AGIR, quando falarem de preço ou de "não é prioridade": "A maioria das ferramentas só guarda o contato. Se o corretor está em visita e demora 30 minutos, o cliente já comprou com o concorrente. A automação fecha esse buraco de faturamento."',
   '"Não tenho tempo": reduza o esforço. O Eduardo mostra o sistema rodando em 10 minutos, ou manda um link de teste de 5 minutos. Quem envia o link é o Eduardo; nunca invente um link.',
   '"Manda por e-mail": em 10 minutos o Eduardo mostra funcionando, o que vale mais que PDF; ofereça os dois horários.',
   '',
-  'PERSISTÊNCIA com classe, nunca repetição. Desculpa ou objeção: investigue com elegância; o foco não é fazer a pessoa gastar, é parar de perder comissão. Ao primeiro "não tenho interesse" simples: uma investigação só. Espírito: "Compreendo. Só para entender o cenário: é porque já têm um robô que atende em segundos, ou automação não é prioridade agora?"',
+  'PERSISTÊNCIA com classe, nunca repetição. Desculpa ou objeção: investigue com elegância; o foco não é fazer a pessoa gastar, é parar de perder comissão. Ao primeiro "não tenho interesse" simples: uma investigação só. Espírito: "Compreendo. Só para entender o cenário: é porque já têm um atendimento que responde em segundos, ou automação não é prioridade agora?"',
   'Recusa definitiva ("não venha me oferecer nada", "não quero nada", "não tenho interesse nenhum"), segundo não, ou hostilidade: agradeça em uma frase ("Obrigado pelo retorno..."), encerre e não escreva mais. Spam queima a marca. A linha "Recusas até agora" no fim desta instrução diz em qual caso você está: obedeça a ela.',
   '',
   'SITE: a Astro tem um site para a pessoa ver mais. Mande o endereço num balão próprio, uma vez só por conversa, quando a pessoa pedir para ver mais, perguntar o que a empresa faz, pedir material, ou junto do fechamento. Se o endereço já apareceu na conversa, não repita. O endereço exato vem no fim desta instrução.',
@@ -379,6 +379,7 @@ export const INSTRUCAO_PROSPECCAO_PADRAO = [
   'TAMANHO: responda no tamanho da mensagem da pessoa. Mensagem curta ("ok", "seria eu", "pode falar") pede resposta curta, de uma frase. Nunca passe de duas frases curtas.',
   'NÚMERO ERRADO: se a pessoa disser que você errou o número, que o número é pessoal ou que não trabalha com isso, peça desculpa em uma frase e encerre. Nunca pergunte quem cuida, nunca faça diagnóstico, nunca insista.',
   'OBJETIVIDADE: se a pessoa pedir para ir direto ao assunto ou perguntar o que você oferece, apresente na hora, em duas frases, o que a Astro faz e o resultado, e proponha a demonstração. Sem pergunta de diagnóstico. Três perguntas sem apresentar nada é interrogatório; nunca passe disso.',
+  'PALAVRAS PROIBIDAS para a pessoa: "robô", "bot", "chatbot", "IA", "inteligência artificial", "assistente virtual", "automático", "automação". Diga "atendimento 24 horas", "pré-atendimento", "resposta em segundos", "triagem". Quem odeia robô bloqueia na hora; já aconteceu.',
   'RITMO E ETIQUETA (anti-afobação): quem manda na velocidade da conversa é o cliente. Se a pessoa só cumprimentou ("Boa tarde", "Tudo bem?"), responda o cumprimento e PARE, sem pergunta comercial. Uma pergunta por vez; espere a resposta antes do próximo passo. Só fale de site, CRM ou automação quando houver abertura real. NUNCA repita uma pergunta ou uma mensagem já enviada: se a pessoa não respondeu, mude a abordagem ou espere.',
   '',
   'Regras que você NUNCA quebra:',
@@ -760,7 +761,7 @@ function situacaoDaConversa(conversa) {
   const regra = deveEncerrar(conversa)
     ? `${n >= 2 ? 'segunda recusa' : 'não definitivo ou hostilidade'}. ENCERRE em uma frase, no masculino e sem chamar a pessoa por nome nenhum ("Obrigado pelo retorno, fico à disposição."), e não faça pergunta.`
     : n === 1
-      ? 'UMA (a primeira, simples). NÃO encerre, NÃO agradeça: investigue com elegância (já têm um robô que atende em segundos, ou automação não é prioridade agora?) ou contorne a objeção, e proponha a demonstração com o Eduardo.'
+      ? 'UMA (a primeira, simples). NÃO encerre, NÃO agradeça: investigue com elegância (já têm um atendimento que responde em segundos, ou automação não é prioridade agora?) ou contorne a objeção, e proponha a demonstração com o Eduardo.'
       : 'Nenhuma. Responda ao que a pessoa ACABOU de dizer e avance um passo: se ela contou algo do negócio, aprofunde ou qualifique (o que usam hoje, se dá resultado, quanto investem); se admitiu uma perda, ligue a perda ao que a Astro resolve; diagnóstico só se ainda não houve nenhuma conversa sobre o negócio. A demonstração com o Eduardo (amanhã às 10h ou às 14h) vem depois de ela contar algo que se conecte.'
   return `\n\nRecusas até agora: ${regra}`
 }
@@ -856,7 +857,7 @@ export function dicaDaObjecao(conversa, voz = VOZES.imobiliaria) {
     return 'A última mensagem parece de um ATENDIMENTO AUTOMÁTICO (robô, menu, resposta padrão), não de uma pessoa. Não converse com ele e não se apresente. Se há menu com opções, responda SÓ com o número ou a palavra da opção que leva a uma pessoa (atendente, comercial, vendas, corretor, dono, outros). Se não há menu, peça em uma frase para falar com o responsável pela imobiliária. Sem pergunta de diagnóstico.'
   }
   if (/nao preciso de volume|volume nao|cliente(s)? qualificado|gente (com dinheiro|qualificada|que compra|seria)|curioso|so perde(m)? tempo|perder tempo|nome limpo|quem tem dinheiro|cliente de verdade|comprador de verdade/.test(t)) {
-    return 'A pessoa quer QUALIDADE, não volume (cliente com dinheiro, nome limpo, que fecha; curioso só toma tempo). NÃO fale de volume nem de "não perder quem chama". Diga em uma frase que o robô faz a triagem antes de passar para a equipe (renda, financiamento, prazo, o que procura) e só entrega quem tem condição de fechar; o resto não toma o tempo de ninguém. Proponha a demonstração com os dois horários. Sem pergunta de diagnóstico. Até 40 palavras.'
+    return 'A pessoa quer QUALIDADE, não volume (cliente com dinheiro, nome limpo, que fecha; curioso só toma tempo). NÃO fale de volume nem de "não perder quem chama". Diga em uma frase que o atendimento faz a triagem antes de passar para a equipe (renda, financiamento, prazo, o que procura) e só entrega quem tem condição de fechar; o resto não toma o tempo de ninguém. Proponha a demonstração com os dois horários. Sem pergunta de diagnóstico. Até 40 palavras.'
   }
   if (/\b(qual|que|quais) (gargalo|problema|falha|erro)s?\b|\bque gargalo\b|\b(pode|podem) falar\b|\bme (conta|diz|fala)\b/.test(t) && !/\bnao\b/.test(t)) {
     return `A pessoa perguntou qual é o gargalo. Diga em uma frase, sem inventar nada sobre o sistema dela: "${voz.gargalo}" Depois emende UMA pergunta curta, de até dez palavras, sobre como eles atendem esses contatos hoje. Tudo em no máximo 30 palavras.`
@@ -880,7 +881,7 @@ export function dicaDaObjecao(conversa, voz = VOZES.imobiliaria) {
     return 'A pessoa diz que não tem tempo: REDUZA O ESFORÇO (10 minutos com o Eduardo, ou o link de teste de 5 minutos) e ofereça os dois horários. Não investigue.'
   }
   if (/\b(odeio|detesto|nao gosto de|nao quero|nada de|sem) (robo|robos|bot|bots|chatbot|automa\w*)|atendimento (e |é )?(humano|pessoal|humanizado)|prefiro (gente|pessoa|humano|falar com gente)|robo nao\b/.test(t)) {
-    return 'A pessoa diz que não gosta de robô e que o atendimento dela é humano. NÃO defenda o robô, NÃO faça diagnóstico genérico. Valide em uma frase (atendimento humano é o diferencial dela, e ninguém quer perder isso), diga em uma frase que o robô só cobre quando a equipe não pode (madrugada, fim de semana, corretor em visita) e passa para a pessoa certa, e pergunte quem responde o cliente que chama às 23h. Até 35 palavras.'
+    return 'A pessoa diz que não gosta de robô e que o atendimento dela é humano. NÃO defenda o robô, NÃO faça diagnóstico genérico. Valide em uma frase (atendimento humano é o diferencial dela, e ninguém quer perder isso), diga em uma frase que o atendimento 24 horas só entra quando a equipe não pode (madrugada, fim de semana, corretor em visita) e passa para a pessoa certa, e pergunte quem responde o cliente que chama às 23h. Até 35 palavras.'
   }
   if (/\b(caro|preco|valor|custa|custo|dinheiro|orcamento|prioridade|investir|investimento|cortando|grana)\b/.test(t)) {
     return 'A pessoa fala de custo ou prioridade: use o CUSTO DE NÃO AGIR (a ferramenta só guarda o contato; corretor em visita demora 30 minutos e o cliente compra do concorrente) e ofereça a demonstração com os dois horários.'
@@ -938,7 +939,7 @@ export function pedePreco(texto) {
   return PEDE_PRECO.test(String(texto || ''))
 }
 function respostaDePreco(segmento, pitchFeito) {
-  if (pitchFeito) return `O valor depende do que vocês precisam, só o robô, só o site ou os dois, e o Eduardo fecha isso com você na demonstração de 10 minutos. ${perguntaDosHorarios()}`
+  if (pitchFeito) return `O valor depende do que vocês precisam, só o atendimento, só o site ou os dois, e o Eduardo fecha isso com você na demonstração de 10 minutos. ${perguntaDosHorarios()}`
   return `${pitchCurto(segmento).split('\n\n')[0]}\n\nO valor depende do que vocês precisam, e o Eduardo fecha isso com você em 10 minutos. ${perguntaDosHorarios()}`
 }
 /* "Isso é golpe?", "é sério?": desconfiança legítima. Quem somos, o site
@@ -976,9 +977,9 @@ export function pedeObjetividade(texto) {
 }
 /* A apresentação direta, por segmento. */
 const PITCHES = {
-  imobiliaria: 'A Astro monta o site da imobiliária e um robô no WhatsApp que atende em segundos, 24 horas, e entrega a ficha do cliente pronta para o corretor. O resultado é não perder quem chama fora do horário.\n\nQuer ver funcionando em 10 minutos, amanhã às 10h ou às 14h?',
-  cursinho: 'A Astro monta o site do cursinho com inscrição e um robô no WhatsApp que responde dúvidas de turmas e matrícula 24 horas e agenda a visita, com cada interessado organizado para a secretaria. O resultado é não perder matrícula por demora.\n\nQuer ver funcionando em 10 minutos, amanhã às 10h ou às 14h?',
-  odonto: 'A Astro monta o site da clínica com agendamento e um robô no WhatsApp que marca e confirma consultas 24 horas, lembra o paciente no dia e organiza tudo para a recepção. O resultado é não perder paciente por demora.\n\nQuer ver funcionando em 10 minutos, amanhã às 10h ou às 14h?',
+  imobiliaria: 'A Astro monta o site da imobiliária e um atendimento no WhatsApp que responde o cliente em segundos, 24 horas, e entrega a ficha pronta para o corretor. O resultado é não perder quem chama fora do horário.\n\nQuer ver funcionando em 10 minutos, amanhã às 10h ou às 14h?',
+  cursinho: 'A Astro monta o site do cursinho com inscrição e um atendimento no WhatsApp que responde dúvidas de turmas e matrícula 24 horas e agenda a visita, com cada interessado organizado para a secretaria. O resultado é não perder matrícula por demora.\n\nQuer ver funcionando em 10 minutos, amanhã às 10h ou às 14h?',
+  odonto: 'A Astro monta o site da clínica com agendamento e um atendimento no WhatsApp que marca e confirma consultas 24 horas, lembra o paciente no dia e organiza tudo para a recepção. O resultado é não perder paciente por demora.\n\nQuer ver funcionando em 10 minutos, amanhã às 10h ou às 14h?',
 }
 /* Quando é a demonstração: "amanhã", menos na sexta e no sábado, que viram
    "segunda". Sem isto, uma conversa de sexta marcava demonstração no sábado. */
@@ -990,6 +991,18 @@ const capitalizar = (t) => t.charAt(0).toUpperCase() + t.slice(1)
 export function perguntaDosHorarios(agora = new Date()) {
   return `${capitalizar(quandoDemo(agora))} às 10h ou às 14h?`
 }
+/* Abertura a frio: gente, não "assistente". Com o nome da empresa (vem na
+   lista do painel, depois do número) a mensagem mostra que não é disparo
+   cego. Uma pergunta só, fácil de responder. */
+export function aberturaAFrio(lead) {
+  const nome = String(lead?.nome || '').trim()
+  const temNome = Boolean(nome) && !/^\+?[\d\s()-]{8,}$/.test(nome)
+  const gancho = temNome
+    ? ` Vi a ${nome} aqui na região e queria te fazer uma pergunta rápida sobre o atendimento de vocês no WhatsApp.`
+    : ' Queria te fazer uma pergunta rápida sobre o atendimento de vocês no WhatsApp.'
+  return `${saudacaoDoDia()}! Aqui é a equipe do Eduardo, da Astro Soluções.${gancho} É com você que eu falo?`
+}
+export const apresentacaoDe = (segmento) => pitchDe(segmento)
 function pitchDe(segmento) {
   return (PITCHES[segmento] || PITCHES.imobiliaria).replace('amanhã às 10h', `${quandoDemo()} às 10h`)
 }
@@ -1002,7 +1015,7 @@ function pitchCurto(segmento) {
 function ehTextoFixo(texto) {
   const t = String(texto || '')
   if (Object.values(PITCHES).includes(t) || t === DESCULPA_ENGANO || t === QUEM_CUIDA || t === PEDIDO_DE_PESSOA || t === PEDIDO_DE_PESSOA_2 || t === RESPOSTA_OCUPADO || t === QUAL_HORARIO || t === RESPOSTA_AGUARDO) return true
-  return /^(Fechado, |Aqui é a equipe do Eduardo|Não, é a equipe do Eduardo|O valor depende|A Astro monta|Aqui dá para ver o que a gente faz)/.test(t)
+  return /^(Fechado, |Aqui é a equipe do Eduardo|Não, é a equipe do Eduardo|O valor depende|A Astro monta|Aqui dá para ver o que a gente faz|(Bom dia|Boa tarde|Boa noite)! Aqui é a equipe do Eduardo)/.test(t)
 }
 
 const PEDIDO_DE_PESSOA = 'Olá! Preciso falar com o responsável pela empresa. Consegue me passar para uma pessoa?'
@@ -1264,7 +1277,7 @@ export async function aberturaParaIndicado(origem, conversaOrigem) {
   if (!origemFalas.length || !temInteligencia()) return ''
   const voz = VOZES[await segmentoDoLead(origem)] || VOZES.imobiliaria
   const instrucaoAbertura = [
-    'Você é o assistente da Astro Soluções (site, robô de WhatsApp e CRM para empresas), escrevendo pelo WhatsApp do Eduardo, no masculino.',
+    'Você é da equipe do Eduardo, da Astro Soluções (site, atendimento 24 horas no WhatsApp e CRM para empresas), escrevendo pelo WhatsApp do Eduardo, no masculino.',
     `Segmento: ${voz.rotulo}.`,
     'Escreva a PRIMEIRA mensagem para uma pessoa que foi indicada na conversa abaixo. Use o nome dela se aparecer, diga quem indicou (nome e/ou empresa, se aparecerem) e em meia frase por que você quer falar com ela, ligado ao que a conversa mostrou. Termine com uma pergunta leve.',
     `Comece com "${saudacaoDoDia()}". No máximo duas frases e 30 palavras. Sem emoji, sem link, sem dois-pontos, sem inventar nada que não esteja na conversa.`,
@@ -1296,7 +1309,7 @@ export async function prospectarIndicado(numero, origem, conversaOrigem = null, 
   })
   await fixarSegmento(novo.id, await segmentoDoLead(origem))
   let abertura = humanizar(
-    `${saudacaoDoDia()}, tudo bem? Aqui é o assistente da Astro Soluções. O atendimento ${nomeOrigem ? `da ${nomeOrigem}` : 'da empresa'} indicou você como a pessoa certa para falar.\n\nPosso te explicar em duas linhas o que a gente faz?`,
+    `${saudacaoDoDia()}! Aqui é a equipe do Eduardo, da Astro Soluções. O atendimento ${nomeOrigem ? `da ${nomeOrigem}` : 'da empresa'} indicou você como a pessoa certa para falar.\n\nPosso te explicar em duas linhas o que a gente faz?`,
   )
   /* Indicação feita por uma pessoa: a abertura usa a conversa de origem
      (nome de quem foi indicado, quem indicou, a empresa). Falhou, fica o
@@ -1547,7 +1560,7 @@ async function falarComIA(lead, conversa) {
      pelo corte de tamanho: ele já tem o tamanho certo e o corte o mutilava. */
   if (ehTextoFixo(cru)) return humanizar(cru)
   /* Apresentacao (demonstracao, 10 minutos, atende em segundos) precisa de espaco: teto de 45. */
-  const ehApresentacao = /demonstra|10 minutos|10 min|atende em segundos|24 horas/i.test(cru)
+  const ehApresentacao = /demonstra|10 minutos|10 min|atende em segundos|responde (o cliente )?em segundos|24 horas/i.test(cru)
   return encurtar(humanizar(cru), ehApresentacao ? 45 : limite)
 }
 
@@ -1584,14 +1597,14 @@ async function falarComIACru(lead, conversa) {
 
   const segmentoAtual = await segmentoDoLead(lead)
   const perguntasDoRobo = falas.filter((f) => f?.de === 'robo' && String(f.texto || '').includes('?')).length
-  const pitchFeito = falas.some((f) => f?.de === 'robo' && /demonstra|10 minutos|10 min|rob[oô] (no|de) WhatsApp|atende em segundos|10h|14h/i.test(String(f.texto || '')))
+  const pitchFeito = falas.some((f) => f?.de === 'robo' && /demonstra|10 minutos|10 min|rob[oô] (no|de) WhatsApp|atende em segundos|responde (o cliente )?em segundos|atendimento (no|24 horas no) WhatsApp|10h|14h/i.test(String(f.texto || '')))
   const linkJaFoi = falas.some((f) => f?.de === 'robo' && String(f.texto || '').includes(linkDoSite()))
   const falaDaPessoaAgora = ultimaFala?.de === 'pessoa' ? ultimaDaPessoa : ''
   /* "Quem é você?": quem somos e a apresentação, numa vez só. */
   if (pedeApresentacao(falaDaPessoaAgora)) return `Aqui é a equipe do Eduardo, da Astro Soluções. ${pitchCurto(segmentoAtual)}`
   if (desconfia(falaDaPessoaAgora)) {
     const conferir = linkJaFoi ? '' : ` Dá para conferir no site: ${linkDoSite()}`
-    return `Não, é a equipe do Eduardo, da Astro Soluções.${conferir}\n\nA gente monta site e robô de WhatsApp para ${voz.plural || 'imobiliárias'}. Quer ver funcionando em 10 minutos, ${perguntaDosHorarios().toLowerCase()}`
+    return `Não, é a equipe do Eduardo, da Astro Soluções.${conferir}\n\nA gente monta site e atendimento 24 horas no WhatsApp para ${voz.plural || 'imobiliárias'}. Quer ver funcionando em 10 minutos, ${perguntaDosHorarios().toLowerCase()}`
   }
   /* Preço: nunca a apresentação de novo; o valor vai para a demonstração. */
   if (pedePreco(falaDaPessoaAgora)) return respostaDePreco(segmentoAtual, pitchFeito)
@@ -1620,11 +1633,11 @@ async function falarComIACru(lead, conversa) {
     if (/\b(e voce|e vc|e com voce|e com vc|tudo bem|tudo bom|beleza)\b/.test(t)) {
       return `Tudo certo por aqui também!\n\nEstou falando com ${voz.quem}?`
     }
-    const jaSeApresentou = falas.some((f) => f?.de === 'robo' && /assistente da astro/i.test(String(f.texto || '')))
+    const jaSeApresentou = falas.some((f) => f?.de === 'robo' && /equipe do eduardo|assistente da astro/i.test(String(f.texto || '')))
     /* Já perguntamos "tudo bem?" e a pessoa só devolveu o cumprimento: segue
        para a pergunta do responsável, em vez de perguntar "tudo bem?" de novo. */
     if (/tudo bem\?/i.test(ultimaDoRobo)) return `${saudacaoDoDia(ultimaDaPessoa)}! Estou falando com ${voz.quem}?`
-    return `${saudacaoDoDia(ultimaDaPessoa)}, tudo bem?${jaSeApresentou ? '' : ' Aqui é o assistente da Astro Soluções.'}`
+    return `${saudacaoDoDia(ultimaDaPessoa)}, tudo bem?${jaSeApresentou ? '' : ' Aqui é a equipe do Eduardo, da Astro Soluções.'}`
   }
 
   const situacao = situacaoDaConversa(conversa)
@@ -1652,7 +1665,7 @@ async function falarComIACru(lead, conversa) {
   const mensagens = conversaParaMensagens(conversa, 20)
   /* Abertura a frio (número digitado, sem histórico): só o cumprimento e a
      apresentação. O assunto vem quando a pessoa responder, ou na retomada. */
-  if (mensagens.length === 0) return `${saudacaoDoDia()}, tudo bem? Aqui é o assistente da Astro Soluções.`
+  if (mensagens.length === 0) return aberturaAFrio(lead)
   if (mensagens[mensagens.length - 1].role !== 'user') {
     mensagens.push({
       role: 'user',
@@ -1675,7 +1688,7 @@ async function falarComIACru(lead, conversa) {
   if (resposta && !deveEncerrar(conversa) && DESPEDIDA.test(resposta) && !resposta.includes('?')) {
     resposta =
       contarRecusas(conversa) >= 1
-        ? 'Compreendo. Só para entender o cenário de vocês: é porque já têm um robô que atende em segundos, ou automação não é prioridade agora?'
+        ? 'Compreendo. Só para entender o cenário de vocês: é porque já têm um atendimento que responde em segundos, ou automação não é prioridade agora?'
         : 'Entendi. Hoje o site e o atendimento no WhatsApp de vocês estão rodando redondo, ou sentem que perdem clientes por lentidão?'
   }
   /* Anti-repetição: igual (ou 70% igual) a uma das três últimas do robô?
@@ -1710,7 +1723,7 @@ async function falarComIACru(lead, conversa) {
  * para o lead (criado se for a primeira vez), marca o lead como `bot` e
  * manda a mensagem de abordagem. Devolve um resultado por conversa.
  */
-export async function assumirConversas(jids) {
+export async function assumirConversas(jids, nomes = {}) {
   const evo = await evolucaoDaProspeccao()
   if (!evo) throw new Error('faltam EVOLUTION_API_URL e EVOLUTION_API_KEY na Vercel')
   if (!temBanco()) throw new Error('a prospecção precisa do banco (POSTGRES_URL)')
@@ -1730,10 +1743,15 @@ export async function assumirConversas(jids) {
     try {
       const registros = await evo.mensagens(nome, String(jid), 40).catch(() => [])
       let lead = await acharLeadPorContato(telefone)
+      const nomeDaLista = String(nomes?.[String(jid)] || '').trim().slice(0, 80)
+      if (lead && nomeDaLista && (!lead.nome || /^\+?[\d\s()-]{8,}$/.test(String(lead.nome)))) {
+        await atualizarLead(lead.id, { nome: nomeDaLista }).catch(() => {})
+        lead = { ...lead, nome: nomeDaLista }
+      }
       if (!lead) {
         const nomeExibido = registros.map((r) => (r?.key?.fromMe ? '' : r?.pushName)).find(Boolean) || ''
         lead = await criarLead({
-          nome: nomeExibido,
+          nome: nomeDaLista || nomeExibido,
           contato: telefone,
           canal: 'prospeccao',
           necessidade: 'A definir',
@@ -1990,7 +2008,7 @@ export async function webhookProspeccao(evento) {
        perde a venda: se ainda não apresentou, sai a apresentação fixa; se já
        apresentou, fica quieto e avisa o dono para responder pelo celular. */
     await avisarDono('IA falhou, responda pelo celular', lead, `${textoDaPessoa} · ${erro?.message || ''}`.slice(0, 200)).catch(() => {})
-    const jaApresentou = atual.some((f) => f?.de === 'robo' && /demonstra|10 minutos|atende em segundos|10h|14h/i.test(String(f.texto || '')))
+    const jaApresentou = atual.some((f) => f?.de === 'robo' && /demonstra|10 minutos|atende em segundos|responde (o cliente )?em segundos|10h|14h/i.test(String(f.texto || '')))
     if (jaApresentou || deveEncerrar(atual) || foraDoAlvo(textoDaPessoa) || pareceAutomatica(textoDaPessoa)) return await rastro('debug', 'IA falhou', erro?.message || '')
     resposta = pitchDe(await segmentoDoLead(lead))
     await rastro('ia-fallback', textoDaPessoa, erro?.message || '')

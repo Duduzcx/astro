@@ -89,14 +89,17 @@ export default async function handler(req, res) {
          para prospectar quem não está na lista. O número vira o jid do
          WhatsApp; DDI 55 é assumido quando vêm só 10 ou 11 dígitos. */
       const jids = Array.isArray(dados?.jids) ? dados.jids.map(String) : []
+      const nomes = {}
       if (dados?.numero) {
         /* Todas as travas da abordagem a frio num lugar só (prospeccao.js). */
         const decisao = await podeAbordarAFrio(String(dados.numero))
         if (decisao.erro) return res.status(409).json({ erro: decisao.erro })
         jids.push(decisao.jid)
+        /* O nome da empresa, se veio na lista, entra na abertura. */
+        if (typeof dados?.nome === 'string' && dados.nome.trim()) nomes[decisao.jid] = dados.nome.trim().slice(0, 80)
       }
       if (jids.length === 0) return res.status(400).json({ erro: 'escolha uma conversa ou digite um número' })
-      return res.status(200).json({ resultados: await assumirConversas(jids) })
+      return res.status(200).json({ resultados: await assumirConversas(jids, nomes) })
     }
     if (req.method === 'PATCH') {
       if (!temBanco()) return res.status(503).json({ erro: 'banco não configurado' })

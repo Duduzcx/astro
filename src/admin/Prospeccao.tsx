@@ -71,38 +71,45 @@ export function AbaProspeccao() {
        pausa entre eles. Erro em um número não para a lista: vira uma linha
        de resultado e o laço segue. "Aguarde" (intervalo mínimo do site)
        espera e tenta de novo uma vez. */
-    const numeros = Array.from(
-      new Set(
-        numeroNovo
-          .split(/[\n,;]+/)
-          .map((n) => n.replace(/\D/g, ''))
-          .filter((n) => n.length >= 10),
-      ),
-    ).slice(0, 10)
+    /* Cada linha: o número e, se quiser, o nome da empresa depois dele
+       ("11984680317 Ribeiro Imóveis"). O nome entra na abertura ("Vi a
+       Ribeiro Imóveis aqui na região…"): abordagem com cara de gente. */
+    const vistos = new Set<string>()
+    const itens = numeroNovo
+      .split(/[\n;]+/)
+      .map((linha) => {
+        const trecho = (linha.match(/\+?\d[\d\s().-]{8,}\d/) || [''])[0]
+        const numero = trecho.replace(/\D/g, '')
+        const nome = linha.replace(trecho, '').replace(/^[\s,|:–-]+|[\s,|:–-]+$/g, '').trim().slice(0, 80)
+        return { numero, nome }
+      })
+      .filter((item) => item.numero.length >= 10 && !vistos.has(item.numero) && vistos.add(item.numero))
+      .slice(0, 10)
+    const numeros = itens.map((item) => item.numero)
     if (numeros.length === 0) {
-      setAviso('Digite o número com DDD (ex.: 11984680317), um por linha.')
+      setAviso('Digite o número com DDD, um por linha. Pode pôr o nome da empresa depois do número (ex.: 11984680317 Ribeiro Imóveis).')
       return
     }
     setOcupado(true)
     setAviso('')
     const todos: Resultado[] = []
     const espera = (ms: number) => new Promise((fim) => setTimeout(fim, ms))
-    const abordar = async (numero: string) => {
-      const r = await pedir('/api/admin/prospeccao', { method: 'POST', body: JSON.stringify({ numero }) })
+    const abordar = async (item: { numero: string; nome: string }) => {
+      const r = await pedir('/api/admin/prospeccao', { method: 'POST', body: JSON.stringify({ numero: item.numero, nome: item.nome || undefined }) })
       return (r.resultados || []) as Resultado[]
     }
     try {
       for (let i = 0; i < numeros.length; i += 1) {
         setAviso(`Abordando ${i + 1} de ${numeros.length}…`)
         try {
-          todos.push(...(await abordar(numeros[i])))
+          todos.push(...(await abordar(itens[i])))
         } catch (falha) {
           const motivo = mensagemDe(falha)
           if (/aguarde/i.test(motivo)) {
             setAviso(`Intervalo mínimo: esperando para abordar ${i + 1} de ${numeros.length}…`)
             await espera(65000)
             try {
-              todos.push(...(await abordar(numeros[i])))
+              todos.push(...(await abordar(itens[i])))
             } catch (denovo) {
               todos.push({ jid: `${numeros[i]}@s.whatsapp.net`, erro: mensagemDe(denovo) } as Resultado)
             }

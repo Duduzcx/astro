@@ -432,3 +432,13 @@ test('"quem tem dinheiro não perde tempo, liga direto" não é recusa', async (
   assert.equal(m.contarRecusas([{ de: 'pessoa', texto: 'Não me liga, por favor' }]), 1)
   assert.equal(m.contarRecusas([{ de: 'pessoa', texto: 'Não manda mais mensagem' }]), 1)
 })
+
+test('abertura a frio é humana, com o nome da empresa, e ninguém lê "robô"', async () => {
+  const m = await import('../api/_lib/prospeccao.js')
+  const comNome = m.aberturaAFrio({ nome: 'Ribeiro Imóveis' })
+  assert.match(comNome, /Aqui é a equipe do Eduardo, da Astro Soluções\. Vi a Ribeiro Imóveis aqui na região/)
+  assert.match(comNome, /É com você que eu falo\?$/)
+  assert.doesNotMatch(m.aberturaAFrio({ nome: '+5511999990000' }), /Vi a/)
+  assert.doesNotMatch(m.aberturaAFrio({}), /assistente/i)
+  for (const seg of ['imobiliaria', 'cursinho', 'odonto']) assert.doesNotMatch(m.apresentacaoDe(seg), /rob[oô]|\bbot\b|chatbot|\bIA\b/i, seg)
+})
