@@ -365,3 +365,11 @@ test('recusa exige objeto, hostilidade com interrogação é dúvida, pedido de 
   assert.equal(m.confirmarHorario('Pode ser o das 10'), 'Fechado, amanhã às 10h então! O Eduardo confirma com você um pouco antes. Obrigado!')
   assert.equal(m.encurtar('Mando para joao@imob.com.br ainda hoje. Depois a gente alinha os detalhes com calma e vê o que faz mais sentido para vocês. Combinado?', 10).includes('joao@imob.com.br'), true)
 })
+
+test('"desculpa, não faço a mínima ideia" depois de "quem cuida?" encerra como negativa curta', async () => {
+  const m = await import('../api/_lib/prospeccao.js')
+  assert.equal(m.foraDoAlvo('Desculpa... Não faço a mínima ideia'), false)
+  assert.equal(m.negativaCurta('Desculpa... Não faço a mínima ideia'), true)
+  assert.equal(m.negativaCurta('Não'), true)
+  assert.equal(m.negativaCurta('Não, mas me explica melhor'), false)
+})

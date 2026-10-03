@@ -878,12 +878,15 @@ const DESPEDIDA = /obrigad[oa] pelo (retorno|contato|tempo|papo)|obrigad[oa] pel
    três vezes, ouviu três perguntas de volta e bloqueou o número. */
 const FORA_DO_ALVO =
   /n[uú]mero (incorreto|errado|pessoal)|digitou errado|ligou errado|mandou errado|mensagem errada|pessoa errada|(e|é) engano|foi engano|n[aã]o trabalho com (isso|nada disso|im[oó]ve|essa [aá]rea|esse ramo|vendas?|clientes?|empresas?)|n[aã]o (tenho|temos) (imobili|empresa|loja|neg[oó]cio|cl[ií]nica|cursinho|nada a ver)|nada a ver com|n[aã]o (sou|somos) (de |da |do )?(imobili|empresa|cl[ií]nica|cursinho)|n[aã]o (é|e) (aqui|comigo)[\s.!]*$|este (n[uú]mero )?(é|e) pessoal|uso pessoal|n[aã]o (atuo|mexo) (com|nessa|nisso)/i
+export function negativaCurta(texto) {
+  return NEGATIVA_CURTA.test(String(texto || '').trim())
+}
 export function foraDoAlvo(texto) {
   return FORA_DO_ALVO.test(String(texto || ''))
 }
 const DESCULPA_ENGANO = 'Desculpe o engano, foi número errado. Tenha um ótimo dia!'
 const QUEM_CUIDA = 'Entendi, desculpe! Você saberia me dizer quem cuida disso por aí?'
-const NEGATIVA_CURTA = /^(desculp[ae]w*[s.!,]*)?(n[aã]o|nao|n|negativo|n[aã]o sou|n[aã]o é comigo|n[aã]o sei|sei n[aã]o|n[aã]o (fa[cç]o|tenho) (a m[ií]nima )?ideia|nem ideia)[\s.!,]*$/i
+const NEGATIVA_CURTA = /^(desculp[ae]\w*[\s.!,]*)?(n[aã]o|nao|n|negativo|n[aã]o sou|n[aã]o é comigo|n[aã]o sei|sei n[aã]o|n[aã]o (fa[cç]o|tenho) (a m[ií]nima )?ideia|nem ideia)[\s.!,]*$/i
 
 /* "Quem é você?", "de onde pegou meu número?", "não conheço": a pessoa é
    real e só não sabe quem fala. Antes isso caía em "número errado" e dava
