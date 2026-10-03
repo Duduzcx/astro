@@ -233,34 +233,49 @@ async function pedirGroq(corpo) {
 }
 
 async function comGroq(instrucao, mensagens) {
-  const fila = await escolherModelosGroq()
+  const fila = (await escolherModelosGroq()).slice(0, 4)
   let ultimo = null
-  for (const model of fila.slice(0, 3)) {
-    const base = {
-      model,
-      max_tokens: 900,
-      temperature: 0.4,
-      messages: [{ role: 'system', content: instrucao }, ...mensagens],
+  for (let rodada = 0; rodada < 2; rodada += 1) {
+    /* Segunda rodada só depois de uma pausa: o limite por minuto do plano
+       grátis passa. Medido: numa rajada, os quatro modelos deram 429 juntos. */
+    if (rodada === 1) await new Promise((resolve) => setTimeout(resolve, 7000))
+    for (const model of fila) {
+      const base = {
+        model,
+        max_tokens: 900,
+        temperature: 0.4,
+        messages: [{ role: 'system', content: instrucao }, ...mensagens],
+      }
+      const pensa = PENSA.test(model)
+      let resposta
+      try {
+        resposta = await pedirGroq(pensa ? { ...base, reasoning_effort: /qwen|qwq/i.test(model) ? 'none' : 'low', reasoning_format: 'hidden' } : base)
+        /* O modelo não aceitou os parâmetros de raciocínio: manda sem eles. */
+        if (resposta.status === 400 && pensa) resposta = await pedirGroq(base)
+      } catch (erro) {
+        /* Rede ou 45 s sem resposta: o próximo da fila, não o silêncio. */
+        ultimo = new Error(`groq sem resposta (modelo ${model}): ${erro?.message || erro}`)
+        continue
+      }
+      if (!resposta.ok) {
+        /* 429: limite por minuto; 5xx: o modelo caiu; 400/404: saiu de linha
+           entre a listagem e agora (a próxima chamada relista). Em todos, o
+           próximo da fila. */
+        ultimo = new Error(`groq ${resposta.status} (modelo ${model}): ${(await resposta.text()).slice(0, 120)}`)
+        if (resposta.status !== 429 && resposta.status < 500) modelosGroq = []
+        continue
+      }
+      const dados = await resposta.json()
+      const escolha = dados?.choices?.[0]
+      const texto = String(escolha?.message?.content || '').replace(SEM_PENSAMENTO, '').trim()
+      if (!texto) {
+        ultimo = new Error(`groq devolveu vazio (modelo ${model}, parou por ${escolha?.finish_reason || '?'})`)
+        continue
+      }
+      return texto
     }
-    const pensa = PENSA.test(model)
-    let resposta = await pedirGroq(pensa ? { ...base, reasoning_effort: /qwen|qwq/i.test(model) ? 'none' : 'low', reasoning_format: 'hidden' } : base)
-    /* O modelo não aceitou os parâmetros de raciocínio: manda sem eles. */
-    if (resposta.status === 400 && pensa) resposta = await pedirGroq(base)
-    if (resposta.status === 429 || resposta.status >= 500) {
-      /* Limite por minuto do plano grátis, ou o modelo caiu: o próximo da fila. */
-      ultimo = new Error(`groq ${resposta.status} (modelo ${model}): ${(await resposta.text()).slice(0, 120)}`)
-      continue
-    }
-    if (!resposta.ok) {
-      /* Modelo saiu de linha entre a listagem e agora: a próxima chamada relista. */
-      modelosGroq = []
-      throw new Error(`groq ${resposta.status} (modelo ${model}): ${(await resposta.text()).slice(0, 160)}`)
-    }
-    const dados = await resposta.json()
-    const escolha = dados?.choices?.[0]
-    const texto = String(escolha?.message?.content || '').replace(SEM_PENSAMENTO, '').trim()
-    if (!texto) throw new Error(`groq devolveu vazio (modelo ${model}, parou por ${escolha?.finish_reason || '?'})`)
-    return texto
+    /* Só vale repetir se o problema foi limite: erro de modelo não melhora esperando. */
+    if (!/ 429 /.test(String(ultimo?.message || ''))) break
   }
   throw ultimo || new Error('groq: nenhum modelo respondeu')
 }

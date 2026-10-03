@@ -115,5 +115,5 @@ export function exigirSegredo(req     , segredo        ) {
   const cabecalho = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '')
   const alternativo = String(req.headers['x-cron-secret'] || '')
   const consulta = primeiro(req.query.secret)
-  if (cabecalho !== segredo && alternativo !== segredo && consulta !== segredo) throw new ErroHttp(401, 'não autorizado')
+  if (!segredoConfere(cabecalho, segredo) && !segredoConfere(alternativo, segredo) && !segredoConfere(consulta, segredo)) throw new ErroHttp(401, 'não autorizado')
 }

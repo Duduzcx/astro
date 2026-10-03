@@ -265,6 +265,19 @@ export async function registrarPonte(req, res) {
       await registrarLog({ canal: 'prospeccao', de: linha.contato, entrada: '(retomada manual)', saida: texto, modo: 'retomada' }).catch(() => {})
       return res.status(200).json({ ok: true, texto })
     }
+    /* { conversaLead: id } as falas de um lead; { logsDe: "55..." } os rastros daquele contato. */
+    if (dados?.conversaLead) {
+      const [linha] = await s2`SELECT id, nome, prospeccao, situacao, atualizado_em, conversa FROM leads WHERE id = ${Number(dados.conversaLead)}`
+      if (!linha) return res.status(404).json({ erro: 'lead não encontrado' })
+      return res.status(200).json({ ok: true, id: linha.id, nome: linha.nome, prospeccao: linha.prospeccao, situacao: linha.situacao, atualizado_em: linha.atualizado_em, falas: paraArray(linha.conversa) })
+    }
+    if (dados?.logsDe) {
+      const digitos = String(dados.logsDe).replace(/\D/g, '')
+      if (digitos.length < 8) return res.status(400).json({ erro: 'número curto' })
+      const padrao = `%${digitos}%`
+      const linhas = await s2`SELECT quando, modo, left(entrada, 70) AS entrada, left(saida, 70) AS saida FROM bot_logs WHERE entrada LIKE ${padrao} OR saida LIKE ${padrao} OR de LIKE ${padrao} ORDER BY quando DESC LIMIT 30`
+      return res.status(200).json({ ok: true, logs: linhas })
+    }
     if (dados?.testarLimite) return res.status(200).json({ ok: true, dentroDoLimite: await dentroDoLimiteDeAbordagens() })
     if (dados?.resetarGatilho) {
       await gravarConfig('prospeccao_gatilho', '')
@@ -690,7 +703,7 @@ function contextoDoLead(lead) {
    verbo ("não tenho", "não quero"), para "não sei se é com você, mas me
    interessa" não contar. */
 const RECUSA =
-  /\b(n[aã]o|nunca)\s+(tenho|temos|quero|queremos|precis\w*|vou querer|vamos querer|me interessa|nos interessa|estou interessad\w*|estamos interessad\w*)\b|\bn[aã]o,?\s+obrigad|sem interesse|pode parar|para de (me )?(mandar|escrever)|n[aã]o (me )?(mande|manda|chame|liga)|desist|tira (o )?meu (n[uú]mero|contato)/i
+  /\b(n[aã]o|nunca)\s+(tenho|temos)\s+(nenhum |o menor |muito )?(interesse|necessidade)\b|\b(n[aã]o|nunca)\s+(quero|queremos|vou querer|vamos querer)\b(?!\s+(ser|parecer|incomodar|atrapalhar|tomar|perder))|\b(n[aã]o|nunca)\s+precis\w*\s+(disso|de nada|nada|de nenhum|de rob[oô]|de site|de automa|de sistema|de ajuda|de servi[cç]o|de outro|de mais nada)\b|\b(n[aã]o|nunca)\s+(me|nos)\s+interessa\b|\bn[aã]o\s+(estou|estamos)\s+interessad\w*|\bn[aã]o,?\s+obrigad|sem interesse|pode parar|para de (me )?(mandar|escrever)|n[aã]o (me )?(mande|manda|chame|liga)|desist|tira (o )?meu (n[uú]mero|contato)/i
 export function contarRecusas(conversa) {
   return (Array.isArray(conversa) ? conversa : []).filter((f) => f?.de === 'pessoa' && RECUSA.test(String(f.texto || ''))).length
 }
@@ -699,10 +712,13 @@ export function contarRecusas(conversa) {
    "Não tenho interesse" simples NÃO está aqui de propósito: ganha uma
    investigação elegante antes (é a primeira recusa, contada em RECUSA). */
 const HOSTIL =
-  /n[aã]o (venha|vem|venham) (me )?oferecer|n[aã]o (me )?ofere[çc]a|n[aã]o quero (nada|saber|conversar|nenhum|mais nada)|n[aã]o (tenho|temos) (nenhum |o menor )?interesse (nenhum|algum|mesmo)|n[aã]o insist|me tira (da lista|do grupo|daqui)|tira (o )?meu (n[uú]mero|contato)|n[aã]o (me )?(mande|manda|envie|envia|escreva|escreve) mais|para de (me )?(mandar|escrever|encher|incomodar)|n[aã]o (quero|me) (mais )?(contato|mensagem)|vou (te )?(bloquear|denunciar)|bloquead|den[uú]ncia|spam|golpe|vai se f|porra|caralho|merda|idiota|ot[aá]rio|palha[cç]o/i
+  /n[aã]o (venha|vem|venham) (me )?oferecer|n[aã]o (me )?ofere[çc]a|n[aã]o quero (nada|saber|conversar|nenhum|mais nada)|n[aã]o (tenho|temos) (nenhum |o menor )?interesse (nenhum|algum|mesmo)|n[aã]o insist|me tira (da lista|do grupo|daqui)|tira (o )?meu (n[uú]mero|contato)|n[aã]o (me )?(mande|manda|envie|envia|escreva|escreve) mais|para de (me )?(mandar|escrever|encher|incomodar)|n[aã]o (quero|me) (mais )?(contato|mensagem)|vou (te )?(bloquear|denunciar)|vai se f|idiota|ot[aá]rio|palha[cç]o/i
+/* Palavras que só são hostis sem interrogação: "isso é golpe?" é dúvida. */
+const HOSTIL_FRACO = /bloquead|den[uú]ncia|spam|golpe|porra|caralho|merda/i
 
 export function ehHostil(texto) {
-  return HOSTIL.test(String(texto || ''))
+  const t = String(texto || '')
+  return HOSTIL.test(t) || (HOSTIL_FRACO.test(t) && !t.includes('?'))
 }
 
 /**
@@ -775,12 +791,32 @@ export function contarAutomaticasSeguidas(conversa) {
 /* A pessoa aceitou um horário? Precisa de uma hora explícita ("14h",
    "10:30") junto de um sim, e nenhum "não" na frase. É o fim do trabalho do
    robô: confirma, agradece e o Eduardo assume. */
-const HORA = /\b(\d{1,2}\s?h(\s?\d{2})?|\d{1,2}\s\d{2}\b|\d{1,2}\s?horas?|as \d{1,2}\b|meio dia)\b/
-const ACEITE = /\b(pode ser|fechado|combinado|ok|beleza|bora|vamos|perfeito|otimo|topo|confirmo|confirmado|pode marcar|pode agendar|marca|fica bom|ta bom|tudo bem|certo|melhor|prefiro)\b/
+const HORA = /\b(\d{1,2}\s?(h|hs|hrs|horas?)(\s?\d{2})?|\d{1,2}\s\d{2}|as \d{1,2}|das? \d{1,2}|meio dia)\b/
+const ACEITE = /\b(pode ser|fechado|combinado|ok|beleza|bora|vamos|perfeito|otimo|topo|confirmo|confirmado|pode marcar|pode agendar|marca|fica bom|ta bom|tudo bem|certo|melhor|prefiro|sim|pode|serve|consigo|da certo|show|top|blz|isso|boa|fica otimo|agendado|marcado)\b/
+const DIAS = { segunda: 'segunda', terca: 'terça', quarta: 'quarta', quinta: 'quinta', sexta: 'sexta', sabado: 'sábado' }
+/* A confirmação do horário, fixa: dia e hora da fala da pessoa, agradecimento
+   no masculino, sem pergunta. O modelo, nesta hora, repetia a apresentação. */
+export function confirmarHorario(texto) {
+  const t = normalizarFrase(texto)
+  let hora = (t.match(HORA) || [''])[0].replace(/^(as|das?) /, '').replace(/\s+/g, '').replace(/(hs|hrs|horas?)$/, 'h').trim()
+  if (/^\d{1,2}$/.test(hora)) hora = `${hora}h`
+  const diaSemana = (t.match(/\b(segunda|terca|quarta|quinta|sexta|sabado)\b/) || [])[1]
+  const dia = /\bhoje\b/.test(t) ? 'hoje' : diaSemana ? DIAS[diaSemana] : 'amanhã'
+  const quando = hora === 'meiodia' ? `${dia} ao meio-dia` : hora ? `${dia} às ${hora}` : dia
+  return `Fechado, ${quando} então! O Eduardo confirma com você um pouco antes. Obrigado!`
+}
+/* Aceitou sem dizer a hora ("pode ser", "bora") depois dos dois horários. */
+export function aceitouSemHora(texto, ultimaDoRobo) {
+  if (pareceAutomatica(texto)) return false
+  const t = normalizarFrase(texto)
+  return /10h|14h/.test(String(ultimaDoRobo || '')) && ACEITE.test(t) && !HORA.test(t) && !/\b(nao|nunca|nem|mas|porem|so que)\b/.test(t) && t.split(/\s+/).length <= 6
+}
+const QUAL_HORARIO = 'Perfeito! Qual fica melhor para você, 10h ou 14h?'
 export function aceitouHorario(texto) {
   if (pareceAutomatica(texto)) return false
   const t = normalizarFrase(texto)
-  return HORA.test(t) && ACEITE.test(t) && !/\b(nao|nunca|nem)\b/.test(t)
+  if (/\b(reuniao|compromisso|depois d|apos|so (a|as|depois)|antes d|nao (da|posso|consigo|rola|vai dar))\b/.test(t)) return false
+  return HORA.test(t) && ACEITE.test(t) && !/\b(nao|nunca|nem)\b(?! precisa)/.test(t)
 }
 
 export function dicaDaObjecao(conversa, voz = VOZES.imobiliaria) {
@@ -841,17 +877,50 @@ const DESPEDIDA = /obrigad[oa] pelo (retorno|contato|tempo|papo)|obrigad[oa] pel
    desculpa, encerra, nunca mais chama. Foi o caso da pessoa que se explicou
    três vezes, ouviu três perguntas de volta e bloqueou o número. */
 const FORA_DO_ALVO =
-  /n[uú]mero (incorreto|errado|pessoal)|digitou errado|ligou errado|mandou errado|mensagem errada|pessoa errada|(e|é) engano|foi engano|n[aã]o trabalho com|n[aã]o (tenho|temos) (imobili|empresa|loja|neg[oó]cio|cl[ií]nica|cursinho|nada a ver)|nada a ver com|n[aã]o (sou|somos) (de |da |do )?(imobili|corretor|empresa|cl[ií]nica|cursinho)|n[aã]o (fa[cç]o|tenho) (a m[ií]nima )?ideia|n[aã]o conhe[cç]o (voc|isso|a astro)|n[aã]o (é|e) (aqui|comigo)|n[aã]o sei (do que|de que) (vc|voc[eê]) (ta|t[aá]|est[aá]) falando|quem (é|e) voc[eê]|n[aã]o (pedi|solicitei) (nada|isso)|este (n[uú]mero )?(é|e) pessoal|uso pessoal|n[aã]o (atuo|mexo) (com|nessa|nisso)/i
+  /n[uú]mero (incorreto|errado|pessoal)|digitou errado|ligou errado|mandou errado|mensagem errada|pessoa errada|(e|é) engano|foi engano|n[aã]o trabalho com (isso|nada disso|im[oó]ve|essa [aá]rea|esse ramo|vendas?|clientes?|empresas?)|n[aã]o (tenho|temos) (imobili|empresa|loja|neg[oó]cio|cl[ií]nica|cursinho|nada a ver)|nada a ver com|n[aã]o (sou|somos) (de |da |do )?(imobili|empresa|cl[ií]nica|cursinho)|n[aã]o (é|e) (aqui|comigo)[\s.!]*$|este (n[uú]mero )?(é|e) pessoal|uso pessoal|n[aã]o (atuo|mexo) (com|nessa|nisso)/i
 export function foraDoAlvo(texto) {
   return FORA_DO_ALVO.test(String(texto || ''))
 }
 const DESCULPA_ENGANO = 'Desculpe o engano, foi número errado. Tenha um ótimo dia!'
 const QUEM_CUIDA = 'Entendi, desculpe! Você saberia me dizer quem cuida disso por aí?'
-const NEGATIVA_CURTA = /^(n[aã]o|nao|n|negativo|n[aã]o sou|n[aã]o é comigo|n[aã]o sei|sei n[aã]o|n[aã]o fa[cç]o ideia|nem ideia)[\s.!,]*$/i
+const NEGATIVA_CURTA = /^(desculp[ae]w*[s.!,]*)?(n[aã]o|nao|n|negativo|n[aã]o sou|n[aã]o é comigo|n[aã]o sei|sei n[aã]o|n[aã]o (fa[cç]o|tenho) (a m[ií]nima )?ideia|nem ideia)[\s.!,]*$/i
+
+/* "Quem é você?", "de onde pegou meu número?", "não conheço": a pessoa é
+   real e só não sabe quem fala. Antes isso caía em "número errado" e dava
+   opt-out num cliente possível. Resposta: quem somos e a apresentação. */
+const PEDE_APRESENTACAO =
+  /quem (é|e) (voc[eê]|vc|que (ta|t[aá]|est[aá]) falando)|quem (fala|ta falando|t[aá] falando|est[aá] falando)|de onde (pegou|tirou|conseguiu|veio|arrumou) (o )?meu (n[uú]mero|contato)|n[aã]o conhe[cç]o (voc|a astro|isso|a empresa)|n[aã]o sei (do que|de que|o que) (vc|voc[eê]) (ta|t[aá]|est[aá]) falando|n[aã]o (pedi|solicitei) (nada|isso)|(o que|oq|oque) (é|e) (isso|a astro)/i
+export function pedeApresentacao(texto) {
+  return PEDE_APRESENTACAO.test(String(texto || ''))
+}
+/* Preço: separado da objetividade. Sem tabela de preços ainda (PRECOS do
+   FAQ), o valor vai para a demonstração. Quando houver preços, é aqui. */
+const PEDE_PRECO =
+  /quanto (é|e|custa|fica|sai|cobra|cobram|seria|ficaria)|qual (é |e |seria )?o (valor|pre[cç]o|investimento|custo)|\bpre[cç]o\b|valor (mensal|por m[eê]s|do servi)|mensalidade|or[cç]amento|tabela de (valor|pre[cç]o)/i
+export function pedePreco(texto) {
+  return PEDE_PRECO.test(String(texto || ''))
+}
+function respostaDePreco(segmento, pitchFeito) {
+  const fecho = 'O valor depende do que vocês precisam, só o robô, só o site ou os dois, e o Eduardo fecha isso com você na demonstração de 10 minutos. Amanhã às 10h ou às 14h?'
+  if (pitchFeito) return fecho
+  return `${pitchDe(segmento).split('\n\n')[0]}\n\n${fecho}`
+}
+/* "Me chama depois", "agora não posso": reduz o esforço e pede o horário. */
+const OCUPADO =
+  /me (chama|liga|procura|manda|chame|ligue) (depois|mais tarde|outra hora|amanh[aã]|semana que vem|na segunda)|(agora|hoje) n[aã]o (posso|consigo|d[aá]|vai dar)|(estou|to|tô) (ocupad|em reuni[aã]o|na correria|sem tempo|atendendo|dirigindo)|depois (a gente|nos|n[oó]s) (fala|conversa)|outra hora|mais tarde (eu|a gente) (vejo|falo|retorno)/i
+export function estaOcupado(texto) {
+  return OCUPADO.test(String(texto || ''))
+}
+const RESPOSTA_OCUPADO = 'Claro, sem problemas. Qual horário fica melhor para eu te chamar, amanhã de manhã ou à tarde?'
+/* "Me manda o site": o endereço com uma frase e um fecho leve. */
+const PEDE_SITE = /me (manda|mande|envia|envie|passa|passe) (o |um )?(site|link|endere[cç]o)|(qual|tem) (é |e )?o site|site de voc[eê]s|voc[eê]s? t[eê]m site|quero ver o site|link do site/i
+export function pedeSite(texto) {
+  return PEDE_SITE.test(String(texto || ''))
+}
 
 /* Pediu objetividade: apresentação em duas frases, sem pergunta. */
 const PEDE_OBJETIVIDADE =
-  /o que (voc[eê]s?|vcs?) (tem|t[eê]m|oferece|oferecem|faz|fazem|vende|vendem)|o que (é|e) (isso|a astro)|do que se trata|qual (é |e )?a (proposta|oferta|ideia)|me (ofere[cç]a|oferece|explica|fala) (o que|logo|direto)|seja (direto|objetivo)|(vai|vá|v[aá]) direto|direto aos? (assuntos?|ponto)|ser (direto|objetivo)|sem (rodeio|enrola|inqu[eé]rito)|n[aã]o gosto de (pergunta|inqu[eé]rito)|chega de pergunta|o que voc[eê] quer|qual o (seu )?objetivo|quanto (é|e|custa)|me ofere[cç]a|quiser oferecer|me manda (a |uma )?proposta|vamos l[aá]\.? o que/i
+  /o que (voc[eê]s?|vcs?) (tem|t[eê]m|oferece|oferecem|faz|fazem|vende|vendem)|o que (é|e) (isso|a astro)|do que se trata|qual (é |e )?a (proposta|oferta|ideia)|me (ofere[cç]a|oferece|explica|fala) (o que|logo|direto)|seja (direto|objetivo)|(vai|vá|v[aá]) direto|direto aos? (assuntos?|ponto)|ser (direto|objetivo)|sem (rodeio|enrola|inqu[eé]rito)|n[aã]o gosto de (pergunta|inqu[eé]rito)|chega de pergunta|o que voc[eê] quer|qual o (seu )?objetivo|me ofere[cç]a|quiser oferecer|me manda (a |uma )?proposta|vamos l[aá]\.? o que/i
 export function pedeObjetividade(texto) {
   return PEDE_OBJETIVIDADE.test(String(texto || ''))
 }
@@ -863,6 +932,12 @@ const PITCHES = {
 }
 function pitchDe(segmento) {
   return PITCHES[segmento] || PITCHES.imobiliaria
+}
+/* Texto que saiu pronto do roteiro (não do modelo): já tem o tamanho certo. */
+function ehTextoFixo(texto) {
+  const t = String(texto || '')
+  if (Object.values(PITCHES).includes(t) || t === DESCULPA_ENGANO || t === QUEM_CUIDA || t === PEDIDO_DE_PESSOA || t === PEDIDO_DE_PESSOA_2 || t === RESPOSTA_OCUPADO || t === QUAL_HORARIO) return true
+  return /^(Fechado, |Aqui é a equipe do Eduardo|O valor depende|A Astro monta|Aqui dá para ver o que a gente faz)/.test(t)
 }
 
 const PEDIDO_DE_PESSOA = 'Olá! Preciso falar com o responsável pela empresa. Consegue me passar para uma pessoa?'
@@ -1067,7 +1142,10 @@ export async function avisarDono(titulo, lead, detalhe = '') {
 /* Pedido explícito de gente ou de ligação: o robô para e avisa. */
 const PEDE_HUMANO = /\b(me liga|liga pra mim|liga para mim|pode me ligar|me ligue|quero falar com (uma pessoa|alguem|alguém|o eduardo|um humano|um atendente|o dono|o responsavel|o responsável)|falar com uma pessoa|é urgente|e urgente|urgente)\b/i
 export function pedeHumano(texto) {
-  return PEDE_HUMANO.test(String(texto || ''))
+  const t = String(texto || '')
+  if (pareceAutomatica(t)) return false
+  if (/n[aã]o (é|e) urgente|nada urgente|sem urg[eê]ncia|n[aã]o (me )?lig|n[aã]o precisa (me )?ligar|s[oó] por escrito/i.test(t)) return false
+  return PEDE_HUMANO.test(t)
 }
 
 /* Teto de respostas do robô por hora para o mesmo número (padrão 8): barra
@@ -1331,7 +1409,7 @@ export async function retomarPonte(req, res) {
    do limite. O limite acompanha a mensagem da pessoa (curta pede curta). */
 export function encurtar(texto, limite = 32) {
   const t = String(texto || '').trim()
-  if (!t || /https?:\/\//.test(t) || t.split(/\s+/).length <= limite) return t
+  if (!t || /https?:\/\/|\w\.\w/.test(t) || t.split(/\s+/).length <= limite) return t
   const baloes = t.split(/\n{2,}/)
   const frases = baloes.join(' ').match(/[^.!?]+[.!?]+|[^.!?]+$/g)?.map((f) => f.trim()).filter(Boolean) || [t]
   const pergunta = [...frases].reverse().find((f) => f.endsWith('?'))
@@ -1354,7 +1432,7 @@ async function falarComIA(lead, conversa) {
   const cru = await falarComIACru(lead, conversa)
   /* Texto fixo (apresentação direta, desculpa, pedido de pessoa) não passa
      pelo corte de tamanho: ele já tem o tamanho certo e o corte o mutilava. */
-  if (Object.values(PITCHES).includes(cru) || cru === DESCULPA_ENGANO || cru === QUEM_CUIDA || cru === PEDIDO_DE_PESSOA || cru === PEDIDO_DE_PESSOA_2) return humanizar(cru)
+  if (ehTextoFixo(cru)) return humanizar(cru)
   /* Apresentacao (demonstracao, 10 minutos, atende em segundos) precisa de espaco: teto de 45. */
   const ehApresentacao = /demonstra|10 minutos|10 min|atende em segundos|24 horas/i.test(cru)
   return encurtar(humanizar(cru), ehApresentacao ? 45 : limite)
@@ -1374,38 +1452,53 @@ async function falarComIACru(lead, conversa) {
     return opcao || (contarAutomaticasSeguidas(falas) >= 2 ? PEDIDO_DE_PESSOA_2 : PEDIDO_DE_PESSOA)
   }
 
+  const ultimaDoRobo = [...falas].reverse().find((f) => f?.de === 'robo')?.texto || ''
+  /* Aceitou o horário: confirma e para. Vem ANTES de qualquer outra regra,
+     senão o teto de perguntas devolvia a apresentação a quem acabou de dizer
+     "pode ser amanhã às 10h". */
+  if (ultimaFala?.de === 'pessoa' && aceitouHorario(ultimaDaPessoa)) return confirmarHorario(ultimaDaPessoa)
+  if (ultimaFala?.de === 'pessoa' && aceitouSemHora(ultimaDaPessoa, ultimaDoRobo)) return QUAL_HORARIO
+
   /* Fora do alvo: desculpa e fim. Nada de pergunta, nada de indicação. */
-  if (ultimaFala?.de === 'pessoa' && foraDoAlvo(ultimaDaPessoa)) return DESCULPA_ENGANO
+  if (ultimaFala?.de === 'pessoa' && foraDoAlvo(ultimaDaPessoa) && !numeroIndicado(ultimaDaPessoa, lead?.contato) && !emailNoTexto(ultimaDaPessoa)) return DESCULPA_ENGANO
 
   /* "Não" seco depois de "é o responsável?": pergunta quem cuida, uma vez.
      Segundo não, ou "não sei": desculpa e fim. */
-  const ultimaDoRobo = [...falas].reverse().find((f) => f?.de === 'robo')?.texto || ''
   if (ultimaFala?.de === 'pessoa' && NEGATIVA_CURTA.test(String(ultimaDaPessoa).trim())) {
-    const jaPerguntouQuem = falas.some((f) => f?.de === 'robo' && f.texto === QUEM_CUIDA)
-    if (jaPerguntouQuem) return DESCULPA_ENGANO
+    if (ultimaDoRobo === QUEM_CUIDA) return DESCULPA_ENGANO
     if (/respons[aá]vel|quem cuida|falando com|é você quem|decide/i.test(ultimaDoRobo)) return QUEM_CUIDA
   }
 
   const segmentoAtual = await segmentoDoLead(lead)
   const perguntasDoRobo = falas.filter((f) => f?.de === 'robo' && String(f.texto || '').includes('?')).length
-  const pitchFeito = falas.some((f) => f?.de === 'robo' && /demonstra|10 minutos|10 min|rob[oô] (no|de) WhatsApp|atende em segundos/i.test(String(f.texto || '')))
-  const querObjetividade = ultimaFala?.de === 'pessoa' && pedeObjetividade(ultimaDaPessoa)
-  /* Pediu objetividade: apresentação direta, sem modelo. */
-  if (querObjetividade) return pitchDe(segmentoAtual)
+  const pitchFeito = falas.some((f) => f?.de === 'robo' && /demonstra|10 minutos|10 min|rob[oô] (no|de) WhatsApp|atende em segundos|10h|14h/i.test(String(f.texto || '')))
+  const linkJaFoi = falas.some((f) => f?.de === 'robo' && String(f.texto || '').includes(linkDoSite()))
+  const falaDaPessoaAgora = ultimaFala?.de === 'pessoa' ? ultimaDaPessoa : ''
+  /* "Quem é você?": quem somos e a apresentação, numa vez só. */
+  if (pedeApresentacao(falaDaPessoaAgora)) return `Aqui é a equipe do Eduardo, da Astro Soluções. ${pitchDe(segmentoAtual)}`
+  /* Preço: nunca a apresentação de novo; o valor vai para a demonstração. */
+  if (pedePreco(falaDaPessoaAgora)) return respostaDePreco(segmentoAtual, pitchFeito)
+  const querObjetividade = Boolean(falaDaPessoaAgora) && pedeObjetividade(falaDaPessoaAgora)
+  /* Pediu objetividade: apresentação direta, sem modelo. Já apresentou?
+     Então o modelo responde a dúvida, com a ordem de não repetir. */
+  if (querObjetividade && !pitchFeito) return pitchDe(segmentoAtual)
+  /* "Me chama depois": reduz o esforço e pede o horário, sem modelo. */
+  if (estaOcupado(falaDaPessoaAgora) && !pedeHumano(falaDaPessoaAgora)) return RESPOSTA_OCUPADO
+  /* "Me manda o site": o endereço e um fecho leve, uma vez. */
+  if (pedeSite(falaDaPessoaAgora) && !linkJaFoi) return `Aqui dá para ver o que a gente faz: ${linkDoSite()}\n\nSe fizer sentido, o Eduardo mostra funcionando em 10 minutos. Amanhã às 10h ou às 14h?`
 
   /* Etiqueta: cumprimento puro nas duas primeiras falas da pessoa recebe só
      o cumprimento de volta, e para. "Tudo bem?" de volta vira a pergunta
      leve de quem fala com o responsável. Sem modelo: o modelo emendava a
      pergunta comercial. */
   const falasDaPessoa = falas.filter((f) => f?.de === 'pessoa')
-  if (ultimaFala?.de === 'pessoa' && ehSaudacao(ultimaDaPessoa)) {
+  if (ultimaFala?.de === 'pessoa' && falasDaPessoa.length <= 2 && ehSaudacao(ultimaDaPessoa)) {
     const t = normalizarFrase(ultimaDaPessoa)
     /* A pessoa perguntou "tudo bem?": responde e devolve a pergunta, e para.
        O assunto vem depois que ela responder. */
     if (/\b(tudo bem|tudo bom|td bem|td bom|como vai|como voce|como vc|beleza)\b/.test(t) && !/\b(e voce|e vc|e com voce|e com vc)\b/.test(t)) {
       return `${/\b(boa tarde|bom dia|boa noite)\b/.test(t) ? `${saudacaoDoDia(ultimaDaPessoa)}! ` : ''}Tudo ótimo por aqui, e com você?`
     }
-    if (falasDaPessoa.length > 2) return 'Que bom!'
     if (/\b(e voce|e vc|e com voce|e com vc|tudo bem|tudo bom|beleza)\b/.test(t)) {
       return `Tudo certo por aqui também!\n\nEstou falando com ${voz.quem}?`
     }
@@ -1421,13 +1514,12 @@ async function falarComIACru(lead, conversa) {
   const chegaDePerguntas = perguntasDoRobo >= 3 && !pitchFeito
   /* Tres perguntas sem apresentar: a apresentacao sai fixa, sem modelo. */
   if (chegaDePerguntas && ultimaFala?.de === "pessoa" && !foraDoAlvo(ultimaDaPessoa) && !deveEncerrar(conversa)) return pitchDe(segmentoAtual)
-  const cabecalho = `${voz.bloco ? `${voz.bloco}\n\n` : ''}SITUAÇÃO AGORA (manda mais que qualquer exemplo abaixo):${situacao}${dica ? `\n${dica}` : ''}${chegaDePerguntas ? '\nVocê já fez três perguntas e ainda não apresentou nada: parece interrogatório. AGORA apresente em duas frases o que a Astro faz e o resultado, e proponha a demonstração com o Eduardo. Nenhuma pergunta de diagnóstico.' : ''}\n\n`
+  const cabecalho = `${voz.bloco ? `${voz.bloco}\n\n` : ''}SITUAÇÃO AGORA (manda mais que qualquer exemplo abaixo):${situacao}${dica ? `\n${dica}` : ''}${chegaDePerguntas ? '\nVocê já fez três perguntas e ainda não apresentou nada: parece interrogatório. AGORA apresente em duas frases o que a Astro faz e o resultado, e proponha a demonstração com o Eduardo. Nenhuma pergunta de diagnóstico.' : ''}${querObjetividade && pitchFeito ? '\nA pessoa pediu objetividade e você JÁ apresentou a Astro: não repita a apresentação. Responda em uma frase o que ela perguntou e feche com os dois horários.' : ''}\n\n`
   const jaPerguntou = falas
     .filter((f) => f?.de === 'robo' && String(f.texto || '').includes('?'))
     .map((f) => String(f.texto).split(/(?<=[.!?])\s+/).filter((frase) => frase.includes('?')).join(' '))
     .filter(Boolean)
     .slice(-6)
-  const linkJaFoi = falas.some((f) => f?.de === 'robo' && String(f.texto || '').includes(linkDoSite()))
   const instrucao =
     cabecalho +
     (await instrucaoDeProspeccao()) +
@@ -1664,11 +1756,13 @@ export async function webhookProspeccao(evento) {
   /* Áudio: a ponte mandou o arquivo; o Whisper da Groq transcreve e a
      conversa segue como texto. Sem transcrição, pede por escrito. */
   let textoDaPessoa = mensagem.texto
-  if (!textoDaPessoa && mensagem.temAudio) {
+  if (mensagem.temAudio) {
     const mimeOk = /^audio\//i.test(String(mensagem.audio?.mime || ''))
     const transcrito = mensagem.audio && mimeOk ? await transcreverAudio(mensagem.audio.base64, mensagem.audio.mime).catch(() => '') : ''
     if (transcrito) {
-      textoDaPessoa = `(áudio) ${transcrito}`
+      textoDaPessoa = textoDaPessoa ? `${textoDaPessoa}\n(áudio) ${transcrito}` : `(áudio) ${transcrito}`
+    } else if (textoDaPessoa) {
+      /* Texto junto do áudio que não abriu: segue só com o texto. */
     } else {
       const pedido = 'Aqui o áudio não abriu. Consegue me mandar por texto?'
       await acrescentarFala(lead.id, { de: 'pessoa', texto: '(áudio que não deu para ouvir)' })
@@ -1770,7 +1864,14 @@ export async function webhookProspeccao(evento) {
   try {
     resposta = await falarComIA(lead, atual)
   } catch (erro) {
-    return await rastro('debug', 'IA falhou', erro?.message || '')
+    /* Groq sem resposta (limite do plano grátis, modelo fora). Silêncio
+       perde a venda: se ainda não apresentou, sai a apresentação fixa; se já
+       apresentou, fica quieto e avisa o dono para responder pelo celular. */
+    await avisarDono('IA falhou, responda pelo celular', lead, `${textoDaPessoa} · ${erro?.message || ''}`.slice(0, 200)).catch(() => {})
+    const jaApresentou = atual.some((f) => f?.de === 'robo' && /demonstra|10 minutos|atende em segundos|10h|14h/i.test(String(f.texto || '')))
+    if (jaApresentou || deveEncerrar(atual) || foraDoAlvo(textoDaPessoa) || pareceAutomatica(textoDaPessoa)) return await rastro('debug', 'IA falhou', erro?.message || '')
+    resposta = pitchDe(await segmentoDoLead(lead))
+    await rastro('ia-fallback', textoDaPessoa, erro?.message || '')
   }
   if (!resposta) return await rastro('debug', 'IA vazia', textoDaPessoa)
   try {

@@ -73,10 +73,24 @@ export async function criarLead(dados) {
 export async function acharLeadPorContato(contato) {
   await prepararBanco()
   const s = sql()
+  const variantes = variantesDoContato(texto(contato, 160))
   const [linha] = await s`
-    SELECT * FROM leads WHERE contato = ${texto(contato, 160)}
-    ORDER BY criado_em DESC LIMIT 1`
+    SELECT * FROM leads WHERE contato = ANY(${variantes}::text[])
+    ORDER BY (contato = ${variantes[0]}) DESC, criado_em DESC LIMIT 1`
   return linha ? { ...linha, conversa: paraArray(linha.conversa) } : null
+}
+
+/* Celular brasileiro com e sem o nono dígito: o WhatsApp às vezes entrega o
+   jid sem o 9 e o lead foi gravado com ele (ou o contrário). Sem isto, a
+   resposta da pessoa dava "lead nao achado" e o robô ficava mudo. */
+export function variantesDoContato(contato) {
+  const c = String(contato || '')
+  const m = c.match(/^\+55(\d{2})(\d{8,9})$/)
+  if (!m) return [c]
+  const [, ddd, resto] = m
+  if (resto.length === 9 && resto.startsWith('9')) return [c, `+55${ddd}${resto.slice(1)}`]
+  if (resto.length === 8 && /^[6-9]/.test(resto)) return [c, `+55${ddd}9${resto}`]
+  return [c]
 }
 
 /** Guarda as falas mais recentes, e devolve a conversa já com a nova. */

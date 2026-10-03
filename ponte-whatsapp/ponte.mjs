@@ -98,7 +98,7 @@ function registrarEvento(texto) {
    (o WhatsApp só manda o histórico na primeira ligação). */
 const ARQUIVO_LOJA = path.join(DADOS, 'loja.json')
 const POR_CONVERSA = 200
-const VERSAO = '2026-10-01e'
+const VERSAO = '2026-10-03a'
 const loja = { conversas: new Map(), nomes: new Map(), mensagens: new Map(), recuperadas: new Set(), salvos: new Set() }
 
 /* Contatos salvos na agenda do celular (têm "name", não só o apelido do
@@ -108,7 +108,7 @@ function marcarSalvos(lista) {
   let mudou = false
   for (const c of lista || []) {
     if (!c?.name) continue
-    const jid = jidDePessoa({ remoteJid: String(c.id || '') }) || String(c.id || '')
+    const jid = jidDePessoa({ remoteJid: String(c.id || ''), remoteJidAlt: String(c.phoneNumber || c.pnJid || '') }) || String(c.id || '')
     if (jid && !loja.salvos.has(jid)) {
       loja.salvos.add(jid)
       mudou = true
@@ -176,26 +176,34 @@ async function enviarComoGente(jid, partes) {
   const anterior = filasDeEnvio.get(jid) || Promise.resolve()
   const tarefa = anterior.then(async () => {
     enviando.add(jid)
-    await pausa(3000 + Math.random() * 3000)
-    for (const [i, parte] of partes.entries()) {
-      if (!sock || estado !== 'conectado') return registrarEvento('envio adiado perdido: número não conectado')
-      const digitando = Math.min(10000, Math.max(2500, parte.length * 55))
-      await sock.sendPresenceUpdate('composing', jid).catch(() => {})
-      await pausa(digitando)
-      try {
-        const enviada = await sock.sendMessage(jid, { text: parte })
-        lembrarEnviada(enviada)
-        ultimoEnvio.set(jid, Date.now())
-      } catch (erro) {
-        registrarEvento(`envio falhou: ${erro?.message}`)
+    try {
+      await pausa(3000 + Math.random() * 3000)
+      for (const [i, parte] of partes.entries()) {
+        /* O soquete pode cair durante a pausa de digitação: lê de novo a cada
+           balão, numa variável local, para não chamar método de null. */
+        const s = sock
+        if (!s || estado !== 'conectado') return registrarEvento('envio adiado perdido: número não conectado')
+        const digitando = Math.min(10000, Math.max(2500, parte.length * 55))
+        await s.sendPresenceUpdate('composing', jid).catch(() => {})
+        await pausa(digitando)
+        try {
+          const enviada = await s.sendMessage(jid, { text: parte })
+          lembrarEnviada(enviada)
+          ultimoEnvio.set(jid, Date.now())
+        } catch (erro) {
+          registrarEvento(`envio falhou: ${erro?.message}`)
+        }
+        await s.sendPresenceUpdate('paused', jid).catch(() => {})
+        if (i < partes.length - 1) await pausa(2500 + Math.random() * 2500)
       }
-      await sock.sendPresenceUpdate('paused', jid).catch(() => {})
-      if (i < partes.length - 1) await pausa(2500 + Math.random() * 2500)
+    } catch (erro) {
+      registrarEvento(`envio quebrou: ${erro?.message}`)
+    } finally {
+      enviando.delete(jid)
     }
-    enviando.delete(jid)
   })
   filasDeEnvio.set(jid, tarefa.catch(() => {}))
-  await tarefa
+  await tarefa.catch(() => {})
 }
 
 function conteudoDaMensagem(key) {
@@ -231,10 +239,12 @@ function jidDePessoa(chave) {
     const alternativo = String(chave?.remoteJidAlt || chave?.senderPn || '')
     if (alternativo.endsWith('@s.whatsapp.net')) aprenderLid(jid, alternativo)
     jid = alternativo || lidParaTelefone.get(jid) || ''
+    if (!jid) lidsSemTelefone += 1
   }
   if (!jid.endsWith('@s.whatsapp.net')) return null
   return jid
 }
+let lidsSemTelefone = 0
 
 /** Uma mensagem do Baileys vira um objeto simples, com o relógio em segundos. */
 function simplificar(m) {
@@ -321,8 +331,12 @@ let urlPublica = URL_FIXA
 const ESPERA_PARA_JUNTAR = 20000
 const aguardando = new Map()
 function textoSimples(plana) {
-  const msg = plana?.message || {}
-  return String(msg.conversation || msg.extendedTextMessage?.text || '').trim()
+  const raiz = plana?.message || {}
+  /* Mensagem temporária, de visualização única ou editada vem embrulhada:
+     sem desembrulhar, chegava vazia e o robô ficava mudo com quem usa
+     mensagens temporárias. */
+  const msg = raiz.ephemeralMessage?.message || raiz.viewOnceMessage?.message || raiz.viewOnceMessageV2?.message || raiz.editedMessage?.message?.protocolMessage?.editedMessage || raiz
+  return String(msg.conversation || msg.extendedTextMessage?.text || msg.imageMessage?.caption || msg.videoMessage?.caption || msg.documentMessage?.caption || '').trim()
 }
 
 /* Depois de reconectar, quem respondeu enquanto a ponte estava fora fica
@@ -404,11 +418,22 @@ async function encaminharAoSite(m, plana) {
   let carga = plana
   const audio =
     m?.message?.audioMessage || m?.message?.ephemeralMessage?.message?.audioMessage || m?.message?.viewOnceMessage?.message?.audioMessage
+  if (audio && !plana?.key?.fromMe) {
+    /* Texto da mesma pessoa esperando na janela de 20 s: vai junto do áudio,
+       numa chamada só. Separados, viravam duas respostas. */
+    const jidAudio = String(plana?.key?.remoteJid || '')
+    const pendente = aguardando.get(jidAudio)
+    if (pendente) {
+      clearTimeout(pendente.temporizador)
+      aguardando.delete(jidAudio)
+      carga = { ...plana, message: { ...(plana.message || {}), conversation: pendente.textos.join('\n') } }
+    }
+  }
   if (audio && !plana?.key?.fromMe && sock) {
     try {
       const buf = await downloadMediaMessage(m, 'buffer', {}, { logger: pino({ level: 'silent' }), reuploadRequest: sock.updateMediaMessage })
       if (buf && buf.length <= 2 * 1024 * 1024) {
-        carga = { ...plana, audioBase64: Buffer.from(buf).toString('base64'), audioMime: String(audio.mimetype || 'audio/ogg') }
+        carga = { ...carga, audioBase64: Buffer.from(buf).toString('base64'), audioMime: String(audio.mimetype || 'audio/ogg') }
       } else {
         registrarEvento('áudio grande demais para encaminhar (mais de 2 MB)')
       }
@@ -542,7 +567,7 @@ async function ligar() {
           velho?.ev.removeAllListeners('creds.update')
           setTimeout(() => {
             fs.rmSync(path.join(DADOS, 'auth'), { recursive: true, force: true })
-            void ligar()
+            ligarSeguro()
           }, 1500)
           return
         } else {
@@ -556,12 +581,15 @@ async function ligar() {
              WhatsApp e realimentavam o próprio 428. */
           if (!reconectando) {
             reconectando = true
-            registrarEvento(`conexão caiu (${codigo || 'sem código'}); tentando de novo em 5s`)
+            /* 440 é outra sessão no mesmo número (duas pontes): voltar em 5 s
+               faz as duas se derrubarem sem parar. Espera um minuto. */
+            const espera = codigo === 440 ? 60000 : 5000
+            registrarEvento(`conexão caiu (${codigo || 'sem código'}); tentando de novo em ${espera / 1000}s`)
             setTimeout(() => {
               reconectando = false
               ligando = false
-              void ligar()
-            }, 5000)
+              ligarSeguro()
+            }, espera)
           }
           return
         }
@@ -707,13 +735,14 @@ async function tratar(req, res) {
     if (a === 'diagnostico') {
       return responder(res, 200, {
         estado,
-        numero: meuNumero,
+        numero: meuNumero ? `${meuNumero.slice(0, 3)}…${meuNumero.slice(-4)}` : null,
         publica: urlPublica || null,
         registradaNoSite: registrada,
         salvos: loja.salvos.size,
         versao: VERSAO,
         envios: resumoDosEnvios(),
-        webhook,
+        webhook: webhook ? String(webhook).replace(/\?.*$/, '') : webhook,
+        lidsSemTelefone,
         conversas: loja.conversas.size,
         mensagens: [...loja.mensagens.values()].reduce((n, l) => n + l.length, 0),
         idsTraduzidos: lidParaTelefone.size,
@@ -724,7 +753,7 @@ async function tratar(req, res) {
     if (a === 'instance' && b === 'create' && req.method === 'POST') {
       const dados = await corpo(req)
       if (dados?.webhook?.url) webhook = String(dados.webhook.url)
-      if (!sock) void ligar()
+      if (!sock) ligarSeguro()
       return responder(res, 201, { instance: { instanceName: INSTANCIA, status: estado } })
     }
     if (a === 'webhook' && b === 'set' && req.method === 'POST') {
@@ -734,7 +763,7 @@ async function tratar(req, res) {
     }
     if (a === 'instance' && b === 'connect') {
       if (estado === 'conectado') return responder(res, 200, { instance: { state: 'open' } })
-      if (!sock) void ligar()
+      if (!sock) ligarSeguro()
       /* Espera o QR nascer (uns dois segundos depois de ligar), até oito:
          responder "conectando" sem QR fazia o painel voltar sem nada, e o
          clique em Conectar parecia não fazer nada. */
@@ -761,7 +790,7 @@ async function tratar(req, res) {
       meuNumero = null
       qrAtual = null
       if (velho) {
-        velho.ev.removeAllListeners('creds.update')
+        velho.ev.removeAllListeners()
         await velho.logout().catch(() => undefined)
       }
       registrarEvento('número desconectado pelo painel; preparando um QR novo')
@@ -770,7 +799,7 @@ async function tratar(req, res) {
          motivo do desligamento pelo celular. */
       setTimeout(() => {
         fs.rmSync(path.join(DADOS, 'auth'), { recursive: true, force: true })
-        void ligar()
+        ligarSeguro()
       }, 1500)
       return responder(res, 200, { ok: true })
     }
@@ -848,10 +877,19 @@ async function tratar(req, res) {
 
 /* ------------------------------------------------------------------------
    Sobe tudo: o servidor, o WhatsApp, o túnel e o registro. */
+/* ligar() rejeitado derrubava o processo (promessa sem catch). Aqui vira
+   evento e uma nova tentativa em 10 s. */
+function ligarSeguro() {
+  ligar().catch((erro) => {
+    registrarEvento(`ligar falhou: ${erro?.message || erro}`)
+    ligando = false
+    setTimeout(ligarSeguro, 10000)
+  })
+}
 const servidor = http.createServer((req, res) => void tratar(req, res))
 servidor.listen(PORTA, '0.0.0.0', async () => {
   console.log(`ponte na porta ${PORTA}; instância ${INSTANCIA}; site ${SITE}`)
-  void ligar()
+  ligarSeguro()
   if (SEM_TUNEL) return
   if (!urlPublica) {
     try {
