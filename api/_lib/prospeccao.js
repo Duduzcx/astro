@@ -876,6 +876,9 @@ export function dicaDaObjecao(conversa, voz = VOZES.imobiliaria) {
   if (/\b(tempo|corrid\w*|ocupad\w*|agenda (cheia|lotada|apertada)|depois|outra hora|semana que vem|mes que vem)\b/.test(t)) {
     return 'A pessoa diz que não tem tempo: REDUZA O ESFORÇO (10 minutos com o Eduardo, ou o link de teste de 5 minutos) e ofereça os dois horários. Não investigue.'
   }
+  if (/\b(odeio|detesto|nao gosto de|nao quero|nada de|sem) (robo|robos|bot|bots|chatbot|automa\w*)|atendimento (e |é )?(humano|pessoal|humanizado)|prefiro (gente|pessoa|humano|falar com gente)|robo nao\b/.test(t)) {
+    return 'A pessoa diz que não gosta de robô e que o atendimento dela é humano. NÃO defenda o robô, NÃO faça diagnóstico genérico. Valide em uma frase (atendimento humano é o diferencial dela, e ninguém quer perder isso), diga em uma frase que o robô só cobre quando a equipe não pode (madrugada, fim de semana, corretor em visita) e passa para a pessoa certa, e pergunte quem responde o cliente que chama às 23h. Até 35 palavras.'
+  }
   if (/\b(caro|preco|valor|custa|custo|dinheiro|orcamento|prioridade|investir|investimento|cortando|grana)\b/.test(t)) {
     return 'A pessoa fala de custo ou prioridade: use o CUSTO DE NÃO AGIR (a ferramenta só guarda o contato; corretor em visita demora 30 minutos e o cliente compra do concorrente) e ofereça a demonstração com os dois horários.'
   }
