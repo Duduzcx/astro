@@ -403,3 +403,9 @@ test('rampa de abordagens: 10, depois +5 a cada dois dias, teto 30', async () =>
   assert.equal(limitePorDias(-3), 10)
   assert.equal(limitePorDias(Number.NaN), 10)
 })
+
+test('"sobre?" e "em que posso ajudar?" pedem o assunto', async () => {
+  const m = await import('../api/_lib/prospeccao.js')
+  for (const t of ['Sobre?', 'Bom dia! Tudo bem Sobre?', 'Em que posso ajudar?', 'Por favor, me fala o que você busca', 'Qual o assunto?']) assert.equal(m.pedeObjetividade(t), true, t)
+  assert.equal(m.pedeObjetividade('Falei sobre isso com o João'), false)
+})

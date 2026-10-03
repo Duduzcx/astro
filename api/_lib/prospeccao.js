@@ -964,7 +964,7 @@ export function pedeSite(texto) {
 
 /* Pediu objetividade: apresentação em duas frases, sem pergunta. */
 const PEDE_OBJETIVIDADE =
-  /o que (voc[eê]s?|vcs?) (tem|t[eê]m|oferece|oferecem|faz|fazem|vende|vendem)|o que (é|e) (isso|a astro)|do que se trata|qual (é |e )?a (proposta|oferta|ideia)|me (ofere[cç]a|oferece|explica|fala) (o que|logo|direto)|seja (direto|objetivo)|(vai|vá|v[aá]) direto|direto aos? (assuntos?|ponto)|ser (direto|objetivo)|sem (rodeio|enrola|inqu[eé]rito)|n[aã]o gosto de (pergunta|inqu[eé]rito)|chega de pergunta|o que voc[eê] quer|qual o (seu )?objetivo|me ofere[cç]a|quiser oferecer|me manda (a |uma )?proposta|vamos l[aá]\.? o que/i
+  /o que (voc[eê]s?|vcs?) (tem|t[eê]m|oferece|oferecem|faz|fazem|vende|vendem)|o que (é|e) (isso|a astro)|do que se trata|qual (é |e )?a (proposta|oferta|ideia)|me (ofere[cç]a|oferece|explica|fala) (o que|logo|direto)|seja (direto|objetivo)|(vai|vá|v[aá]) direto|direto aos? (assuntos?|ponto)|ser (direto|objetivo)|sem (rodeio|enrola|inqu[eé]rito)|n[aã]o gosto de (pergunta|inqu[eé]rito)|chega de pergunta|o que voc[eê] quer|qual o (seu )?objetivo|\bsobre\s*\?|sobre o qu[eê]|a respeito de qu[eê]|qual (é |e |seria )?o assunto|(em|como) (que )?posso (te )?ajudar|o que (voc[eê] |vc )?(busca|procura|deseja|precisa|gostaria)|me ofere[cç]a|quiser oferecer|me manda (a |uma )?proposta|vamos l[aá]\.? o que/i
 export function pedeObjetividade(texto) {
   return PEDE_OBJETIVIDADE.test(String(texto || ''))
 }
@@ -1615,6 +1615,9 @@ async function falarComIACru(lead, conversa) {
       return `Tudo certo por aqui também!\n\nEstou falando com ${voz.quem}?`
     }
     const jaSeApresentou = falas.some((f) => f?.de === 'robo' && /assistente da astro/i.test(String(f.texto || '')))
+    /* Já perguntamos "tudo bem?" e a pessoa só devolveu o cumprimento: segue
+       para a pergunta do responsável, em vez de perguntar "tudo bem?" de novo. */
+    if (/tudo bem\?/i.test(ultimaDoRobo)) return `${saudacaoDoDia(ultimaDaPessoa)}! Estou falando com ${voz.quem}?`
     return `${saudacaoDoDia(ultimaDaPessoa)}, tudo bem?${jaSeApresentou ? '' : ' Aqui é o assistente da Astro Soluções.'}`
   }
 
