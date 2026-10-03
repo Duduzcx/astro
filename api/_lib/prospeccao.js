@@ -1355,7 +1355,9 @@ async function falarComIA(lead, conversa) {
   /* Texto fixo (apresentação direta, desculpa, pedido de pessoa) não passa
      pelo corte de tamanho: ele já tem o tamanho certo e o corte o mutilava. */
   if (Object.values(PITCHES).includes(cru) || cru === DESCULPA_ENGANO || cru === QUEM_CUIDA || cru === PEDIDO_DE_PESSOA || cru === PEDIDO_DE_PESSOA_2) return humanizar(cru)
-  return encurtar(humanizar(cru), limite)
+  /* Apresentacao (demonstracao, 10 minutos, atende em segundos) precisa de espaco: teto de 45. */
+  const ehApresentacao = /demonstra|10 minutos|10 min|atende em segundos|24 horas/i.test(cru)
+  return encurtar(humanizar(cru), ehApresentacao ? 45 : limite)
 }
 
 async function falarComIACru(lead, conversa) {
