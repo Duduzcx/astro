@@ -98,7 +98,7 @@ function registrarEvento(texto) {
    (o WhatsApp só manda o histórico na primeira ligação). */
 const ARQUIVO_LOJA = path.join(DADOS, 'loja.json')
 const POR_CONVERSA = 200
-const VERSAO = '2026-10-03a'
+const VERSAO = '2026-10-03b'
 const loja = { conversas: new Map(), nomes: new Map(), mensagens: new Map(), recuperadas: new Set(), salvos: new Set() }
 
 /* Contatos salvos na agenda do celular (têm "name", não só o apelido do
@@ -242,6 +242,9 @@ function jidDePessoa(chave) {
     if (!jid) lidsSemTelefone += 1
   }
   if (!jid.endsWith('@s.whatsapp.net')) return null
+  /* Mensagem do número para ele mesmo (a conversa "Você"): é onde o site
+     deixa os avisos ao dono. Nunca vira conversa nem vai ao site. */
+  if (meuNumero && jid === `${String(meuNumero).replace(/\D/g, '')}@s.whatsapp.net`) return null
   return jid
 }
 let lidsSemTelefone = 0

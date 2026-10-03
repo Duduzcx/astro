@@ -373,3 +373,13 @@ test('"desculpa, não faço a mínima ideia" depois de "quem cuida?" encerra com
   assert.equal(m.negativaCurta('Não'), true)
   assert.equal(m.negativaCurta('Não, mas me explica melhor'), false)
 })
+
+test('hora seca depois dos dois horários é aceite; "vou verificar" recebe agradecimento', async () => {
+  const m = await import('../api/_lib/prospeccao.js')
+  assert.equal(m.aceitouHorario('14 hs', 'Amanhã às 10h ou às 14h para ver a solução?'), true)
+  assert.equal(m.aceitouHorario('14 hs', 'Como vocês captam novos clientes hoje?'), false)
+  assert.equal(m.aceitouHorario('Tenho reunião às 14h, depois eu vejo', 'Amanhã às 10h ou às 14h?'), false)
+  assert.equal(m.confirmarHorario('14 hs'), 'Fechado, amanhã às 14h então! O Eduardo confirma com você um pouco antes. Obrigado!')
+  for (const t of ['Preciso verificar com os nossos responsáveis e já te dou o retorno', 'Vou falar com o dono e te dou retorno', 'Vou repassar para a diretoria']) assert.equal(m.vaiVerificar(t), true, t)
+  assert.equal(m.vaiVerificar('Quero ver funcionando'), false)
+})

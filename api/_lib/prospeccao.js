@@ -265,6 +265,15 @@ export async function registrarPonte(req, res) {
       await registrarLog({ canal: 'prospeccao', de: linha.contato, entrada: '(retomada manual)', saida: texto, modo: 'retomada' }).catch(() => {})
       return res.status(200).json({ ok: true, texto })
     }
+    /* { pausar: id, optout?: true, aviso?: "título" } tira um lead do robô; com optout nunca mais chama; com aviso manda o alerta ao dono. */
+    if (dados?.pausar) {
+      const [linha] = await s2`SELECT * FROM leads WHERE id = ${Number(dados.pausar)}`
+      if (!linha) return res.status(404).json({ erro: 'lead não encontrado' })
+      await marcarProspeccao(linha.id, 'pausado')
+      if (dados.optout) await marcarOptOut(linha.contato)
+      const avisado = dados.aviso ? await avisarDono(String(dados.aviso).slice(0, 160), linha, '') : null
+      return res.status(200).json({ ok: true, pausado: linha.id, optout: Boolean(dados.optout), avisado })
+    }
     /* { conversaLead: id } as falas de um lead; { logsDe: "55..." } os rastros daquele contato. */
     if (dados?.conversaLead) {
       const [linha] = await s2`SELECT id, nome, prospeccao, situacao, atualizado_em, conversa FROM leads WHERE id = ${Number(dados.conversaLead)}`
@@ -812,11 +821,15 @@ export function aceitouSemHora(texto, ultimaDoRobo) {
   return /10h|14h/.test(String(ultimaDoRobo || '')) && ACEITE.test(t) && !HORA.test(t) && !/\b(nao|nunca|nem|mas|porem|so que)\b/.test(t) && t.split(/\s+/).length <= 6
 }
 const QUAL_HORARIO = 'Perfeito! Qual fica melhor para você, 10h ou 14h?'
-export function aceitouHorario(texto) {
+export function aceitouHorario(texto, ultimaDoRobo = '') {
   if (pareceAutomatica(texto)) return false
   const t = normalizarFrase(texto)
   if (/\b(reuniao|compromisso|depois d|apos|so (a|as|depois)|antes d|nao (da|posso|consigo|rola|vai dar))\b/.test(t)) return false
-  return HORA.test(t) && ACEITE.test(t) && !/\b(nao|nunca|nem)\b(?! precisa)/.test(t)
+  if (!HORA.test(t) || /\b(nao|nunca|nem)\b(?! precisa)/.test(t)) return false
+  if (ACEITE.test(t)) return true
+  /* "14 hs" seco, logo depois de "10h ou 14h?": é aceite. Foi assim que uma
+     reunião de verdade passou sem ser marcada nem avisada. */
+  return /10h|14h|hor[aá]rio/i.test(String(ultimaDoRobo || '')) && t.split(/\s+/).filter(Boolean).length <= 6
 }
 
 export function dicaDaObjecao(conversa, voz = VOZES.imobiliaria) {
@@ -915,6 +928,14 @@ export function estaOcupado(texto) {
   return OCUPADO.test(String(texto || ''))
 }
 const RESPOSTA_OCUPADO = 'Claro, sem problemas. Qual horário fica melhor para eu te chamar, amanhã de manhã ou à tarde?'
+/* "Vou verificar com os responsáveis e te dou retorno": agradece e espera.
+   Perguntar mais aqui é pressão; a retomada de 24 h cuida do resto. */
+const VAI_VERIFICAR =
+  /(vou|preciso|tenho que|deixa eu|deixe-me|vamos) (verificar|ver|consultar|falar|alinhar|conversar|passar|levar) (com|internamente|para|pro|pra|isso)|te (dou|do|passo) (um |o )?retorno|dou (um )?retorno|retorno (depois|em breve|assim que)|assim que (tiver|puder|souber) (eu )?(te )?(aviso|falo|retorno|chamo)|vou (repassar|encaminhar)/i
+export function vaiVerificar(texto) {
+  return VAI_VERIFICAR.test(String(texto || ''))
+}
+const RESPOSTA_AGUARDO = 'Perfeito, fico no aguardo. Obrigado!'
 /* "Me manda o site": o endereço com uma frase e um fecho leve. */
 const PEDE_SITE = /me (manda|mande|envia|envie|passa|passe) (o |um )?(site|link|endere[cç]o)|(qual|tem) (é |e )?o site|site de voc[eê]s|voc[eê]s? t[eê]m site|quero ver o site|link do site/i
 export function pedeSite(texto) {
@@ -939,7 +960,7 @@ function pitchDe(segmento) {
 /* Texto que saiu pronto do roteiro (não do modelo): já tem o tamanho certo. */
 function ehTextoFixo(texto) {
   const t = String(texto || '')
-  if (Object.values(PITCHES).includes(t) || t === DESCULPA_ENGANO || t === QUEM_CUIDA || t === PEDIDO_DE_PESSOA || t === PEDIDO_DE_PESSOA_2 || t === RESPOSTA_OCUPADO || t === QUAL_HORARIO) return true
+  if (Object.values(PITCHES).includes(t) || t === DESCULPA_ENGANO || t === QUEM_CUIDA || t === PEDIDO_DE_PESSOA || t === PEDIDO_DE_PESSOA_2 || t === RESPOSTA_OCUPADO || t === QUAL_HORARIO || t === RESPOSTA_AGUARDO) return true
   return /^(Fechado, |Aqui é a equipe do Eduardo|O valor depende|A Astro monta|Aqui dá para ver o que a gente faz)/.test(t)
 }
 
@@ -1123,7 +1144,7 @@ export async function podeAbordarAFrio(numeroCru) {
  */
 export async function avisarDono(titulo, lead, detalhe = '') {
   const url = process.env.ALERTA_WEBHOOK_URL
-  if (!url) return false
+  if (!url) return await avisarNoProprioWhatsApp(titulo, lead, detalhe)
   const nome = lead?.nome && !/^\+?[\d\s()-]{8,}$/.test(String(lead.nome)) ? lead.nome : ''
   const painel = `${linkDoSite()}/admin`
   const content = [`**${titulo}**`, nome ? `Nome: ${nome}` : '', `Contato: ${lead?.contato || ''}`, detalhe ? `Última mensagem: ${limpar(detalhe, 300)}` : '', `Painel: ${painel}`]
@@ -1250,6 +1271,25 @@ export async function prospectarIndicado(numero, origem, conversaOrigem = null, 
   await registrarLog({ canal: 'prospeccao', de: `+${numero}`, entrada: '(indicação)', saida: abertura, modo: 'ia' }).catch(() => {})
   await avisarDono('Indicação recebida: novo contato abordado', { ...novo, contato: `+${numero}` }, `indicado por ${nomeOrigem || origem?.contato || ''}`)
   return { ok: true, lead: novo.id }
+}
+
+/* Sem ALERTA_WEBHOOK_URL, o aviso vai como mensagem do número para ele
+   mesmo (a conversa "Você" do WhatsApp). A ponte ignora mensagens para si,
+   então o aviso nunca vira conversa do robô. */
+async function avisarNoProprioWhatsApp(titulo, lead, detalhe = '') {
+  try {
+    const meu = (await estadoDoNumero()).numero
+    const evo = await evolucaoDaProspeccao()
+    if (!meu || !evo) return false
+    const nome = lead?.nome && !/^\+?[\d\s()-]{8,}$/.test(String(lead.nome)) ? lead.nome : ''
+    const texto = [`AVISO DO ROBÔ. ${titulo}.`, nome ? `Nome ${nome}.` : '', lead?.contato ? `Contato ${lead.contato}.` : '', lead?.id ? `Lead ${lead.id} no painel.` : '', detalhe ? `Última mensagem "${limpar(detalhe, 200)}"` : '']
+      .filter(Boolean)
+      .join(' ')
+    await evo.enviarTexto(instanciaPessoal(), meu, texto)
+    return true
+  } catch {
+    return false
+  }
 }
 
 /* A pessoa quer continuar em outro canal: e-mail ou outro número. */
@@ -1459,7 +1499,7 @@ async function falarComIACru(lead, conversa) {
   /* Aceitou o horário: confirma e para. Vem ANTES de qualquer outra regra,
      senão o teto de perguntas devolvia a apresentação a quem acabou de dizer
      "pode ser amanhã às 10h". */
-  if (ultimaFala?.de === 'pessoa' && aceitouHorario(ultimaDaPessoa)) return confirmarHorario(ultimaDaPessoa)
+  if (ultimaFala?.de === 'pessoa' && aceitouHorario(ultimaDaPessoa, ultimaDoRobo)) return confirmarHorario(ultimaDaPessoa)
   if (ultimaFala?.de === 'pessoa' && aceitouSemHora(ultimaDaPessoa, ultimaDoRobo)) return QUAL_HORARIO
 
   /* Fora do alvo: desculpa e fim. Nada de pergunta, nada de indicação. */
@@ -1487,6 +1527,7 @@ async function falarComIACru(lead, conversa) {
   if (querObjetividade && !pitchFeito) return pitchDe(segmentoAtual)
   /* "Me chama depois": reduz o esforço e pede o horário, sem modelo. */
   if (estaOcupado(falaDaPessoaAgora) && !pedeHumano(falaDaPessoaAgora)) return RESPOSTA_OCUPADO
+  if (vaiVerificar(falaDaPessoaAgora) && !emailNoTexto(falaDaPessoaAgora) && !numeroIndicado(falaDaPessoaAgora, lead?.contato)) return RESPOSTA_AGUARDO
   /* "Me manda o site": o endereço e um fecho leve, uma vez. */
   if (pedeSite(falaDaPessoaAgora) && !linkJaFoi) return `Aqui dá para ver o que a gente faz: ${linkDoSite()}\n\nSe fizer sentido, o Eduardo mostra funcionando em 10 minutos. Amanhã às 10h ou às 14h?`
 
@@ -1812,6 +1853,7 @@ export async function webhookProspeccao(evento) {
      passou o e-mail ou o número. O robô confirma, encerra aqui e avisa o
      dono, que segue por lá. Não manda mensagem sozinho para o outro número. */
   const falasPessoa = paraArray(lead.conversa).filter((f) => f?.de === 'pessoa').slice(-2).map((f) => String(f.texto || ''))
+  const ultimaDoRoboAntes = [...paraArray(lead.conversa)].reverse().find((f) => f?.de === 'robo')?.texto || ''
   const pediuAntes = pedeOutroCanal(textoDaPessoa) || falasPessoa.some(pedeOutroCanal) || paraArray(lead.conversa).slice(-1).some((f) => f?.de === 'robo' && /e-?mail|n[uú]mero/i.test(String(f.texto || '')))
   const emailDado = emailNoTexto(textoDaPessoa)
   const numeroDado = numeroIndicado(textoDaPessoa, mensagem.telefone)
@@ -1890,7 +1932,7 @@ export async function webhookProspeccao(evento) {
     await marcarOptOut(mensagem.telefone)
     await rastro('encerrado', textoDaPessoa, mensagem.telefone)
     if (ehHostil(textoDaPessoa)) await avisarDono('Conversa encerrada por hostilidade', lead, textoDaPessoa)
-  } else if (aceitouHorario(textoDaPessoa)) {
+  } else if (aceitouHorario(textoDaPessoa, ultimaDoRoboAntes)) {
     /* Reunião aceita: o robô confirmou e sai; daqui em diante é o Eduardo,
        pelo celular. "#robo" devolve ao robô se precisar. */
     await marcarProspeccao(lead.id, 'pausado')
