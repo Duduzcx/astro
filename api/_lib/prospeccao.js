@@ -726,7 +726,7 @@ function contextoDoLead(lead) {
    verbo ("não tenho", "não quero"), para "não sei se é com você, mas me
    interessa" não contar. */
 const RECUSA =
-  /\b(n[aã]o|nunca)\s+(tenho|temos)\s+(nenhum |o menor |muito )?(interesse|necessidade)\b|\b(n[aã]o|nunca)\s+(quero|queremos|vou querer|vamos querer)\b(?!\s+(ser|parecer|incomodar|atrapalhar|tomar|perder))|\b(n[aã]o|nunca)\s+precis\w*\s+(disso|de nada|nada|de nenhum|de rob[oô]|de site|de automa|de sistema|de ajuda|de servi[cç]o|de outro|de mais nada)\b|\b(n[aã]o|nunca)\s+(me|nos)\s+interessa\b|\bn[aã]o\s+(estou|estamos)\s+interessad\w*|\bn[aã]o,?\s+obrigad|sem interesse|pode parar|para de (me )?(mandar|escrever)|n[aã]o (me )?(mande|manda|chame|liga)|desist|tira (o )?meu (n[uú]mero|contato)/i
+  /\b(n[aã]o|nunca)\s+(tenho|temos)\s+(nenhum |o menor |muito )?(interesse|necessidade)\b|\b(n[aã]o|nunca)\s+(quero|queremos|vou querer|vamos querer)\b(?!\s+(ser|parecer|incomodar|atrapalhar|tomar|perder))|\b(n[aã]o|nunca)\s+precis\w*\s+(disso|de nada|nada|de nenhum|de rob[oô]|de site|de automa|de sistema|de ajuda|de servi[cç]o|de outro|de mais nada)\b|\b(n[aã]o|nunca)\s+(me|nos)\s+interessa\b|\bn[aã]o\s+(estou|estamos)\s+interessad\w*|\bn[aã]o,?\s+obrigad|sem interesse|pode parar|para de (me )?(mandar|escrever)|n[aã]o me (mande|manda|chame|liga|ligue)|n[aã]o (mande|manda|chame|liga|ligue) mais|desist|tira (o )?meu (n[uú]mero|contato)/i
 export function contarRecusas(conversa) {
   return (Array.isArray(conversa) ? conversa : []).filter((f) => f?.de === 'pessoa' && RECUSA.test(String(f.texto || ''))).length
 }

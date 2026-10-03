@@ -425,3 +425,10 @@ test('"não preciso de volume, preciso de gente com dinheiro" pede triagem, não
   assert.match(dica, /triagem/)
   assert.doesNotMatch(dica, /REDUZA O ESFORÇO/)
 })
+
+test('"quem tem dinheiro não perde tempo, liga direto" não é recusa', async () => {
+  const m = await import('../api/_lib/prospeccao.js')
+  assert.equal(m.contarRecusas([{ de: 'pessoa', texto: 'Quem tem dinheiro..não perde tempo em WhatsApp nao Liga direto' }]), 0)
+  assert.equal(m.contarRecusas([{ de: 'pessoa', texto: 'Não me liga, por favor' }]), 1)
+  assert.equal(m.contarRecusas([{ de: 'pessoa', texto: 'Não manda mais mensagem' }]), 1)
+})
