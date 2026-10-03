@@ -1419,6 +1419,8 @@ async function falarComIACru(lead, conversa) {
      ler só o roteiro (que cita "não tenho interesse" como definitivo) que
      ele encerrou na primeira recusa simples. */
   const chegaDePerguntas = perguntasDoRobo >= 3 && !pitchFeito
+  /* Tres perguntas sem apresentar: a apresentacao sai fixa, sem modelo. */
+  if (chegaDePerguntas && ultimaFala?.de === "pessoa" && !foraDoAlvo(ultimaDaPessoa) && !deveEncerrar(conversa)) return pitchDe(segmentoAtual)
   const cabecalho = `${voz.bloco ? `${voz.bloco}\n\n` : ''}SITUAÇÃO AGORA (manda mais que qualquer exemplo abaixo):${situacao}${dica ? `\n${dica}` : ''}${chegaDePerguntas ? '\nVocê já fez três perguntas e ainda não apresentou nada: parece interrogatório. AGORA apresente em duas frases o que a Astro faz e o resultado, e proponha a demonstração com o Eduardo. Nenhuma pergunta de diagnóstico.' : ''}\n\n`
   const jaPerguntou = falas
     .filter((f) => f?.de === 'robo' && String(f.texto || '').includes('?'))
