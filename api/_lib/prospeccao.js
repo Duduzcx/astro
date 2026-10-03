@@ -805,12 +805,13 @@ const ACEITE = /\b(pode ser|fechado|combinado|ok|beleza|bora|vamos|perfeito|otim
 const DIAS = { segunda: 'segunda', terca: 'terça', quarta: 'quarta', quinta: 'quinta', sexta: 'sexta', sabado: 'sábado' }
 /* A confirmação do horário, fixa: dia e hora da fala da pessoa, agradecimento
    no masculino, sem pergunta. O modelo, nesta hora, repetia a apresentação. */
-export function confirmarHorario(texto) {
+export function confirmarHorario(texto, ultimaDoRobo = '') {
   const t = normalizarFrase(texto)
   let hora = (t.match(HORA) || [''])[0].replace(/^(as|das?) /, '').replace(/\s+/g, '').replace(/(hs|hrs|horas?)$/, 'h').trim()
   if (/^\d{1,2}$/.test(hora)) hora = `${hora}h`
   const diaSemana = (t.match(/\b(segunda|terca|quarta|quinta|sexta|sabado)\b/) || [])[1]
-  const dia = /\bhoje\b/.test(t) ? 'hoje' : diaSemana ? DIAS[diaSemana] : 'amanhã'
+  const oferta = normalizarFrase(ultimaDoRobo)
+  const dia = /\bhoje\b/.test(t) ? 'hoje' : diaSemana ? DIAS[diaSemana] : /\bamanha\b/.test(t) ? 'amanhã' : /\bsegunda\b/.test(oferta) ? 'segunda' : /\bamanha\b/.test(oferta) ? 'amanhã' : quandoDemo()
   const quando = hora === 'meiodia' ? `${dia} ao meio-dia` : hora ? `${dia} às ${hora}` : dia
   return `Fechado, ${quando} então! O Eduardo confirma com você um pouco antes. Obrigado!`
 }
@@ -917,9 +918,14 @@ export function pedePreco(texto) {
   return PEDE_PRECO.test(String(texto || ''))
 }
 function respostaDePreco(segmento, pitchFeito) {
-  const fecho = 'O valor depende do que vocês precisam, só o robô, só o site ou os dois, e o Eduardo fecha isso com você na demonstração de 10 minutos. Amanhã às 10h ou às 14h?'
-  if (pitchFeito) return fecho
-  return `${pitchDe(segmento).split('\n\n')[0]}\n\n${fecho}`
+  if (pitchFeito) return `O valor depende do que vocês precisam, só o robô, só o site ou os dois, e o Eduardo fecha isso com você na demonstração de 10 minutos. ${perguntaDosHorarios()}`
+  return `${pitchCurto(segmento).split('\n\n')[0]}\n\nO valor depende do que vocês precisam, e o Eduardo fecha isso com você em 10 minutos. ${perguntaDosHorarios()}`
+}
+/* "Isso é golpe?", "é sério?": desconfiança legítima. Quem somos, o site
+   para conferir, e a demonstração. Nunca a desculpa de número errado. */
+const DESCONFIANCA = /(é|e|isso é|isso e) (golpe|spam|fraude|s[eé]rio|verdade|de verdade|confi[aá]vel)[^?]{0,15}\?|parece golpe|n[aã]o (caio|cai) (nessa|em golpe)/i
+export function desconfia(texto) {
+  return DESCONFIANCA.test(String(texto || ''))
 }
 /* "Me chama depois", "agora não posso": reduz o esforço e pede o horário. */
 const OCUPADO =
@@ -954,14 +960,29 @@ const PITCHES = {
   cursinho: 'A Astro monta o site do cursinho com inscrição e um robô no WhatsApp que responde dúvidas de turmas e matrícula 24 horas e agenda a visita, com cada interessado organizado para a secretaria. O resultado é não perder matrícula por demora.\n\nQuer ver funcionando em 10 minutos, amanhã às 10h ou às 14h?',
   odonto: 'A Astro monta o site da clínica com agendamento e um robô no WhatsApp que marca e confirma consultas 24 horas, lembra o paciente no dia e organiza tudo para a recepção. O resultado é não perder paciente por demora.\n\nQuer ver funcionando em 10 minutos, amanhã às 10h ou às 14h?',
 }
+/* Quando é a demonstração: "amanhã", menos na sexta e no sábado, que viram
+   "segunda". Sem isto, uma conversa de sexta marcava demonstração no sábado. */
+export function quandoDemo(agora = new Date()) {
+  const dia = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', weekday: 'short' }).format(agora)
+  return dia === 'Fri' || dia === 'Sat' ? 'segunda' : 'amanhã'
+}
+const capitalizar = (t) => t.charAt(0).toUpperCase() + t.slice(1)
+export function perguntaDosHorarios(agora = new Date()) {
+  return `${capitalizar(quandoDemo(agora))} às 10h ou às 14h?`
+}
 function pitchDe(segmento) {
-  return PITCHES[segmento] || PITCHES.imobiliaria
+  return (PITCHES[segmento] || PITCHES.imobiliaria).replace('amanhã às 10h', `${quandoDemo()} às 10h`)
+}
+/* A apresentação curta: só a primeira frase e a pergunta dos horários. */
+function pitchCurto(segmento) {
+  const [corpo, pergunta] = pitchDe(segmento).split('\n\n')
+  return `${corpo.split(/(?<=\.)\s+(?=O resultado)/)[0]}\n\n${pergunta}`
 }
 /* Texto que saiu pronto do roteiro (não do modelo): já tem o tamanho certo. */
 function ehTextoFixo(texto) {
   const t = String(texto || '')
   if (Object.values(PITCHES).includes(t) || t === DESCULPA_ENGANO || t === QUEM_CUIDA || t === PEDIDO_DE_PESSOA || t === PEDIDO_DE_PESSOA_2 || t === RESPOSTA_OCUPADO || t === QUAL_HORARIO || t === RESPOSTA_AGUARDO) return true
-  return /^(Fechado, |Aqui é a equipe do Eduardo|O valor depende|A Astro monta|Aqui dá para ver o que a gente faz)/.test(t)
+  return /^(Fechado, |Aqui é a equipe do Eduardo|Não, é a equipe do Eduardo|O valor depende|A Astro monta|Aqui dá para ver o que a gente faz)/.test(t)
 }
 
 const PEDIDO_DE_PESSOA = 'Olá! Preciso falar com o responsável pela empresa. Consegue me passar para uma pessoa?'
@@ -1499,7 +1520,7 @@ async function falarComIACru(lead, conversa) {
   /* Aceitou o horário: confirma e para. Vem ANTES de qualquer outra regra,
      senão o teto de perguntas devolvia a apresentação a quem acabou de dizer
      "pode ser amanhã às 10h". */
-  if (ultimaFala?.de === 'pessoa' && aceitouHorario(ultimaDaPessoa, ultimaDoRobo)) return confirmarHorario(ultimaDaPessoa)
+  if (ultimaFala?.de === 'pessoa' && aceitouHorario(ultimaDaPessoa, ultimaDoRobo)) return confirmarHorario(ultimaDaPessoa, ultimaDoRobo)
   if (ultimaFala?.de === 'pessoa' && aceitouSemHora(ultimaDaPessoa, ultimaDoRobo)) return QUAL_HORARIO
 
   /* Fora do alvo: desculpa e fim. Nada de pergunta, nada de indicação. */
@@ -1518,7 +1539,11 @@ async function falarComIACru(lead, conversa) {
   const linkJaFoi = falas.some((f) => f?.de === 'robo' && String(f.texto || '').includes(linkDoSite()))
   const falaDaPessoaAgora = ultimaFala?.de === 'pessoa' ? ultimaDaPessoa : ''
   /* "Quem é você?": quem somos e a apresentação, numa vez só. */
-  if (pedeApresentacao(falaDaPessoaAgora)) return `Aqui é a equipe do Eduardo, da Astro Soluções. ${pitchDe(segmentoAtual)}`
+  if (pedeApresentacao(falaDaPessoaAgora)) return `Aqui é a equipe do Eduardo, da Astro Soluções. ${pitchCurto(segmentoAtual)}`
+  if (desconfia(falaDaPessoaAgora)) {
+    const conferir = linkJaFoi ? '' : ` Dá para conferir no site: ${linkDoSite()}`
+    return `Não, é a equipe do Eduardo, da Astro Soluções.${conferir}\n\nA gente monta site e robô de WhatsApp para ${voz.plural || 'imobiliárias'}. Quer ver funcionando em 10 minutos, ${perguntaDosHorarios().toLowerCase()}`
+  }
   /* Preço: nunca a apresentação de novo; o valor vai para a demonstração. */
   if (pedePreco(falaDaPessoaAgora)) return respostaDePreco(segmentoAtual, pitchFeito)
   const querObjetividade = Boolean(falaDaPessoaAgora) && pedeObjetividade(falaDaPessoaAgora)
@@ -1529,7 +1554,7 @@ async function falarComIACru(lead, conversa) {
   if (estaOcupado(falaDaPessoaAgora) && !pedeHumano(falaDaPessoaAgora)) return RESPOSTA_OCUPADO
   if (vaiVerificar(falaDaPessoaAgora) && !emailNoTexto(falaDaPessoaAgora) && !numeroIndicado(falaDaPessoaAgora, lead?.contato)) return RESPOSTA_AGUARDO
   /* "Me manda o site": o endereço e um fecho leve, uma vez. */
-  if (pedeSite(falaDaPessoaAgora) && !linkJaFoi) return `Aqui dá para ver o que a gente faz: ${linkDoSite()}\n\nSe fizer sentido, o Eduardo mostra funcionando em 10 minutos. Amanhã às 10h ou às 14h?`
+  if (pedeSite(falaDaPessoaAgora) && !linkJaFoi) return `Aqui dá para ver o que a gente faz: ${linkDoSite()}\n\nSe fizer sentido, o Eduardo mostra funcionando em 10 minutos. ${perguntaDosHorarios()}`
 
   /* Etiqueta: cumprimento puro nas duas primeiras falas da pessoa recebe só
      o cumprimento de volta, e para. "Tudo bem?" de volta vira a pergunta
@@ -1558,7 +1583,7 @@ async function falarComIACru(lead, conversa) {
   const chegaDePerguntas = perguntasDoRobo >= 3 && !pitchFeito
   /* Tres perguntas sem apresentar: a apresentacao sai fixa, sem modelo. */
   if (chegaDePerguntas && ultimaFala?.de === "pessoa" && !foraDoAlvo(ultimaDaPessoa) && !deveEncerrar(conversa)) return pitchDe(segmentoAtual)
-  const cabecalho = `${voz.bloco ? `${voz.bloco}\n\n` : ''}SITUAÇÃO AGORA (manda mais que qualquer exemplo abaixo):${situacao}${dica ? `\n${dica}` : ''}${chegaDePerguntas ? '\nVocê já fez três perguntas e ainda não apresentou nada: parece interrogatório. AGORA apresente em duas frases o que a Astro faz e o resultado, e proponha a demonstração com o Eduardo. Nenhuma pergunta de diagnóstico.' : ''}${querObjetividade && pitchFeito ? '\nA pessoa pediu objetividade e você JÁ apresentou a Astro: não repita a apresentação. Responda em uma frase o que ela perguntou e feche com os dois horários.' : ''}\n\n`
+  const cabecalho = `${voz.bloco ? `${voz.bloco}\n\n` : ''}SITUAÇÃO AGORA (manda mais que qualquer exemplo abaixo):${situacao}${dica ? `\n${dica}` : ''}${chegaDePerguntas ? '\nVocê já fez três perguntas e ainda não apresentou nada: parece interrogatório. AGORA apresente em duas frases o que a Astro faz e o resultado, e proponha a demonstração com o Eduardo. Nenhuma pergunta de diagnóstico.' : ''}${querObjetividade && pitchFeito ? '\nA pessoa pediu objetividade e você JÁ apresentou a Astro: não repita a apresentação. Responda em uma frase o que ela perguntou e feche com os dois horários.' : ''}\nAo propor horários, escreva exatamente "${perguntaDosHorarios()}" (hoje é ${new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'long' }).format(new Date())}).\n\n`
   const jaPerguntou = falas
     .filter((f) => f?.de === 'robo' && String(f.texto || '').includes('?'))
     .map((f) => String(f.texto).split(/(?<=[.!?])\s+/).filter((frase) => frase.includes('?')).join(' '))
