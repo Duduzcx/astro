@@ -253,7 +253,7 @@ como contornar isso e a ponte não tenta. O que existe é o **modo do robô**
   com quem você abriu à mão pelo celular (frase gatilho). Nada de abordagem
   a frio pelo painel, nada de empurrão automático.
 - **Ativo**: empurrão em conversa parada e abordagem a frio pelo painel, até
-  10 por dia (`ABORDAGENS_POR_DIA`). Use sabendo do risco.
+  10 por dia no começo, subindo 5 a cada dois dias sem restrição até 30 (aquecimento do número; `ABORDAGENS_POR_DIA` na Vercel fixa um valor e ignora a rampa). Uma quarentena volta a 10. O painel mostra "hoje X de Y"; a sonda lê com `{ testarLimite: true }`, devolve uma vaga com `{ ajustarUso: -1 }` e marca o começo com `{ rampaInicio: "AAAA-MM-DD" }`. Use sabendo do risco.
 
 Regras que valem sempre: uma ponte só por número; não reparear à toa; parar
 no primeiro "não" definitivo ou hostilidade; nunca rajada. Para prospecção
