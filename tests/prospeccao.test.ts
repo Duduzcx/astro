@@ -409,3 +409,12 @@ test('"sobre?" e "em que posso ajudar?" pedem o assunto', async () => {
   for (const t of ['Sobre?', 'Bom dia! Tudo bem Sobre?', 'Em que posso ajudar?', 'Por favor, me fala o que você busca', 'Qual o assunto?']) assert.equal(m.pedeObjetividade(t), true, t)
   assert.equal(m.pedeObjetividade('Falei sobre isso com o João'), false)
 })
+
+test('"odeio robô, já bloqueio na hora" é hostil e encerra; "pois não" e "?" pedem o assunto', async () => {
+  const m = await import('../api/_lib/prospeccao.js')
+  assert.equal(m.ehHostil('Amigo, odeio robô, meu atendimento é humanizado. Empresa que me responde através de IA eu não chamo nunca mais, eu já bloqueio na hora. Boa tarde.'), true)
+  assert.equal(m.deveEncerrar([{ de: 'pessoa', texto: 'Empresa que me responde por IA eu bloqueio na hora.' }]), true)
+  assert.equal(m.ehHostil('Não gosto muito de robô, mas me explica'), false)
+  for (const t of ['Bom dia Pois não', '?', ' ?? ']) assert.equal(m.pedeObjetividade(t), true, t)
+  assert.equal(m.pedeObjetividade('Pois é, perdemos cliente sim'), false)
+})

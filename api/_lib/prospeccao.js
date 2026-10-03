@@ -735,7 +735,7 @@ export function contarRecusas(conversa) {
    "Não tenho interesse" simples NÃO está aqui de propósito: ganha uma
    investigação elegante antes (é a primeira recusa, contada em RECUSA). */
 const HOSTIL =
-  /n[aã]o (venha|vem|venham) (me )?oferecer|n[aã]o (me )?ofere[çc]a|n[aã]o quero (nada|saber|conversar|nenhum|mais nada)|n[aã]o (tenho|temos) (nenhum |o menor )?interesse (nenhum|algum|mesmo)|n[aã]o insist|me tira (da lista|do grupo|daqui)|tira (o )?meu (n[uú]mero|contato)|n[aã]o (me )?(mande|manda|envie|envia|escreva|escreve) mais|para de (me )?(mandar|escrever|encher|incomodar)|n[aã]o (quero|me) (mais )?(contato|mensagem)|vou (te )?(bloquear|denunciar)|vai se f|idiota|ot[aá]rio|palha[cç]o/i
+  /n[aã]o (venha|vem|venham) (me )?oferecer|n[aã]o (me )?ofere[çc]a|n[aã]o quero (nada|saber|conversar|nenhum|mais nada)|n[aã]o (tenho|temos) (nenhum |o menor )?interesse (nenhum|algum|mesmo)|n[aã]o insist|me tira (da lista|do grupo|daqui)|tira (o )?meu (n[uú]mero|contato)|n[aã]o (me )?(mande|manda|envie|envia|escreva|escreve) mais|para de (me )?(mandar|escrever|encher|incomodar)|n[aã]o (quero|me) (mais )?(contato|mensagem)|vou (te )?(bloquear|denunciar)|bloqueio (na hora|direto|voc[eê]|o n[uú]mero)|j[aá] bloqueio|nunca mais|vai se f|idiota|ot[aá]rio|palha[cç]o/i
 /* Palavras que só são hostis sem interrogação: "isso é golpe?" é dúvida. */
 const HOSTIL_FRACO = /bloquead|den[uú]ncia|spam|golpe|porra|caralho|merda/i
 
@@ -967,7 +967,7 @@ export function pedeSite(texto) {
 
 /* Pediu objetividade: apresentação em duas frases, sem pergunta. */
 const PEDE_OBJETIVIDADE =
-  /o que (voc[eê]s?|vcs?) (tem|t[eê]m|oferece|oferecem|faz|fazem|vende|vendem)|o que (é|e) (isso|a astro)|do que se trata|qual (é |e )?a (proposta|oferta|ideia)|me (ofere[cç]a|oferece|explica|fala) (o que|logo|direto)|seja (direto|objetivo)|(vai|vá|v[aá]) direto|direto aos? (assuntos?|ponto)|ser (direto|objetivo)|sem (rodeio|enrola|inqu[eé]rito)|n[aã]o gosto de (pergunta|inqu[eé]rito)|chega de pergunta|o que voc[eê] quer|qual o (seu )?objetivo|\bsobre\s*\?|sobre o qu[eê]|a respeito de qu[eê]|qual (é |e |seria )?o assunto|(em|como) (que )?posso (te )?ajudar|o que (voc[eê] |vc )?(busca|procura|deseja|precisa|gostaria)|me ofere[cç]a|quiser oferecer|me manda (a |uma )?proposta|vamos l[aá]\.? o que/i
+  /o que (voc[eê]s?|vcs?) (tem|t[eê]m|oferece|oferecem|faz|fazem|vende|vendem)|o que (é|e) (isso|a astro)|do que se trata|qual (é |e )?a (proposta|oferta|ideia)|me (ofere[cç]a|oferece|explica|fala) (o que|logo|direto)|seja (direto|objetivo)|(vai|vá|v[aá]) direto|direto aos? (assuntos?|ponto)|ser (direto|objetivo)|sem (rodeio|enrola|inqu[eé]rito)|n[aã]o gosto de (pergunta|inqu[eé]rito)|chega de pergunta|o que voc[eê] quer|qual o (seu )?objetivo|pois n[aã]o|^\s*\?+\s*$|\bsobre\s*\?|sobre o qu[eê]|a respeito de qu[eê]|qual (é |e |seria )?o assunto|(em|como) (que )?posso (te )?ajudar|o que (voc[eê] |vc )?(busca|procura|deseja|precisa|gostaria)|me ofere[cç]a|quiser oferecer|me manda (a |uma )?proposta|vamos l[aá]\.? o que/i
 export function pedeObjetividade(texto) {
   return PEDE_OBJETIVIDADE.test(String(texto || ''))
 }
