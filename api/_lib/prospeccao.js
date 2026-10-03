@@ -1351,7 +1351,11 @@ async function falarComIA(lead, conversa) {
   const ultimaDaPessoa = [...paraArray(conversa)].reverse().find((f) => f?.de === 'pessoa')?.texto || ''
   const palavras = String(ultimaDaPessoa).split(/\s+/).filter(Boolean).length
   const limite = palavras <= 4 ? 22 : palavras <= 12 ? 28 : 32
-  return encurtar(humanizar(await falarComIACru(lead, conversa)), limite)
+  const cru = await falarComIACru(lead, conversa)
+  /* Texto fixo (apresentação direta, desculpa, pedido de pessoa) não passa
+     pelo corte de tamanho: ele já tem o tamanho certo e o corte o mutilava. */
+  if (Object.values(PITCHES).includes(cru) || cru === DESCULPA_ENGANO || cru === QUEM_CUIDA || cru === PEDIDO_DE_PESSOA || cru === PEDIDO_DE_PESSOA_2) return humanizar(cru)
+  return encurtar(humanizar(cru), limite)
 }
 
 async function falarComIACru(lead, conversa) {
@@ -1382,7 +1386,7 @@ async function falarComIACru(lead, conversa) {
 
   const segmentoAtual = await segmentoDoLead(lead)
   const perguntasDoRobo = falas.filter((f) => f?.de === 'robo' && String(f.texto || '').includes('?')).length
-  const pitchFeito = falas.some((f) => f?.de === 'robo' && /demonstra|10 minutos|10 min|Eduardo|rob[oô] (no|de) WhatsApp/i.test(String(f.texto || '')))
+  const pitchFeito = falas.some((f) => f?.de === 'robo' && /demonstra|10 minutos|10 min|rob[oô] (no|de) WhatsApp|atende em segundos/i.test(String(f.texto || '')))
   const querObjetividade = ultimaFala?.de === 'pessoa' && pedeObjetividade(ultimaDaPessoa)
   /* Pediu objetividade: apresentação direta, sem modelo. */
   if (querObjetividade) return pitchDe(segmentoAtual)
