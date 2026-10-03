@@ -31,6 +31,8 @@ import {
   MODOS_DO_ROBO,
   podeAbordarAFrio,
   quarentenaAte,
+  limiteDeAbordagensHoje,
+  usoDeHoje,
   SEGMENTOS,
   segmentoPadrao,
   sincronizarConversas,
@@ -73,6 +75,7 @@ export default async function handler(req, res) {
         gatilhoPadrao: GATILHO_PADRAO,
         modo,
         quarentenaAte: quarentena,
+        abordagens: { usadas: await usoDeHoje(), limite: await limiteDeAbordagensHoje() },
         segmento,
         conversas,
         ponte,
@@ -125,6 +128,8 @@ export default async function handler(req, res) {
         const ate = horas > 0 ? new Date(Date.now() + horas * 3600 * 1000).toISOString() : ''
         await gravarConfig('quarentena_ate', ate)
         if (ate) await gravarConfig('prospeccao_modo', 'responder')
+        /* Restrição zera o aquecimento: a rampa recomeça em 10 no fim da quarentena. */
+        if (ate) await gravarConfig('abordagens_rampa_inicio', ate.slice(0, 10))
         saida.quarentenaAte = ate || null
       }
       if (typeof dados?.segmento === 'string') {

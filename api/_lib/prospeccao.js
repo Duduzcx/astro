@@ -287,7 +287,21 @@ export async function registrarPonte(req, res) {
       const linhas = await s2`SELECT quando, modo, left(entrada, 70) AS entrada, left(saida, 70) AS saida FROM bot_logs WHERE entrada LIKE ${padrao} OR saida LIKE ${padrao} OR de LIKE ${padrao} ORDER BY quando DESC LIMIT 30`
       return res.status(200).json({ ok: true, logs: linhas })
     }
-    if (dados?.testarLimite) return res.status(200).json({ ok: true, dentroDoLimite: await dentroDoLimiteDeAbordagens() })
+    /* { testarLimite: true } só lê (antes gastava uma vaga do dia); { ajustarUso: -1 } devolve uma vaga; { rampaInicio: "AAAA-MM-DD" } marca o começo do aquecimento. */
+    if (dados?.testarLimite) {
+      const usadas = await usoDeHoje()
+      const limite = await limiteDeAbordagensHoje()
+      return res.status(200).json({ ok: true, usadas, limite, restam: Math.max(0, limite - usadas), rampaInicio: await lerConfig('abordagens_rampa_inicio', null) })
+    }
+    if (typeof dados?.ajustarUso === 'number' && Number.isFinite(dados.ajustarUso)) {
+      const novo = Math.max(0, (await usoDeHoje()) + Math.trunc(dados.ajustarUso))
+      await gravarConfig('abordagens_uso', { dia: diaSP(), quantas: novo })
+      return res.status(200).json({ ok: true, usadas: novo })
+    }
+    if (typeof dados?.rampaInicio === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dados.rampaInicio)) {
+      await gravarConfig('abordagens_rampa_inicio', dados.rampaInicio)
+      return res.status(200).json({ ok: true, rampaInicio: dados.rampaInicio, limiteHoje: await limiteDeAbordagensHoje() })
+    }
     if (dados?.resetarGatilho) {
       await gravarConfig('prospeccao_gatilho', '')
       return res.status(200).json({ ok: true, gatilho: 'padrão de fábrica' })
@@ -1324,11 +1338,40 @@ export function emailNoTexto(texto) {
 }
 
 const ABORDAGENS_PADRAO = 10
+const ABORDAGENS_TETO = 30
+const RAMPA_PASSO = 5
+const RAMPA_DIAS = 2
+/* Aquecimento do número: começa em 10 por dia e sobe 5 a cada dois dias sem
+   restrição, até 30. Uma quarentena (restrição do WhatsApp) zera a rampa.
+   ABORDAGENS_POR_DIA na Vercel, se existir, fixa o limite e ignora a rampa. */
+export function limitePorDias(dias, base = ABORDAGENS_PADRAO) {
+  const d = Number.isFinite(dias) && dias > 0 ? Math.floor(dias) : 0
+  return Math.min(ABORDAGENS_TETO, base + RAMPA_PASSO * Math.floor(d / RAMPA_DIAS))
+}
+const diaSP = (quando = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(quando)
+export async function limiteDeAbordagensHoje() {
+  const fixo = Number(process.env.ABORDAGENS_POR_DIA)
+  if (Number.isFinite(fixo) && fixo > 0) return fixo
+  if (!temBanco()) return ABORDAGENS_PADRAO
+  let inicio = await lerConfig('abordagens_rampa_inicio', null)
+  if (typeof inicio !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(inicio)) {
+    inicio = diaSP()
+    await gravarConfig('abordagens_rampa_inicio', inicio)
+  }
+  const dias = Math.floor((Date.parse(diaSP()) - Date.parse(inicio)) / 864e5)
+  return limitePorDias(dias)
+}
+/* Quantas abordagens a frio já saíram hoje (horário de São Paulo). */
+export async function usoDeHoje() {
+  if (!temBanco()) return 0
+  const uso = await lerConfig('abordagens_uso', null)
+  return uso && typeof uso === 'object' && uso.dia === diaSP() ? Number(uso.quantas) || 0 : 0
+}
 export async function dentroDoLimiteDeAbordagens() {
   if (!temBanco()) return true
-  const limite = Number(process.env.ABORDAGENS_POR_DIA || ABORDAGENS_PADRAO)
+  const limite = await limiteDeAbordagensHoje()
   if (!Number.isFinite(limite) || limite <= 0) return false
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = diaSP()
   await prepararBanco()
   const s = sql()
   const [linha] = await s`

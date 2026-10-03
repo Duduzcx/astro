@@ -396,3 +396,10 @@ test('sexta e sábado propõem segunda; desconfiança tem resposta própria', as
   for (const t of ['Isso é golpe?', 'É sério isso?', 'Parece golpe']) assert.equal(m.desconfia(t), true, t)
   assert.equal(m.desconfia('Quem cuida disso é a Ana'), false)
 })
+
+test('rampa de abordagens: 10, depois +5 a cada dois dias, teto 30', async () => {
+  const { limitePorDias } = await import('../api/_lib/prospeccao.js')
+  assert.deepEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 30].map((d) => limitePorDias(d)), [10, 10, 15, 15, 20, 20, 25, 25, 30, 30, 30])
+  assert.equal(limitePorDias(-3), 10)
+  assert.equal(limitePorDias(Number.NaN), 10)
+})

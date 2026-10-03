@@ -29,6 +29,7 @@ type Dados = {
   gatilhoPadrao: string
   modo: 'responder' | 'ativo'
   quarentenaAte: string | null
+  abordagens?: { usadas: number; limite: number }
   segmento: 'imobiliaria' | 'cursinho' | 'odonto'
   conversas: Conversa[]
   ponte: { url: string; instancia: string; quando: string } | null
@@ -490,6 +491,12 @@ export function AbaProspeccao() {
               </button>
             )}
           </div>
+          {dados.abordagens ? (
+            <p className="mt-2 text-[12px] text-ash">
+              Abordagens a frio hoje: {dados.abordagens.usadas} de {dados.abordagens.limite}. O limite sobe 5 a cada dois dias sem
+              restrição, até 30, e volta a 10 depois de uma quarentena.
+            </p>
+          ) : null}
         </div>
 
         <div className="graphite-card">
